@@ -1,0 +1,210 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================================================
+    // دالة التحقق من الأدمن
+    // ==================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // ==================================================
+    // العقارات
+    // ==================================================
+ 
+ match /properties/{propertyId} {
+
+      // الجميع يستطيع مشاهدة العقارات
+      allow read: if true;
+
+      // أي مستخدم مسجل يستطيع إضافة عقار
+      allow create: if isSignedIn();
+
+      // صاحب العقار أو الأدمن
+      allow update, delete: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+
+      // ==============================================
+      // التعليقات
+      // ==============================================
+      match /comments/{commentId} {
+
+        allow read: if true;
+
+        allow create: if isSignedIn();
+
+        allow update, delete: if isSignedIn() &&
+          (
+            resource.data.userId == request.auth.uid ||
+            isAdmin()
+          );
+
+        // ==========================================
+        // الردود
+        // ==========================================
+        match /replies/{replyId} {
+
+          allow read: if true;
+
+          allow create: if isSignedIn();
+
+          allow update, delete: if isSignedIn() &&
+            (
+              resource.data.userId == request.auth.uid ||
+              isAdmin()
+            );
+        }
+      }
+    }
+
+    // ==================================================
+    // Collection Group (comments)
+    // مطلوب لشاشة إدارة التعليقات
+    // ==================================================
+    match /{path=**}/comments/{commentId} {
+
+      allow read: if true;
+
+      allow create: if isSignedIn();
+
+      allow update, delete: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+    }
+
+    // ==================================================
+    // المستخدمون
+    // ==================================================
+    match /users/{userId} {
+
+      // الأدمن يرى الجميع
+      // المستخدم يرى نفسه
+      allow read: if isSignedIn() &&
+        (
+          request.auth.uid == userId ||
+          isAdmin()
+        );
+
+      // إنشاء الحساب أو تعديل الحساب الشخصي
+      allow create, update: if isSignedIn() &&
+          request.auth.uid == userId;
+
+      // حذف المستخدم للأدمن فقط
+      allow delete: if isAdmin();
+
+      // ==========================================
+      // المفضلة
+      // ==========================================
+      match /favorites/{favoriteId} {
+
+        allow read, write: if isSignedIn() &&
+            request.auth.uid == userId;
+      }
+    }
+
+    // ==================================================
+    // الإشعارات
+    // ==================================================
+    match /notifications/{notificationId} {
+
+      // الإنشاء للمستخدمين المسجلين والأدمن
+      allow create: if isSignedIn();
+
+      // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
+allow read: if isSignedIn() &&
+(
+  resource.data.userId == request.auth.uid ||
+  isAdmin()
+);
+
+      // التحديث لصاحب الإشعار أو الأدمن
+      allow update: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+
+      // الحذف لصاحب الإشعار أو الأدمن
+allow delete: if isSignedIn() &&
+(
+  resource.data.userId == request.auth.uid ||
+  isAdmin()
+);
+    }
+
+    // ==================================================
+    // إعدادات التطبيق
+    // ==================================================
+    match /settings/{document} {
+
+      // الجميع يقرأ
+      allow read: if true;
+
+      // الأدمن فقط يكتب
+      allow write: if isAdmin();
+    }
+// ==================================================
+// الدردشة
+// ==================================================
+match /chats/{chatId} {
+
+  // المستخدم يرى محادثته فقط أو الأدمن
+  allow read: if isSignedIn() &&
+    (
+      request.auth.uid == chatId ||
+      isAdmin()
+    );
+
+  // إنشاء المحادثة للمستخدم نفسه أو الأدمن
+  allow create: if isSignedIn() &&
+    (
+      request.auth.uid == chatId ||
+      isAdmin()
+    );
+
+  // تحديث المحادثة لصاحبها أو الأدمن
+  allow update: if isSignedIn() &&
+    (
+      request.auth.uid == chatId ||
+      isAdmin()
+    );
+
+  // حذف المحادثة للأدمن فقط
+  allow delete: if isAdmin();
+
+  // ==========================
+  // الرسائل
+  // ==========================
+  match /messages/{messageId} {
+
+    allow read: if isSignedIn() &&
+      (
+        request.auth.uid == chatId ||
+        isAdmin()
+      );
+
+    allow create: if isSignedIn() &&
+      (
+        request.auth.uid == chatId ||
+        isAdmin()
+      );
+
+    allow update: if isAdmin();
+
+    allow delete: if isAdmin();
+  }
+}
+  }
+}

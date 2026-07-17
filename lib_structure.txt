@@ -1,0 +1,124 @@
+Folder PATH listing
+Volume serial number is 00000033 0683:9C50
+C:\PROJECTS\AQAR\LIB
+|   firebase_options.dart
+|   main.dart
+|   select_location.dart
+|   
++---bottom_sheets
+|       about_sheet.dart
+|       contact_sheet.dart
+|       privacy_sheet.dart
+|       terms_sheet.dart
+|       
++---chat
+|   |   chat_screen.dart
+|   |   
+|   +---models
+|   |       chat_model.dart
+|   |       message_model.dart
+|   |       
+|   +---screens
+|   |       image_viewer_screen.dart
+|   |       
+|   +---services
+|   |       chat_image_service.dart
+|   |       chat_service.dart
+|   |       
+|   +---utils
+|   |       time_formatter.dart
+|   |       
+|   \---widgets
+|           chat_app_bar.dart
+|           date_separator.dart
+|           message_bubble.dart
+|           message_input.dart
+|           typing_indicator.dart
+|           unread_badge.dart
+|           
++---models
+|       add_property_data.dart
+|       comment_model.dart
+|       
++---providers
+|       app_settings_provider.dart
+|       
++---screens
+|   |   edit_property_screen.dart
+|   |   favorites_screen.dart
+|   |   home_screen.dart
+|   |   login_screen.dart
+|   |   main_shell.dart
+|   |   my_properties_screen.dart
+|   |   notifications_screen.dart
+|   |   otp_screen.dart
+|   |   pending_properties.dart
+|   |   profile_screen.dart
+|   |   property_details.dart
+|   |   register_screen.dart
+|   |   send_notification_screen.dart
+|   |   settings_screen.dart
+|   |   
+|   +---add_property
+|   |   |   add_property_screen.dart
+|   |   |   step1_ad_type.dart
+|   |   |   step2_property_type.dart
+|   |   |   step3_details.dart
+|   |   |   step4_location.dart
+|   |   |   step5_price.dart
+|   |   |   step6_images.dart
+|   |   |   step7_contact.dart
+|   |   |   
+|   |   \---widgets
+|   |           glass_card.dart
+|   |           navigation_buttons.dart
+|   |           progress_header.dart
+|   |           
+|   +---admin
+|   |   |   admin_chat_list_screen.dart
+|   |   |   admin_chat_screen.dart
+|   |   |   admin_dashboard.dart
+|   |   |   comments_management_screen.dart
+|   |   |   notifications_management_screen.dart
+|   |   |   property_management_screen.dart
+|   |   |   settings_screen.dart
+|   |   |   users_management_screen.dart
+|   |   |   
+|   |   \---widgets
+|   |           admin_action_menu.dart
+|   |           filter_bar.dart
+|   |           property_card.dart
+|   |           search_bar_widget.dart
+|   |           status_chip.dart
+|   |           
+|   \---onboarding
+|           onboarding_screen.dart
+|           splash_screen.dart
+|           
++---services
+|       apple_auth_service.dart
+|       cloudinary_service.dart
+|       facebook_auth_service.dart
+|       fcm_service.dart
+|       google_auth_service.dart
+|       notification_service.dart
+|       user_service.dart
+|       
++---theme
+|       app_theme.dart
+|       
++---utils
+|       currency.dart
+|       property_default_images.dart
+|       
+\---widgets
+    |   app_drawer.dart
+    |   aqar_refresh_indicator.dart
+    |   notification_badge.dart
+    |   property_card.dart
+    |   
+    \---navigation
+            add_property_button.dart
+            bottom_nav_item.dart
+            custom_bottom_bar.dart
+            
