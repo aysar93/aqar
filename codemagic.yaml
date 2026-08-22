@@ -20,7 +20,7 @@ workflows:
         script: flutter test
 
       - name: Build iPhone Simulator app without signing
-        script: flutter build ios --simulator --release
+        script: flutter build ios --simulator --debug
 
       - name: Package simulator build
         script: |
