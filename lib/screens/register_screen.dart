@@ -1,390 +1,277 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/fcm_service.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/user_provider.dart';
+import '../services/iraqi_phone_service.dart';
+import '../services/password_auth_service.dart';
+import 'main_shell.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _loading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  String _error = '';
+
+  Future<void> _register() async {
+    FocusScope.of(context).unfocus();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    try {
+      await PasswordAuthService.register(
+        name: _nameController.text,
+        phone: _phoneController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      await context.read<UserProvider>().refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم إنشاء حسابك بنجاح')));
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainShell()),
+        (_) => false,
+      );
+    } on AuthFailure catch (failure) {
+      if (mounted) setState(() => _error = failure.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String? _validateName(String? value) {
+    final name = value?.trim() ?? '';
+    if (name.isEmpty) return 'يرجى إدخال الاسم الكامل';
+    if (name.length < 3) return 'يجب ألا يقل الاسم عن 3 أحرف';
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if ((value ?? '').trim().isEmpty) return 'رقم الهاتف مطلوب';
+    if (IraqiPhoneService.normalize(value!) == null) {
+      return 'أدخل رقم هاتف عراقي صحيحًا، مثل 07801234567';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) return null;
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      return 'البريد الإلكتروني غير صحيح';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final password = value ?? '';
+    if (password.isEmpty) return 'يرجى إدخال كلمة المرور';
+    if (password.length < 6) return 'استخدم 6 أحرف على الأقل';
+    if (!RegExp(r'[A-Za-z]').hasMatch(password) ||
+        !RegExp(r'\d').hasMatch(password)) {
+      return 'يجب أن تحتوي على حرف ورقم على الأقل';
+    }
+    return null;
+  }
 
   @override
-  State<RegisterScreen> createState() =>
-      _RegisterScreenState();
-}
-
-class _RegisterScreenState
-    extends State<RegisterScreen> {
-final phoneController = TextEditingController();
-
-  final nameController = TextEditingController();
-  final emailController = TextEditingController();
-  final passwordController =
-      TextEditingController();
-
-  bool loading = false;
-  bool obscure = true;
-  String error = '';
-
-  Future<void> register() async {
-if (nameController.text.isEmpty) {
-  setState(() {
-    error = "يرجى إدخال الاسم";
-  });
-  return;
-}
-    // التسجيل بالبريد الإلكتروني
-  if (emailController.text.isEmpty ||
-    passwordController.text.isEmpty ||
-    phoneController.text.isEmpty) {
-
-  setState(() {
-    error =
-        "يرجى إدخال البريد الإلكتروني وكلمة المرور ورقم الهاتف";
-  });
-
-  return;
-}
-
-  setState(() {
-    loading = true;
-    error = '';
-  });
-
-  try {
-
-    final credential =
-        await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-      email:
-          emailController.text.trim(),
-      password:
-          passwordController.text.trim(),
-    );
-
-    await FirebaseFirestore.instance
-    .collection('users')
-    .doc(credential.user!.uid)
-    .set({
-
-  'uid': credential.user!.uid,
-
-  'name': nameController.text.trim(),
-
-  'email': emailController.text.trim(),
-
-  'phone': phoneController.text.trim(),
-
-  'photo': '',
-
-  'provider': 'password',
-
-  // للتوافق مع النظام الحالي
-  'isAdmin': false,
-
-  // النظام الجديد
-  'accountType': 'user',
-
-  'officeId': '',
-
-  'isVerified': true,
-
-  'isBlocked': false,
-
-  'createdAt': FieldValue.serverTimestamp(),
-
-  'lastLogin': FieldValue.serverTimestamp(),
-
-});
-
-await FCMService.initialize();
-await FCMService.saveTokens();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      const SnackBar(
-        content:
-            Text("تم إنشاء الحساب بنجاح"),
-      ),
-    );
-
-    Navigator.pop(context);
-
-  } on FirebaseAuthException catch (e) {
-
-    setState(() {
-      error =
-          e.message ??
-          "حدث خطأ أثناء إنشاء الحساب";
-    });
-
-  } finally {
-
-    setState(() {
-      loading = false;
-    });
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
   }
-}
 
   @override
   Widget build(BuildContext context) {
-
-    return Scaffold(
-      backgroundColor: const Color(0xff0F172A),
-
-      appBar: AppBar(
-  elevation: 0,
-  centerTitle: true,
-  backgroundColor: const Color(0xff0F172A),
-  foregroundColor: Colors.white,
-  title: const Text(
-    "إنشاء حساب",
-    style: TextStyle(
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-),
-
-      body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.all(20),
-
-        child: Column(
-          children: [
-
-            const SizedBox(height: 30),
-            TextField(
-  controller: nameController,
-  style: const TextStyle(
-    color: Colors.white,
-  ),
-  decoration: InputDecoration(
-    hintText: "الاسم الكامل",
-    hintStyle: const TextStyle(
-      color: Colors.white54,
-    ),
-    prefixIcon: const Icon(
-      Icons.person,
-      color: Color(0xffD4AF37),
-    ),
-    filled: true,
-    fillColor: const Color(0xff1E293B),
-
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide.none,
-    ),
-
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(
-        color: Color(0xffD4AF37),
-        width: 2,
-      ),
-    ),
-  ),
-),
-
-            const SizedBox(height: 20),
-
-  TextField(
-  controller: emailController,
-  style: const TextStyle(
-    color: Colors.white,
-  ),
-  decoration: InputDecoration(
-    hintText: "البريد الإلكتروني",
-    hintStyle: const TextStyle(
-      color: Colors.white54,
-    ),
-    prefixIcon: const Icon(
-      Icons.email,
-      color: Color(0xffD4AF37),
-    ),
-    filled: true,
-    fillColor: const Color(0xff1E293B),
-
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide.none,
-    ),
-
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(
-        color: Color(0xffD4AF37),
-        width: 2,
-      ),
-    ),
-  ),
-),
-
-const SizedBox(height: 20),
-
-Container(
-  decoration: BoxDecoration(
-    color: const Color(0xff1E293B),
-    borderRadius: BorderRadius.circular(18),
-  ),
-  child: Row(
-    children: [
-
-      const SizedBox(width: 15),
-
-      const Text(
-        "🇮🇶",
-        style: TextStyle(fontSize: 24),
-      ),
-
-      const SizedBox(width: 10),
-
-      const Text(
-  "+964",
-  style: TextStyle(
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-  ),
-),
-
-      Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: 12,
-        ),
-        width: 1,
-        height: 30,
-        color: Colors.grey,
-      ),
-
-      Expanded(
-        child: TextField(
-          controller: phoneController,
-          style: const TextStyle(
-  color: Colors.white,
-),
-          keyboardType: TextInputType.phone,
-          maxLength: 11,
-          decoration: const InputDecoration(
-            hintText: "7801234567",
-hintStyle: const TextStyle(
-  color: Colors.white54,
-),
-border: InputBorder.none,
-counterText: "",
-          ),
-        ),
-      ),
-    ],
-  ),
-),
-
-const SizedBox(height: 20),
-
-             TextField(
-  controller: passwordController,
-  obscureText: obscure,
-  style: const TextStyle(
-    color: Colors.white,
-  ),
-  decoration: InputDecoration(
-    hintText: "كلمة المرور",
-    hintStyle: const TextStyle(
-      color: Colors.white54,
-    ),
-    prefixIcon: const Icon(
-      Icons.lock,
-      color: Color(0xffD4AF37),
-    ),
-    suffixIcon: IconButton(
-      icon: Icon(
-        obscure
-            ? Icons.visibility_off
-            : Icons.visibility,
-        color: const Color(0xffD4AF37),
-      ),
-      onPressed: () {
-        setState(() {
-          obscure = !obscure;
-        });
-      },
-    ),
-    filled: true,
-    fillColor: const Color(0xff1E293B),
-
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide.none,
-    ),
-
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(
-        color: Color(0xffD4AF37),
-        width: 2,
-      ),
-    ),
-  ),
-),
-
-            const SizedBox(height: 20),
-
-            if (error.isNotEmpty)
-              Text(
-                error,
-                style:
-                    const TextStyle(
-                  color: Colors.red,
-                ),
-              ),
-
-            const SizedBox(height: 25),
-
-            SizedBox(
-              width:
-                  double.infinity,
-              height: 60,
-              child:
-                  ElevatedButton(
-                onPressed: loading
-                    ? null
-                    : register,
-                style:
-                    ElevatedButton
-                        .styleFrom(
-                  backgroundColor: const Color(0xffD4AF37),
-foregroundColor: Colors.white,
-elevation: 8,
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius
-                            .circular(
-                                18),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('إنشاء حساب')),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Icon(Icons.person_add_alt_1_rounded, size: 64),
+                        const SizedBox(height: 12),
+                        Text(
+                          'أنشئ حسابك بسهولة',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'رقم الهاتف مطلوب، والبريد الإلكتروني اختياري',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _nameController,
+                          textInputAction: TextInputAction.next,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'الاسم الكامل',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                          validator: _validateName,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          textDirection: TextDirection.ltr,
+                          textAlign: TextAlign.right,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9٠-٩۰-۹+\s()\-]'),
+                            ),
+                            LengthLimitingTextInputFormatter(24),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'رقم الهاتف',
+                            hintText: '0780 123 4567',
+                            prefixIcon: Icon(Icons.phone_iphone_rounded),
+                          ),
+                          validator: _validatePhone,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textDirection: TextDirection.ltr,
+                          textAlign: TextAlign.right,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'البريد الإلكتروني (اختياري)',
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                          validator: _validateEmail,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textDirection: TextDirection.ltr,
+                          textAlign: TextAlign.right,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.newPassword],
+                          decoration: InputDecoration(
+                            labelText: 'كلمة المرور',
+                            helperText: '6 أحرف على الأقل وتتضمن حرفًا ورقمًا',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                            ),
+                          ),
+                          validator: _validatePassword,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _confirmController,
+                          obscureText: _obscureConfirm,
+                          textDirection: TextDirection.ltr,
+                          textAlign: TextAlign.right,
+                          onFieldSubmitted: (_) {
+                            if (!_loading) _register();
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'تأكيد كلمة المرور',
+                            prefixIcon: const Icon(
+                              Icons.verified_user_outlined,
+                            ),
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm,
+                              ),
+                              icon: Icon(
+                                _obscureConfirm
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                            ),
+                          ),
+                          validator: (value) =>
+                              value != _passwordController.text
+                                  ? 'كلمتا المرور غير متطابقتين'
+                                  : null,
+                        ),
+                        if (_error.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            _error,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _loading ? null : _register,
+                          child: _loading
+                              ? const SizedBox.square(
+                                  dimension: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : const Text(
+                                  'إنشاء الحساب',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed:
+                              _loading ? null : () => Navigator.pop(context),
+                          child: const Text('لديك حساب؟ تسجيل الدخول'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                child: loading
-                    ? const CircularProgressIndicator(
-                        color:
-                            Colors
-                                .white,
-                      )
-                    : const Text(
-                        "إنشاء الحساب",
-                        style:
-                            TextStyle(
-                          fontSize:
-                              20,
-                          color:
-                              Colors
-                                  .white,
-                          fontWeight:
-                              FontWeight
-                                  .bold,
-                        ),
-                      ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

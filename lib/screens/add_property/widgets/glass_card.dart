@@ -17,26 +17,19 @@ class GlassCard extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
-
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-
         color: const Color(0xFF1E293B),
-
         border: Border.all(
-          color: selected
-              ? const Color(0xFFD4AF37)
-              : Colors.white12,
+          color: selected ? const Color(0xFFD4AF37) : Colors.white12,
           width: selected ? 2 : 1,
         ),
-
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .35),
             blurRadius: 25,
             offset: const Offset(0, 12),
           ),
-
           if (selected)
             BoxShadow(
               color: const Color(0xFFD4AF37).withValues(alpha: .25),
@@ -45,14 +38,11 @@ class GlassCard extends StatelessWidget {
             ),
         ],
       ),
-
       child: Material(
         color: Colors.transparent,
-
         child: InkWell(
           borderRadius: BorderRadius.circular(28),
           onTap: onTap,
-
           child: Padding(
             padding: const EdgeInsets.all(22),
             child: child,

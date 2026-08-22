@@ -2,11 +2,18 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+
+val keystoreProperties = Properties().apply {
+    load(rootProject.file("key.properties").inputStream())
+}
+
 android {
-    namespace = "com.example.aqar"
+    namespace = "com.andalus.aqar"
 
     // استخدام إصدار SDK الخاص بـ Flutter
     compileSdk = 36
@@ -24,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.aqar"
+        applicationId = "com.andalus.aqar"
 
         minSdk = flutter.minSdkVersion
         targetSdk = 36
@@ -35,15 +42,29 @@ android {
         multiDexEnabled = true
     }
 
-    buildTypes {
-        release {
-            // مؤقتاً يستخدم توقيع debug حتى يتم إنشاء keystore للإصدار النهائي
-            signingConfig = signingConfigs.getByName("debug")
 
-            isMinifyEnabled = false
-            isShrinkResources = false
-        }
+    signingConfigs {
+    create("release") {
+        storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+        storePassword = keystoreProperties["storePassword"] as String
+        keyAlias = keystoreProperties["keyAlias"] as String
+        keyPassword = keystoreProperties["keyPassword"] as String
     }
+}
+
+    buildTypes {
+    release {
+        signingConfig = signingConfigs.getByName("release")
+
+        isMinifyEnabled = true
+        isShrinkResources = true
+
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+    }
+}
 }
 
 flutter {

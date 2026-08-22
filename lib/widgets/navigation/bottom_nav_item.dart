@@ -16,67 +16,39 @@ class BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: SizedBox(
-          height: 70,
-          child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
-            children: [
-
-              AnimatedContainer(
-                duration:
-                    const Duration(milliseconds: 250),
-
-                padding:
-                    const EdgeInsets.all(6),
-
-                decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0xffD4AF37)
-                          .withValues(alpha: 0.15)
-                      : Colors.transparent,
-
-                  borderRadius:
-                      BorderRadius.circular(14),
-                ),
-
-                child: Icon(
-                  icon,
-
-                  size: 28,
-
-                  color: selected
-                      ? const Color(0xffD4AF37)
-                      : Colors.white70,
-                ),
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: SizedBox(
+        height: 70,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xffD4AF37).withValues(alpha: 0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
               ),
-
-
-              const SizedBox(height: 4),
-
-
-              Text(
-                label,
-
-                style: TextStyle(
-                  color: selected
-                      ? const Color(0xffD4AF37)
-                      : Colors.white70,
-
-                  fontSize: 12,
-
-                  fontWeight:
-                      selected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                ),
+              child: Icon(
+                icon,
+                size: 28,
+                color: selected ? const Color(0xffD4AF37) : Colors.white70,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? const Color(0xffD4AF37) : Colors.white70,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -230,90 +230,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             Card(
-  color: const Color(0xff1E293B),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(18),
-  ),
-  child: Padding(
-    padding: const EdgeInsets.all(18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-
-        Row(
-          children: const [
-
-            Icon(
-              Icons.business,
-              color: Color(0xffD4AF37),
-              size: 32,
-            ),
-
-            SizedBox(width: 12),
-
-            Expanded(
-              child: Text(
-                "هل تمتلك مكتبًا عقاريًا؟",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              color: const Color(0xff1E293B),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.business,
+                          color: Color(0xffD4AF37),
+                          size: 32,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "هل تمتلك مكتبًا عقاريًا؟",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "انضم إلى منصة عقارات الأنبار، وأنشئ صفحة خاصة بمكتبك، واعرض جميع عقاراتك في مكان واحد",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text("انضم الآن"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xffD4AF37),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          // سنربطه بالشاشة القادمة
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-          ],
-        ),
-
-        SizedBox(height: 12),
-
-        const Text(
-          "انضم إلى منصة عقارات الأنبار، وأنشئ صفحة خاصة بمكتبك، واعرض جميع عقاراتك في مكان واحد.",
-          style: TextStyle(
-            color: Colors.white70,
-            height: 1.5,
-          ),
-        ),
-
-        SizedBox(height: 18),
-
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.arrow_forward),
-            label: const Text("انضم الآن"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xffD4AF37),
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            onPressed: () {
-
-              // سنربطه بالشاشة القادمة
-
-            },
-          ),
-        ),
-
-      ],
-    ),
-  ),
-),
-
-const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
             const SizedBox(height: 10),
 
             // زر شروط الاستخدام المنسق والمنظم بالكامل
             menuItem(
-  context,
-  Icons.description,
-  "شروط الاستخدام",
-  () => showTermsSheet(context),
-),
+              context,
+              Icons.description,
+              "شروط الاستخدام",
+              () => showTermsSheet(context),
+            ),
 
             // زر تواصل معنا الاحترافي والمحاذي بشكل صحيح
             menuItem(
@@ -494,7 +482,7 @@ const SizedBox(height: 15),
                                   ),
                                   const SizedBox(height: 6),
                                   const Text(
-                                    "تطبيق عقارات الأنبار هو المنصة الرقمية المتكاملة والمتخصصة في سوق العقارات داخل محافظة الأنبار. انطلق التطبيق ليكون صلة الوصل الأسرع والأكثر أماناً بين الباحثين عن عقارات (شراء أو إيجار) وبين الملاك وأصحاب المكاتب العقارية، مستفيدين من أحدث التقنيات لتسهيل عملية البحث والتسويق.",
+                                    "تطبيق عقارات الأنبار هو المنصة الرقمية المتكاملة والمتخصصة في سوق العقارات داخل محافظة الأنبار. انطلق التطبيق ليكون صلة الوصل الأسرع والأكثر أماناً بين الباحثين عن عقارات (شراء أو إيجار) وبين الملاك وأصحاب المكاتب العقارية، مستفيدين من أحدث التقنيات لتسهيل عملية البحث والتسويق",
                                     textAlign: TextAlign.justify,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -511,7 +499,7 @@ const SizedBox(height: 15),
                                   ),
                                   const SizedBox(height: 6),
                                   const Text(
-                                    "أن نكون الدليل العقاري الأول والأنشط في الأنبار، ونساهم في تطوير وتسهيل حركة الاستثمار العقاري والتوسع العمراني الذي تشهده المحافظة، من خلال توفير بيئة رقمية شفافة وموثوقة لكل مستخدم.",
+                                    "أن نكون الدليل العقاري الأول والأنشط في الأنبار، ونساهم في تطوير وتسهيل حركة الاستثمار العقاري والتوسع العمراني الذي تشهده المحافظة، من خلال توفير بيئة رقمية شفافة وموثوقة لكل مستخدم",
                                     textAlign: TextAlign.justify,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -580,32 +568,6 @@ const SizedBox(height: 15),
     );
   }
 
-  // دالة مساعدة لبناء فقرات شروط الاستخدام بشكل منسق ومحاذي
-  Widget _buildTermSection(String title, String content) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: Color(0xffD4AF37)),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            content,
-            textAlign: TextAlign.justify,
-            style: const TextStyle(
-                fontSize: 14, color: Colors.white70, height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ودجت فرعية مساعدة لبناء نقاط المميزات في "عن التطبيق" بشكل منسق
   Widget _buildFeaturePoint(String text) {
     return Padding(
@@ -618,7 +580,7 @@ const SizedBox(height: 15),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: Colors.white70,
               ),

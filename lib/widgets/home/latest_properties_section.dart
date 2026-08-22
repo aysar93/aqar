@@ -13,8 +13,7 @@ class LatestPropertiesSection extends StatelessWidget {
     return StreamBuilder<List<PropertyModel>>(
       stream: PropertyService.latestProperties(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
             height: 325,
             child: Center(
@@ -42,8 +41,7 @@ class LatestPropertiesSection extends StatelessWidget {
         }
 
         return Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -71,19 +69,15 @@ class LatestPropertiesSection extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             SizedBox(
               height: 325,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: properties.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: 14),
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (context, index) {
-                  final property =
-                      properties[index];
+                  final property = properties[index];
 
                   return PropertyHorizontalCard(
                     property: property,
@@ -91,79 +85,50 @@ class LatestPropertiesSection extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              PropertyDetails(
+                          builder: (_) => PropertyDetails(
                             docId: property.id,
-                            propertyNumber:
-                                property.propertyNumber,
+                            propertyNumber: property.propertyNumber,
                             isFavorite: false,
-                            imageUrl:
-                                property.imageUrl,
+                            imageUrl: property.imageUrl,
                             title: property.title,
-                            location:
-                                property.location,
-                            price: property.price
-                                .toString(),
+                            location: property.location,
+                            price: property.price.toString(),
+                            negotiable: property.negotiable,
                             rooms: property.rooms,
-                            bathrooms:
-                                property.bathrooms,
+                            bathrooms: property.bathrooms,
                             area: property.area,
-                            livingRooms:
-                                property.livingRooms,
-                            parking:
-                                property.parking,
-                            description:
-                                property.description,
-                            ownerPhone:
-                                property.ownerPhone,
-                            ownerWhatsapp:
-                                property.ownerWhatsapp,
-                            publisherPhone:
-                                property.publisherPhone,
-                            publisherWhatsapp:
-                                property
-                                    .publisherWhatsapp,
-                            publisherUid:
-                                property.publisherUid,
-                            publisherName:
-                                property.publisherName,
-                            publisherEmail:
-                                property.publisherEmail,
-                            propertyType:
-                                property.propertyType,
-                            adType:
-                                property.adType,
+                            frontage: property.frontage,
+                            depth: property.depth,
+                            floors: property.floors,
+                            apartmentFloor: property.apartmentFloor,
+                            unitsCount: property.unitsCount,
+                            livingRooms: property.livingRooms,
+                            parking: property.parking,
+                            description: property.description,
+                            ownerPhone: property.ownerPhone,
+                            ownerWhatsapp: property.ownerWhatsapp,
+                            publisherPhone: property.publisherPhone,
+                            publisherWhatsapp: property.publisherWhatsapp,
+                            publisherUid: property.publisherUid,
+                            publisherName: property.publisherName,
+                            publisherEmail: property.publisherEmail,
+                            propertyType: property.propertyType,
+                            adType: property.adType,
                             city: property.city,
-                            areaName:
-                                property.areaName,
-                            landmark:
-                                property.landmark,
-                            latitude:
-                                property.latitude,
-                            longitude:
-                                property.longitude,
-                            availabilityStatus:
-                                property
-                                    .availabilityStatus,
-                            isVerified:
-                                property.isVerified,
-                            isFeatured:
-                                property.isFeatured,
-                            views:
-                                property.views,
-                            createdAt:
-                                property.createdAt,
-                            buildYear:
-                                property.buildYear,
-                            images:
-                                property.images,
-                            features:
-                                property.features,
-                            documentType:
-                                property.documentType,
-                            furnitureStatus:
-                                property
-                                    .furnitureStatus,
+                            areaName: property.areaName,
+                            landmark: property.landmark,
+                            latitude: property.latitude,
+                            longitude: property.longitude,
+                            availabilityStatus: property.availabilityStatus,
+                            isVerified: property.isVerified,
+                            isFeatured: property.isFeatured,
+                            views: property.views,
+                            createdAt: property.createdAt,
+                            buildYear: property.buildYear,
+                            images: property.images,
+                            features: property.features,
+                            documentType: property.documentType,
+                            furnitureStatus: property.furnitureStatus,
                           ),
                         ),
                       );
@@ -172,7 +137,6 @@ class LatestPropertiesSection extends StatelessWidget {
                 },
               ),
             ),
-
             const SizedBox(height: 25),
           ],
         );

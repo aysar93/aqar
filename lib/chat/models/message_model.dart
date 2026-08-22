@@ -28,7 +28,6 @@ class MessageModel {
     required this.message,
     required this.imageUrl,
     required this.type,
-
     this.latitude,
     this.longitude,
     required this.isRead,
@@ -51,11 +50,9 @@ class MessageModel {
       imageUrl: data["imageUrl"] ?? "",
       type: data["type"] ?? "text",
 
-      latitude:
-    data["latitude"]?.toDouble(),
+      latitude: data["latitude"]?.toDouble(),
 
-longitude:
-    data["longitude"]?.toDouble(),
+      longitude: data["longitude"]?.toDouble(),
       isRead: data["isRead"] ?? false,
 
       // إذا كانت الرسائل القديمة لا تحتوي على status
@@ -74,10 +71,8 @@ longitude:
       "message": message,
       "imageUrl": imageUrl,
       "type": type,
-
-"latitude": latitude,
-
-"longitude": longitude,
+      "latitude": latitude,
+      "longitude": longitude,
       "isRead": isRead,
       "status": status,
       "createdAt": createdAt,

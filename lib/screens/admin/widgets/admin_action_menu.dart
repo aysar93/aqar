@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'change_availability_sheet.dart';
+import '../../../services/notification_service.dart';
 
 class AdminActionMenu extends StatelessWidget {
   final DocumentSnapshot document;
@@ -11,23 +13,60 @@ class AdminActionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = document.data() as Map<String, dynamic>;
+
+    final isFeatured = data["isFeatured"] ?? false;
 
     return PopupMenuButton<String>(
       icon: const Icon(
         Icons.more_vert,
         color: Colors.white,
       ),
-
       color: const Color(0xff1E293B),
-
       onSelected: (value) async {
-
         switch (value) {
+          case "availability":
+            if (!context.mounted) return;
+
+            final currentStatus =
+                data["availabilityStatus"]?.toString() ?? "available";
+
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: const Color(0xff1E293B),
+              isScrollControlled: true,
+              builder: (_) => ChangeAvailabilitySheet(
+                documentId: document.id,
+                currentStatus: currentStatus,
+              ),
+            );
+            return;
 
           case "approve":
             await document.reference.update({
               "status": "approved",
             });
+
+            final ownerUid =
+                (data["publisherUid"] ?? data["userId"] ?? "").toString();
+
+            if (ownerUid.isNotEmpty) {
+              await NotificationService.sendNotification(
+                title: "تم قبول إعلانك",
+                message: "تمت الموافقة على عقارك بنجاح",
+                type: "property_approved",
+                target: "user",
+                userId: ownerUid,
+                propertyId: document.id,
+              );
+            } else {
+              debugPrint(
+                "AdminActionMenu: "
+                "Cannot send approval notification - owner UID is empty. "
+                "propertyId=${document.id}",
+              );
+            }
+
             break;
 
           case "pending":
@@ -40,53 +79,49 @@ class AdminActionMenu extends StatelessWidget {
             await document.reference.update({
               "status": "rejected",
             });
+
+            final ownerUid =
+                (data["publisherUid"] ?? data["userId"] ?? "").toString();
+
+            if (ownerUid.isNotEmpty) {
+              await NotificationService.sendNotification(
+                title: "تم رفض إعلانك",
+                message: "تم رفض العقار من قبل الإدارة، يرجى مراجعة البيانات",
+                type: "property_rejected",
+                target: "user",
+                userId: ownerUid,
+                propertyId: document.id,
+              );
+            } else {
+              debugPrint(
+                "AdminActionMenu: "
+                "Cannot send rejection notification - owner UID is empty. "
+                "propertyId=${document.id}",
+              );
+            }
+
             break;
 
-            case "available":
-  await document.reference.update({
-    "availabilityStatus": "متوفر",
-  });
-  break;
-
-case "reserved":
-  await document.reference.update({
-    "availabilityStatus": "محجوز",
-  });
-  break;
-
-case "sold":
-  await document.reference.update({
-    "availabilityStatus": "تم البيع",
-  });
-  break;
-
-case "rented":
-  await document.reference.update({
-    "availabilityStatus": "مؤجر",
-  });
-  break;
-
-case "unavailable":
-  await document.reference.update({
-    "availabilityStatus": "غير متوفر",
-  });
-  break;
+          case "featured":
+            await document.reference.update({
+              "isFeatured": !isFeatured,
+            });
+            break;
 
           case "delete":
             await document.reference.delete();
             break;
         }
         if (context.mounted) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("تم تنفيذ العملية بنجاح"),
-    ),
-  );
-}
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("تم تنفيذ العملية بنجاح"),
+            ),
+          );
+        }
       },
-
       itemBuilder: (context) => [
-                const PopupMenuItem(
+        const PopupMenuItem(
           value: "approve",
           child: ListTile(
             leading: Icon(
@@ -96,7 +131,6 @@ case "unavailable":
             title: Text("قبول الإعلان"),
           ),
         ),
-
         const PopupMenuItem(
           value: "pending",
           child: ListTile(
@@ -107,7 +141,6 @@ case "unavailable":
             title: Text("إرجاع للمراجعة"),
           ),
         ),
-
         const PopupMenuItem(
           value: "reject",
           child: ListTile(
@@ -118,66 +151,32 @@ case "unavailable":
             title: Text("رفض الإعلان"),
           ),
         ),
-
         const PopupMenuDivider(),
-
         const PopupMenuItem(
-          value: "available",
+          value: "availability",
           child: ListTile(
             leading: Icon(
-              Icons.home,
+              Icons.check_circle_outline,
               color: Colors.green,
             ),
-            title: Text("متوفر"),
+            title: Text("تغيير حالة التوفر"),
+            contentPadding: EdgeInsets.zero,
           ),
         ),
-
-        const PopupMenuItem(
-          value: "reserved",
+        PopupMenuItem(
+          value: "featured",
           child: ListTile(
             leading: Icon(
-              Icons.lock_clock,
-              color: Colors.orange,
+              isFeatured ? Icons.star : Icons.star_border,
+              color: const Color(0xffD4AF37),
             ),
-            title: Text("محجوز"),
+            title: Text(
+              isFeatured ? "إلغاء تمييز العقار" : "تمييز العقار",
+            ),
+            contentPadding: EdgeInsets.zero,
           ),
         ),
-
-        const PopupMenuItem(
-          value: "sold",
-          child: ListTile(
-            leading: Icon(
-              Icons.sell,
-              color: Colors.red,
-            ),
-            title: Text("تم البيع"),
-          ),
-        ),
-
-        const PopupMenuItem(
-          value: "rented",
-          child: ListTile(
-            leading: Icon(
-              Icons.key,
-              color: Colors.blue,
-            ),
-            title: Text("مؤجر"),
-          ),
-        ),
-
-        const PopupMenuItem(
-          value: "unavailable",
-          child: ListTile(
-            leading: Icon(
-              Icons.block,
-              color: Colors.grey,
-            ),
-            title: Text("غير متوفر"),
-          ),
-        ),
-
         const PopupMenuDivider(),
-
         const PopupMenuItem(
           value: "delete",
           child: ListTile(
@@ -188,7 +187,7 @@ case "unavailable":
             title: Text("حذف العقار"),
           ),
         ),
-              ],
+      ],
     );
   }
 }

@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -55,6 +52,18 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1031621585901',
     projectId: 'aqar-9f3f9',
     storageBucket: 'aqar-9f3f9.firebasestorage.app',
+  );
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyAPoW5hErTr__oc-gXx8r1UCzQTeHiTkgE',
+    appId: '1:1031621585901:ios:a8834b5b6455a5224b95e4',
+    messagingSenderId: '1031621585901',
+    projectId: 'aqar-9f3f9',
+    databaseURL:
+        'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'aqar-9f3f9.firebasestorage.app',
+    iosBundleId: 'com.andalus.aqar',
+    iosClientId:
+        '1031621585901-o49joo3lj39uhl9r214la59tndhj66lr.apps.googleusercontent.com',
   );
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCrrMFoyg66WCDleskA4PUuia3g7AOZRQQ',

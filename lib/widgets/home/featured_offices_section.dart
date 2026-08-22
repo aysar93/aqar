@@ -1,21 +1,50 @@
 import 'package:flutter/material.dart';
 
-import '../../models/office_model.dart';
-import '../../services/office_service.dart';
+import '../../office/models/office_model.dart';
+import '../../office/screens/office_profile_screen.dart';
+import '../../office/services/office_service.dart';
+import '../../office/widgets/office_card.dart';
+import '../../office/screens/offices_screen.dart';
 
-class FeaturedOfficesSection extends StatelessWidget {
+class FeaturedOfficesSection extends StatefulWidget {
   const FeaturedOfficesSection({super.key});
+
+  @override
+  State<FeaturedOfficesSection> createState() => _FeaturedOfficesSectionState();
+}
+
+class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
+  static const Color gold = Color(0xFFD4AF37);
+  static const Color sectionBackground = Color(0xFF0F172A);
+
+  final PageController _pageController = PageController();
+
+  late final Stream<List<OfficeModel>> _featuredOfficesStream;
+
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _featuredOfficesStream = OfficeService.featuredOffices();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<OfficeModel>>(
-      stream: OfficeService.featuredOffices(),
+      stream: _featuredOfficesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-            height: 185,
+            height: 260,
             child: Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(color: gold),
             ),
           );
         }
@@ -30,166 +59,190 @@ class FeaturedOfficesSection extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            margin: const EdgeInsets.symmetric(
+              vertical: 8,
+            ),
+            padding: const EdgeInsets.only(
+              top: 14,
+              bottom: 12,
+            ),
+            decoration: BoxDecoration(
+              color: sectionBackground,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: gold.withValues(alpha: 0.10),
+                width: 1,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Expanded(
-                  child: Text(
-                    "🏢 المكاتب العقارية",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                _buildHeader(context),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 260,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: offices.length,
+                    onPageChanged: (index) {
+                      if (mounted) {
+                        setState(() => _currentPage = index);
+                      }
+                    },
+                    itemBuilder: (context, index) {
+                      final office = offices[index];
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
+                        child: OfficeCard(
+                          office: office,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => OfficeProfileScreen(
+                                  officeId: office.id,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    // TODO: شاشة جميع المكاتب
-                  },
-                  child: const Text(
-                    "عرض الكل",
-                    style: TextStyle(
-                      color: Color(0xffD4AF37),
-                      fontWeight: FontWeight.bold,
-                    ),
+                if (offices.length > 1) ...[
+                  const SizedBox(height: 8),
+                  _buildPageIndicator(offices.length),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        children: [
+          Container(
+            width: 4,
+            height: 27,
+            decoration: BoxDecoration(
+              color: gold,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(width: 9),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'المكاتب المميزة',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'أفضل المكاتب العقارية المختارة لك',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                if (!context.mounted) return;
 
-            const SizedBox(height: 15),
-
-            SizedBox(
-              height: 185,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: offices.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: 14),
-                itemBuilder: (context, index) {
-                  final office = offices[index];
-
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(22),
-                    onTap: () {
-                      // TODO: الانتقال إلى صفحة المكتب
-                    },
-                    child: Container(
-                      width: 175,
-                      decoration: BoxDecoration(
-                        color: const Color(0xff1E293B),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: Colors.white10,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color:
-                                      const Color(0xffD4AF37),
-                                  width: 2,
-                                ),
-                              ),
-                              child: CircleAvatar(
-                                radius: 34,
-                                backgroundColor:
-                                    const Color(0xffD4AF37),
-                                backgroundImage:
-                                    office.logo.isNotEmpty
-                                        ? NetworkImage(
-                                            office.logo,
-                                          )
-                                        : null,
-                                child: office.logo.isEmpty
-                                    ? const Icon(
-                                        Icons.business,
-                                        color: Colors.black,
-                                        size: 34,
-                                      )
-                                    : null,
-                              ),
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            Text(
-                              office.name,
-                              maxLines: 1,
-                              overflow:
-                                  TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight:
-                                    FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-
-                            const SizedBox(height: 6),
-
-                            Text(
-                              "${office.propertyCount} عقار",
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: office.verified
-                                    ? const Color(
-                                        0xffD4AF37,
-                                      )
-                                    : Colors.grey,
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  30,
-                                ),
-                              ),
-                              child: Text(
-                                office.verified
-                                    ? "موثق"
-                                    : "غير موثق",
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (routeContext) => const OfficesScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: gold.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: const Text(
+                  'عرض الكل',
+                  style: TextStyle(
+                    color: gold,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 25),
-          ],
-        );
-      },
+  Widget _buildPageIndicator(int count) {
+    final visibleDots = count > 5 ? 5 : count;
+    final activeIndex = _currentPage.clamp(0, visibleDots - 1);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      textDirection: TextDirection.ltr,
+      children: List.generate(
+        visibleDots,
+        (index) {
+          final active = index == activeIndex;
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: active ? 18 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: active ? gold : Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          );
+        },
+      ),
     );
   }
 }

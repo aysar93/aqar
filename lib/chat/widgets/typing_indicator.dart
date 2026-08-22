@@ -5,7 +5,7 @@ class TypingIndicator extends StatelessWidget {
 
   const TypingIndicator({
     super.key,
-    this.text = "يكتب الآن...",
+    this.text = "يكتب الآن",
   });
 
   @override
@@ -19,7 +19,6 @@ class TypingIndicator extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 10),
-
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -39,9 +38,7 @@ class TypingIndicator extends StatelessWidget {
                     strokeWidth: 2,
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Text(
                   text,
                   style: const TextStyle(

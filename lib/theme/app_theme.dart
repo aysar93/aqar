@@ -66,32 +66,27 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: cardColor,
-
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 18,
         ),
-
         hintStyle: const TextStyle(
           color: textGrey,
         ),
-
         border: OutlineInputBorder(
-  borderRadius: BorderRadius.circular(18),
-  borderSide: BorderSide(
-    color: Colors.white24,
-    width: 1,
-  ),
-),
-
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Colors.white24,
+            width: 1,
+          ),
+        ),
         enabledBorder: OutlineInputBorder(
-  borderRadius: BorderRadius.circular(18),
-  borderSide: BorderSide(
-    color: Colors.white24,
-    width: 1,
-  ),
-),
-
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Colors.white24,
+            width: 1,
+          ),
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(

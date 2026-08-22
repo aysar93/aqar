@@ -22,21 +22,16 @@ class CommentModel {
   factory CommentModel.fromFirestore(
     DocumentSnapshot doc,
   ) {
-    final data =
-        doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>;
 
     return CommentModel(
       id: doc.id,
       text: data["text"] ?? "",
       userId: data["userId"] ?? "",
       userName: data["userName"] ?? "مستخدم",
-      createdAt:
-          data["createdAt"] ??
-          Timestamp.now(),
-      isHidden:
-          data["isHidden"] ?? false,
-      isPinned:
-          data["isPinned"] ?? false,
+      createdAt: data["createdAt"] ?? Timestamp.now(),
+      isHidden: data["isHidden"] ?? false,
+      isPinned: data["isPinned"] ?? false,
     );
   }
 

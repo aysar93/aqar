@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/build/
+/android/build/reports/
+/android/error.txt
+
+# Local editor, generated reports, and workspace notes
+/.vscode/
+/Microsoft/
+/log.txt
+/numbered.txt
+/office_connections.txt
+/office_search.txt
+/office_structure.txt
+/project_structure.txt

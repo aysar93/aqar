@@ -1,57 +1,26 @@
 class PropertyDefaultImages {
-
-
-  static String getImage(
-    String? propertyType,
-  ) {
-
-
-    switch(propertyType) {
-
-
+  static String getImage(String? propertyType) {
+    switch (propertyType) {
       case "بيت":
-
-        return
-        "ضع_هنا_رابط_صورة_البيت";
-
+        return "assets/images/defaults/house.png";
 
       case "شقة":
-
-        return
-        "ضع_هنا_رابط_صورة_الشقة";
-
+        return "assets/images/defaults/apartment.png";
 
       case "أرض":
-
-        return
-        "ضع_هنا_رابط_صورة_الأرض";
-
+        return "assets/images/defaults/land.png";
 
       case "محل":
-
-        return
-        "ضع_هنا_رابط_صورة_المحل";
-
+        return "assets/images/defaults/shop.png";
 
       case "عمارة":
-
-        return
-        "ضع_هنا_رابط_صورة_العمارة";
-
+        return "assets/images/defaults/building.png";
 
       case "مزرعة":
-
-        return
-        "ضع_هنا_رابط_صورة_المزرعة";
-
+        return "assets/images/defaults/farm.png";
 
       default:
-
-        return
-        "ضع_هنا_رابط_صورة_افتراضية";
-
+        return "assets/images/defaults/house.png";
     }
-
   }
-
 }

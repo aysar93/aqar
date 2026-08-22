@@ -12,7 +12,52 @@
           "package_name": "com.andalus.aqar"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1031621585901-0nrromnfa3qsed98kh4lj6qj95tit5lm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.andalus.aqar",
+            "certificate_hash": "7388ae9569a93b04e1a74ed9908798cdd15b0f65"
+          }
+        },
+        {
+          "client_id": "1031621585901-0vevni0dsqq37d6b4f5db79keq9jld2u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.andalus.aqar",
+            "certificate_hash": "8a3b4c29e746a4b235522931e088bbff20e9020e"
+          }
+        },
+        {
+          "client_id": "1031621585901-72orjj2fi44bqjfvvhosmh2vqsbfm9jf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.andalus.aqar",
+            "certificate_hash": "f6b7310a52a40f6288df5e8b4ef24db3d21f96af"
+          }
+        },
+        {
+          "client_id": "1031621585901-925um0rlprve4j7flugskj8hksqdt7jg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.andalus.aqar",
+            "certificate_hash": "e1662d19016f196982f02f7aa239f0680e72fcf8"
+          }
+        },
+        {
+          "client_id": "1031621585901-tb4obheear5721l2ff3fi42rrp8vf2fa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.andalus.aqar",
+            "certificate_hash": "155fbc083ebe6bc286695b8f4735927583c0f4ae"
+          }
+        },
+        {
+          "client_id": "1031621585901-upglau30rejkhjoqf21el5fdd2fjd3sv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBfpEGEA25NXv9AgMsw64dJir4IOrjXr3E"
@@ -20,7 +65,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1031621585901-upglau30rejkhjoqf21el5fdd2fjd3sv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     },
@@ -31,7 +81,12 @@
           "package_name": "com.example.aqar"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1031621585901-upglau30rejkhjoqf21el5fdd2fjd3sv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBfpEGEA25NXv9AgMsw64dJir4IOrjXr3E"
@@ -39,7 +94,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1031621585901-upglau30rejkhjoqf21el5fdd2fjd3sv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

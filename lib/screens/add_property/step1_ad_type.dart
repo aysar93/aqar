@@ -3,7 +3,6 @@ import '../../models/add_property_data.dart';
 import 'widgets/glass_card.dart';
 
 class Step1AdType extends StatelessWidget {
-
   final AddPropertyData property;
   final VoidCallback onChanged;
 
@@ -13,20 +12,13 @@ class Step1AdType extends StatelessWidget {
     required this.onChanged,
   });
 
-
   @override
   Widget build(BuildContext context) {
-
     return Padding(
       padding: const EdgeInsets.all(20),
-
       child: Column(
-
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           const Text(
             "نوع الإعلان",
             style: TextStyle(
@@ -35,11 +27,7 @@ class Step1AdType extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-
-
           const SizedBox(height: 10),
-
-
           const Text(
             "اختر نوع الإعلان",
             style: TextStyle(
@@ -47,121 +35,72 @@ class Step1AdType extends StatelessWidget {
               fontSize: 15,
             ),
           ),
-
-
           const SizedBox(height: 30),
-
-
-
           Expanded(
             child: Column(
               children: [
-
                 Expanded(
                   child: GlassCard(
-
-                    selected:
-                        property.adType ==
-                            "للبيع",
-
+                    selected: property.adType == "للبيع",
                     onTap: () {
-
-                      property.adType =
-                          "للبيع";
+                      property.adType = "للبيع";
 
                       onChanged();
-
                     },
-
                     child: const Column(
-
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
-
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
                         Icon(
                           Icons.sell_rounded,
                           size: 55,
-                          color:
-                              Color(0xffD4AF37),
+                          color: Color(0xffD4AF37),
                         ),
-
                         SizedBox(height: 15),
-
                         Text(
                           "للبيع",
                           style: TextStyle(
-                            color:
-                                Colors.white,
+                            color: Colors.white,
                             fontSize: 24,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-
                       ],
                     ),
                   ),
                 ),
-
-
                 const SizedBox(height: 20),
-
-
-
                 Expanded(
                   child: GlassCard(
-
-                    selected:
-                        property.adType ==
-                            "للإيجار",
-
+                    selected: property.adType == "للإيجار",
                     onTap: () {
-
-                      property.adType =
-                          "للإيجار";
+                      property.adType = "للإيجار";
 
                       onChanged();
-
                     },
-
                     child: const Column(
-
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
-
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
                         Icon(
                           Icons.key_rounded,
                           size: 55,
-                          color:
-                              Color(0xffD4AF37),
+                          color: Color(0xffD4AF37),
                         ),
-
                         SizedBox(height: 15),
-
                         Text(
                           "للإيجار",
                           style: TextStyle(
-                            color:
-                                Colors.white,
+                            color: Colors.white,
                             fontSize: 24,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-
                       ],
                     ),
                   ),
                 ),
-
               ],
             ),
           ),
-
         ],
       ),
     );

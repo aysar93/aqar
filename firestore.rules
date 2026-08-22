@@ -27,12 +27,37 @@ service cloud.firestore {
       // أي مستخدم مسجل يستطيع إضافة عقار
       allow create: if isSignedIn();
 
-      // صاحب العقار أو الأدمن
-      allow update, delete: if isSignedIn() &&
+      // صاحب العقار أو الأدمن.
+      // صاحب المكتب يستطيع تمييز/إلغاء تمييز عقار مكتبه فقط.
+      allow update: if isSignedIn() &&
         (
           resource.data.userId == request.auth.uid ||
-          isAdmin()
+          isAdmin() ||
+          (
+            resource.data.officeId != null &&
+            get(/databases/$(database)/documents/offices/$(resource.data.officeId))
+              .data.ownerId == request.auth.uid &&
+            request.resource.data.officeId == resource.data.officeId &&
+            request.resource.data.diff(resource.data)
+              .affectedKeys()
+              .hasOnly(['isFeatured', 'updatedAt'])
+          ) ||
+          (
+            request.resource.data.diff(resource.data)
+                .affectedKeys()
+                .hasOnly(['views']) &&
+            request.resource.data.views is int &&
+            resource.data.views is int &&
+            request.resource.data.views ==
+                resource.data.views + 1
+          )
         );
+
+allow delete: if isSignedIn() &&
+  (
+    resource.data.userId == request.auth.uid ||
+    isAdmin()
+  );
 
       // ==============================================
       // التعليقات
@@ -66,6 +91,91 @@ service cloud.firestore {
         }
       }
     }
+    // ==================================================
+    // طلبات العقارات
+    // ==================================================
+    match /property_requests/{requestId} {
+
+      // الطلبات المعتمدة يمكن للجميع مشاهدتها.
+      // صاحب الطلب والأدمن يستطيعان مشاهدة الطلب
+      // حتى أثناء المراجعة.
+      allow read: if
+        resource.data.status == "approved" ||
+        (
+          isSignedIn() &&
+          (
+            resource.data.userId == request.auth.uid ||
+            isAdmin()
+          )
+        );
+
+      // المستخدم المسجل يستطيع إنشاء طلب خاص به فقط،
+      // ويجب أن يبدأ الطلب بحالة pending.
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.publisherUid == request.auth.uid &&
+        request.resource.data.status == "pending";
+
+      // صاحب الطلب يستطيع تعديل بيانات طلبه،
+      // لكنه لا يستطيع تغيير المالك أو حالة المراجعة.
+      // الأدمن يستطيع التعديل بالكامل.
+      allow update: if isSignedIn() &&
+        (
+          isAdmin() ||
+          (
+            resource.data.userId == request.auth.uid &&
+            request.resource.data.userId == resource.data.userId &&
+            request.resource.data.publisherUid == resource.data.publisherUid &&
+            request.resource.data.status == resource.data.status
+          )
+        );
+
+      // صاحب الطلب أو الأدمن يستطيع حذف الطلب.
+      allow delete: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+    }
+    
+    
+// ==================================================
+// طلبات الانضمام كمكتب عقاري
+// ==================================================
+match /officeRequests/{requestId} {
+
+  // المستخدم يرى طلبه فقط، والأدمن يرى جميع الطلبات
+  allow read: if isSignedIn() &&
+    (
+      isAdmin() ||
+      resource.data.ownerId == request.auth.uid
+    );
+
+  // المستخدم المسجل يستطيع إرسال طلب مكتب خاص به
+  // ويبدأ الطلب بحالة pending
+  allow create: if isSignedIn() &&
+    request.resource.data.ownerId == request.auth.uid &&
+    request.resource.data.status == "pending";
+
+  // الأدمن يستطيع تعديل الطلب بالكامل
+  // المستخدم يستطيع تعديل طلبه دون تغيير المالك أو الحالة
+  allow update: if isSignedIn() &&
+    (
+      isAdmin() ||
+      (
+        resource.data.ownerId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.status == resource.data.status
+      )
+    );
+
+  // صاحب الطلب أو الأدمن يستطيع الحذف
+  allow delete: if isSignedIn() &&
+    (
+      resource.data.ownerId == request.auth.uid ||
+      isAdmin()
+    );
+}
 
     // ==================================================
     // Collection Group (comments)
@@ -85,34 +195,340 @@ service cloud.firestore {
     }
 
     // ==================================================
-    // المستخدمون
+// مشاهدات المكاتب
+// ==================================================
+match /office_events/{eventId} {
+  allow read: if true;
+  allow create: if true;
+  allow update, delete: if false;
+}
+// ==================================================
+// متابعو المكاتب
+// ==================================================
+match /office_followers/{followerId} {
+  // السماح للجميع بقراءة المتابعين لحساب العدد
+  allow read: if true;
+
+  // إنشاء متابعة للمستخدم المسجل فقط
+  allow create: if isSignedIn()
+    && request.resource.data.userId == request.auth.uid;
+
+  // المستخدم يستطيع فقط تعديل متابعته هو
+  allow update: if isSignedIn()
+    && resource.data.userId == request.auth.uid
+    && request.resource.data.userId == request.auth.uid;
+
+  // منع الحذف المباشر
+  allow delete: if false;
+}
+    
     // ==================================================
-    match /users/{userId} {
+// المكاتب العقارية
+// ==================================================
+match /offices/{officeId} {
+  // المكتب العام ظاهر للجميع إذا كان نشطًا.
+  // المالك والإدارة يستطيعان قراءة المكتب مهما كانت حالته.
+  allow read: if resource.data.status == "active" ||
+    (
+      isSignedIn() &&
+      (
+        resource.data.ownerId == request.auth.uid ||
+        isAdmin()
+      )
+    );
 
-      // الأدمن يرى الجميع
-      // المستخدم يرى نفسه
-      allow read: if isSignedIn() &&
+  // إنشاء المكتب يتم من الإدارة بعد اعتماد طلب الانضمام.
+  allow create: if isAdmin();
+
+  // الإدارة تملك صلاحية التعديل الكامل.
+  // المالك يعدّل بيانات العرض والتواصل فقط.
+  allow update: if isSignedIn() &&
+    (
+      isAdmin() ||
+      (
+        resource.data.ownerId == request.auth.uid &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "name",
+            "description",
+            "logoUrl",
+            "coverImageUrl",
+            "galleryImages",
+            "phone",
+            "whatsapp",
+            "email",
+            "website",
+            "facebook",
+            "instagram",
+            "telegram",
+            "tiktok",
+            "youtube",
+            "city",
+            "district",
+            "areaName",
+            "address",
+            "latitude",
+            "longitude",
+            "services",
+            "workingHours",
+            "establishedYear",
+            "licenseNumber",
+            "licenseImageUrl",
+            "updatedAt"
+          ])
+      )
+    );
+
+  // الحفاظ على السلوك الحالي: المالك أو الإدارة يستطيعان الحذف.
+  allow delete: if isSignedIn() &&
+    (
+      resource.data.ownerId == request.auth.uid ||
+      isAdmin()
+    );
+}
+// العلاقات التشغيلية للمكاتب: المالك يقرأ بيانات مكتبه، لكن الإدارة فقط
+// تعدل الاشتراك والإحصاءات. المراجعات والمتابعات محمية على مستوى صاحب السجل.
+match /office_followers/{followerId} {
+  allow read: if isSignedIn() && (isAdmin() ||
+    resource.data.userId == request.auth.uid ||
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid);
+  allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+  allow update, delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+}
+match /office_reviews/{reviewId} {
+  allow read: if true;
+  allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+  allow update: if isSignedIn() && (isAdmin() ||
+    resource.data.userId == request.auth.uid ||
+    (get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid &&
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasOwnerReply', 'ownerReply', 'updatedAt'])));
+  allow delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+}
+match /office_subscriptions/{subscriptionId} {
+
+  // الأدمن يرى جميع الاشتراكات،
+  // وصاحب المكتب يرى اشتراكاته فقط.
+  allow read: if isSignedIn() &&
+    (
+      isAdmin() ||
+      resource.data.ownerId == request.auth.uid
+    );
+
+  // صاحب المكتب يستطيع إنشاء طلب اشتراك فقط
+  // لمكتبه وبحالة pending.
+  allow create: if isSignedIn() &&
+    request.resource.data.ownerId == request.auth.uid &&
+    request.resource.data.status == 'pending' &&
+    get(
+      /databases/$(database)/documents/offices/$(request.resource.data.officeId)
+    ).data.ownerId == request.auth.uid;
+
+  // الإدارة تستطيع تعديل الاشتراك بالكامل.
+  //
+  // صاحب المكتب يستطيع فقط استهلاك محاولة تمييز واحدة
+  // من اشتراكه الفعال. لا يستطيع تعديل أي حقل آخر،
+  // ولا يستطيع تجاوز الحد الأقصى لمحاولات التمييز.
+  allow update: if isAdmin() ||
+    (
+      isSignedIn() &&
+      resource.data.ownerId == request.auth.uid &&
+      resource.data.officeId == request.resource.data.officeId &&
+      resource.data.ownerId == request.resource.data.ownerId &&
+      resource.data.status == 'active' &&
+      request.resource.data.status == 'active' &&
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'featuredPropertiesUsed',
+          'updatedAt'
+        ]) &&
+      request.resource.data.featuredPropertiesUsed is int &&
+      request.resource.data.featuredPropertiesUsed ==
         (
-          request.auth.uid == userId ||
-          isAdmin()
-        );
+          resource.data.keys().hasAll(['featuredPropertiesUsed']) &&
+          resource.data.featuredPropertiesUsed is int
+            ? resource.data.featuredPropertiesUsed + 1
+            : 1
+        ) &&
+      (
+        !resource.data.keys().hasAll(['maxFeaturedProperties']) ||
+        !(resource.data.maxFeaturedProperties is int) ||
+        resource.data.maxFeaturedProperties <= 0 ||
+        request.resource.data.featuredPropertiesUsed <=
+          resource.data.maxFeaturedProperties
+      )
+    );
 
-      // إنشاء الحساب أو تعديل الحساب الشخصي
-      allow create, update: if isSignedIn() &&
-          request.auth.uid == userId;
+  // الحذف للإدارة فقط.
+  allow delete: if isAdmin();
+}
+match /office_events/{eventId} {
+  allow create: if isSignedIn();
+  allow read: if isSignedIn() && (isAdmin() ||
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid);
+  allow update, delete: if isAdmin();
+}
 
-      // حذف المستخدم للأدمن فقط
-      allow delete: if isAdmin();
+// ==================================================
+// مدفوعات اشتراكات المكاتب
+// ==================================================
+match /subscription_payments/{paymentId} {
 
-      // ==========================================
-      // المفضلة
-      // ==========================================
-      match /favorites/{favoriteId} {
+  // الأدمن يرى جميع عمليات الدفع،
+  // وصاحب المكتب يرى عمليات الدفع الخاصة به فقط.
+  allow read: if isSignedIn() &&
+    (
+      isAdmin() ||
+      resource.data.ownerUid == request.auth.uid
+    );
 
-        allow read, write: if isSignedIn() &&
-            request.auth.uid == userId;
-      }
-    }
+  // صاحب المكتب يستطيع إنشاء عملية دفع خاصة باشتراكه فقط.
+  allow create: if isSignedIn() &&
+    request.resource.data.ownerUid == request.auth.uid &&
+    request.resource.data.officeId != null &&
+    request.resource.data.subscriptionId != null;
+
+  // الإدارة فقط تستطيع اعتماد أو رفض عملية الدفع.
+  allow update: if isAdmin();
+
+  // الإدارة فقط تستطيع حذف عملية الدفع.
+  allow delete: if isAdmin();
+}
+
+// ==================================================
+// بلاغات المكاتب
+// ==================================================
+match /office_reports/{reportId} {
+  // أي مستخدم مسجل يستطيع إرسال بلاغ.
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid;
+
+  // البلاغات للإدارة فقط.
+  allow read, update, delete: if isAdmin();
+}
+
+   // ============================================================
+// تحديثات التطبيق (App Updates)
+// ------------------------------------------------------------
+// - المستخدمون يستطيعون قراءة التحديثات المنشورة فقط.
+// - الأدمن يستطيع قراءة جميع الإصدارات.
+// - الأدمن يستطيع إنشاء وتعديل وحذف ونشر الإصدارات.
+// - isActive = true يعني أن الإصدار ظاهر للمستخدمين.
+// - isActive = false يعني أن الإصدار محفوظ لكنه غير ظاهر.
+// ============================================================
+
+match /app_updates/{updateId} {
+  allow read: if isAdmin() || resource.data.isActive == true;
+  allow write: if isAdmin();
+}
+   // ==================================================
+// المستخدمون
+// ==================================================
+match /users/{userId} {
+
+  // قراءة المستخدم:
+  // المستخدم يستطيع قراءة بياناته،
+  // والأدمن يستطيع قراءة جميع المستخدمين.
+  allow read: if isSignedIn() &&
+    (
+      request.auth.uid == userId ||
+      isAdmin()
+    );
+
+  // إنشاء حساب المستخدم لنفسه فقط.
+  allow create: if isSignedIn() &&
+    request.auth.uid == userId &&
+    request.resource.data.isAdmin == false &&
+    request.resource.data.isBlocked == false &&
+    request.resource.data.accountType == 'user' &&
+    request.resource.data.accountMode == 'user';
+
+  // التحديث:
+  // 1. المستخدم يستطيع تعديل حسابه.
+  // 2. الأدمن يستطيع تعديل صلاحية isAdmin فقط.
+  allow update: if isSignedIn() &&
+    (
+      (
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'name',
+            'email',
+            'photo',
+            'photoUrl',
+            'provider',
+            'providers',
+            'accountMode',
+            'activeOfficeId',
+            'notificationsEnabled',
+            'fcmToken',
+            'oneSignalId',
+            'lastLogin',
+            'updatedAt'
+          ])
+      ) ||
+      (
+        isAdmin() &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'isAdmin',
+            'adminUpdatedAt'
+          ])
+      )
+    );
+
+  // الحذف:
+  // المستخدم يستطيع حذف حسابه،
+  // والأدمن يستطيع حذف أي مستخدم.
+  allow delete: if isSignedIn() &&
+    (
+      request.auth.uid == userId ||
+      isAdmin()
+    );
+
+  // ==================================================
+  // المفضلة
+  // ==================================================
+  match /favorites/{favoriteId} {
+
+    allow read, write: if isSignedIn() &&
+      request.auth.uid == userId;
+  }
+}
+
+// فهرس تسجيل الدخول ورقابة المحاولات يُداران من Cloud Functions فقط.
+match /phone_login_index/{document=**} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() &&
+    (
+      (
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.authEmail == request.auth.token.email
+      ) || isAdmin()
+    );
+  allow update, delete: if isAdmin();
+}
+
+match /email_login_index/{document=**} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() &&
+    (
+      (
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.authEmail == request.auth.token.email
+      ) || isAdmin()
+    );
+  allow update, delete: if isAdmin();
+}
+
+match /auth_rate_limits/{document=**} {
+  allow read, write: if false;
+}
 
     // ==================================================
     // الإشعارات
@@ -144,17 +560,69 @@ allow delete: if isSignedIn() &&
 );
     }
 
-    // ==================================================
-    // إعدادات التطبيق
-    // ==================================================
-    match /settings/{document} {
+// ==================================================
+// البنرات الإعلانية
+// ==================================================
+match /banners/{bannerId} {
 
-      // الجميع يقرأ
-      allow read: if true;
+  // الجميع يستطيع مشاهدة البنرات
+  allow read: if true;
 
-      // الأدمن فقط يكتب
-      allow write: if isAdmin();
-    }
+  // الأدمن فقط يستطيع الإضافة والتعديل والحذف
+  allow create, update, delete: if isAdmin();
+}
+
+    // ==================================================
+// إعدادات التطبيق
+// ==================================================
+match /settings/{document} {
+
+  // الجميع يستطيع قراءة الإعدادات
+  allow read: if true;
+
+  // ==================================================
+  // تحديث عداد العقارات
+  // يسمح للمستخدم المسجل بزيادة lastNumber بمقدار 1 فقط
+  // ==================================================
+  allow update: if
+    (
+      document == "properties" &&
+      isSignedIn() &&
+      request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(["lastNumber"]) &&
+      request.resource.data.lastNumber is int &&
+      resource.data.lastNumber is int &&
+      request.resource.data.lastNumber ==
+          resource.data.lastNumber + 1
+    )
+
+    ||
+
+    // ==================================================
+    // تحديث عداد طلبات العقارات
+    // يسمح للمستخدم المسجل بزيادة lastNumber بمقدار 1 فقط
+    // ==================================================
+    (
+      document == "property_requests" &&
+      isSignedIn() &&
+      request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(["lastNumber"]) &&
+      request.resource.data.lastNumber is int &&
+      resource.data.lastNumber is int &&
+      request.resource.data.lastNumber ==
+          resource.data.lastNumber + 1
+    )
+
+    ||
+
+    // الأدمن يستطيع تحديث بقية إعدادات التطبيق
+    isAdmin();
+
+  // إنشاء أو حذف مستندات settings للأدمن فقط
+  allow create, delete: if isAdmin();
+}
 // ==================================================
 // الدردشة
 // ==================================================
@@ -201,10 +669,81 @@ match /chats/{chatId} {
         isAdmin()
       );
 
-    allow update: if isAdmin();
+    allow update: if isSignedIn() &&
+  (
+    request.auth.uid == chatId ||
+    isAdmin()
+  );
 
     allow delete: if isAdmin();
   }
+}
+// ==================================================
+// جلسات وزيارات التطبيق
+// ==================================================
+match /app_sessions/{sessionId} {
+
+  // المستخدم ينشئ جلسة لنفسه فقط
+  allow create: if
+    isSignedIn() &&
+    request.resource.data.visitorId == request.auth.uid &&
+    request.resource.data.isGuest is bool &&
+    request.resource.data.platform is string &&
+    request.resource.data.startedAt == request.time &&
+    request.resource.data.durationSeconds == 0;
+
+  // المستخدم يستطيع إنهاء جلسته فقط
+  allow update: if
+    isSignedIn() &&
+    resource.data.visitorId == request.auth.uid &&
+    request.resource.data.visitorId == resource.data.visitorId &&
+    request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          "endedAt",
+          "durationSeconds"
+        ]) &&
+    request.resource.data.durationSeconds is int &&
+    request.resource.data.durationSeconds >= 0;
+
+  // قراءة الإحصائيات والحذف للمدير فقط
+  allow read, delete: if isAdmin();
+}
+
+
+// ==================================================
+// آخر نشاط للمستخدمين والزوار
+// ==================================================
+match /user_activity/{visitorId} {
+
+  // إنشاء سجل النشاط لصاحب الحساب فقط
+  allow create: if
+    isSignedIn() &&
+    visitorId == request.auth.uid &&
+    request.resource.data.lastSeen == request.time &&
+    request.resource.data.isGuest is bool &&
+    request.resource.data.platform is string;
+
+  // تحديث آخر النشاط لصاحب الحساب فقط
+  allow update: if
+    isSignedIn() &&
+    visitorId == request.auth.uid &&
+    request.resource.data.lastSeen == request.time &&
+    request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          "userId",
+          "displayName",
+          "isGuest",
+          "platform",
+          "lastSeen",
+          "lastSessionId"
+        ]);
+
+  // عرض قائمة النشاط وحذف السجلات للمدير فقط
+  allow read, delete: if isAdmin();
 }
   }
 }

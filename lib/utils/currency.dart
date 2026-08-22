@@ -8,10 +8,7 @@ String iqd(dynamic amount) {
     number = amount;
   } else if (amount is String) {
     number = double.tryParse(
-          amount
-              .replaceAll('د.ع', '')
-              .replaceAll(',', '')
-              .trim(),
+          amount.replaceAll('د.ع', '').replaceAll(',', '').trim(),
         ) ??
         0;
   }

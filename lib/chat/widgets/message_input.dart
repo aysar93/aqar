@@ -43,39 +43,36 @@ class _MessageInputState extends State<MessageInput> {
     );
 
     await ChatService().sendMessage(
-  chatId: widget.chatId,
-  message: "",
-  imageUrl: url,
-  senderType: widget.senderType,
-  type: "image",
-);
+      chatId: widget.chatId,
+      message: "",
+      imageUrl: url,
+      senderType: widget.senderType,
+      type: "image",
+    );
   }
 
   Future<void> sendLocation() async {
-  LocationPermission permission =
-      await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
 
-  if (permission == LocationPermission.denied) {
-    permission =
-        await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    final position = await Geolocator.getCurrentPosition();
+
+    await ChatService().sendMessage(
+      chatId: widget.chatId,
+      senderType: widget.senderType,
+      type: "location",
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
   }
-
-  if (permission == LocationPermission.denied ||
-      permission == LocationPermission.deniedForever) {
-    return;
-  }
-
-  final position =
-      await Geolocator.getCurrentPosition();
-
-  await ChatService().sendMessage(
-    chatId: widget.chatId,
-    senderType: widget.senderType,
-    type: "location",
-    latitude: position.latitude,
-    longitude: position.longitude,
-  );
-}
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +101,7 @@ class _MessageInputState extends State<MessageInput> {
                 ),
                 decoration: InputDecoration(
                   hintText: widget.enabled
-                      ? "اكتب رسالتك..."
+                      ? "اكتب رسالتك"
                       : "تم إغلاق المحادثة من قبل الإدارة",
                   hintStyle: const TextStyle(
                     color: Colors.white54,
@@ -133,23 +130,19 @@ class _MessageInputState extends State<MessageInput> {
                 ),
               ),
             ),
-
             const SizedBox(width: 8),
-
             CircleAvatar(
-  radius: 22,
-  backgroundColor: const Color(0xFF0F172A),
-  child: IconButton(
-    onPressed: widget.enabled ? sendLocation : null,
-    icon: const Icon(
-      Icons.location_on,
-      color: Color(0xFFD4AF37),
-    ),
-  ),
-),
-
-const SizedBox(width: 8),
-
+              radius: 22,
+              backgroundColor: const Color(0xFF0F172A),
+              child: IconButton(
+                onPressed: widget.enabled ? sendLocation : null,
+                icon: const Icon(
+                  Icons.location_on,
+                  color: Color(0xFFD4AF37),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             CircleAvatar(
               radius: 22,
               backgroundColor: const Color(0xFF0F172A),
@@ -161,18 +154,13 @@ const SizedBox(width: 8),
                 ),
               ),
             ),
-
             const SizedBox(width: 8),
-
             CircleAvatar(
               radius: 24,
-              backgroundColor: widget.enabled
-                  ? const Color(0xFFD4AF37)
-                  : Colors.grey,
+              backgroundColor:
+                  widget.enabled ? const Color(0xFFD4AF37) : Colors.grey,
               child: IconButton(
-                onPressed: widget.enabled
-                    ? widget.onSend
-                    : null,
+                onPressed: widget.enabled ? widget.onSend : null,
                 icon: const Icon(
                   Icons.send_rounded,
                   color: Colors.black,

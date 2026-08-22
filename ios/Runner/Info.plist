@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Aqar</string>
+	<string>عقارات الأنبار</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -16,6 +16,36 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>aqar</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1031621585901-o49joo3lj39uhl9r214la59tndhj66lr</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb1745018726927685</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>1745018726927685</string>
+	<key>FacebookClientToken</key>
+	<string>deb6b71ce90d4b269491847482f4925a</string>
+	<key>FacebookDisplayName</key>
+	<string>عقارات الأنبار</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -26,6 +56,17 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>نحتاج إلى الكاميرا لالتقاط صور العقارات والمستندات.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>نحتاج إلى موقعك لتحديد موقع العقار على الخريطة.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج إلى مكتبة الصور لإرفاق صور العقارات والمحادثات.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

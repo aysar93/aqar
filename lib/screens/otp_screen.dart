@@ -11,21 +11,19 @@ class OtpScreen extends StatefulWidget {
   });
 
   @override
-  State<OtpScreen> createState() =>
-      _OtpScreenState();
+  State<OtpScreen> createState() => _OtpScreenState();
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-
-  final codeController =
-      TextEditingController();
+  final codeController = TextEditingController();
 
   bool loading = false;
   String error = '';
 
   Future<void> verify() async {
-    if (codeController.text.length < 6)
+    if (codeController.text.length < 6) {
       return;
+    }
 
     setState(() {
       loading = true;
@@ -33,16 +31,12 @@ class _OtpScreenState extends State<OtpScreen> {
     });
 
     try {
-      PhoneAuthCredential credential =
-          PhoneAuthProvider.credential(
-        verificationId:
-            widget.verificationId,
-        smsCode:
-            codeController.text.trim(),
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: widget.verificationId,
+        smsCode: codeController.text.trim(),
       );
 
-      await FirebaseAuth.instance
-          .signInWithCredential(
+      await FirebaseAuth.instance.signInWithCredential(
         credential,
       );
 
@@ -51,15 +45,13 @@ class _OtpScreenState extends State<OtpScreen> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              const MainShell(),
+          builder: (_) => const MainShell(),
         ),
         (route) => false,
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
-        error =
-            e.message ?? "رمز غير صحيح";
+        error = e.message ?? "رمز غير صحيح";
       });
     }
 
@@ -72,88 +64,60 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text("رمز التحقق"),
+        title: const Text("رمز التحقق"),
       ),
       body: Padding(
-        padding:
-            const EdgeInsets.all(25),
+        padding: const EdgeInsets.all(25),
         child: Column(
           children: [
-
             const SizedBox(
               height: 50,
             ),
-
             const Icon(
               Icons.sms,
               size: 90,
-              color:
-                  Color(0xff0D47A1),
+              color: Color(0xff0D47A1),
             ),
-
             const SizedBox(
               height: 20,
             ),
-
             const Text(
               "أدخل رمز التحقق",
               style: TextStyle(
                 fontSize: 24,
-                fontWeight:
-                    FontWeight.bold,
+                fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(
               height: 30,
             ),
-
             TextField(
-              controller:
-                  codeController,
-              keyboardType:
-                  TextInputType.number,
+              controller: codeController,
+              keyboardType: TextInputType.number,
               maxLength: 6,
-              textAlign:
-                  TextAlign.center,
-              decoration:
-                  InputDecoration(
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
                 hintText: "******",
-                border:
-                    OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius
-                          .circular(
-                              15),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
                 ),
               ),
             ),
-
             if (error.isNotEmpty)
               Text(
                 error,
-                style:
-                    const TextStyle(
-                  color:
-                      Colors.red,
+                style: const TextStyle(
+                  color: Colors.red,
                 ),
               ),
-
             const SizedBox(
               height: 20,
             ),
-
             SizedBox(
-              width:
-                  double.infinity,
+              width: double.infinity,
               height: 55,
-              child:
-                  ElevatedButton(
-                onPressed:
-                    loading
-                        ? null
-                        : verify,
+              child: ElevatedButton(
+                onPressed: loading ? null : verify,
                 child: loading
                     ? const CircularProgressIndicator()
                     : const Text(

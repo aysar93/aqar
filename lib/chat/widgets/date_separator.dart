@@ -52,25 +52,18 @@ class DateSeparator extends StatelessWidget {
               color: Colors.white24,
             ),
           ),
-
           Container(
-            margin:
-                const EdgeInsets.symmetric(
+            margin: const EdgeInsets.symmetric(
               horizontal: 10,
             ),
-
-            padding:
-                const EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 5,
             ),
-
             decoration: BoxDecoration(
               color: const Color(0xFF334155),
-              borderRadius:
-                  BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20),
             ),
-
             child: Text(
               text,
               style: const TextStyle(
@@ -80,7 +73,6 @@ class DateSeparator extends StatelessWidget {
               ),
             ),
           ),
-
           const Expanded(
             child: Divider(
               color: Colors.white24,

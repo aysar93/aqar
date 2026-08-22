@@ -1,0 +1,97 @@
+workflows:
+  ios-review-no-signing:
+    name: iPhone Review - No Apple Account
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: stable
+      xcode: latest
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Run automated tests
+        script: flutter test
+
+      - name: Build iPhone Simulator app without signing
+        script: flutter build ios --simulator --release
+
+      - name: Package simulator build
+        script: |
+          cd build/ios/iphonesimulator
+          zip -r Runner-simulator.zip Runner.app
+
+    artifacts:
+      - build/ios/iphonesimulator/Runner-simulator.zip
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+  ios-app-store:
+    name: iPhone - App Store Connect
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    environment:
+      groups:
+        # Required secrets and identifiers are documented in
+        # docs/ios-codemagic-release.md.
+        - appstore_credentials
+        - ios_config
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.andalus.aqar
+      flutter: stable
+      xcode: latest
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Run automated tests
+        script: flutter test
+
+      - name: Initialize signing keychain
+        script: keychain initialize
+
+      - name: Fetch App Store signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Install signing certificate
+        script: keychain add-certificates
+
+      - name: Apply provisioning profiles
+        script: xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          flutter build ipa --release \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist="$HOME/export_options.plist"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true

@@ -19,103 +19,54 @@ class NotificationBadge extends StatelessWidget {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('notifications')
-          .snapshots(),
-
+      stream:
+          FirebaseFirestore.instance.collection('notifications').snapshots(),
       builder: (context, snapshot) {
-
         int count = 0;
 
         if (snapshot.hasData) {
-
           count = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
 
-            final data =
-                doc.data() as Map<String, dynamic>;
+            final target = data['target'] ?? '';
 
-            final target =
-                data['target'] ?? '';
-
-            final userId =
-                data['userId'] ?? '';
+            final userId = data['userId'] ?? '';
 
             final List readBy = data['readBy'] ?? [];
 
-final isRead = readBy.contains(uid);
+            final isRead = readBy.contains(uid);
 
-return !isRead &&
-    (
-      target == 'all' ||
-      (
-        target == 'user' &&
-        userId == uid
-      )
-    );
-
+            return !isRead &&
+                (target == 'all' || (target == 'user' && userId == uid));
           }).length;
         }
 
-
         return Stack(
           clipBehavior: Clip.none,
-
           children: [
-
             child,
-
-
             if (count > 0)
-
               Positioned(
                 right: -8,
                 top: -8,
-
                 child: Container(
-
-                  padding:
-                      const EdgeInsets.all(5),
-
-                  decoration:
-                      const BoxDecoration(
-
+                  padding: const EdgeInsets.all(5),
+                  decoration: const BoxDecoration(
                     color: Colors.red,
-
-                    shape:
-                        BoxShape.circle,
-
+                    shape: BoxShape.circle,
                   ),
-
-                  constraints:
-                      const BoxConstraints(
+                  constraints: const BoxConstraints(
                     minWidth: 18,
                     minHeight: 18,
                   ),
-
-
                   child: Text(
-
-                    count > 9
-                        ? "9+"
-                        : count.toString(),
-
-                    style:
-                        const TextStyle(
-
-                      color:
-                          Colors.white,
-
-                      fontSize:
-                          11,
-
-                      fontWeight:
-                          FontWeight.bold,
-
+                    count > 9 ? "9+" : count.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
                     ),
-
-                    textAlign:
-                        TextAlign.center,
-
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),

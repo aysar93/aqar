@@ -13,6 +13,10 @@ class ChatModel {
   final int unreadUser;
 
   final bool isClosed;
+  final bool isPinned;
+  final bool isArchived;
+  final bool isMuted;
+  final bool isBlocked;
 
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
@@ -27,6 +31,10 @@ class ChatModel {
     required this.unreadAdmin,
     required this.unreadUser,
     required this.isClosed,
+    this.isPinned = false,
+    this.isArchived = false,
+    this.isMuted = false,
+    this.isBlocked = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -46,6 +54,10 @@ class ChatModel {
       unreadAdmin: data["unreadAdmin"] ?? 0,
       unreadUser: data["unreadUser"] ?? 0,
       isClosed: data["isClosed"] ?? false,
+      isPinned: data["isPinned"] ?? false,
+      isArchived: data["isArchived"] ?? false,
+      isMuted: data["isMuted"] ?? false,
+      isBlocked: data["isBlocked"] ?? false,
       createdAt: data["createdAt"],
       updatedAt: data["updatedAt"],
     );
@@ -61,6 +73,10 @@ class ChatModel {
       "unreadAdmin": unreadAdmin,
       "unreadUser": unreadUser,
       "isClosed": isClosed,
+      "isPinned": isPinned,
+      "isArchived": isArchived,
+      "isMuted": isMuted,
+      "isBlocked": isBlocked,
       "createdAt": createdAt,
       "updatedAt": updatedAt,
     };
