@@ -28,6 +28,7 @@ workflows:
           zip -r Runner-simulator.zip Runner.app
 
     artifacts:
+      - build/ios/iphonesimulator/Runner.app
       - build/ios/iphonesimulator/Runner-simulator.zip
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
