@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -25,13 +26,32 @@ Future<void> main() async {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     return true;
   };
-  await FCMService.initialize();
-  await AppActivityService.instance.initialize();
   runApp(MultiProvider(providers: [
     ChangeNotifierProvider(
         create: (_) => AppSettingsProvider()..loadSettings()),
     ChangeNotifierProvider(create: (_) => UserProvider()),
   ], child: const AqarApp()));
+
+  // Network-dependent services must never block the first Flutter frame.
+  // This is especially important on fresh installs, simulators, or when
+  // notification/analytics permissions have not been provisioned yet.
+  unawaited(_initializeBackgroundServices());
+}
+
+Future<void> _initializeBackgroundServices() async {
+  try {
+    await FCMService.initialize();
+  } catch (error, stack) {
+    debugPrint('FCM initialization failed: $error');
+    await FirebaseCrashlytics.instance.recordError(error, stack);
+  }
+
+  try {
+    await AppActivityService.instance.initialize();
+  } catch (error, stack) {
+    debugPrint('App activity initialization failed: $error');
+    await FirebaseCrashlytics.instance.recordError(error, stack);
+  }
 }
 
 class AqarApp extends StatelessWidget {
