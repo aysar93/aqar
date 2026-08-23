@@ -13,10 +13,18 @@
 ## المتطلبات في Apple
 
 1. عضوية Apple Developer فعالة.
-2. App ID صريح بالمعرّف `com.andalus.aqar` مع تفعيل Push Notifications.
+2. App ID صريح بالمعرّف `com.andalus.aqar` مع تفعيل Push Notifications و
+   **Sign in with Apple**.
 3. سجل تطبيق في App Store Connect بالمعرّف نفسه.
 4. مفتاح App Store Connect API بصلاحية **App Manager**، مع الاحتفاظ بملف `.p8`؛
    يمكن تنزيله مرة واحدة فقط.
+
+## تفعيل تسجيل الدخول بواسطة Apple في Firebase
+
+بعد تفعيل Sign in with Apple في Apple Developer، افتح Firebase Console ثم
+Authentication > Sign-in method > Apple، وأدخل Team ID وKey ID والمفتاح الخاص
+وService ID وفق البيانات التي تنشئها في حساب Apple. لا تضف المفتاح الخاص إلى
+Git أو ملفات المشروع.
 
 ## متغيرات Codemagic
 

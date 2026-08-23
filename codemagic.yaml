@@ -16,6 +16,9 @@ workflows:
       - name: Get Flutter packages
         script: flutter pub get
 
+      - name: Configure Sign in with Apple entitlement
+        script: swift tools/configure_ios_entitlements.swift
+
       - name: Run automated tests
         script: flutter test
 
@@ -57,6 +60,9 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+
+      - name: Configure Sign in with Apple entitlement
+        script: swift tools/configure_ios_entitlements.swift
 
       - name: Run automated tests
         script: flutter test

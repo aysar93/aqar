@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/user_provider.dart';
+import '../services/apple_auth_service.dart';
 import '../services/facebook_auth_service.dart';
 import '../services/google_auth_service.dart';
 import '../services/password_auth_service.dart';
@@ -379,6 +380,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
+                          if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: _loading
+                                  ? null
+                                  : () => _socialLogin(
+                                        AppleAuthService.signInWithApple,
+                                        'Apple',
+                                      ),
+                              icon: const FaIcon(
+                                FontAwesomeIcons.apple,
+                                size: 20,
+                              ),
+                              label: const Text('المتابعة باستخدام Apple'),
+                            ),
+                          ],
                         ],
                       ),
                     ),
