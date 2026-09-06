@@ -85,10 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = value ?? '';
     if (password.isEmpty) return 'يرجى إدخال كلمة المرور';
     if (password.length < 6) return 'استخدم 6 أحرف على الأقل';
-    if (!RegExp(r'[A-Za-z]').hasMatch(password) ||
-        !RegExp(r'\d').hasMatch(password)) {
-      return 'يجب أن تحتوي على حرف ورقم على الأقل';
-    }
     return null;
   }
 
@@ -187,7 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           autofillHints: const [AutofillHints.newPassword],
                           decoration: InputDecoration(
                             labelText: 'كلمة المرور',
-                            helperText: '6 أحرف على الأقل وتتضمن حرفًا ورقمًا',
+                            helperText: '6 أحرف على الأقل',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
                               onPressed: () => setState(

@@ -32,7 +32,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           elevation: 0,
           centerTitle: true,
           title: const Text(
-            "لوحة إدارة عقارات الأنبار",
+            "لوحة إدارة عقارات الانبار",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,

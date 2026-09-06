@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppSettingsProvider extends ChangeNotifier {
-  String appName = "عقارات الأنبار";
+  String appName = "عقارات الانبار";
 
   String officeName = "مكتب الأندلس للعقارات";
 

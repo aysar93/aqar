@@ -29,7 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     {
       "title": "اعرض عقارك للبيع",
       "description":
-          "بيع عقارك عن طريق عقارات الأنبار في أسرع وقت وبأسهل طريقة ممكنة",
+          "بيع عقارك عن طريق عقارات الانبار في أسرع وقت وبأسهل طريقة ممكنة",
       "image": "assets/images/onboarding_2.png",
     },
     {

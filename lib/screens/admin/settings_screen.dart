@@ -15,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController appNameController = TextEditingController(
-    text: "عقارات الأنبار",
+    text: "عقارات الانبار",
   );
 
   final TextEditingController officeNameController = TextEditingController(

@@ -261,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      "انضم إلى منصة عقارات الأنبار، وأنشئ صفحة خاصة بمكتبك، واعرض جميع عقاراتك في مكان واحد",
+                      "انضم إلى منصة عقارات الانبار وأنشئ صفحة خاصة بمكتبك، واعرض جميع عقاراتك في مكان واحد",
                       style: TextStyle(
                         color: Colors.white70,
                         height: 1.5,
@@ -464,7 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Color(0xffD4AF37)),
                           ),
                           const Text(
-                            "الإصدار 1.0.0",
+                            "الإصدار 1.0.1",
                             style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                           const Divider(height: 30),
@@ -482,7 +482,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   const Text(
-                                    "تطبيق عقارات الأنبار هو المنصة الرقمية المتكاملة والمتخصصة في سوق العقارات داخل محافظة الأنبار. انطلق التطبيق ليكون صلة الوصل الأسرع والأكثر أماناً بين الباحثين عن عقارات (شراء أو إيجار) وبين الملاك وأصحاب المكاتب العقارية، مستفيدين من أحدث التقنيات لتسهيل عملية البحث والتسويق",
+                                    "تطبيق عقارات الانبار هو المنصة الرقمية المتكاملة والمتخصصة في سوق العقارات داخل محافظة الأنبار. انطلق التطبيق ليكون صلة الوصل الأسرع والأكثر أماناً بين الباحثين عن عقارات (شراء أو إيجار) وبين الملاك وأصحاب المكاتب العقارية، مستفيدين من أحدث التقنيات لتسهيل عملية البحث والتسويق",
                                     textAlign: TextAlign.justify,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -526,7 +526,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 25),
                                   const Center(
                                     child: Text(
-                                      "جميع الحقوق محفوظة © عقارات الأنبار 2026",
+                                      "جميع الحقوق محفوظة © عقارات الانبار 2026",
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
                                     ),

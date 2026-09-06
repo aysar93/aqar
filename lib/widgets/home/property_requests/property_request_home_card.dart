@@ -221,7 +221,7 @@ class PropertyRequestHomeCard extends StatelessWidget {
             ),
             content: Text(
               'هل أنت متأكد من حذف طلب $propertyType نهائيًا؟\n\n'
-              'سيختفي الطلب من قسم مطلوب على عقارات الأنبار، '
+              'سيختفي الطلب من قسم مطلوب على عقارات الانبار، '
               'ولا يمكن التراجع عن الحذف',
               style: const TextStyle(
                 color: Colors.white70,

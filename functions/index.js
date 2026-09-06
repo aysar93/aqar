@@ -75,8 +75,8 @@ exports.createPasswordAccount = onCall(async (request) => {
 
   if (name.length < 3) throw new HttpsError("invalid-argument", "الاسم غير صحيح");
   if (!phone) throw new HttpsError("invalid-argument", "رقم الهاتف العراقي غير صحيح");
-  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    throw new HttpsError("invalid-argument", "كلمة المرور يجب أن تتضمن 8 أحرف وحرفًا ورقمًا");
+  if (password.length < 6) {
+    throw new HttpsError("invalid-argument", "كلمة المرور يجب أن تتضمن 6 أحرف على الأقل");
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new HttpsError("invalid-argument", "البريد الإلكتروني غير صحيح");

@@ -80,7 +80,7 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
           centerTitle: true,
           foregroundColor: Colors.white,
           title: const Text(
-            "مطلوب على عقارات الأنبار",
+            "مطلوب على عقارات الانبار",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -570,7 +570,7 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
             ),
             content: Text(
               'هل أنت متأكد من حذف طلب $propertyType نهائيًا؟\n\n'
-              'سيختفي الطلب من قسم مطلوب على عقارات الأنبار، '
+              'سيختفي الطلب من قسم مطلوب على عقارات الانبار، '
               'ولا يمكن التراجع عن الحذف',
               style: const TextStyle(
                 color: Colors.white70,

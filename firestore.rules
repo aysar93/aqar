@@ -445,40 +445,68 @@ match /users/{userId} {
     request.resource.data.accountMode == 'user';
 
   // التحديث:
-  // 1. المستخدم يستطيع تعديل حسابه.
-  // 2. الأدمن يستطيع تعديل صلاحية isAdmin فقط.
-  allow update: if isSignedIn() &&
+// 1. المستخدم يستطيع تعديل حسابه.
+// 2. رقم الهاتف يمكن إضافته لأول مرة فقط.
+// 3. الأدمن يستطيع تعديل صلاحية isAdmin فقط.
+allow update: if isSignedIn() &&
+  (
     (
+      request.auth.uid == userId &&
+
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'name',
+          'email',
+          'phone',
+          'photo',
+          'photoUrl',
+          'provider',
+          'providers',
+          'accountMode',
+          'activeOfficeId',
+          'notificationsEnabled',
+          'fcmToken',
+          'oneSignalId',
+          'lastLogin',
+          'updatedAt'
+        ]) &&
+
       (
-        request.auth.uid == userId &&
-        request.resource.data.diff(resource.data)
+        // إذا لم يتم تعديل رقم الهاتف
+        !request.resource.data.diff(resource.data)
           .affectedKeys()
-          .hasOnly([
-            'name',
-            'email',
-            'photo',
-            'photoUrl',
-            'provider',
-            'providers',
-            'accountMode',
-            'activeOfficeId',
-            'notificationsEnabled',
-            'fcmToken',
-            'oneSignalId',
-            'lastLogin',
-            'updatedAt'
-          ])
-      ) ||
-      (
-        isAdmin() &&
-        request.resource.data.diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'isAdmin',
-            'adminUpdatedAt'
-          ])
+          .hasAny(['phone'])
+
+        ||
+
+        // السماح بإضافة رقم الهاتف لأول مرة فقط
+        (
+          (
+            !resource.data.keys().hasAny(['phone']) ||
+            resource.data.phone == null ||
+            resource.data.phone == ''
+          ) &&
+
+          request.resource.data.phone is string &&
+          request.resource.data.phone.size() >= 10 &&
+          request.resource.data.phone.size() <= 15
+        )
       )
-    );
+    )
+
+    ||
+
+    (
+      isAdmin() &&
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'isAdmin',
+          'adminUpdatedAt'
+        ])
+    )
+  );
 
   // الحذف:
   // المستخدم يستطيع حذف حسابه،

@@ -16,6 +16,7 @@ import 'publisher_properties_screen.dart';
 import '../core/design/aqar_sizes.dart';
 import '../core/design/aqar_text.dart';
 import '../office/screens/office_profile_screen.dart';
+import 'dart:async';
 
 class PropertyDetails extends StatefulWidget {
   final PropertyModel? property;
@@ -145,6 +146,9 @@ class _PropertyDetailsState extends State<PropertyDetails> {
   int currentViews = 0;
 
   bool showComments = false;
+  bool allowComments = true;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+      _commentsSettingsSubscription;
 
   final TextEditingController commentController = TextEditingController();
 
@@ -171,12 +175,29 @@ class _PropertyDetailsState extends State<PropertyDetails> {
     increaseViews();
     _loadPublisherData();
     _loadContactData();
+    _loadCommentsSetting();
+    _commentsSettingsSubscription = FirebaseFirestore.instance
+        .collection("settings")
+        .doc("app_settings")
+        .snapshots()
+        .listen((doc) {
+      if (!mounted) return;
+
+      setState(() {
+        allowComments = doc.data()?["allowComments"] ?? true;
+
+        if (!allowComments) {
+          replyingToCommentId = null;
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
     commentController.dispose();
     replyController.dispose();
+    _commentsSettingsSubscription?.cancel();
     super.dispose();
   }
 
@@ -1047,7 +1068,39 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
     );
   }
 
+  Future<void> _loadCommentsSetting() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection("settings")
+          .doc("app_settings")
+          .get();
+
+      if (!mounted) return;
+
+      setState(() {
+        allowComments = doc.data()?["allowComments"] ?? true;
+      });
+    } catch (e) {
+      debugPrint("LOAD COMMENTS SETTING ERROR: $e");
+    }
+  }
+
   Future<void> sendComment() async {
+    if (!allowComments) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "التعليقات متوقفة حاليًا من إدارة التطبيق",
+            textAlign: TextAlign.right,
+          ),
+          backgroundColor: Color(0xff1E293B),
+        ),
+      );
+
+      return;
+    }
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -1107,6 +1160,21 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
   }
 
   Future<void> sendReply(String commentId) async {
+    if (!allowComments) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "الردود متوقفة حاليًا من إدارة التطبيق",
+            textAlign: TextAlign.right,
+          ),
+          backgroundColor: Color(0xff1E293B),
+        ),
+      );
+
+      return;
+    }
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -1353,22 +1421,23 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      replyingToCommentId = commentId;
-                    });
-                  },
-                  icon: const Icon(
-                    Icons.reply,
-                    size: 18,
-                    color: Color(0xffD4AF37),
+                if (allowComments)
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        replyingToCommentId = commentId;
+                      });
+                    },
+                    icon: const Icon(
+                      Icons.reply,
+                      size: 18,
+                      color: Color(0xffD4AF37),
+                    ),
+                    label: const Text(
+                      "رد",
+                      style: TextStyle(color: Color(0xffD4AF37)),
+                    ),
                   ),
-                  label: const Text(
-                    "رد",
-                    style: TextStyle(color: Color(0xffD4AF37)),
-                  ),
-                ),
                 if (replyingToCommentId == commentId)
                   Container(
                     margin: const EdgeInsets.only(top: 12),
@@ -3057,159 +3126,199 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   ),
 
                   const SizedBox(height: 15),
-
-                  Container(
-                    padding: EdgeInsets.all(
-                      MediaQuery.of(context).size.width < 360 ? 8 : 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff1E293B),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .25),
+                  if (allowComments)
+                    Container(
+                      padding: EdgeInsets.all(
+                        MediaQuery.of(context).size.width < 360 ? 8 : 12,
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 16,
-                          offset: Offset(0, 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff1E293B),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: const Color(0xffD4AF37).withValues(alpha: .25),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      textDirection: TextDirection.rtl,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // صورة المستخدم
-                        Builder(
-                          builder: (context) {
-                            final user = FirebaseAuth.instance.currentUser;
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 16,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        textDirection: TextDirection.rtl,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // صورة المستخدم
+                          Builder(
+                            builder: (context) {
+                              final user = FirebaseAuth.instance.currentUser;
 
-                            // المستخدم ضيف
-                            if (user == null) {
-                              return CircleAvatar(
-                                radius: MediaQuery.of(context).size.width < 360
-                                    ? 18
-                                    : 22,
-                                backgroundColor: Color(0xffD4AF37),
-                                child: Icon(
-                                  Icons.person_outline_rounded,
-                                  color: Colors.black,
-                                ),
-                              );
-                            }
-
-                            // المستخدم مسجل الدخول
-                            return FutureBuilder<DocumentSnapshot>(
-                              future: FirebaseFirestore.instance
-                                  .collection("users")
-                                  .doc(user.uid)
-                                  .get(),
-                              builder: (context, snapshot) {
-                                String photo = "";
-
-                                if (snapshot.hasData && snapshot.data!.exists) {
-                                  final data = snapshot.data!.data()
-                                      as Map<String, dynamic>?;
-
-                                  photo = (data?["photoUrl"] ?? "").toString();
-                                }
-
+                              // المستخدم ضيف
+                              if (user == null) {
                                 return CircleAvatar(
                                   radius:
                                       MediaQuery.of(context).size.width < 360
                                           ? 18
                                           : 22,
-                                  backgroundColor: const Color(0xffD4AF37),
-                                  backgroundImage: photo.isNotEmpty
-                                      ? NetworkImage(photo)
-                                      : null,
-                                  child: photo.isEmpty
-                                      ? const Icon(
-                                          Icons.person,
-                                          color: Colors.black,
-                                        )
-                                      : null,
+                                  backgroundColor: Color(0xffD4AF37),
+                                  child: Icon(
+                                    Icons.person_outline_rounded,
+                                    color: Colors.black,
+                                  ),
                                 );
-                              },
-                            );
-                          },
-                        ),
+                              }
 
-                        SizedBox(
-                          width:
-                              MediaQuery.of(context).size.width < 360 ? 8 : 12,
-                        ),
+                              // المستخدم مسجل الدخول
+                              return FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection("users")
+                                    .doc(user.uid)
+                                    .get(),
+                                builder: (context, snapshot) {
+                                  String photo = "";
 
-                        // حقل الكتابة
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xff0F172A),
-                              borderRadius: BorderRadius.circular(20),
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.exists) {
+                                    final data = snapshot.data!.data()
+                                        as Map<String, dynamic>?;
+
+                                    photo =
+                                        (data?["photoUrl"] ?? "").toString();
+                                  }
+
+                                  return CircleAvatar(
+                                    radius:
+                                        MediaQuery.of(context).size.width < 360
+                                            ? 18
+                                            : 22,
+                                    backgroundColor: const Color(0xffD4AF37),
+                                    backgroundImage: photo.isNotEmpty
+                                        ? NetworkImage(photo)
+                                        : null,
+                                    child: photo.isEmpty
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: Colors.black,
+                                          )
+                                        : null,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width < 360
+                                ? 8
+                                : 12,
+                          ),
+
+                          // حقل الكتابة
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0F172A),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: TextField(
+                                controller: commentController,
+                                minLines: 1,
+                                maxLines: 4,
+                                textDirection: TextDirection.rtl,
+                                textAlign: TextAlign.right,
+                                textInputAction: TextInputAction.newline,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: "شارك رأيك حول هذا العقار",
+                                  hintStyle: TextStyle(
+                                    color: Colors.white.withValues(alpha: .45),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 16,
+                                  ),
+                                  prefixIcon:
+                                      MediaQuery.of(context).size.width < 380
+                                          ? null
+                                          : const Icon(
+                                              Icons.mode_comment_outlined,
+                                              color: Color(0xffD4AF37),
+                                            ),
+                                ),
+                              ),
                             ),
-                            child: TextField(
-                              controller: commentController,
-                              minLines: 1,
-                              maxLines: 4,
-                              textDirection: TextDirection.rtl,
+                          ),
+
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width < 360
+                                ? 8
+                                : 12,
+                          ),
+
+                          // زر الإرسال
+                          Container(
+                            width: AqarSizes.detailsTopButton(context),
+                            height: AqarSizes.detailsTopButton(context),
+                            decoration: const BoxDecoration(
+                              color: Color(0xffD4AF37),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: sendComment,
+                                child: Icon(
+                                  Icons.send_rounded,
+                                  color: Colors.black,
+                                  size: AqarSizes.detailsTopIcon(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff1E293B),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: .08),
+                        ),
+                      ),
+                      child: const Row(
+                        textDirection: TextDirection.rtl,
+                        children: [
+                          Icon(
+                            Icons.comments_disabled_rounded,
+                            color: Colors.white54,
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "التعليقات متوقفة حاليًا من إدارة التطبيق",
                               textAlign: TextAlign.right,
-                              textInputAction: TextInputAction.newline,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: "شارك رأيك حول هذا العقار",
-                                hintStyle: TextStyle(
-                                  color: Colors.white.withValues(alpha: .45),
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 16,
-                                ),
-                                prefixIcon:
-                                    MediaQuery.of(context).size.width < 380
-                                        ? null
-                                        : const Icon(
-                                            Icons.mode_comment_outlined,
-                                            color: Color(0xffD4AF37),
-                                          ),
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                        ),
-
-                        SizedBox(
-                          width:
-                              MediaQuery.of(context).size.width < 360 ? 8 : 12,
-                        ),
-
-                        // زر الإرسال
-                        Container(
-                          width: AqarSizes.detailsTopButton(context),
-                          height: AqarSizes.detailsTopButton(context),
-                          decoration: const BoxDecoration(
-                            color: Color(0xffD4AF37),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: sendComment,
-                              child: Icon(
-                                Icons.send_rounded,
-                                color: Colors.black,
-                                size: AqarSizes.detailsTopIcon(context),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 20),
 

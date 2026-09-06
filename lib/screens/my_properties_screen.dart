@@ -114,7 +114,9 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                 ),
               ),
             Expanded(
-              child: _buildPropertiesTab(uid),
+              child: selectedTab == 0
+                  ? _buildPropertiesTab(uid)
+                  : _buildRequestsTab(uid),
             ),
           ],
         ),

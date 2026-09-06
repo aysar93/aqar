@@ -581,7 +581,7 @@ class _VerifiedBadge extends StatelessWidget {
                       text: 'تم التحقق من بيانات المكتب واعتماد ملفه من قبل ',
                     ),
                     TextSpan(
-                      text: 'منصة عقارات الأنبار',
+                      text: 'منصة عقارات الانبار',
                       style: TextStyle(
                         color: OfficeProfileScreen.gold,
                         fontWeight: FontWeight.w800,

@@ -115,9 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _openApp();
     } on AuthFailure catch (failure) {
       if (mounted) setState(() => _error = failure.message);
-    } catch (_) {
+    } on GoogleSignInFailure catch (failure) {
+      if (mounted) setState(() => _error = failure.message);
+    } catch (e) {
       if (mounted) {
-        setState(() => _error = 'تعذر تسجيل الدخول بواسطة $provider');
+        setState(() => _error = 'تعذر تسجيل الدخول بواسطة $provider: $e');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -136,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final identifier = _identifierController.text.trim().isEmpty
         ? 'غير مذكور'
         : _identifierController.text.trim();
-    final message = '''السلام عليكم، فريق إدارة تطبيق عقارات الأنبار.
+    final message = '''السلام عليكم، فريق إدارة تطبيق عقارات الانبار.
 
 أواجه مشكلة في تسجيل الدخول، ويبدو أنني نسيت كلمة المرور.
 

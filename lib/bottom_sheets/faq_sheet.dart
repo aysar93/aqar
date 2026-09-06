@@ -55,7 +55,7 @@ void showFaqSheet(BuildContext context) {
             const SizedBox(height: 10),
             const Center(
               child: Text(
-                "إليك أكثر الأسئلة شيوعاً حول استخدام تطبيق عقارات الأنبار",
+                "إليك أكثر الأسئلة شيوعاً حول استخدام تطبيق عقارات الانبار",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,
@@ -100,7 +100,7 @@ void showFaqSheet(BuildContext context) {
                   _FaqTile(
                     question: "هل التطبيق مسؤول عن عمليات البيع والشراء؟",
                     answer:
-                        "لا، تطبيق عقارات الأنبار هو منصة إلكترونية لعرض الإعلانات والتواصل بين المستخدمين، ولا يعد طرفاً في أي عملية بيع أو شراء أو إيجار",
+                        "لا، تطبيق عقارات الانبار هو منصة إلكترونية لعرض الإعلانات والتواصل بين المستخدمين، ولا يعد طرفاً في أي عملية بيع أو شراء أو إيجار",
                   ),
                   _FaqTile(
                     question: "كيف أبلغ عن إعلان مخالف؟",
@@ -133,7 +133,7 @@ void showFaqSheet(BuildContext context) {
             const SizedBox(height: 6),
             const Center(
               child: Text(
-                "© 2026 جميع الحقوق محفوظة - عقارات الأنبار",
+                "© 2026 جميع الحقوق محفوظة - عقارات الانبار",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey,

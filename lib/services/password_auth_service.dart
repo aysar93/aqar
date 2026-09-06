@@ -96,7 +96,7 @@ class PasswordAuthService {
           'officeId': '',
           'activeOfficeId': '',
           'accountMode': 'user',
-          'isVerified': true,
+          'isVerified': false,
           'phoneVerified': false,
           'isBlocked': false,
           'createdAt': FieldValue.serverTimestamp(),

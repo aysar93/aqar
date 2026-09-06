@@ -17,10 +17,14 @@ import 'screens/onboarding/splash_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Presence الآمن يحتاج مستخدم Firebase حتى للزائر.
-  if (FirebaseAuth.instance.currentUser == null) {
-    await FirebaseAuth.instance.signInAnonymously();
+
+  // Anonymous sessions created by older app versions are persisted by Firebase.
+  // Remove only those sessions; real users remain signed in across app restarts.
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser?.isAnonymous ?? false) {
+    await FirebaseAuth.instance.signOut();
   }
+
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   PlatformDispatcher.instance.onError = (error, stack) {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
@@ -46,11 +50,20 @@ Future<void> _initializeBackgroundServices() async {
     await FirebaseCrashlytics.instance.recordError(error, stack);
   }
 
-  try {
-    await AppActivityService.instance.initialize();
-  } catch (error, stack) {
-    debugPrint('App activity initialization failed: $error');
-    await FirebaseCrashlytics.instance.recordError(error, stack);
+  // Guests intentionally have no Firebase user. If a guest signs in later in
+  // this app session, initialize presence/activity for that real user then.
+  final user = FirebaseAuth.instance.currentUser ??
+      await FirebaseAuth.instance.authStateChanges().firstWhere(
+            (user) => user != null && !user.isAnonymous,
+          );
+
+  if (user != null && !user.isAnonymous) {
+    try {
+      await AppActivityService.instance.initialize();
+    } catch (error, stack) {
+      debugPrint('App activity initialization failed: $error');
+      await FirebaseCrashlytics.instance.recordError(error, stack);
+    }
   }
 }
 

@@ -549,7 +549,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     const Divider(height: 1),
                     drawerItem(Icons.share_rounded, "مشاركة التطبيق", () {
                       Share.share(
-                        "حمّل تطبيق عقارات الأنبار واستعرض أفضل العقارات بسهولة.\n\nhttps://play.google.com/store/apps/details?id=com.andalus.aqar",
+                        "حمّل تطبيق عقارات الانبار واستعرض أفضل العقارات بسهولة.\n\nhttps://play.google.com/store/apps/details?id=com.andalus.aqar",
                       );
                     }),
                     const Divider(height: 1),

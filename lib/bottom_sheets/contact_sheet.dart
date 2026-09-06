@@ -106,7 +106,7 @@ class _ContactSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'فريق عقارات الأنبار جاهز لمساعدتك والإجابة عن استفساراتك.',
+                    'فريق عقارات الانبار جاهز لمساعدتك والإجابة عن استفساراتك.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.66),
@@ -160,7 +160,7 @@ class _ContactSheet extends StatelessWidget {
                   const _DetailsCard(),
                   const SizedBox(height: 18),
                   Text(
-                    '© 2026 جميع الحقوق محفوظة — عقارات الأنبار',
+                    '© 2026 جميع الحقوق محفوظة — عقارات الانبار',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.38),
