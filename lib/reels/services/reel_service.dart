@@ -11,7 +11,10 @@ class ReelService {
   ReelService._();
   static final instance = ReelService._();
   final _db = FirebaseFirestore.instance;
-  static const _apiBaseUrl = String.fromEnvironment('REELS_API_BASE_URL');
+  static const _apiBaseUrl = String.fromEnvironment(
+    'REELS_API_BASE_URL',
+    defaultValue: 'https://aqar-reels-api.aysar-aliraqe.workers.dev',
+  );
 
   Stream<List<ReelModel>> publicReels() => _db
       .collection('reels')
@@ -35,7 +38,14 @@ class ReelService {
   Future<void> track(String reelId, String event,
       {Map<String, dynamic>? data}) async {
     if (_apiBaseUrl.isEmpty) return;
-    await _post('/event', {'reelId': reelId, 'event': event, 'data': data ?? const <String, dynamic>{}}, authenticated: false);
+    await _post(
+        '/event',
+        {
+          'reelId': reelId,
+          'event': event,
+          'data': data ?? const <String, dynamic>{}
+        },
+        authenticated: false);
   }
 
   String _interactionId(String reelId) {
@@ -75,7 +85,8 @@ class ReelService {
   Future<void> report(String reelId, String reason, String details) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw StateError('AUTH_REQUIRED');
-    await _post('/report', {'reelId': reelId, 'reason': reason, 'details': details.trim()});
+    await _post('/report',
+        {'reelId': reelId, 'reason': reason, 'details': details.trim()});
   }
 
   Future<String> uploadVideo(
@@ -85,7 +96,14 @@ class ReelService {
     if (_apiBaseUrl.isEmpty) throw StateError('REELS_API_NOT_CONFIGURED');
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     if (token == null) throw StateError('AUTH_REQUIRED');
-    final response = await http.post(Uri.parse('$_apiBaseUrl/upload?fileName=${Uri.encodeQueryComponent(fileName)}'), body: bytes, headers: {'Content-Type': contentType, 'Authorization': 'Bearer $token'});
+    final response = await http.post(
+        Uri.parse(
+            '$_apiBaseUrl/upload?fileName=${Uri.encodeQueryComponent(fileName)}'),
+        body: bytes,
+        headers: {
+          'Content-Type': contentType,
+          'Authorization': 'Bearer $token'
+        });
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('UPLOAD_FAILED');
     }
@@ -93,7 +111,8 @@ class ReelService {
     return payload['publicUrl'] as String;
   }
 
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body, {bool authenticated = true}) async {
+  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body,
+      {bool authenticated = true}) async {
     if (_apiBaseUrl.isEmpty) throw StateError('REELS_API_NOT_CONFIGURED');
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (authenticated) {
@@ -101,8 +120,10 @@ class ReelService {
       if (token == null) throw StateError('AUTH_REQUIRED');
       headers['Authorization'] = 'Bearer $token';
     }
-    final response = await http.post(Uri.parse('$_apiBaseUrl$path'), headers: headers, body: jsonEncode(body));
-    if (response.statusCode < 200 || response.statusCode >= 300) throw StateError('REELS_API_FAILED_${response.statusCode}');
+    final response = await http.post(Uri.parse('$_apiBaseUrl$path'),
+        headers: headers, body: jsonEncode(body));
+    if (response.statusCode < 200 || response.statusCode >= 300)
+      throw StateError('REELS_API_FAILED_${response.statusCode}');
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 }

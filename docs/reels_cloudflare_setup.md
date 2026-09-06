@@ -29,7 +29,11 @@ npx wrangler deploy
 عند أمر السر، الصق محتوى ملف حساب الخدمة JSON كاملًا. لا تضف مفاتيح R2 إلى
 التطبيق؛ الـWorker يصل إلى الحاوية عبر R2 Binding مباشرة.
 
-انسخ رابط Worker الناتج، ثم ابنِ التطبيق مع:
+رابط Worker الإنتاجي الحالي هو:
+
+`https://aqar-reels-api.aysar-aliraqe.workers.dev`
+
+الرابط مضبوط افتراضيًا داخل التطبيق. ويمكن استبداله في بيئة اختبار عند البناء:
 
 ```bash
 flutter build apk --release --dart-define=REELS_API_BASE_URL=https://aqar-reels-api.YOUR-SUBDOMAIN.workers.dev
