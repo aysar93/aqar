@@ -12,6 +12,7 @@ import 'property_requests/admin_property_requests_screen.dart';
 import 'office_management_screen.dart';
 import '../../app_updates/app_updates_management_screen.dart';
 import '../../analytics/screens/analytics_dashboard_screen.dart';
+import '../../reels/admin/reels_admin_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -66,6 +67,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
               subtitle: "المتصلون الآن والزيارات والجلسات",
               color: Colors.green,
               page: const AnalyticsDashboardScreen(),
+            ),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('reel_reports')
+                  .where('status', isEqualTo: 'open')
+                  .snapshots(),
+              builder: (context, snapshot) => adminButton(
+                context,
+                icon: Icons.video_collection_rounded,
+                title: 'إدارة الريلز',
+                subtitle: 'النشر والجدولة والإحصائيات والبلاغات',
+                color: const Color(0xffD4AF37),
+                page: const ReelsAdminScreen(),
+                badgeCount: snapshot.data?.docs.length ?? 0,
+              ),
             ),
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance

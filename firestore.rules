@@ -651,6 +651,51 @@ match /settings/{document} {
   // إنشاء أو حذف مستندات settings للأدمن فقط
   allow create, delete: if isAdmin();
 }
+
+// ==================================================
+// ريلز العقارات
+// ==================================================
+match /reels/{reelId} {
+  // الجمهور يرى المنشور الفعّال فقط، والأدمن يرى جميع الحالات.
+  allow read: if isAdmin() ||
+    (
+      resource.data.status == "published" &&
+      (!("publishAt" in resource.data) || resource.data.publishAt == null || resource.data.publishAt <= request.time) &&
+      (!("expiresAt" in resource.data) || resource.data.expiresAt == null || resource.data.expiresAt > request.time)
+    );
+  allow create, update, delete: if isAdmin();
+}
+
+match /reel_likes/{interactionId} {
+  allow read: if isSignedIn() && (interactionId.matches(request.auth.uid + "_.*") || isAdmin());
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid &&
+    interactionId == request.auth.uid + "_" + request.resource.data.reelId;
+  allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+  allow update: if false;
+}
+
+match /reel_saves/{interactionId} {
+  allow read: if isSignedIn() && (interactionId.matches(request.auth.uid + "_.*") || isAdmin());
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid &&
+    interactionId == request.auth.uid + "_" + request.resource.data.reelId;
+  allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+  allow update: if false;
+}
+
+match /reel_reports/{reportId} {
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid &&
+    reportId == request.auth.uid + "_" + request.resource.data.reelId &&
+    request.resource.data.status == "open";
+  allow read, update, delete: if isAdmin();
+}
+
+// تُكتب من Cloud Functions فقط.
+match /reel_event_dedup/{eventId} {
+  allow read, write: if false;
+}
 // ==================================================
 // الدردشة
 // ==================================================
