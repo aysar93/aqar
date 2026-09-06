@@ -1,113 +1,14 @@
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 initializeApp();
 
 const db = getFirestore();
-
-const r2AccountId = defineSecret("R2_ACCOUNT_ID");
-const r2AccessKeyId = defineSecret("R2_ACCESS_KEY_ID");
-const r2SecretAccessKey = defineSecret("R2_SECRET_ACCESS_KEY");
-const r2Bucket = defineSecret("R2_BUCKET");
-const r2PublicBaseUrl = defineSecret("R2_PUBLIC_BASE_URL");
-
-async function assertAdmin(uid) {
-  if (!uid) throw new HttpsError("unauthenticated", "تسجيل الدخول مطلوب");
-  const user = await db.collection("users").doc(uid).get();
-  if (user.data()?.isAdmin !== true) throw new HttpsError("permission-denied", "هذه العملية للمدير فقط");
-}
-
-function safeVideoName(input) {
-  const extension = String(input || "video.mp4").split(".").pop().toLowerCase();
-  const allowed = ["mp4", "mov", "m4v", "webm"];
-  return `${Date.now()}-${crypto.randomUUID()}.${allowed.includes(extension) ? extension : "mp4"}`;
-}
-
-exports.createReelUploadUrl = onCall({
-  secrets: [r2AccountId, r2AccessKeyId, r2SecretAccessKey, r2Bucket, r2PublicBaseUrl],
-  timeoutSeconds: 30,
-}, async (request) => {
-  await assertAdmin(request.auth?.uid);
-  const size = Number(request.data?.size || 0);
-  const contentType = String(request.data?.contentType || "");
-  if (!contentType.startsWith("video/")) throw new HttpsError("invalid-argument", "نوع الملف غير مدعوم");
-  if (size <= 0 || size > 250 * 1024 * 1024) throw new HttpsError("invalid-argument", "حجم الفيديو يجب ألا يتجاوز 250MB");
-  const key = `reels/original/${safeVideoName(request.data?.fileName)}`;
-  const client = new S3Client({
-    region: "auto",
-    endpoint: `https://${r2AccountId.value()}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId: r2AccessKeyId.value(), secretAccessKey: r2SecretAccessKey.value() },
-  });
-  const command = new PutObjectCommand({ Bucket: r2Bucket.value(), Key: key, ContentType: contentType });
-  const uploadUrl = await getSignedUrl(client, command, { expiresIn: 10 * 60 });
-  return { uploadUrl, publicUrl: `${r2PublicBaseUrl.value().replace(/\/$/, "")}/${key}`, key, expiresInSeconds: 600 };
-});
-
-const reelCounters = {
-  view: "views", completion: "completions", share: "shares",
-  propertyClick: "propertyClicks", officeClick: "officeClicks", externalClick: "externalClicks",
-};
-
-exports.recordReelEvent = onCall(async (request) => {
-  const reelId = String(request.data?.reelId || "");
-  const event = String(request.data?.event || "");
-  if (!/^[A-Za-z0-9_-]{10,80}$/.test(reelId) || !reelCounters[event]) {
-    throw new HttpsError("invalid-argument", "حدث غير صالح");
-  }
-  const reel = db.collection("reels").doc(reelId);
-  if (!(await reel.get()).exists) throw new HttpsError("not-found", "الريل غير موجود");
-  const actor = request.auth?.uid || crypto.createHash("sha256").update(String(request.rawRequest?.ip || "guest")).digest("hex");
-  const bucket = Math.floor(Date.now() / (event === "view" ? 300000 : 30000));
-  const dedupe = db.collection("reel_event_dedup").doc(crypto.createHash("sha256").update(`${actor}:${reelId}:${event}:${bucket}`).digest("hex"));
-  await db.runTransaction(async (transaction) => {
-    if ((await transaction.get(dedupe)).exists) return;
-    transaction.create(dedupe, { reelId, event, createdAt: FieldValue.serverTimestamp(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
-    transaction.update(reel, { [reelCounters[event]]: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() });
-  });
-  return { ok: true };
-});
-
-exports.refreshReelLikeMetrics = onDocumentWritten("reel_likes/{interactionId}", async (event) => {
-  const before = event.data?.before.exists === true;
-  const after = event.data?.after.exists === true;
-  if (before === after) return;
-  const data = (after ? event.data.after.data() : event.data.before.data()) || {};
-  if (data.reelId) await db.collection("reels").doc(data.reelId).update({ likes: FieldValue.increment(after ? 1 : -1) });
-});
-
-exports.refreshReelSaveMetrics = onDocumentWritten("reel_saves/{interactionId}", async (event) => {
-  const before = event.data?.before.exists === true;
-  const after = event.data?.after.exists === true;
-  if (before === after) return;
-  const data = (after ? event.data.after.data() : event.data.before.data()) || {};
-  if (data.reelId) await db.collection("reels").doc(data.reelId).update({ saves: FieldValue.increment(after ? 1 : -1) });
-});
-
-exports.refreshReelReportMetrics = onDocumentCreated("reel_reports/{reportId}", async (event) => {
-  const reelId = event.data?.data()?.reelId;
-  if (reelId) await db.collection("reels").doc(reelId).update({ reports: FieldValue.increment(1) });
-});
-
-exports.publishScheduledReels = onSchedule("every 5 minutes", async () => {
-  const now = new Date();
-  const [scheduled, expired] = await Promise.all([
-    db.collection("reels").where("status", "==", "scheduled").where("publishAt", "<=", now).limit(200).get(),
-    db.collection("reels").where("status", "==", "published").where("expiresAt", "<=", now).limit(200).get(),
-  ]);
-  const batch = db.batch();
-  scheduled.docs.forEach((doc) => batch.update(doc.ref, { status: "published", updatedAt: FieldValue.serverTimestamp() }));
-  expired.docs.forEach((doc) => batch.update(doc.ref, { status: "expired", updatedAt: FieldValue.serverTimestamp() }));
-  if (scheduled.size + expired.size > 0) await batch.commit();
-});
 
 function normalizeIraqiPhone(input) {
   const localizedDigits = {

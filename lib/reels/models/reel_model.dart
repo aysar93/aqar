@@ -71,7 +71,7 @@ class ReelModel {
 
   bool get isCurrentlyVisible {
     final now = DateTime.now();
-    return status == ReelStatus.published &&
+    return (status == ReelStatus.published || status == ReelStatus.scheduled) &&
         (publishAt == null || !publishAt!.isAfter(now)) &&
         (expiresAt == null || expiresAt!.isAfter(now));
   }

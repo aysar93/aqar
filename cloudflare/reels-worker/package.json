@@ -1,0 +1,12 @@
+{
+  "name": "aqar-reels-worker",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check src/index.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.33.1"
+  }
+}

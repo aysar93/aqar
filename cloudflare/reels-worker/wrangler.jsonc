@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aqar-reels-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "r2_buckets": [
+    {
+      "binding": "REELS_BUCKET",
+      "bucket_name": "aqar-reels"
+    }
+  ],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "aqar-9f3f9",
+    "FIREBASE_WEB_API_KEY": "AIzaSyCrrMFoyg66WCDleskA4PUuia3g7AOZRQQ",
+    "R2_PUBLIC_BASE_URL": "https://pub-c550d5a8e7784ce0add189f2914961ed.r2.dev"
+  }
+}

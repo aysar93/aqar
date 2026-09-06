@@ -659,7 +659,7 @@ match /reels/{reelId} {
   // الجمهور يرى المنشور الفعّال فقط، والأدمن يرى جميع الحالات.
   allow read: if isAdmin() ||
     (
-      resource.data.status == "published" &&
+      (resource.data.status == "published" || resource.data.status == "scheduled") &&
       (!("publishAt" in resource.data) || resource.data.publishAt == null || resource.data.publishAt <= request.time) &&
       (!("expiresAt" in resource.data) || resource.data.expiresAt == null || resource.data.expiresAt > request.time)
     );

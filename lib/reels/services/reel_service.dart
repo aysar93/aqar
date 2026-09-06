@@ -1,7 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,10 +11,11 @@ class ReelService {
   ReelService._();
   static final instance = ReelService._();
   final _db = FirebaseFirestore.instance;
+  static const _apiBaseUrl = String.fromEnvironment('REELS_API_BASE_URL');
 
   Stream<List<ReelModel>> publicReels() => _db
       .collection('reels')
-      .where('status', isEqualTo: 'published')
+      .where('status', whereIn: ['published', 'scheduled'])
       .orderBy('isPinned', descending: true)
       .orderBy('sortOrder')
       .orderBy('publishAt', descending: true)
@@ -33,11 +34,8 @@ class ReelService {
 
   Future<void> track(String reelId, String event,
       {Map<String, dynamic>? data}) async {
-    await FirebaseFunctions.instance.httpsCallable('recordReelEvent').call({
-      'reelId': reelId,
-      'event': event,
-      'data': data ?? const <String, dynamic>{},
-    });
+    if (_apiBaseUrl.isEmpty) return;
+    await _post('/event', {'reelId': reelId, 'event': event, 'data': data ?? const <String, dynamic>{}}, authenticated: false);
   }
 
   String _interactionId(String reelId) {
@@ -66,54 +64,45 @@ class ReelService {
         .map((d) => d.exists);
   }
 
-  Future<void> toggleLike(String reelId) => _toggle('reel_likes', reelId);
-  Future<void> toggleSave(String reelId) => _toggle('reel_saves', reelId);
+  Future<void> toggleLike(String reelId) => _toggle('like', reelId);
+  Future<void> toggleSave(String reelId) => _toggle('save', reelId);
 
-  Future<void> _toggle(String collection, String reelId) async {
-    final id = _interactionId(reelId);
-    final ref = _db.collection(collection).doc(id);
-    final exists = (await ref.get()).exists;
-    if (exists) {
-      await ref.delete();
-    } else {
-      await ref.set({
-        'userId': FirebaseAuth.instance.currentUser!.uid,
-        'reelId': reelId,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
+  Future<void> _toggle(String type, String reelId) async {
+    _interactionId(reelId);
+    await _post('/interaction', {'reelId': reelId, 'type': type});
   }
 
   Future<void> report(String reelId, String reason, String details) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw StateError('AUTH_REQUIRED');
-    await _db.collection('reel_reports').doc('${user.uid}_$reelId').set({
-      'reelId': reelId,
-      'userId': user.uid,
-      'reason': reason,
-      'details': details.trim(),
-      'status': 'open',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await _post('/report', {'reelId': reelId, 'reason': reason, 'details': details.trim()});
   }
 
   Future<String> uploadVideo(
       {required Uint8List bytes,
       required String fileName,
       required String contentType}) async {
-    final result = await FirebaseFunctions.instance
-        .httpsCallable('createReelUploadUrl')
-        .call({
-      'fileName': fileName,
-      'contentType': contentType,
-      'size': bytes.length,
-    });
-    final payload = Map<String, dynamic>.from(result.data as Map);
-    final response = await http.put(Uri.parse(payload['uploadUrl'] as String),
-        body: bytes, headers: {'Content-Type': contentType});
+    if (_apiBaseUrl.isEmpty) throw StateError('REELS_API_NOT_CONFIGURED');
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    if (token == null) throw StateError('AUTH_REQUIRED');
+    final response = await http.post(Uri.parse('$_apiBaseUrl/upload?fileName=${Uri.encodeQueryComponent(fileName)}'), body: bytes, headers: {'Content-Type': contentType, 'Authorization': 'Bearer $token'});
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('UPLOAD_FAILED');
     }
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
     return payload['publicUrl'] as String;
+  }
+
+  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body, {bool authenticated = true}) async {
+    if (_apiBaseUrl.isEmpty) throw StateError('REELS_API_NOT_CONFIGURED');
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (authenticated) {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null) throw StateError('AUTH_REQUIRED');
+      headers['Authorization'] = 'Bearer $token';
+    }
+    final response = await http.post(Uri.parse('$_apiBaseUrl$path'), headers: headers, body: jsonEncode(body));
+    if (response.statusCode < 200 || response.statusCode >= 300) throw StateError('REELS_API_FAILED_${response.statusCode}');
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 }
