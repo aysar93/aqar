@@ -122,8 +122,9 @@ class ReelService {
     }
     final response = await http.post(Uri.parse('$_apiBaseUrl$path'),
         headers: headers, body: jsonEncode(body));
-    if (response.statusCode < 200 || response.statusCode >= 300)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('REELS_API_FAILED_${response.statusCode}');
+    }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 }
