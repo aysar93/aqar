@@ -364,11 +364,18 @@ class _ReelEditorScreenState extends State<ReelEditorScreen> {
           const SnackBar(content: Text('اختر العنصر المرتبط بالريل')));
       return;
     }
+    final propertySnapshot = await _snapshot('properties', _propertyId);
+    final officeSnapshot = await _snapshot('offices', _officeId);
+    final automaticCover = _target == 'property'
+        ? (propertySnapshot['imageUrl'] ?? '').toString()
+        : (officeSnapshot['logoUrl'] ?? '').toString();
     final data = <String, dynamic>{
       'title': _title.text.trim(),
       'description': _description.text.trim(),
       'videoUrl': _video.text.trim(),
-      'thumbnailUrl': _thumbnail.text.trim(),
+      'thumbnailUrl': _thumbnail.text.trim().isNotEmpty
+          ? _thumbnail.text.trim()
+          : automaticCover,
       'qualityUrls': {'auto': _video.text.trim()},
       'status': _status,
       'targetType': _target,
@@ -388,8 +395,8 @@ class _ReelEditorScreenState extends State<ReelEditorScreen> {
       'publishAt': _publishAt == null ? null : Timestamp.fromDate(_publishAt!),
       'expiresAt': _expiresAt == null ? null : Timestamp.fromDate(_expiresAt!),
       'sortOrder': int.tryParse(_sort.text) ?? 0,
-      'propertySnapshot': await _snapshot('properties', _propertyId),
-      'officeSnapshot': await _snapshot('offices', _officeId),
+      'propertySnapshot': propertySnapshot,
+      'officeSnapshot': officeSnapshot,
       'updatedAt': FieldValue.serverTimestamp()
     };
     final collection = FirebaseFirestore.instance.collection('reels');
@@ -437,7 +444,9 @@ class _ReelEditorScreenState extends State<ReelEditorScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.upload_rounded))
                 ]),
-                _field(_thumbnail, 'رابط الصورة المصغرة (Cloudinary أو R2)'),
+                _field(_thumbnail, 'صورة غلاف الريل (اختياري)',
+                    helper:
+                        'تظهر قبل تشغيل الفيديو وأثناء التحميل. اتركها فارغة لاستخدام صورة العقار أو شعار المكتب تلقائيًا.'),
                 DropdownButtonFormField(
                     initialValue: _target,
                     decoration: const InputDecoration(labelText: 'نوع الربط'),
@@ -458,7 +467,9 @@ class _ReelEditorScreenState extends State<ReelEditorScreen> {
                   _documentSelector('offices', _officeId, 'اختر المكتب',
                       (v) => setState(() => _officeId = v)),
                 _field(_category, 'التصنيف'),
-                _field(_tags, 'الوسوم مفصولة بفواصل'),
+                _field(_tags, 'كلمات البحث (اختياري)',
+                    helper:
+                        'تساعدك في البحث والتصنيف داخل الإدارة، مثل: الرمادي، للبيع، بيت. افصل بينها بفاصلة.'),
                 _field(_external, 'الرابط الخارجي'),
                 _field(_cta, 'نص زر الرابط'),
                 _field(_sort, 'الترتيب', keyboard: TextInputType.number),
@@ -507,14 +518,17 @@ class _ReelEditorScreenState extends State<ReelEditorScreen> {
                     label: const Text('حفظ الريل')),
               ]))));
   Widget _field(TextEditingController c, String label,
-          {bool required = false, int lines = 1, TextInputType? keyboard}) =>
+          {bool required = false,
+          int lines = 1,
+          TextInputType? keyboard,
+          String? helper}) =>
       Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: TextFormField(
               controller: c,
               maxLines: lines,
               keyboardType: keyboard,
-              decoration: InputDecoration(labelText: label),
+              decoration: InputDecoration(labelText: label, helperText: helper),
               validator: required
                   ? (v) =>
                       v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null
@@ -530,19 +544,129 @@ class _ReelEditorScreenState extends State<ReelEditorScreen> {
                   .snapshots(),
               builder: (_, s) {
                 final docs = s.data?.docs ?? [];
-                return DropdownButtonFormField<String>(
-                    initialValue: docs.any((d) => d.id == value) ? value : null,
-                    decoration: InputDecoration(labelText: label),
-                    items: docs
-                        .map((d) => DropdownMenuItem(
-                            value: d.id,
-                            child: Text(
-                                (d.data()['title'] ?? d.data()['name'] ?? d.id)
-                                    .toString(),
-                                overflow: TextOverflow.ellipsis)))
-                        .toList(),
-                    onChanged: changed);
+                final selectedDocs = docs.where((d) => d.id == value).toList();
+                final selected =
+                    selectedDocs.isEmpty ? null : selectedDocs.first;
+                final data = selected?.data();
+                final title =
+                    (data?['title'] ?? data?['name'] ?? label).toString();
+                final detail = collection == 'properties' && data != null
+                    ? 'رقم الإعلان: ${data['adNumber'] ?? '-'}  •  ${data['location'] ?? data['city'] ?? ''}'
+                    : data == null
+                        ? 'اضغط للبحث والاختيار'
+                        : '${data['city'] ?? ''}';
+                return InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    final picked = await _showDocumentPicker(
+                        collection, label, docs, value);
+                    if (picked != null) changed(picked);
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                        labelText: label,
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: const Icon(Icons.arrow_drop_down_rounded)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 3),
+                        Text(detail,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                );
               }));
+
+  Future<String?> _showDocumentPicker(
+      String collection,
+      String label,
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+      String? selectedId) async {
+    var query = '';
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final normalized = query.trim().toLowerCase();
+          final filtered = docs.where((doc) {
+            final d = doc.data();
+            final searchable = [
+              d['title'],
+              d['name'],
+              d['adNumber'],
+              d['propertyNumber'],
+              d['location'],
+              d['city'],
+              d['areaName'],
+              d['district'],
+              doc.id
+            ].whereType<Object>().join(' ').toLowerCase();
+            return normalized.isEmpty || searchable.contains(normalized);
+          }).toList();
+          return FractionallySizedBox(
+            heightFactor: .88,
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Column(children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    autofocus: true,
+                    onChanged: (value) => setSheetState(() => query = value),
+                    decoration: InputDecoration(
+                      labelText: 'ابحث في $label',
+                      hintText: collection == 'properties'
+                          ? 'العنوان، رقم الإعلان، المنطقة أو المدينة'
+                          : 'اسم المكتب أو المدينة',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? const Center(child: Text('لا توجد نتائج مطابقة'))
+                      : ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (_, index) {
+                            final doc = filtered[index];
+                            final d = doc.data();
+                            final title =
+                                (d['title'] ?? d['name'] ?? doc.id).toString();
+                            final subtitle = collection == 'properties'
+                                ? 'رقم الإعلان: ${d['adNumber'] ?? '-'}  •  ${d['location'] ?? d['city'] ?? ''}'
+                                : '${d['city'] ?? ''}';
+                            return ListTile(
+                              selected: doc.id == selectedId,
+                              leading: Icon(collection == 'properties'
+                                  ? Icons.home_work_rounded
+                                  : Icons.business_rounded),
+                              title: Text(title),
+                              subtitle: Text(subtitle),
+                              trailing: doc.id == selectedId
+                                  ? const Icon(Icons.check_circle,
+                                      color: AppTheme.primaryColor)
+                                  : null,
+                              onTap: () => Navigator.pop(sheetContext, doc.id),
+                            );
+                          }),
+                ),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _date(String label, DateTime? date, ValueChanged<DateTime?> changed) =>
       OutlinedButton.icon(
           onPressed: () async {
@@ -633,27 +757,97 @@ class _ReelsReports extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             children: snapshot.data!.docs.map((doc) {
               final data = doc.data();
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.flag, color: Colors.red),
-                  title: Text((data['reason'] ?? 'بلاغ').toString()),
-                  subtitle: Text(
-                      "Reel: ${data['reelId']}\nالحالة: ${data['status'] ?? 'open'}"),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) => doc.reference.update({
-                      'status': value,
-                      'resolvedAt': FieldValue.serverTimestamp()
-                    }),
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                          value: 'reviewed', child: Text('تمت المراجعة')),
-                      PopupMenuItem(
-                          value: 'dismissed', child: Text('رفض البلاغ')),
-                      PopupMenuItem(
-                          value: 'actioned', child: Text('تم اتخاذ إجراء')),
-                    ],
-                  ),
-                ),
+              final reelId = (data['reelId'] ?? '').toString();
+              return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                future: reelId.isEmpty
+                    ? null
+                    : FirebaseFirestore.instance
+                        .collection('reels')
+                        .doc(reelId)
+                        .get(),
+                builder: (context, reelSnapshot) {
+                  final reelData = reelSnapshot.data?.data();
+                  final reelTitle = (data['reelTitle'] ??
+                          reelData?['title'] ??
+                          'ريل غير متوفر')
+                      .toString();
+                  final details = (data['details'] ?? '').toString();
+                  final status = (data['status'] ?? 'open').toString();
+                  final statusLabel = const {
+                        'open': 'جديد',
+                        'reviewed': 'تمت المراجعة',
+                        'dismissed': 'مرفوض',
+                        'actioned': 'تم اتخاذ إجراء'
+                      }[status] ??
+                      status;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const Icon(Icons.flag_rounded, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(reelTitle,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                            Chip(label: Text(statusLabel)),
+                          ]),
+                          const SizedBox(height: 8),
+                          Text('سبب البلاغ: ${data['reason'] ?? 'غير محدد'}'),
+                          if (details.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text('التوضيح: $details'),
+                          ],
+                          const SizedBox(height: 5),
+                          SelectableText('معرّف الريل: $reelId',
+                              style: Theme.of(context).textTheme.bodySmall),
+                          const SizedBox(height: 10),
+                          Row(children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: reelSnapshot.data?.exists == true
+                                    ? () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ReelsScreen(
+                                                initialReelId: reelId),
+                                          ),
+                                        )
+                                    : null,
+                                icon: const Icon(Icons.play_circle_rounded),
+                                label: const Text('عرض الريل ومراجعته'),
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              tooltip: 'تغيير حالة البلاغ',
+                              onSelected: (value) => doc.reference.update({
+                                'status': value,
+                                'resolvedAt': FieldValue.serverTimestamp()
+                              }),
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                    value: 'reviewed',
+                                    child: Text('تمت المراجعة')),
+                                PopupMenuItem(
+                                    value: 'dismissed',
+                                    child: Text('رفض البلاغ')),
+                                PopupMenuItem(
+                                    value: 'actioned',
+                                    child: Text('تم اتخاذ إجراء')),
+                              ],
+                            ),
+                          ]),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             }).toList(),
           );

@@ -15,7 +15,8 @@ import '../models/reel_model.dart';
 import '../services/reel_service.dart';
 
 class ReelsScreen extends StatefulWidget {
-  const ReelsScreen({super.key});
+  final String? initialReelId;
+  const ReelsScreen({super.key, this.initialReelId});
   @override
   State<ReelsScreen> createState() => _ReelsScreenState();
 }
@@ -39,7 +40,14 @@ class _ReelsScreenState extends State<ReelsScreen> {
                   child:
                       CircularProgressIndicator(color: AppTheme.primaryColor));
             }
-            final all = snapshot.data!;
+            final all = [...snapshot.data!];
+            if (widget.initialReelId != null) {
+              all.sort((a, b) {
+                if (a.id == widget.initialReelId) return -1;
+                if (b.id == widget.initialReelId) return 1;
+                return 0;
+              });
+            }
             final categories = [
               'الكل',
               ...{for (final reel in all) reel.category}
@@ -252,37 +260,91 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  void _openOffice() {
+    final id = widget.reel.officeId;
+    if (id == null || id.isEmpty) return;
+    ReelService.instance.track(widget.reel.id, 'officeClick');
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => OfficeProfileScreen(officeId: id)));
+  }
+
+  void _share() {
+    final details = <String>[
+      widget.reel.title,
+      if (widget.reel.description.isNotEmpty) widget.reel.description,
+      if (widget.reel.propertySnapshot['location'] != null)
+        'الموقع: ${widget.reel.propertySnapshot['location']}',
+      if (widget.reel.propertySnapshot['price'] != null)
+        'السعر: ${widget.reel.propertySnapshot['price']} د.ع',
+      '',
+      widget.reel.externalUrl.isNotEmpty
+          ? widget.reel.externalUrl
+          : widget.reel.videoUrl,
+      '',
+      'عقارات الأنبار',
+    ];
+    ReelService.instance.track(widget.reel.id, 'share');
+    Share.share(details.join('\n'), subject: widget.reel.title);
+  }
+
   Future<void> _report() async {
     if (!await _requireLogin() || !mounted) return;
     String reason = 'محتوى غير مناسب';
+    final details = TextEditingController();
     final sent = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-              title: const Text('الإبلاغ عن الريل'),
-              content: DropdownButtonFormField<String>(
-                  initialValue: reason,
-                  items: const [
-                    'محتوى غير مناسب',
-                    'معلومات مضللة',
-                    'عقار غير متاح',
-                    'حقوق ملكية',
-                    'سبب آخر'
-                  ]
-                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                      .toList(),
-                  onChanged: (v) => reason = v ?? reason),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('إلغاء')),
-                FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('إرسال'))
-              ],
-            ));
+        builder: (context) =>
+            StatefulBuilder(builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('الإبلاغ عن الريل'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  DropdownButtonFormField<String>(
+                      initialValue: reason,
+                      decoration:
+                          const InputDecoration(labelText: 'سبب البلاغ'),
+                      items: const [
+                        'محتوى غير مناسب',
+                        'معلومات مضللة',
+                        'عقار غير متاح',
+                        'حقوق ملكية',
+                        'سبب آخر'
+                      ]
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .toList(),
+                      onChanged: (v) =>
+                          setDialogState(() => reason = v ?? reason)),
+                  if (reason == 'سبب آخر') ...[
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: details,
+                      autofocus: true,
+                      maxLines: 3,
+                      maxLength: 500,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: const InputDecoration(
+                          labelText: 'اكتب سبب البلاغ',
+                          hintText: 'وضّح المشكلة حتى يستطيع المشرف مراجعتها'),
+                    ),
+                  ],
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('إلغاء')),
+                  FilledButton(
+                      onPressed:
+                          reason == 'سبب آخر' && details.text.trim().isEmpty
+                              ? null
+                              : () => Navigator.pop(context, true),
+                      child: const Text('إرسال'))
+                ],
+              );
+            }));
     if (sent == true) {
-      await ReelService.instance.report(widget.reel.id, reason, '');
+      await ReelService.instance.report(widget.reel, reason, details.text);
     }
+    details.dispose();
   }
 
   @override
@@ -325,86 +387,113 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
               .45,
               1
             ]))),
-        SafeArea(
-            child: Align(
-                alignment: Alignment.topLeft,
-                child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: GestureDetector(
-                        onLongPress: _selectQuality,
-                        child: IconButton.filledTonal(
-                            tooltip: 'الصوت (ضغط مطول للجودة)',
-                            onPressed: _toggleSound,
-                            icon: Icon(_muted
-                                ? Icons.volume_off_rounded
-                                : Icons.volume_up_rounded)))))),
+        Positioned(
+            top: MediaQuery.paddingOf(context).top + 62,
+            left: 12,
+            child: GestureDetector(
+                onLongPress: _selectQuality,
+                child: IconButton.filledTonal(
+                    tooltip: 'الصوت (ضغط مطول للجودة)',
+                    onPressed: _toggleSound,
+                    icon: Icon(_muted
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded)))),
         Positioned(
             left: 12,
             bottom: 110,
             child: Column(children: [
-              _action(Icons.favorite_rounded, widget.reel.likes, () async {
-                if (await _requireLogin()) {
-                  await ReelService.instance.toggleLike(widget.reel.id);
-                }
-              }),
-              _action(Icons.bookmark_rounded, widget.reel.saves, () async {
-                if (await _requireLogin()) {
-                  await ReelService.instance.toggleSave(widget.reel.id);
-                }
-              }),
-              _action(Icons.share_rounded, widget.reel.shares, () {
-                ReelService.instance.track(widget.reel.id, 'share');
-                Share.share('${widget.reel.title}\n${widget.reel.externalUrl}');
-              }),
+              StreamBuilder<bool>(
+                stream: ReelService.instance.liked(widget.reel.id),
+                builder: (_, s) => _action(
+                    Icons.favorite_rounded, widget.reel.likes, () async {
+                  if (await _requireLogin()) {
+                    await ReelService.instance.toggleLike(widget.reel.id);
+                  }
+                }, active: s.data == true),
+              ),
+              StreamBuilder<bool>(
+                stream: ReelService.instance.saved(widget.reel.id),
+                builder: (_, s) => _action(
+                    Icons.bookmark_rounded, widget.reel.saves, () async {
+                  if (await _requireLogin()) {
+                    await ReelService.instance.toggleSave(widget.reel.id);
+                  }
+                }, active: s.data == true),
+              ),
+              _action(Icons.share_rounded, widget.reel.shares, _share),
               _action(Icons.flag_outlined, 0, _report),
             ])),
         Positioned(
             right: 16,
             left: 78,
             bottom: 30,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Wrap(spacing: 6, children: [
-                    if (widget.reel.isSponsored) _badge('ممول'),
-                    if (widget.reel.isFeatured) _badge('مميز'),
-                    _badge(widget.reel.category)
-                  ]),
-                  const SizedBox(height: 8),
-                  Text(widget.reel.title,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold)),
-                  if (widget.reel.description.isNotEmpty)
-                    Text(widget.reel.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70)),
-                  if (widget.reel.propertySnapshot.isNotEmpty)
-                    Text(
-                        '${widget.reel.propertySnapshot['location'] ?? ''}  •  ${widget.reel.propertySnapshot['area'] ?? ''} م²  •  ${widget.reel.propertySnapshot['price'] ?? ''}',
-                        style: const TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w600)),
-                ])),
+            child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.reel.propertyId?.isNotEmpty == true
+                    ? _openProperty
+                    : widget.reel.officeId?.isNotEmpty == true
+                        ? _openOffice
+                        : null,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Wrap(spacing: 6, children: [
+                        if (widget.reel.isSponsored) _badge('ممول'),
+                        if (widget.reel.isFeatured) _badge('مميز'),
+                        _badge(widget.reel.category)
+                      ]),
+                      const SizedBox(height: 8),
+                      Text(widget.reel.title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold)),
+                      if (widget.reel.propertyId?.isNotEmpty == true ||
+                          widget.reel.officeId?.isNotEmpty == true)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 3),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.touch_app_rounded,
+                                size: 15, color: AppTheme.primaryColor),
+                            SizedBox(width: 4),
+                            Text('اضغط لعرض التفاصيل',
+                                style: TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 12)),
+                          ]),
+                        ),
+                      if (widget.reel.description.isNotEmpty)
+                        Text(widget.reel.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70)),
+                      if (widget.reel.propertySnapshot.isNotEmpty)
+                        Text(
+                            '${widget.reel.propertySnapshot['location'] ?? ''}  •  ${widget.reel.propertySnapshot['area'] ?? ''} م²  •  ${widget.reel.propertySnapshot['price'] ?? ''}',
+                            style: const TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600)),
+                    ]))),
         if (_ended) _endOverlay(),
       ]),
     );
   }
 
-  Widget _action(IconData icon, int count, VoidCallback onTap) => Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Column(children: [
-        IconButton.filled(
-            onPressed: onTap,
-            style: IconButton.styleFrom(backgroundColor: Colors.black45),
-            icon: Icon(icon, color: Colors.white)),
-        if (count > 0)
-          Text('$count',
-              style: const TextStyle(color: Colors.white, fontSize: 11))
-      ]));
+  Widget _action(IconData icon, int count, VoidCallback onTap,
+          {bool active = false}) =>
+      Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Column(children: [
+            IconButton.filled(
+                onPressed: onTap,
+                style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                icon: Icon(icon,
+                    color: active ? AppTheme.primaryColor : Colors.white)),
+            if (count > 0)
+              Text('$count',
+                  style: const TextStyle(color: Colors.white, fontSize: 11))
+          ]));
   Widget _badge(String label) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
@@ -414,55 +503,84 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
       child: Text(label,
           style: const TextStyle(color: Colors.white, fontSize: 11)));
   Widget _endOverlay() => ColoredBox(
-      color: Colors.black54,
-      child: Center(
-          child: Container(
-              margin: const EdgeInsets.all(28),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: AppTheme.cardColor.withValues(alpha: .96),
-                  border: Border.all(color: AppTheme.primaryColor),
-                  borderRadius: BorderRadius.circular(24)),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('هل أعجبك هذا العقار؟',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22)),
-                const SizedBox(height: 16),
-                if (widget.reel.propertyId?.isNotEmpty == true)
-                  ElevatedButton.icon(
-                      onPressed: _openProperty,
-                      icon: const Icon(Icons.home_work_rounded),
-                      label: const Text('مشاهدة العقار')),
-                if (widget.reel.officeId?.isNotEmpty == true)
-                  OutlinedButton.icon(
-                      onPressed: () {
-                        ReelService.instance
-                            .track(widget.reel.id, 'officeClick');
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => OfficeProfileScreen(
-                                    officeId: widget.reel.officeId!)));
-                      },
-                      icon: const Icon(Icons.business_rounded),
-                      label: const Text('مشاهدة المكتب')),
-                if (widget.reel.externalUrl.isNotEmpty)
-                  OutlinedButton.icon(
-                      onPressed: _openExternal,
-                      icon: const Icon(Icons.open_in_new_rounded),
-                      label: Text(widget.reel.ctaLabel.isEmpty
-                          ? 'مشاهدة الفيديو كاملاً'
-                          : widget.reel.ctaLabel)),
-                TextButton.icon(
-                    onPressed: () async {
-                      setState(() => _ended = false);
-                      await _controller?.seekTo(Duration.zero);
-                      await _controller?.play();
-                    },
-                    icon: const Icon(Icons.replay_rounded),
-                    label: const Text('إعادة المشاهدة')),
-              ]))));
+      color: Colors.black.withValues(alpha: .72),
+      child: SafeArea(
+          child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(14, 24, 14, 18),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  decoration: BoxDecoration(
+                      color: AppTheme.cardColor,
+                      border: Border.all(
+                          color: AppTheme.primaryColor.withValues(alpha: .65)),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black54, blurRadius: 26)
+                      ]),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(10))),
+                    const SizedBox(height: 15),
+                    Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(alpha: .14),
+                            shape: BoxShape.circle),
+                        child: const Icon(Icons.play_circle_fill_rounded,
+                            color: AppTheme.primaryColor, size: 34)),
+                    const SizedBox(height: 10),
+                    Text(
+                        widget.reel.propertyId?.isNotEmpty == true
+                            ? 'هل أعجبك هذا العقار؟'
+                            : 'هل أعجبك هذا الفيديو؟',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22)),
+                    const SizedBox(height: 5),
+                    Text(widget.reel.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white60)),
+                    const SizedBox(height: 16),
+                    if (widget.reel.propertyId?.isNotEmpty == true)
+                      SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                              onPressed: _openProperty,
+                              icon: const Icon(Icons.home_work_rounded),
+                              label: const Text('مشاهدة العقار'))),
+                    if (widget.reel.officeId?.isNotEmpty == true)
+                      SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                              onPressed: _openOffice,
+                              icon: const Icon(Icons.business_rounded),
+                              label: const Text('مشاهدة المكتب'))),
+                    if (widget.reel.externalUrl.isNotEmpty)
+                      SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                              onPressed: _openExternal,
+                              icon: const Icon(Icons.open_in_new_rounded),
+                              label: Text(widget.reel.ctaLabel.isEmpty
+                                  ? 'مشاهدة الفيديو كاملاً'
+                                  : widget.reel.ctaLabel))),
+                    TextButton.icon(
+                        onPressed: () async {
+                          setState(() => _ended = false);
+                          await _controller?.seekTo(Duration.zero);
+                          await _controller?.play();
+                        },
+                        icon: const Icon(Icons.replay_rounded),
+                        label: const Text('إعادة المشاهدة')),
+                  ])))));
 }

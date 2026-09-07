@@ -74,6 +74,31 @@ class ReelService {
         .map((d) => d.exists);
   }
 
+  Stream<List<ReelModel>> savedReels() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Stream.value(const []);
+    return _db
+        .collection('reel_saves')
+        .where('userId', isEqualTo: uid)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      final reels = await Future.wait(snapshot.docs.map((save) async {
+        final reelId = (save.data()['reelId'] ?? '').toString();
+        if (reelId.isEmpty) return null;
+        try {
+          final reel = await _db.collection('reels').doc(reelId).get();
+          return reel.exists ? ReelModel.fromDocument(reel) : null;
+        } catch (_) {
+          return null;
+        }
+      }));
+      return reels
+          .whereType<ReelModel>()
+          .where((reel) => reel.isCurrentlyVisible)
+          .toList();
+    });
+  }
+
   Future<void> toggleLike(String reelId) => _toggle('like', reelId);
   Future<void> toggleSave(String reelId) => _toggle('save', reelId);
 
@@ -82,11 +107,16 @@ class ReelService {
     await _post('/interaction', {'reelId': reelId, 'type': type});
   }
 
-  Future<void> report(String reelId, String reason, String details) async {
+  Future<void> report(ReelModel reel, String reason, String details) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw StateError('AUTH_REQUIRED');
-    await _post('/report',
-        {'reelId': reelId, 'reason': reason, 'details': details.trim()});
+    await _post('/report', {
+      'reelId': reel.id,
+      'reelTitle': reel.title,
+      'thumbnailUrl': reel.thumbnailUrl,
+      'reason': reason,
+      'details': details.trim()
+    });
   }
 
   Future<String> uploadVideo(

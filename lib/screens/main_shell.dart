@@ -10,7 +10,6 @@ import 'favorites_screen.dart';
 import 'login_screen.dart';
 import 'add_property/add_property_screen.dart';
 import 'property_request/property_request_screen.dart';
-import 'notifications_screen.dart';
 import '../reels/screens/reels_screen.dart';
 
 import '../chat/chat_screen.dart';
@@ -184,7 +183,6 @@ class _MainShellState extends State<MainShell> {
 
   List<Widget> get pages => [
         HomeScreen(key: ValueKey('home-$_accountMode')),
-        const ReelsScreen(),
         FavoritesScreen(
           onExplore: () {
             if (!mounted) return;
@@ -195,7 +193,7 @@ class _MainShellState extends State<MainShell> {
           },
         ),
         const SizedBox(),
-        const NotificationsScreen(),
+        const ReelsScreen(),
         ChatScreen(
           onBack: _backToHome,
         ),
@@ -308,7 +306,7 @@ class _MainShellState extends State<MainShell> {
     // ==========================================
     // المحادثة تحتاج تسجيل الدخول
     // ==========================================
-    if (index == 5) {
+    if (index == 4) {
       final user = FirebaseAuth.instance.currentUser;
 
       if (user == null) {
@@ -422,7 +420,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hideBottomBar = currentIndex == 5;
+    final bool hideBottomBar = currentIndex == 4;
 
     return Scaffold(
       body: pages[currentIndex],

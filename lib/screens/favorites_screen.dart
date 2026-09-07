@@ -8,6 +8,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/currency.dart';
 import '../widgets/aqar_refresh_indicator.dart';
 import '../services/favorites_service.dart';
+import '../reels/models/reel_model.dart';
+import '../reels/screens/reels_screen.dart';
+import '../reels/services/reel_service.dart';
 
 class FavoritesScreen extends StatefulWidget {
   final VoidCallback? onExplore;
@@ -248,28 +251,133 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xff0F172A),
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        title: const Text(
-          "المفضلة",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xff0F172A),
+        appBar: AppBar(
+          elevation: 0,
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          title: const Text("المفضلة",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          bottom: const TabBar(
+            indicatorColor: Color(0xffD4AF37),
+            labelColor: Color(0xffD4AF37),
+            unselectedLabelColor: Colors.white60,
+            tabs: [
+              Tab(text: 'العقارات', icon: Icon(Icons.home_work_rounded)),
+              Tab(text: 'الريلز', icon: Icon(Icons.video_collection_rounded)),
+            ],
           ),
         ),
-      ),
-      body: AqarRefreshIndicator(
-        onRefresh: _refresh,
-        child: _buildBody(),
+        body: TabBarView(children: [
+          AqarRefreshIndicator(onRefresh: _refresh, child: _buildBody()),
+          _buildSavedReels(),
+        ]),
       ),
     );
   }
+
+  Widget _buildSavedReels() => StreamBuilder<List<ReelModel>>(
+        stream: ReelService.instance.savedReels(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text('تعذر تحميل الريلز المحفوظة'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(
+                child: CircularProgressIndicator(color: Color(0xffD4AF37)));
+          }
+          final reels = snapshot.data!;
+          if (reels.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.bookmark_border_rounded,
+                      size: 78, color: Colors.white24),
+                  SizedBox(height: 18),
+                  Text('لا توجد ريلز محفوظة',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Text('اضغط زر الحفظ داخل أي ريل وسيظهر هنا تلقائيًا',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white60)),
+                ]),
+              ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
+            itemCount: reels.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final reel = reels[index];
+              return Card(
+                color: const Color(0xff1E293B),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => ReelsScreen(initialReelId: reel.id)),
+                  ),
+                  child: SizedBox(
+                    height: 112,
+                    child: Row(children: [
+                      SizedBox(
+                        width: 86,
+                        height: double.infinity,
+                        child: reel.thumbnailUrl.isEmpty
+                            ? const ColoredBox(
+                                color: Colors.black26,
+                                child: Icon(Icons.play_circle_rounded,
+                                    color: Color(0xffD4AF37), size: 38))
+                            : Image.network(reel.thumbnailUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.play_circle_rounded,
+                                    color: Color(0xffD4AF37))),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(reel.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            Text(reel.category,
+                                style:
+                                    const TextStyle(color: Color(0xffD4AF37))),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'إزالة من المحفوظات',
+                        onPressed: () =>
+                            ReelService.instance.toggleSave(reel.id),
+                        icon: const Icon(Icons.bookmark_remove_rounded,
+                            color: Color(0xffD4AF37)),
+                      ),
+                    ]),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
 
   Widget _buildBody() {
     if (_loading) {

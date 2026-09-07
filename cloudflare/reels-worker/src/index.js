@@ -89,6 +89,8 @@ async function report(request, env, headers) {
   if (await firestoreExists(path, env, token)) return json({ ok: true, duplicate: true }, 200, headers);
   await firestoreSet(path, {
     userId: stringValue(user.uid), reelId: stringValue(reelId),
+    reelTitle: stringValue(String(body.reelTitle || "").slice(0, 200)),
+    thumbnailUrl: stringValue(String(body.thumbnailUrl || "").slice(0, 1000)),
     reason: stringValue(String(body.reason || "سبب آخر").slice(0, 100)),
     details: stringValue(String(body.details || "").slice(0, 1000)),
     status: stringValue("open"), createdAt: timestampValue(new Date()),

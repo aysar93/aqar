@@ -45,18 +45,10 @@ class CustomBottomBar extends StatelessWidget {
           ),
           Expanded(
             child: BottomNavItem(
-              icon: Icons.video_collection_rounded,
-              label: "الريلز",
-              selected: currentIndex == 1,
-              onTap: () => onTap(1),
-            ),
-          ),
-          Expanded(
-            child: BottomNavItem(
               icon: Icons.favorite_rounded,
               label: "المفضلة",
-              selected: currentIndex == 2,
-              onTap: () => onTap(2),
+              selected: currentIndex == 1,
+              onTap: () => onTap(1),
             ),
           ),
           Expanded(
@@ -66,18 +58,18 @@ class CustomBottomBar extends StatelessWidget {
           ),
           Expanded(
             child: BottomNavItem(
-              icon: Icons.notifications_rounded,
-              label: "التنبيهات",
-              selected: currentIndex == 4,
-              onTap: () => onTap(4),
+              icon: Icons.video_collection_rounded,
+              label: "الريلز",
+              selected: currentIndex == 3,
+              onTap: () => onTap(3),
             ),
           ),
           Expanded(
             child: BottomNavItem(
               icon: Icons.forum_rounded,
               label: "الدردشة",
-              selected: currentIndex == 5,
-              onTap: () => onTap(5),
+              selected: currentIndex == 4,
+              onTap: () => onTap(4),
             ),
           ),
         ],
