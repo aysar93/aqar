@@ -23,6 +23,7 @@ export default {
       if (url.pathname === "/event") return recordEvent(request, env, headers);
       if (url.pathname === "/interaction") return interaction(request, env, headers);
       if (url.pathname === "/report") return report(request, env, headers);
+      if (url.pathname === "/delete") return deleteReel(request, env, headers);
       return json({ error: "not_found" }, 404, headers);
     } catch (error) {
       const status = error.status || 500;
@@ -99,6 +100,39 @@ async function report(request, env, headers) {
   return json({ ok: true }, 201, headers);
 }
 
+async function deleteReel(request, env, headers) {
+  const user = await authenticatedUser(request, env);
+  await requireAdmin(user.uid, env);
+  const body = await request.json();
+  const reelId = validId(body.reelId);
+  const token = await googleAccessToken(env);
+  const reel = await firestoreGet(`reels/${reelId}`, env, token);
+  if (!reel) throw httpError(404, "reel_not_found");
+
+  const reelUrls = urlsFromReel(reel);
+  const allReels = await firestoreQuery("reels", null, null, env, token);
+  const referencedElsewhere = new Set(
+    allReels
+      .filter((document) => !document.name.endsWith(`/reels/${reelId}`))
+      .flatMap(urlsFromReel),
+  );
+  const keys = [...new Set(reelUrls)]
+    .filter((url) => !referencedElsewhere.has(url))
+    .map((url) => r2Key(url, env))
+    .filter(Boolean);
+  if (keys.length) await env.REELS_BUCKET.delete(keys);
+
+  for (const collection of ["reel_likes", "reel_saves", "reel_reports", "reel_event_dedup"]) {
+    const documents = await firestoreQuery(collection, "reelId", reelId, env, token);
+    await Promise.all(documents.map((document) => {
+      const marker = `/documents/`;
+      return firestoreDelete(document.name.split(marker)[1], env, token);
+    }));
+  }
+  await firestoreDelete(`reels/${reelId}`, env, token);
+  return json({ ok: true, deletedObjects: keys.length }, 200, headers);
+}
+
 async function authenticatedUser(request, env) {
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) throw httpError(401, "authentication_required");
@@ -141,6 +175,18 @@ async function firestoreGet(path, env, token) { const r = await fetch(`${firesto
 async function firestoreExists(path, env, token) { return (await firestoreGet(path, env, token)) !== null; }
 async function firestoreSet(path, fields, env, token) { const r = await fetch(`${firestoreBase(env)}/${path}`, { method: "PATCH", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ fields }) }); if (!r.ok) throw new Error("firestore_set_failed"); }
 async function firestoreDelete(path, env, token) { const r = await fetch(`${firestoreBase(env)}/${path}`, { method: "DELETE", headers: { authorization: `Bearer ${token}` } }); if (!r.ok && r.status !== 404) throw new Error("firestore_delete_failed"); }
+async function firestoreQuery(collection, field, value, env, token) {
+  const structuredQuery = { from: [{ collectionId: collection }] };
+  if (field) structuredQuery.where = { fieldFilter: { field: { fieldPath: field }, op: "EQUAL", value: stringValue(value) } };
+  const r = await fetch(`${firestoreBase(env)}:runQuery`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ structuredQuery }),
+  });
+  if (!r.ok) throw new Error("firestore_query_failed");
+  const rows = await r.json();
+  return rows.map((row) => row.document).filter(Boolean);
+}
 async function incrementReel(reelId, field, amount, env, token) {
   const document = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/reels/${reelId}`;
   const r = await fetch(`${firestoreBase(env)}:commit`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ writes: [{ transform: { document, fieldTransforms: [{ fieldPath: field, increment: { integerValue: String(amount) } }, { fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] } }] }) });
@@ -151,6 +197,24 @@ function safeExtension(name) { const value = name.split(".").pop().toLowerCase()
 function validId(value) { const id = String(value || ""); if (!/^[A-Za-z0-9_-]{10,80}$/.test(id)) throw httpError(400, "invalid_reel"); return id; }
 function stringValue(value) { return { stringValue: value }; }
 function timestampValue(value) { return { timestampValue: value.toISOString() }; }
+function urlsFromReel(document) {
+  const fields = document?.fields || {};
+  const values = [fields.videoUrl?.stringValue, fields.thumbnailUrl?.stringValue];
+  const qualities = fields.qualityUrls?.mapValue?.fields || {};
+  for (const quality of Object.values(qualities)) values.push(quality?.stringValue);
+  return values.filter((value) => typeof value === "string" && value.length > 0);
+}
+function r2Key(value, env) {
+  try {
+    const publicBase = new URL(env.R2_PUBLIC_BASE_URL);
+    const url = new URL(value);
+    if (url.origin !== publicBase.origin) return null;
+    const key = decodeURIComponent(url.pathname.replace(/^\//, ""));
+    return key.startsWith("reels/") ? key : null;
+  } catch (_) {
+    return null;
+  }
+}
 function httpError(status, message) { const error = new Error(message); error.status = status; return error; }
 function corsHeaders(request) { return { "access-control-allow-origin": request.headers.get("origin") || "*", "access-control-allow-headers": "Authorization, Content-Type", "access-control-allow-methods": "GET, POST, OPTIONS", "vary": "Origin" }; }
 function json(value, status, headers) { return new Response(JSON.stringify(value), { status, headers: { ...headers, "content-type": "application/json; charset=utf-8" } }); }

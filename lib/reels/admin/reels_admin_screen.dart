@@ -236,17 +236,36 @@ class _ReelsManagementState extends State<_ReelsManagement> {
         builder: (_) => AlertDialog(
                 title: const Text('حذف الريل؟'),
                 content: const Text(
-                    'سيُحذف السجل نهائيًا. استخدم الأرشفة إذا أردت الاحتفاظ به.'),
+                    'سيُحذف الريل نهائيًا من التطبيق، وسيُحذف ملف الفيديو من Cloudflare R2 وجميع الإعجابات والمحفوظات والبلاغات المرتبطة به. لا يمكن التراجع عن هذه العملية. استخدم الأرشفة إذا أردت الاحتفاظ به.'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context, false),
                       child: const Text('إلغاء')),
                   TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('حذف'))
+                      child: const Text('حذف نهائيًا',
+                          style: TextStyle(color: Colors.red)))
                 ]));
     if (ok == true) {
-      await FirebaseFirestore.instance.collection('reels').doc(id).delete();
+      if (!context.mounted) return;
+      showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()));
+      try {
+        await ReelService.instance.deleteReel(id);
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('تم حذف الريل وملفاته وبياناته نهائيًا')));
+        }
+      } catch (_) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('تعذر إكمال الحذف. لم يتم حذف سجل الريل.')));
+        }
+      }
     }
   }
 }

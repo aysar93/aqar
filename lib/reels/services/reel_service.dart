@@ -102,6 +102,10 @@ class ReelService {
   Future<void> toggleLike(String reelId) => _toggle('like', reelId);
   Future<void> toggleSave(String reelId) => _toggle('save', reelId);
 
+  Future<void> deleteReel(String reelId) async {
+    await _post('/delete', {'reelId': reelId});
+  }
+
   Future<void> _toggle(String type, String reelId) async {
     _interactionId(reelId);
     await _post('/interaction', {'reelId': reelId, 'type': type});
