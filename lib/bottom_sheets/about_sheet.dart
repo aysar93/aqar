@@ -279,7 +279,7 @@ void showAboutSheet(BuildContext context) {
               const Column(
                 children: [
                   Text(
-                    "الإصدار 1.0.1",
+                    "الإصدار 1.0.3",
                     style: TextStyle(
                       color: Colors.white54,
                       fontSize: 13,

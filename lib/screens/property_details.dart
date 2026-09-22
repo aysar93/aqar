@@ -16,6 +16,8 @@ import 'publisher_properties_screen.dart';
 import '../core/design/aqar_sizes.dart';
 import '../core/design/aqar_text.dart';
 import '../office/screens/office_profile_screen.dart';
+import '../features/property_card/property_card_data.dart';
+import '../features/property_card/property_card_preview_screen.dart';
 import 'dart:async';
 
 class PropertyDetails extends StatefulWidget {
@@ -931,6 +933,49 @@ $phone
 
 ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 ''');
+  }
+
+  void openPropertyCard() {
+    final propertyId = widget.docId?.trim() ?? '';
+    if (propertyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يمكن إنشاء البطاقة لأن معرف العقار غير متوفر.')),
+      );
+      return;
+    }
+    final image = widget.images.isNotEmpty
+        ? widget.images.first.toString()
+        : widget.imageUrl;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PropertyCardPreviewScreen(
+          data: PropertyCardData(
+            id: propertyId,
+            number: widget.propertyNumber,
+            title: widget.title,
+            imageUrl: image,
+            propertyType: widget.propertyType,
+            adType: widget.adType,
+            price: double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0,
+            negotiable: widget.negotiable,
+            location: widget.location,
+            city: widget.city,
+            areaName: widget.areaName,
+            rooms: widget.rooms,
+            bathrooms: widget.bathrooms,
+            area: widget.area,
+            floors: widget.floors,
+            documentType: widget.documentType,
+            availabilityStatus: widget.availabilityStatus,
+            features: widget.features,
+            contactName: contactName.isEmpty ? widget.publisherName : contactName,
+            contactPhone: contactPhone,
+            isOffice: isOfficeProperty,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget infoTile(IconData icon, String title, String value) {
@@ -1881,6 +1926,21 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                         Row(
                           children: [
+                            Container(
+                              width: AqarSizes.detailsTopButton(context),
+                              height: AqarSizes.detailsTopButton(context),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                              ),
+                              child: IconButton(
+                                tooltip: 'طباعة بطاقة العقار',
+                                icon: Icon(Icons.print_outlined, color: Colors.white, size: AqarSizes.detailsTopIcon(context)),
+                                onPressed: openPropertyCard,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
                             // زر المشاركة
                             Container(
                               width: AqarSizes.detailsTopButton(context),

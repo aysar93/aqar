@@ -464,7 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Color(0xffD4AF37)),
                           ),
                           const Text(
-                            "الإصدار 1.0.1",
+                            "الإصدار 1.0.3",
                             style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                           const Divider(height: 30),
