@@ -5,6 +5,12 @@
     <!-- صلاحيات الإنترنت والموقع -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- حفظ الصور في Gallery — مطلوب لـ Android 9 وما دون فقط -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
+
+
 <uses-permission
     android:name="android.permission.POST_NOTIFICATIONS"/>
 
@@ -63,6 +69,17 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+            <!-- Deep Link: فتح العقار مباشرة عند مسح QR -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="aysar93.github.io"
+                    android:pathPrefix="/aqar-pages/property/"/>
             </intent-filter>
 
         </activity>

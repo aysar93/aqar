@@ -12,6 +12,7 @@ import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_navigation_service.dart';
+import 'services/deep_link_service.dart';
 import 'screens/onboarding/splash_screen.dart';
 
 Future<void> main() async {
@@ -48,6 +49,13 @@ Future<void> _initializeBackgroundServices() async {
   } catch (error, stack) {
     debugPrint('FCM initialization failed: $error');
     await FirebaseCrashlytics.instance.recordError(error, stack);
+  }
+
+  // تهيئة خدمة Deep Link لمعالجة روابط QR العقارات
+  try {
+    DeepLinkService.initialize();
+  } catch (e) {
+    debugPrint('DeepLinkService initialization failed: $e');
   }
 
   // Guests intentionally have no Firebase user. If a guest signs in later in

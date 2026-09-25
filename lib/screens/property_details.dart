@@ -939,13 +939,29 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
     final propertyId = widget.docId?.trim() ?? '';
     if (propertyId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن إنشاء البطاقة لأن معرف العقار غير متوفر.')),
+        const SnackBar(
+            content: Text('لا يمكن إنشاء البطاقة لأن معرف العقار غير متوفر.')),
       );
       return;
     }
-    final image = widget.images.isNotEmpty
+
+    // بناء قائمة الصور: الصورة الرئيسية أولاً ثم باقي الصور
+    final allImages = <String>[];
+    final mainImg = widget.images.isNotEmpty
         ? widget.images.first.toString()
         : widget.imageUrl;
+    if (mainImg.isNotEmpty) allImages.add(mainImg);
+    for (int i = 1; i < widget.images.length; i++) {
+      final url = widget.images[i].toString();
+      if (url.isNotEmpty && !allImages.contains(url)) allImages.add(url);
+    }
+
+    // السعر الرقمي
+    final priceNum = double.tryParse(
+          widget.price.replaceAll(RegExp(r'[^0-9.]'), ''),
+        ) ??
+        0;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -954,24 +970,42 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
             id: propertyId,
             number: widget.propertyNumber,
             title: widget.title,
-            imageUrl: image,
+            imageUrl: mainImg,
+            images: allImages,
             propertyType: widget.propertyType,
             adType: widget.adType,
-            price: double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0,
+            price: priceNum,
             negotiable: widget.negotiable,
             location: widget.location,
             city: widget.city,
             areaName: widget.areaName,
+            landmark: widget.landmark,
             rooms: widget.rooms,
             bathrooms: widget.bathrooms,
+            livingRooms: widget.livingRooms,
+            parking: widget.parking,
             area: widget.area,
+            frontage: widget.frontage,
+            depth: widget.depth,
             floors: widget.floors,
+            apartmentFloor: widget.apartmentFloor,
+            unitsCount: widget.unitsCount,
+            buildYear: widget.buildYear,
             documentType: widget.documentType,
+            furnitureStatus: widget.furnitureStatus,
             availabilityStatus: widget.availabilityStatus,
             features: widget.features,
-            contactName: contactName.isEmpty ? widget.publisherName : contactName,
+            description: widget.description,
+            contactName:
+                contactName.isEmpty ? widget.publisherName : contactName,
             contactPhone: contactPhone,
+            contactWhatsapp: contactWhatsapp.trim().isNotEmpty
+                ? contactWhatsapp.trim()
+                : contactPhone.trim(),
             isOffice: isOfficeProperty,
+            isVerified: widget.isVerified,
+            isFeatured: widget.isFeatured,
+            cardDate: DateTime.now(),
           ),
         ),
       ),
@@ -1932,11 +1966,15 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.35),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                                border: Border.all(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.15)),
                               ),
                               child: IconButton(
                                 tooltip: 'طباعة بطاقة العقار',
-                                icon: Icon(Icons.print_outlined, color: Colors.white, size: AqarSizes.detailsTopIcon(context)),
+                                icon: Icon(Icons.print_outlined,
+                                    color: Colors.white,
+                                    size: AqarSizes.detailsTopIcon(context)),
                                 onPressed: openPropertyCard,
                               ),
                             ),
