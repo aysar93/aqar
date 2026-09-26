@@ -399,13 +399,54 @@ match /subscription_payments/{paymentId} {
 // ==================================================
 // بلاغات المكاتب
 // ==================================================
+// Reports: immutable target, reporter, reason, details and creation time.
+// Older office reports may omit title/reason/details. Review fields are admin-only.
+function reportText(d, key, max) {
+  return !(key in d) || (d[key] is string && d[key].size() <= max);
+}
+function validContentReport(d, office) {
+  let target = office ? 'officeId' : 'propertyId';
+  return d.keys().hasAll([target, 'userId', 'createdAt', 'status']) &&
+    d.keys().hasOnly([target, 'officeOwnerId', 'userId', 'createdAt', 'status',
+      'targetTitle', 'reason', 'details', 'adminNotes', 'reviewedBy', 'updatedAt']) &&
+    d[target] is string && d[target].size() > 0 && d[target].size() <= 128 &&
+    d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128 &&
+    d.createdAt is timestamp &&
+    d.status in ['pending', 'in_review', 'resolved', 'dismissed'] &&
+    reportText(d, 'targetTitle', 300) && reportText(d, 'reason', 100) &&
+    reportText(d, 'details', 1500) && reportText(d, 'officeOwnerId', 128) &&
+    reportText(d, 'adminNotes', 1500) && reportText(d, 'reviewedBy', 128) &&
+    (!('updatedAt' in d) || d.updatedAt is timestamp) &&
+    (office || (!('officeOwnerId' in d) && d.keys().hasAll(['reason', 'details', 'targetTitle']))) &&
+    (!('reason' in d) || (d.reason in ['معلومات مضللة أو غير صحيحة', 'احتيال أو طلبات مشبوهة',
+      'محتوى غير مناسب', 'انتهاك حقوق أو انتحال هوية', 'إعلان مكرر أو غير متاح', 'سبب آخر'] &&
+      (d.reason != 'سبب آخر' || (d.details is string && d.details.size() > 0))));
+}
+function createContentReport(office) {
+  let d = request.resource.data;
+  return isSignedIn() && validContentReport(d, office) &&
+    d.userId == request.auth.uid && d.status == 'pending' && d.createdAt == request.time &&
+    !d.keys().hasAny(['adminNotes', 'reviewedBy', 'updatedAt']);
+}
+function reviewContentReport(office) {
+  let d = request.resource.data;
+  return isAdmin() && validContentReport(d, office) &&
+    d.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNotes', 'reviewedBy', 'updatedAt']) &&
+    d.reviewedBy == request.auth.uid && d.updatedAt == request.time;
+}
 match /office_reports/{reportId} {
-  // أي مستخدم مسجل يستطيع إرسال بلاغ.
-  allow create: if isSignedIn() &&
-    request.resource.data.userId == request.auth.uid;
-
-  // البلاغات للإدارة فقط.
-  allow read, update, delete: if isAdmin();
+  allow create: if createContentReport(true) &&
+    exists(/databases/$(database)/documents/offices/$(request.resource.data.officeId)) &&
+    request.resource.data.officeOwnerId ==
+      get(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerId;
+  allow read, delete: if isAdmin();
+  allow update: if reviewContentReport(true);
+}
+match /property_reports/{reportId} {
+  allow create: if createContentReport(false) &&
+    exists(/databases/$(database)/documents/properties/$(request.resource.data.propertyId));
+  allow read, delete: if isAdmin();
+  allow update: if reviewContentReport(false);
 }
 
    // ============================================================

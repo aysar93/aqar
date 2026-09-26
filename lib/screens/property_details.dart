@@ -20,6 +20,7 @@ import '../office/screens/office_profile_screen.dart';
 import '../features/property_card/property_card_data.dart';
 import '../features/property_card/property_card_preview_screen.dart';
 import 'dart:async';
+import '../reports/report_dialog.dart';
 
 class PropertyDetails extends StatefulWidget {
   final PropertyModel? property;
@@ -1961,6 +1962,29 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                         Row(
                           children: [
+                            Container(
+                              width: AqarSizes.detailsTopButton(context),
+                              height: AqarSizes.detailsTopButton(context),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.15)),
+                              ),
+                              child: IconButton(
+                                tooltip: 'الإبلاغ عن العقار',
+                                icon: Icon(Icons.flag_outlined,
+                                    color: Colors.white,
+                                    size: AqarSizes.detailsTopIcon(context)),
+                                onPressed: () => showContentReportDialog(
+                                    context,
+                                    isOffice: false,
+                                    targetId: widget.docId ?? '',
+                                    title: widget.title),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
                             Container(
                               width: AqarSizes.detailsTopButton(context),
                               height: AqarSizes.detailsTopButton(context),

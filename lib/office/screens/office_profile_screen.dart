@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../reports/report_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:aqar/services/share_origin.dart';
@@ -341,33 +342,11 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
                       return;
                     }
 
-                    try {
-                      await FirebaseFirestore.instance
-                          .collection('office_reports')
-                          .add({
-                        'officeId': office.id,
-                        'officeOwnerId': office.ownerId,
-                        'userId': currentUser.uid,
-                        'createdAt': FieldValue.serverTimestamp(),
-                        'status': 'pending',
-                      });
-
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('تم الإبلاغ عن المكتب بنجاح.'),
-                          ),
-                        );
-                      }
-                    } catch (_) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('تعذر إرسال البلاغ حاليًا.'),
-                          ),
-                        );
-                      }
-                    }
+                    await showContentReportDialog(context,
+                        isOffice: true,
+                        targetId: office.id,
+                        title: office.name,
+                        officeOwnerId: office.ownerId);
                   },
                 ),
               if (office.email.trim().isNotEmpty)

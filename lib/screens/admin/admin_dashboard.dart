@@ -13,6 +13,7 @@ import 'office_management_screen.dart';
 import '../../app_updates/app_updates_management_screen.dart';
 import '../../analytics/screens/analytics_dashboard_screen.dart';
 import '../../reels/admin/reels_admin_screen.dart';
+import 'content_reports_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -60,6 +61,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
             const SizedBox(height: 25),
+            adminButton(
+              context,
+              icon: Icons.flag_rounded,
+              title: 'بلاغات العقارات والمكاتب',
+              subtitle: 'مراجعة البلاغات ومتابعة حالتها والإجراءات المتخذة',
+              color: Colors.redAccent,
+              page: const ContentReportsScreen(),
+            ),
             adminButton(
               context,
               icon: Icons.analytics_rounded,
