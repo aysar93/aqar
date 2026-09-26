@@ -60,6 +60,8 @@
 	<string>نحتاج إلى الكاميرا لالتقاط صور العقارات والمستندات.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>نحتاج إلى موقعك لتحديد موقع العقار على الخريطة.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>نحتاج إلى موقعك عند استخدام ميزات الخريطة لتحديد موقع العقار بدقة.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>نحتاج إلى مكتبة الصور لإرفاق صور العقارات والمحادثات.</string>
 	<key>UIBackgroundModes</key>
