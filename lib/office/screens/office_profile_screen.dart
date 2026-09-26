@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:aqar/services/share_origin.dart';
 
 import '../models/office_model.dart';
 import '../models/office_review_model.dart';
@@ -424,6 +425,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
       await Share.share(
         text,
         subject: name,
+        sharePositionOrigin: shareOrigin(context),
       );
     } catch (e) {
       if (context.mounted) {

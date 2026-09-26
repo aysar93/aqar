@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:aqar/services/share_origin.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/currency.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -932,7 +933,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
 $phone
 
 ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
-''');
+''', sharePositionOrigin: shareOrigin(context));
   }
 
   void openPropertyCard() {

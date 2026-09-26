@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:aqar/services/share_origin.dart';
 import '../screens/login_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/my_properties_screen.dart';
@@ -550,6 +551,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     drawerItem(Icons.share_rounded, "مشاركة التطبيق", () {
                       Share.share(
                         "حمّل تطبيق عقارات الانبار واستعرض أفضل العقارات بسهولة.\n\nhttps://play.google.com/store/apps/details?id=com.andalus.aqar",
+                        sharePositionOrigin: shareOrigin(context),
                       );
                     }),
                     const Divider(height: 1),

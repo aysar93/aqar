@@ -6,6 +6,7 @@ import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:aqar/services/share_origin.dart';
 
 import 'property_card_data.dart';
 import 'property_card_pdf_service.dart';
@@ -332,6 +333,7 @@ class _PropertyCardPreviewScreenState
       await Share.shareXFiles(
         [XFile(tmpFile.path, mimeType: 'image/png')],
         subject: 'عقار #${widget.data.number} — ${widget.data.title}',
+        sharePositionOrigin: shareOrigin(context),
       );
     } catch (e) {
       if (!mounted) return;
@@ -392,6 +394,7 @@ class _PropertyCardPreviewScreenState
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'application/pdf')],
         subject: 'بطاقة عقار #${widget.data.number} — ${widget.data.title}',
+        sharePositionOrigin: shareOrigin(context),
       );
     } catch (e) {
       if (!mounted) return;

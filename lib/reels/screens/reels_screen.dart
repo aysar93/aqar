@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:aqar/services/share_origin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
@@ -284,7 +285,8 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
       'عقارات الأنبار',
     ];
     ReelService.instance.track(widget.reel.id, 'share');
-    Share.share(details.join('\n'), subject: widget.reel.title);
+    Share.share(details.join('\n'), subject: widget.reel.title,
+        sharePositionOrigin: shareOrigin(context));
   }
 
   Future<void> _report() async {
