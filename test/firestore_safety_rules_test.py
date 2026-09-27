@@ -62,6 +62,14 @@ class SafetyRules(unittest.TestCase):
         self.assertEqual(write('properties/spoof-office', {**data, 'userId': 'reporter', 'publisherUid': 'reporter'}), 403)
         self.assertEqual(write('properties/verified-bad', {**data, 'title': 'PORN'}, 'publisher'), 403)
 
+    def test_office_registration_and_owner_edits_remain_available(self):
+        data = {'ownerId': 'reporter', 'name': 'مكتب الرمادي', 'status': 'pending'}
+        self.assertEqual(write('officeRequests/new-office', data), 200)
+        self.assertEqual(write('officeRequests/new-office', {'name': 'مكتب الأنبار'}, 'reporter', True, None), 200)
+        self.assertEqual(write('officeRequests/blocked-office', {**data, 'ownerId': 'blocked'}, 'blocked'), 403)
+        self.assertEqual(write('offices/owner-edit', {'ownerId': 'reporter', 'name': 'مكتب', 'status': 'active'}, 'SEED', timestamp=None), 200)
+        self.assertEqual(write('offices/owner-edit', {'name': 'مكتب الرمادي'}, 'reporter', True, 'updatedAt'), 200)
+
     def test_reviews_and_owner_replies_publish_immediately(self):
         self.assertEqual(write('offices/reviewed', {'ownerId': 'publisher', 'status': 'active'}, 'SEED', timestamp=None), 200)
         data = {'userId': 'reporter', 'officeId': 'reviewed', 'comment': 'خدمة جيدة', 'status': 'published'}
