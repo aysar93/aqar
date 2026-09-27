@@ -60,7 +60,8 @@ class SafetyRules(unittest.TestCase):
         data = {'userId': 'publisher', 'publisherUid': 'publisher', 'officeId': 'verified', 'status': 'approved', 'title': 'بيت للبيع'}
         self.assertEqual(write('properties/verified-direct', data, 'publisher'), 200)
         self.assertEqual(write('properties/spoof-office', {**data, 'userId': 'reporter', 'publisherUid': 'reporter'}), 403)
-        self.assertEqual(write('properties/verified-bad', {**data, 'title': 'PORN'}, 'publisher'), 403)
+        for i, text in enumerate(['PORN', 'بيت\nPORN', 'إبَاحي', 'p\u200born']):
+            self.assertEqual(write(f'properties/verified-bad-{i}', {**data, 'title': text}, 'publisher'), 403)
 
     def test_office_registration_and_owner_edits_remain_available(self):
         data = {'ownerId': 'reporter', 'name': 'مكتب الرمادي', 'status': 'pending'}

@@ -21,7 +21,7 @@ service cloud.firestore {
     }
     function cleanText(d, key) {
       return !(key in d) || (d[key] is string && d[key].size() <= 10000 &&
-        !d[key].lower().replace('[ًٌٍَُِّْـٰ]', '').replace('[أإآ]', 'ا').matches('.*(porn|xxx|fuck|shit|اباحي|إباحي|قحبة|شرموط|كس ام|كسم|نيك|اغتصاب).*'));
+        !d[key].lower().replace('[ً-ٰٟـ​-‏]', '').replace('[أإآ]', 'ا').matches('(?s).*(porn|xxx|fuck|shit|اباحي|إباحي|قحبة|شرموط|كس ام|كسم|نيك|اغتصاب).*'));
     }
     function cleanContent(d) {
       return cleanText(d, 'title') && cleanText(d, 'description') &&
