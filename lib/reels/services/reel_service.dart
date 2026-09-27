@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -23,11 +24,40 @@ class ReelService {
       .orderBy('sortOrder')
       .orderBy('publishAt', descending: true)
       .limit(100)
-      .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map(ReelModel.fromDocument)
-          .where((reel) => reel.isCurrentlyVisible)
-          .toList());
+      .safeSnapshots()
+      .asyncMap((snapshot) async {
+        final result = await Future.wait(snapshot.docs.map((doc) async {
+          final reel = ReelModel.fromDocument(doc);
+          return await _visibleToViewer(reel) ? reel : null;
+        }));
+        return result.whereType<ReelModel>().toList();
+      });
+
+  Future<bool> _visibleToViewer(ReelModel reel) async {
+    if (!reel.isCurrentlyVisible) return false;
+    try {
+      for (final entry in {
+        'properties': reel.propertyId,
+        'offices': reel.officeId
+      }.entries) {
+        if (entry.value == null || entry.value!.isEmpty) continue;
+        final doc = await _db.collection(entry.key).doc(entry.value).get();
+        if (!doc.exists) return false;
+        UserBlocks.instance.rememberTarget(doc.reference.path, doc.data()!);
+        if (UserBlocks.instance.hides(doc.data()!)) return false;
+        if (entry.key == 'properties' && doc.data()?['status'] != 'approved')
+          return false;
+        if (entry.key == 'offices' && doc.data()?['status'] != 'active')
+          return false;
+      }
+      return !UserBlocks.instance.hides({
+        'propertySnapshot': reel.propertySnapshot,
+        'officeSnapshot': reel.officeSnapshot
+      });
+    } catch (_) {
+      return false;
+    }
+  }
 
   Stream<List<ReelModel>> adminReels() => _db
       .collection('reels')
@@ -80,14 +110,16 @@ class ReelService {
     return _db
         .collection('reel_saves')
         .where('userId', isEqualTo: uid)
-        .snapshots()
+        .safeSnapshots()
         .asyncMap((snapshot) async {
       final reels = await Future.wait(snapshot.docs.map((save) async {
         final reelId = (save.data()['reelId'] ?? '').toString();
         if (reelId.isEmpty) return null;
         try {
           final reel = await _db.collection('reels').doc(reelId).get();
-          return reel.exists ? ReelModel.fromDocument(reel) : null;
+          if (!reel.exists) return null;
+          final model = ReelModel.fromDocument(reel);
+          return await _visibleToViewer(model) ? model : null;
         } catch (_) {
           return null;
         }

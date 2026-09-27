@@ -1,3 +1,4 @@
+import '../../moderation/content_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -444,6 +445,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   Future<void> publishProperty() async {
     if (isPublishing) return;
+    if (ContentPolicy.rejects('${property.title} ${property.description}')) {
+      _showValidationMessage('يتضمن الإعلان محتوى غير مسموح. يرجى تعديله.');
+      return;
+    }
     if (!_validateAllBeforePublish()) return;
 
     property.clearFieldsNotUsedByPropertyType();
@@ -590,7 +595,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
       final isVerifiedOffice =
           activeOffice != null && activeOffice.isVerified == true;
-
       final propertyStatus = isVerifiedOffice ? 'approved' : 'pending';
 
       await propertyReference.set({

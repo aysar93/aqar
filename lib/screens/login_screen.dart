@@ -1,3 +1,4 @@
+import '../moderation/eula.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
@@ -28,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
+  bool _acceptedTerms = false;
   bool _obscure = true;
   bool _rememberMe = false;
   bool _showRecovery = false;
@@ -65,6 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (!_acceptedTerms || _loading) return;
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
@@ -82,6 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       await _saveRememberPreference();
       if (!mounted) return;
+      await recordEulaConsent();
+      if (!mounted) return;
       await context.read<UserProvider>().refresh();
       if (!mounted) return;
       _openApp();
@@ -91,6 +96,10 @@ class _LoginScreenState extends State<LoginScreen> {
         _error = failure.message;
         _showRecovery = true;
       });
+    } catch (_) {
+      if (mounted)
+        setState(
+            () => _error = 'تعذر إكمال الدخول أو حفظ الموافقة. حاول مجدداً.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -100,6 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Future<dynamic> Function() signIn,
     String provider,
   ) async {
+    if (!_acceptedTerms || _loading) return;
     setState(() {
       _loading = true;
       _error = '';
@@ -109,6 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result == null) return;
       await UserService.createOrUpdateSocialUser(result.user!);
       await UserService.completeSignIn(result.user!);
+      if (!mounted) return;
+      await recordEulaConsent();
       if (!mounted) return;
       await context.read<UserProvider>().refresh();
       if (!mounted) return;
@@ -298,8 +310,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                           ],
                           const SizedBox(height: 12),
+                          EulaConsent(
+                              accepted: _acceptedTerms,
+                              onChanged: _loading
+                                  ? null
+                                  : (value) =>
+                                      setState(() => _acceptedTerms = value)),
                           ElevatedButton(
-                            onPressed: _loading ? null : _login,
+                            onPressed:
+                                _loading || !_acceptedTerms ? null : _login,
                             child: _loading
                                 ? const SizedBox.square(
                                     dimension: 24,
@@ -318,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton(
-                            onPressed: _loading
+                            onPressed: (_loading || !_acceptedTerms)
                                 ? null
                                 : () {
                                     Navigator.push(
@@ -352,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: _loading
+                                  onPressed: (_loading || !_acceptedTerms)
                                       ? null
                                       : () => _socialLogin(
                                             GoogleAuthService.signInWithGoogle,
@@ -368,7 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: _loading
+                                  onPressed: (_loading || !_acceptedTerms)
                                       ? null
                                       : () => _socialLogin(
                                             FacebookAuthService
@@ -387,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (defaultTargetPlatform == TargetPlatform.iOS) ...[
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
-                              onPressed: _loading
+                              onPressed: (_loading || !_acceptedTerms)
                                   ? null
                                   : () => _socialLogin(
                                         AppleAuthService.signInWithApple,

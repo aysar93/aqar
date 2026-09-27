@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -100,7 +101,7 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
             'status',
             isEqualTo: 'approved',
           )
-          .snapshots(),
+          .safeSnapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {

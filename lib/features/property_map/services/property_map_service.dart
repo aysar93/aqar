@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/map_filter.dart';
@@ -71,7 +72,7 @@ class PropertyMapService implements PropertyMapRepository {
 
     final data = document.data();
 
-    if (data == null) {
+    if (data == null || UserBlocks.instance.hides(data)) {
       return null;
     }
 
@@ -95,7 +96,7 @@ class PropertyMapService implements PropertyMapRepository {
   Stream<List<MapProperty>> watchProperties({
     MapFilter filter = MapFilter.empty,
   }) {
-    return _approvedPropertiesQuery().snapshots().map(
+    return _approvedPropertiesQuery().safeSnapshots().map(
           (snapshot) => _buildProperties(
             snapshot.docs,
             filter: filter,
@@ -117,6 +118,7 @@ class PropertyMapService implements PropertyMapRepository {
     final properties = <MapProperty>[];
 
     for (final document in documents) {
+      if (UserBlocks.instance.hides(document.data())) continue;
       try {
         final property = MapProperty.fromMap(
           document.data(),

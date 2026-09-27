@@ -64,7 +64,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
           return;
         }
 
-        _controller.load();
+        _controller.startWatching();
       },
     );
   }

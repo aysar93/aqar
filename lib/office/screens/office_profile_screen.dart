@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -122,6 +123,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
               );
             }
 
+            if (hiddenForViewer(context, {'ownerId': office.ownerId})) return blockedContentPage();
             return NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
@@ -321,6 +323,9 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
                     );
                   },
                 ),
+              if (!isOwner)
+                ListTile(leading: const Icon(Icons.block), title: const Text('حظر المستخدم'),
+                  onTap: () { Navigator.pop(sheetContext); showBlockUserDialog(context, office.ownerId, targetPath: 'offices/${office.id}', officeId: office.id); }),
               if (!isOwner)
                 ListTile(
                   leading: const Icon(
@@ -1625,7 +1630,7 @@ class _StatisticsCard extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('properties')
           .where('officeId', isEqualTo: officeId)
-          .snapshots(),
+          .safeSnapshots(),
       builder: (context, propertySnapshot) {
         final propertyDocs = propertySnapshot.data?.docs ?? const [];
 
@@ -1662,7 +1667,7 @@ class _StatisticsCard extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('office_followers')
                   .where('officeId', isEqualTo: officeId)
-                  .snapshots(),
+                  .safeSnapshots(),
               builder: (context, followerSnapshot) {
                 final followerDocs = followerSnapshot.data?.docs ?? const [];
 
@@ -1683,7 +1688,7 @@ class _StatisticsCard extends StatelessWidget {
                   stream: FirebaseFirestore.instance
                       .collection('office_events')
                       .where('officeId', isEqualTo: officeId)
-                      .snapshots(),
+                      .safeSnapshots(),
                   builder: (context, viewsSnapshot) {
                     final viewDocs = viewsSnapshot.data?.docs ?? const [];
 
@@ -1949,7 +1954,7 @@ class _LatestPropertiesState extends State<_LatestProperties> {
           .collection('properties')
           .where('officeId', isEqualTo: widget.officeId)
           .limit(30)
-          .snapshots(),
+          .safeSnapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return _Card(
@@ -2941,6 +2946,7 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (hiddenForViewer(context, {'userId': review.userId})) return const SizedBox.shrink();
     final userName =
         review.userName.trim().isEmpty || review.userName.trim().contains('@')
             ? 'مستخدم عقار'
@@ -2988,6 +2994,7 @@ class _ReviewCard extends StatelessWidget {
               ),
             ],
           ),
+          TextButton.icon(onPressed: () => showBlockUserDialog(context, review.userId, targetPath: 'office_reviews/${review.id}'), icon: const Icon(Icons.block), label: const Text('حظر صاحب التقييم')),
           if (review.comment.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(

@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -222,14 +223,14 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                     "officeId",
                     isEqualTo: widget.officeId!.trim(),
                   )
-                  .snapshots()
+                  .safeSnapshots()
               : FirebaseFirestore.instance
                   .collection("properties")
                   .where(
                     "status",
                     isEqualTo: "approved",
                   )
-                  .snapshots(),
+                  .safeSnapshots(),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return const Center(
@@ -785,7 +786,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                             publisherWhatsapp:
                                                 data["publisherWhatsapp"] ?? "",
                                             publisherUid:
-                                                (data["publisherUid"] ?? "")
+                                                (data["publisherUid"] ?? data["userId"] ?? "")
                                                     .toString(),
                                             publisherName:
                                                 (data["publisherName"] ?? "")

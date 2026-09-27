@@ -1,3 +1,4 @@
+import '../../moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +42,14 @@ class _ReelsScreenState extends State<ReelsScreen> {
                   child:
                       CircularProgressIndicator(color: AppTheme.primaryColor));
             }
-            final all = [...snapshot.data!];
+            final all = snapshot.data!
+                .where((r) => !hiddenForViewer(context, {
+                      'propertyId': r.propertyId,
+                      'officeId': r.officeId,
+                      'propertySnapshot': r.propertySnapshot,
+                      'officeSnapshot': r.officeSnapshot
+                    }))
+                .toList();
             if (widget.initialReelId != null) {
               all.sort((a, b) {
                 if (a.id == widget.initialReelId) return -1;
@@ -65,7 +73,9 @@ class _ReelsScreenState extends State<ReelsScreen> {
                   itemCount: reels.length,
                   onPageChanged: (value) => setState(() => _index = value),
                   itemBuilder: (_, index) => ReelPlayerCard(
-                      reel: reels[index], active: index == _index),
+                      key: ValueKey(reels[index].id),
+                      reel: reels[index],
+                      active: index == _index),
                 ),
                 SafeArea(
                   child: Padding(
@@ -285,8 +295,8 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
       'عقارات الأنبار',
     ];
     ReelService.instance.track(widget.reel.id, 'share');
-    Share.share(details.join('\n'), subject: widget.reel.title,
-        sharePositionOrigin: shareOrigin(context));
+    Share.share(details.join('\n'),
+        subject: widget.reel.title, sharePositionOrigin: shareOrigin(context));
   }
 
   Future<void> _report() async {

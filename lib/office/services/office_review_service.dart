@@ -1,3 +1,5 @@
+import '../../moderation/content_policy.dart';
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/office_review_model.dart';
@@ -43,6 +45,7 @@ class OfficeReviewService {
     String userImageUrl = '',
     String comment = '',
   }) async {
+    ContentPolicy.validate(comment);
     final normalizedRating = _normalizeRating(rating);
 
     final existingReview = await _reviews
@@ -86,7 +89,7 @@ class OfficeReviewService {
   }) {
     return _reviews
         .where('officeId', isEqualTo: officeId)
-        .snapshots()
+        .safeSnapshots()
         .map((snapshot) {
       final reviews = snapshot.docs
           .map(
@@ -237,6 +240,7 @@ class OfficeReviewService {
       );
     }
 
+    if (comment != null) ContentPolicy.validate(comment);
     await reference.update({
       'rating': _normalizeRating(rating),
       if (comment != null) 'comment': comment.trim(),
@@ -324,6 +328,7 @@ class OfficeReviewService {
       );
     }
 
+    ContentPolicy.validate(trimmedReply);
     await reference.update({
       'hasOwnerReply': true,
       'ownerReply': trimmedReply,

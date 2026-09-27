@@ -1,3 +1,4 @@
+import '../moderation/eula.dart' show safetyTerms;
 import 'package:flutter/material.dart';
 
 void showTermsSheet(BuildContext context) {
@@ -56,6 +57,7 @@ void showTermsSheet(BuildContext context) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _term("سياسة سلامة المستخدمين والمحتوى", safetyTerms),
                     _term(
                       "١. قبول الشروط",
                       "باستخدامك لتطبيق عقارات الانبار فإنك تقر بقراءة هذه الشروط والأحكام وتوافق على الالتزام بها. وإذا كنت لا توافق على أي جزء منها، فيرجى عدم استخدام التطبيق أو خدماته",
@@ -74,7 +76,7 @@ void showTermsSheet(BuildContext context) {
                     ),
                     _term(
                       "٥. تعديل الشروط",
-                      "تحتفظ إدارة التطبيق بحق تعديل شروط الاستخدام أو إضافة بنود جديدة في أي وقت بما يتوافق مع تطوير الخدمات أو المتطلبات القانونية، ويُعد استمرار استخدام التطبيق بعد نشر التعديلات موافقة عليها",
+                      "تحتفظ إدارة التطبيق بحق تعديل شروط الاستخدام أو إضافة بنود جديدة في أي وقت بما يتوافق مع تطوير الخدمات أو المتطلبات القانونية، ونطلب موافقة صريحة على التغييرات الجوهرية قبل استخدام الحساب",
                     ),
                     _term(
                       "٦. صلاحيات إدارة التطبيق",
@@ -103,7 +105,7 @@ void showTermsSheet(BuildContext context) {
             const SizedBox(height: 12),
             const Center(
               child: Text(
-                "آخر تحديث: يوليو 2026",
+                "آخر تحديث: سبتمبر 2026",
                 style: TextStyle(
                   color: Colors.white54,
                   fontSize: 13,

@@ -15,6 +15,39 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // UGC writes require an active account. Admin authority remains server-controlled.
+    function activeUser() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false;
+    }
+    function cleanText(d, key) {
+      return !(key in d) || (d[key] is string && d[key].size() <= 10000 &&
+        !d[key].lower().replace('[ًٌٍَُِّْـٰ]', '').replace('[أإآ]', 'ا').matches('.*(porn|xxx|fuck|shit|اباحي|إباحي|قحبة|شرموط|كس ام|كسم|نيك|اغتصاب).*'));
+    }
+    function cleanContent(d) {
+      return cleanText(d, 'title') && cleanText(d, 'description') &&
+        cleanText(d, 'text') && cleanText(d, 'comment') && cleanText(d, 'ownerReply') &&
+        cleanText(d, 'name') && cleanText(d, 'userName');
+    }
+    function verifiedOfficePublisher(d) {
+      return d.get('officeId', '') is string && d.get('officeId', '') != '' &&
+        get(/databases/$(database)/documents/offices/$(d.officeId)).data.ownerId == request.auth.uid &&
+        get(/databases/$(database)/documents/offices/$(d.officeId)).data.isVerified == true &&
+        get(/databases/$(database)/documents/offices/$(d.officeId)).data.status == 'active';
+    }
+    function allowedPropertyStatus(d) {
+      return d.status == 'pending' || (d.status == 'approved' && verifiedOfficePublisher(d));
+    }
+    function validCommentCreate() {
+      return activeUser() && request.resource.data.userId == request.auth.uid &&
+        cleanContent(request.resource.data) && request.resource.data.get('isHidden', false) == false;
+    }
+    function validCommentUpdate() {
+      return isAdmin() || (activeUser() && resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId && cleanContent(request.resource.data) &&
+        request.resource.data.get('isHidden', false) == resource.data.get('isHidden', false) &&
+        request.resource.data.get('isPinned', false) == resource.data.get('isPinned', false));
+    }
+
     // ==================================================
     // العقارات
     // ==================================================
@@ -25,16 +58,21 @@ service cloud.firestore {
       allow read: if true;
 
       // أي مستخدم مسجل يستطيع إضافة عقار
-      allow create: if isSignedIn();
+      allow create: if activeUser() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.publisherUid == request.auth.uid && allowedPropertyStatus(request.resource.data) && cleanContent(request.resource.data);
 
       // صاحب العقار أو الأدمن.
       // صاحب المكتب يستطيع تمييز/إلغاء تمييز عقار مكتبه فقط.
       allow update: if isSignedIn() &&
         (
-          resource.data.userId == request.auth.uid ||
+          (activeUser() && resource.data.userId == request.auth.uid &&
+            request.resource.data.userId == resource.data.userId &&
+            request.resource.data.publisherUid == resource.data.publisherUid && cleanContent(request.resource.data) &&
+            (allowedPropertyStatus(request.resource.data) ||
+              (request.resource.data.status == resource.data.status && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availabilityStatus', 'updatedAt'])))) ||
           isAdmin() ||
           (
-            resource.data.officeId != null &&
+            activeUser() && resource.data.officeId != null &&
             get(/databases/$(database)/documents/offices/$(resource.data.officeId))
               .data.ownerId == request.auth.uid &&
             request.resource.data.officeId == resource.data.officeId &&
@@ -66,13 +104,10 @@ allow delete: if isSignedIn() &&
 
         allow read: if true;
 
-        allow create: if isSignedIn();
+        allow create: if validCommentCreate();
 
-        allow update, delete: if isSignedIn() &&
-          (
-            resource.data.userId == request.auth.uid ||
-            isAdmin()
-          );
+        allow update: if validCommentUpdate();
+        allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
 
         // ==========================================
         // الردود
@@ -81,13 +116,10 @@ allow delete: if isSignedIn() &&
 
           allow read: if true;
 
-          allow create: if isSignedIn();
+          allow create: if validCommentCreate();
 
-          allow update, delete: if isSignedIn() &&
-            (
-              resource.data.userId == request.auth.uid ||
-              isAdmin()
-            );
+          allow update: if validCommentUpdate();
+        allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
         }
       }
     }
@@ -111,7 +143,7 @@ allow delete: if isSignedIn() &&
 
       // المستخدم المسجل يستطيع إنشاء طلب خاص به فقط،
       // ويجب أن يبدأ الطلب بحالة pending.
-      allow create: if isSignedIn() &&
+      allow create: if activeUser() && cleanContent(request.resource.data) &&
         request.resource.data.userId == request.auth.uid &&
         request.resource.data.publisherUid == request.auth.uid &&
         request.resource.data.status == "pending";
@@ -126,7 +158,7 @@ allow delete: if isSignedIn() &&
             resource.data.userId == request.auth.uid &&
             request.resource.data.userId == resource.data.userId &&
             request.resource.data.publisherUid == resource.data.publisherUid &&
-            request.resource.data.status == resource.data.status
+            request.resource.data.status == resource.data.status && activeUser() && cleanContent(request.resource.data)
           )
         );
 
@@ -153,8 +185,8 @@ match /officeRequests/{requestId} {
 
   // المستخدم المسجل يستطيع إرسال طلب مكتب خاص به
   // ويبدأ الطلب بحالة pending
-  allow create: if isSignedIn() &&
-    request.resource.data.ownerId == request.auth.uid &&
+  allow create: if activeUser() && cleanContent(request.resource.data) &&
+    request.activeUser() && cleanContent(request.resource.data) && resource.data.ownerId == request.auth.uid &&
     request.resource.data.status == "pending";
 
   // الأدمن يستطيع تعديل الطلب بالكامل
@@ -163,7 +195,7 @@ match /officeRequests/{requestId} {
     (
       isAdmin() ||
       (
-        resource.data.ownerId == request.auth.uid &&
+        activeUser() && cleanContent(request.resource.data) && resource.data.ownerId == request.auth.uid &&
         request.resource.data.ownerId == resource.data.ownerId &&
         request.resource.data.status == resource.data.status
       )
@@ -185,13 +217,10 @@ match /officeRequests/{requestId} {
 
       allow read: if true;
 
-      allow create: if isSignedIn();
+      allow create: if validCommentCreate();
 
-      allow update, delete: if isSignedIn() &&
-        (
-          resource.data.userId == request.auth.uid ||
-          isAdmin()
-        );
+      allow update: if validCommentUpdate();
+        allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     // ==================================================
@@ -246,7 +275,7 @@ match /offices/{officeId} {
     (
       isAdmin() ||
       (
-        resource.data.ownerId == request.auth.uid &&
+        resource.data.ownerId == request.auth.uid && activeUser() && cleanContent(request.resource.data) &&
         request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
@@ -298,12 +327,14 @@ match /office_followers/{followerId} {
 }
 match /office_reviews/{reviewId} {
   allow read: if true;
-  allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-  allow update: if isSignedIn() && (isAdmin() ||
-    resource.data.userId == request.auth.uid ||
-    (get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid &&
-     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasOwnerReply', 'ownerReply', 'updatedAt'])));
-  allow delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+  allow create: if activeUser() && request.resource.data.userId == request.auth.uid && cleanContent(request.resource.data) && request.resource.data.status == 'published';
+  allow update: if isAdmin() || (activeUser() && cleanContent(request.resource.data) &&
+    request.resource.data.userId == resource.data.userId && request.resource.data.officeId == resource.data.officeId &&
+    request.resource.data.status == resource.data.status &&
+    (resource.data.userId == request.auth.uid ||
+      (get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid &&
+       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasOwnerReply', 'ownerReply', 'updatedAt']))));
+  allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
 }
 match /office_subscriptions/{subscriptionId} {
 
@@ -434,6 +465,38 @@ function reviewContentReport(office) {
     d.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNotes', 'reviewedBy', 'updatedAt']) &&
     d.reviewedBy == request.auth.uid && d.updatedAt == request.time;
 }
+match /{path=**}/replies/{replyId} {
+  allow read: if isAdmin();
+  allow update, delete: if isAdmin();
+}
+function reportedTargetData(d) {
+  let p = d.targetPath.split('/');
+  return p.size() == 2 ? get(/databases/$(database)/documents/$(p[0])/$(p[1])).data :
+    p.size() == 4 ? get(/databases/$(database)/documents/$(p[0])/$(p[1])/$(p[2])/$(p[3])).data :
+    get(/databases/$(database)/documents/$(p[0])/$(p[1])/$(p[2])/$(p[3])/$(p[4])/$(p[5])).data;
+}
+function validReportedTarget(d) {
+  return d.targetPath == '' ||
+    (d.targetPath.matches('(properties|offices|property_requests|office_reviews)/[^/]+|properties/[^/]+/comments/[^/]+(/replies/[^/]+)?') &&
+      (reportedTargetData(d).get('userId', '') == d.targetUid ||
+       reportedTargetData(d).get('publisherUid', '') == d.targetUid ||
+       reportedTargetData(d).get('ownerId', '') == d.targetUid));
+}
+match /user_reports/{reportId} {
+  allow create: if isSignedIn() &&
+    request.resource.data.keys().hasOnly(['userId','targetUid','targetPath','reason','details','status','createdAt']) &&
+    request.resource.data.userId == request.auth.uid &&
+    request.resource.data.targetUid is string && request.resource.data.targetUid.size() > 0 && request.resource.data.targetUid.size() <= 128 &&
+    request.resource.data.targetUid != request.auth.uid &&
+    request.resource.data.targetPath is string && request.resource.data.targetPath.size() <= 500 && validReportedTarget(request.resource.data) &&
+    request.resource.data.reason is string && request.resource.data.reason.size() > 0 && request.resource.data.reason.size() <= 100 &&
+    request.resource.data.details is string && request.resource.data.details.size() <= 1500 &&
+    request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+  allow read, delete: if isAdmin();
+  allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedBy','updatedAt']) &&
+    request.resource.data.status in ['pending','in_review','resolved','dismissed'] &&
+    request.resource.data.reviewedBy == request.auth.uid && request.resource.data.updatedAt == request.time;
+}
 match /office_reports/{reportId} {
   allow create: if createContentReport(true) &&
     exists(/databases/$(database)/documents/offices/$(request.resource.data.officeId)) &&
@@ -544,7 +607,7 @@ allow update: if isSignedIn() &&
         .affectedKeys()
         .hasOnly([
           'isAdmin',
-          'adminUpdatedAt'
+          'adminUpdatedAt', 'isBlocked', 'blockedAt', 'blockedBy'
         ])
     )
   );
@@ -554,10 +617,31 @@ allow update: if isSignedIn() &&
   // والأدمن يستطيع حذف أي مستخدم.
   allow delete: if isSignedIn() &&
     (
-      request.auth.uid == userId ||
+      (request.auth.uid == userId && resource.data.get('isBlocked', false) == false) ||
       isAdmin()
     );
 
+  match /consents/{version} {
+    allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    allow create, update: if isSignedIn() && request.auth.uid == userId &&
+      request.resource.data.keys().hasOnly(['version', 'accepted', 'acceptedAt']) &&
+      version == '2026-09-27' && request.resource.data.version == version &&
+      request.resource.data.accepted == true && request.resource.data.acceptedAt == request.time;
+    allow delete: if false;
+  }
+  match /blockedUsers/{targetUid} {
+    allow read: if isSignedIn() && request.auth.uid == userId;
+    allow create, update: if isSignedIn() && request.auth.uid == userId && targetUid != userId &&
+      request.resource.data.keys().hasOnly(['targetUid', 'officeId', 'reportId', 'createdAt']) &&
+      request.resource.data.targetUid == targetUid && targetUid.size() <= 128 &&
+      request.resource.data.officeId is string && request.resource.data.officeId.size() <= 128 &&
+      (request.resource.data.officeId == '' || get(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerId == targetUid) &&
+      request.resource.data.reportId is string && request.resource.data.reportId.size() <= 128 &&
+      request.resource.data.createdAt == request.time &&
+      getAfter(/databases/$(database)/documents/user_reports/$(request.resource.data.reportId)).data.userId == userId &&
+      getAfter(/databases/$(database)/documents/user_reports/$(request.resource.data.reportId)).data.targetUid == targetUid;
+    allow delete: if isSignedIn() && request.auth.uid == userId;
+  }
   // ==================================================
   // المفضلة
   // ==================================================
@@ -750,14 +834,14 @@ match /chats/{chatId} {
     );
 
   // إنشاء المحادثة للمستخدم نفسه أو الأدمن
-  allow create: if isSignedIn() &&
+  allow create: if activeUser() && cleanContent(request.resource.data) &&
     (
       request.auth.uid == chatId ||
       isAdmin()
     );
 
   // تحديث المحادثة لصاحبها أو الأدمن
-  allow update: if isSignedIn() &&
+  allow update: if activeUser() && cleanContent(request.resource.data) &&
     (
       request.auth.uid == chatId ||
       isAdmin()
@@ -777,13 +861,13 @@ match /chats/{chatId} {
         isAdmin()
       );
 
-    allow create: if isSignedIn() &&
+    allow create: if activeUser() && cleanContent(request.resource.data) &&
       (
         request.auth.uid == chatId ||
         isAdmin()
       );
 
-    allow update: if isSignedIn() &&
+    allow update: if activeUser() && cleanContent(request.resource.data) &&
   (
     request.auth.uid == chatId ||
     isAdmin()

@@ -1,3 +1,7 @@
+import '../moderation/content_policy.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1201,6 +1205,11 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
     }
 
     if (commentController.text.trim().isEmpty) return;
+    if (ContentPolicy.rejects(commentController.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('يتضمن النص محتوى غير مسموح. يرجى تعديله.')));
+      return;
+    }
     final userDoc = await FirebaseFirestore.instance
         .collection("users")
         .doc(user.uid)
@@ -1237,6 +1246,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
       });
     }
 
+    if (mounted)
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم نشر التعليق')));
     commentController.clear();
   }
 
@@ -1302,6 +1314,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
         .collection("replies")
         .add({
       "text": replyController.text.trim(),
+      "isHidden": false,
       "userId": user.uid,
       "userName": userData["name"] ?? "مستخدم",
       "userPhoto": userData["photoUrl"] ?? "",
@@ -1321,6 +1334,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
       });
     }
 
+    if (mounted)
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم نشر الرد')));
     replyController.clear();
 
     setState(() {
@@ -1329,6 +1345,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
   }
 
   Widget commentItem(Map<String, dynamic> data, String commentId) {
+    if (hiddenForViewer(context, data)) return const SizedBox.shrink();
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.only(bottom: 16),
@@ -1363,6 +1380,13 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 ? const Icon(Icons.person, color: Colors.black)
                 : null,
           ),
+          IconButton(
+              tooltip: 'حظر صاحب التعليق',
+              icon: const Icon(Icons.block),
+              onPressed: () => showBlockUserDialog(
+                  context, (data['userId'] ?? '').toString(),
+                  targetPath:
+                      'properties/${widget.docId}/comments/$commentId')),
           const SizedBox(width: 14),
           if (FirebaseAuth.instance.currentUser?.email ==
               "aysar.aliraqe@gmail.com")
@@ -1573,7 +1597,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       .doc(commentId)
                       .collection("replies")
                       .orderBy("createdAt", descending: true)
-                      .snapshots(),
+                      .safeSnapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return const SizedBox();
@@ -1627,76 +1651,93 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     final reply =
                                         doc.data() as Map<String, dynamic>;
 
-                                    return Container(
-                                      margin: const EdgeInsets.only(
-                                        top: 10,
-                                        right: 28,
-                                        left: 6,
-                                      ),
-                                      padding: const EdgeInsets.all(14),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xff0F172A),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: const Color(
-                                            0xffD4AF37,
-                                          ).withValues(alpha: .15),
+                                    if (hiddenForViewer(context, reply))
+                                      return const SizedBox.shrink();
+                                    return Column(children: [
+                                      TextButton.icon(
+                                          onPressed: () => showBlockUserDialog(
+                                              context,
+                                              (reply['userId'] ?? '')
+                                                  .toString(),
+                                              targetPath:
+                                                  'properties/${widget.docId}/comments/$commentId/replies/${doc.id}'),
+                                          icon: const Icon(Icons.block),
+                                          label: const Text('حظر صاحب الرد')),
+                                      Container(
+                                        margin: const EdgeInsets.only(
+                                          top: 10,
+                                          right: 28,
+                                          left: 6,
                                         ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              CircleAvatar(
-                                                radius: 12,
-                                                backgroundColor: const Color(
-                                                  0xffD4AF37,
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xff0F172A),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xffD4AF37,
+                                            ).withValues(alpha: .15),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 12,
+                                                  backgroundColor: const Color(
+                                                    0xffD4AF37,
+                                                  ),
+                                                  backgroundImage:
+                                                      (reply["userPhoto"] ?? "")
+                                                              .toString()
+                                                              .isNotEmpty
+                                                          ? NetworkImage(
+                                                              reply[
+                                                                  "userPhoto"],
+                                                            )
+                                                          : null,
+                                                  child: (reply["userPhoto"] ??
+                                                              "")
+                                                          .toString()
+                                                          .isEmpty
+                                                      ? const Icon(
+                                                          Icons.person,
+                                                          size: 14,
+                                                          color: Colors.black,
+                                                        )
+                                                      : null,
                                                 ),
-                                                backgroundImage:
-                                                    (reply["userPhoto"] ?? "")
-                                                            .toString()
-                                                            .isNotEmpty
-                                                        ? NetworkImage(
-                                                            reply["userPhoto"],
-                                                          )
-                                                        : null,
-                                                child:
-                                                    (reply["userPhoto"] ?? "")
-                                                            .toString()
-                                                            .isEmpty
-                                                        ? const Icon(
-                                                            Icons.person,
-                                                            size: 14,
-                                                            color: Colors.black,
-                                                          )
-                                                        : null,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  reply["userName"] ?? "مستخدم",
-                                                  style: const TextStyle(
-                                                    color: Color(0xffD4AF37),
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 13,
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    reply["userName"] ??
+                                                        "مستخدم",
+                                                    style: const TextStyle(
+                                                      color: Color(0xffD4AF37),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 13,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            reply["text"] ?? "",
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14,
+                                              ],
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              reply["text"] ?? "",
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    ]);
                                   }).toList(),
                                 )
                               : const SizedBox(),
@@ -1738,6 +1779,38 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
   @override
   Widget build(BuildContext context) {
+    if (widget.docId == null || widget.docId!.isEmpty)
+      return _buildContent(context);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('properties')
+          .doc(widget.docId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData)
+          return Scaffold(
+              appBar: AppBar(),
+              body: Center(
+                  child: Text(snapshot.hasError
+                      ? 'تعذر تحميل المحتوى'
+                      : 'جارٍ التحميل…')));
+        final data = snapshot.data!.data();
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        final admin = context.watch<UserProvider>().isAdmin;
+        if (data == null ||
+            hiddenForViewer(context, data) ||
+            (data['status'] != 'approved' && data['userId'] != uid && !admin))
+          return blockedContentPage();
+        return _buildContent(context);
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    if (hiddenForViewer(context, {
+      "publisherUid": widget.publisherUid,
+      "officeId": (widget.property?.officeId ?? '')
+    })) return blockedContentPage();
     debugPrint("PROPERTY DETAILS SCREEN OPENED");
 
     debugPrint("IMAGES = ${widget.images}");
@@ -1962,6 +2035,13 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                         Row(
                           children: [
+                            IconButton(
+                                tooltip: 'حظر المستخدم',
+                                icon: const Icon(Icons.block,
+                                    color: Colors.white),
+                                onPressed: () => showBlockUserDialog(
+                                    context, widget.publisherUid,
+                                    targetPath: 'properties/${widget.docId}')),
                             Container(
                               width: AqarSizes.detailsTopButton(context),
                               height: AqarSizes.detailsTopButton(context),
@@ -3143,7 +3223,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         .collection("properties")
                         .doc(widget.docId)
                         .collection("comments")
-                        .snapshots(),
+                        .safeSnapshots(),
                     builder: (context, snapshot) {
                       int count = 0;
 
@@ -3451,7 +3531,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         .doc(widget.docId)
                         .collection("comments")
                         .orderBy("createdAt", descending: true)
-                        .snapshots(),
+                        .safeSnapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());

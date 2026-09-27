@@ -1,0 +1,9 @@
+{
+  "score": 3,
+  "summary": "The new consent, personal-block and user-report flows have strict ownership, bounded fields, server timestamps and admin-only review. Emulator tests cover atomic block/report writes, private reads, spoofed targets, self-unban, consent spoofing and publication bypasses. This is a scoped moderation review, not a certification of every legacy collection.",
+  "findings": [
+    {"check": "Legacy public reads", "severity": "moderate", "issue": "Existing properties and comment reads are public at database level; public app views apply publication/moderation filtering. Private reports and block lists are protected independently.", "recommendation": "A separate migration can tighten legacy query/read contracts without breaking existing clients."},
+    {"check": "Legacy collection validation", "severity": "moderate", "issue": "Unrelated legacy analytics, followers and notifications retain broad create/update contracts and incomplete field limits.", "recommendation": "Audit and migrate these collections separately with their existing clients and server functions."}
+  ],
+  "verified_attacks": ["foreign block-list access", "block without matching report", "self block", "forged target author", "reporter identity spoofing", "report review-field tampering", "oversized report payload", "non-admin report reads", "self-admin escalation", "foreign consent write", "false consent", "self-unban", "blocked-account publishing", "comment hiding bypass through recursive match", "unverified property self-approval", "property owner substitution", "impersonating a verified office for direct publication"]
+}

@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/property_model.dart';
@@ -19,7 +20,7 @@ class PropertyService {
           isEqualTo: true,
         )
         .limit(4)
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -44,7 +45,7 @@ class PropertyService {
           descending: true,
         )
         .limit(10)
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -75,7 +76,7 @@ class PropertyService {
           descending: true,
         )
         .limit(10)
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -100,7 +101,7 @@ class PropertyService {
           descending: true,
         )
         .limit(10)
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -126,7 +127,7 @@ class PropertyService {
           "officeId",
           isEqualTo: officeId,
         )
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -142,7 +143,7 @@ class PropertyService {
   /// العقارات كاملة لصاحب المكتب، وتشمل قيد المراجعة والمرفوضة حتى يديرها.
   /// الوصول إلى البيانات غير المنشورة محكوم بقواعد Firestore، لا بهذه الدالة.
   static Stream<List<PropertyModel>> officePropertiesForOwner(String officeId) {
-    return _properties.where('officeId', isEqualTo: officeId).snapshots().map(
+    return _properties.where('officeId', isEqualTo: officeId).safeSnapshots().map(
           (snapshot) => snapshot.docs
               .map((doc) => PropertyModel.fromMap(doc.data(), doc.id))
               .toList(),

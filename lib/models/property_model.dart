@@ -161,7 +161,7 @@ class PropertyModel {
       furnitureStatus: map['furnitureStatus'] ?? '',
       ownerPhone: map['ownerPhone'] ?? '',
       ownerWhatsapp: map['ownerWhatsapp'] ?? '',
-      publisherUid: map['publisherUid'] ?? '',
+      publisherUid: map['publisherUid'] ?? map['userId'] ?? '',
       publisherName: map['publisherName'] ?? '',
       publisherPhotoUrl:
           map['publisherPhotoUrl'] ?? map['publisherPhoto'] ?? '',

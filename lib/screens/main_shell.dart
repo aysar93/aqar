@@ -1,3 +1,4 @@
+import '../moderation/eula.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -69,6 +70,14 @@ class _MainShellState extends State<MainShell> {
         .snapshots()
         .listen((snapshot) {
       final data = snapshot.data() ?? {};
+      if (data['isBlocked'] == true) {
+        FirebaseAuth.instance.signOut();
+        if (mounted)
+          Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (_) => false);
+        return;
+      }
       final newMode = (data['accountMode'] ?? 'user').toString();
       final normalizedMode = newMode == 'office' ? 'office' : 'user';
 
@@ -419,7 +428,10 @@ class _MainShellState extends State<MainShell> {
   // ==================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      SessionConsentGate(child: _buildContent(context));
+
+  Widget _buildContent(BuildContext context) {
     final bool hideBottomBar = currentIndex == 4;
 
     return Scaffold(

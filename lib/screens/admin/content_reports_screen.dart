@@ -1,3 +1,4 @@
+import '../../moderation/safety_review_screen.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -90,7 +91,14 @@ class _ContentReportsScreenState extends State<ContentReportsScreen> {
         child: Directionality(
             textDirection: TextDirection.rtl,
             child: Scaffold(
-              appBar: AppBar(title: const Text('بلاغات العقارات والمكاتب')),
+              appBar: AppBar(title: const Text('بلاغات المحتوى'), actions: [
+                TextButton(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SafetyReviewScreen())),
+                    child: const Text('بلاغات المستخدمين والحظر'))
+              ]),
               body: Column(children: [
                 Padding(
                     padding: const EdgeInsets.all(16),
@@ -354,8 +362,14 @@ class _ReportReviewDialogState extends State<_ReportReviewDialog> {
                           decoration: const InputDecoration(
                               labelText: 'ملاحظات الإدارة والإجراء المتخذ',
                               border: OutlineInputBorder())),
-                      const Text(
-                          'تغيير الحالة يسجل نتيجة المراجعة فقط. إخفاء الإعلان أو إيقاف المكتب يتم من صفحة إدارته.'),
+                      TextButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () => reviewSafetyTarget(context,
+                                  '${widget.report.isOffice ? 'offices' : 'properties'}/${widget.report.targetId}'),
+                          icon: const Icon(Icons.admin_panel_settings),
+                          label:
+                              const Text('مراجعة المحتوى وحذفه أو حظر صاحبه')),
                       if (_error != null)
                         Text(_error!,
                             style: const TextStyle(color: Colors.redAccent)),

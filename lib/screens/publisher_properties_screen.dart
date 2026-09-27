@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -64,7 +65,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
           stream: FirebaseFirestore.instance
               .collection('properties')
               .where('userId', isEqualTo: widget.publisherUid)
-              .snapshots(),
+              .safeSnapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -419,7 +420,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
           ownerWhatsapp: (data['ownerWhatsapp'] ?? '').toString(),
           publisherPhone: (data['publisherPhone'] ?? '').toString(),
           publisherWhatsapp: (data['publisherWhatsapp'] ?? '').toString(),
-          publisherUid: (data['publisherUid'] ?? '').toString(),
+          publisherUid: (data['publisherUid'] ?? data['userId'] ?? '').toString(),
           publisherName: (data['publisherName'] ?? '').toString(),
           publisherEmail: (data['publisherEmail'] ?? '').toString(),
           images: (data['images'] as List?) ?? [],

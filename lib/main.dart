@@ -1,3 +1,4 @@
+import 'moderation/user_blocks.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ Future<void> main() async {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     return true;
   };
+  UserBlocks.instance.initialize();
   runApp(MultiProvider(providers: [
     ChangeNotifierProvider(
         create: (_) => AppSettingsProvider()..loadSettings()),
@@ -80,6 +82,7 @@ class AqarApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
+        builder: (context, child) => BlockScope(child: child!),
         theme: AppTheme.lightTheme,
         navigatorKey: NotificationNavigationService.navigatorKey,
         home: const SplashScreen(),

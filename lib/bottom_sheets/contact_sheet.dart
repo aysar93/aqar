@@ -57,7 +57,7 @@ class _ContactSheet extends StatelessWidget {
 
   static final Uri _whatsAppUri = Uri.parse(
     'https://wa.me/9647838081677?text='
-    '${Uri.encodeComponent('مرحبًا، أود الاستفسار عن عقار.')}',
+    '${Uri.encodeComponent('مرحبًا، أحتاج مساعدة إدارة عقارات الأنبار.')}',
   );
   static final Uri _phoneUri = Uri(scheme: 'tel', path: '07838081677');
 
@@ -106,7 +106,7 @@ class _ContactSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'فريق عقارات الانبار جاهز لمساعدتك والإجابة عن استفساراتك.',
+                    'للدعم وبلاغات الإساءة: +9647838081677. نراجع بلاغات السلامة خلال 24 ساعة.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.66),

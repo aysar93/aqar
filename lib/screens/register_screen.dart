@@ -1,3 +1,4 @@
+import '../moderation/eula.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -21,11 +22,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _loading = false;
+  bool _acceptedTerms = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   String _error = '';
 
   Future<void> _register() async {
+    if (!_acceptedTerms || _loading) return;
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
@@ -40,6 +43,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
       if (!mounted) return;
+      await recordEulaConsent();
+      if (!mounted) return;
       await context.read<UserProvider>().refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -52,6 +57,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } on AuthFailure catch (failure) {
       if (mounted) setState(() => _error = failure.message);
+    } catch (_) {
+      if (mounted)
+        setState(() => _error =
+            'تعذر إكمال الدخول أو حفظ الموافقة. تحقق من الاتصال وحاول مجدداً.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -237,8 +246,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                         const SizedBox(height: 24),
+                        EulaConsent(
+                            accepted: _acceptedTerms,
+                            onChanged: _loading
+                                ? null
+                                : (value) =>
+                                    setState(() => _acceptedTerms = value)),
                         ElevatedButton(
-                          onPressed: _loading ? null : _register,
+                          onPressed:
+                              _loading || !_acceptedTerms ? null : _register,
                           child: _loading
                               ? const SizedBox.square(
                                   dimension: 24,

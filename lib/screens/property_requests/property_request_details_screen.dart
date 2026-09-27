@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -166,6 +167,7 @@ class _PropertyRequestDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (hiddenForViewer(context, widget.data)) return blockedContentPage();
     final requestType = _text(data['requestType']);
     final propertyType = _text(
       data['propertyType'],
@@ -199,6 +201,7 @@ class _PropertyRequestDetailsScreenState
             ),
           ),
           actions: [
+            IconButton(tooltip: 'حظر المستخدم', icon: const Icon(Icons.block), onPressed: () => showBlockUserDialog(context, (widget.data['userId'] ?? widget.data['publisherUid'] ?? '').toString(), targetPath: 'property_requests/${widget.requestId}')),
             if (_isAdmin)
               PopupMenuButton<String>(
                 tooltip: 'إدارة الطلب',

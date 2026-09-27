@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -526,6 +527,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         final propertyId = visibleIds[index];
         final data = _properties[propertyId]!;
+        if (hiddenForViewer(context, data)) return const SizedBox.shrink();
 
         return Padding(
           key: ValueKey<String>('favorite_card_$propertyId'),
@@ -581,7 +583,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     publisherPhone: (data['publisherPhone'] ?? '').toString(),
                     publisherWhatsapp:
                         (data['publisherWhatsapp'] ?? '').toString(),
-                    publisherUid: (data['publisherUid'] ?? '').toString(),
+                    publisherUid: (data['publisherUid'] ?? data['userId'] ?? '').toString(),
                     publisherName: (data['publisherName'] ?? '').toString(),
                     publisherEmail: (data['publisherEmail'] ?? '').toString(),
                     propertyType: (data['propertyType'] ?? '').toString(),

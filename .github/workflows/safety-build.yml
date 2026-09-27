@@ -1,0 +1,39 @@
+name: Safety and iOS build
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test test/content_policy_test.dart test/user_blocks_test.dart test/content_report_test.dart test/reel_model_test.dart test/iraqi_phone_service_test.dart test/services
+      - run: flutter build ios --release --no-codesign
+  firestore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.reports-test.json "python test/firestore_safety_rules_test.py"

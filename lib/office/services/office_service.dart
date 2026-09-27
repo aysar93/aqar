@@ -1,3 +1,4 @@
+import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/office_model.dart';
@@ -110,7 +111,7 @@ class OfficeService {
     return _offices
         .where('ownerId', isEqualTo: ownerId)
         .limit(1)
-        .snapshots()
+        .safeSnapshots()
         .map((snapshot) {
       if (snapshot.docs.isEmpty) return null;
 
@@ -144,7 +145,7 @@ class OfficeService {
         .where('status', isEqualTo: 'active')
         .where('isFeatured', isEqualTo: true)
         .limit(10)
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -163,7 +164,7 @@ class OfficeService {
         .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .limit(10)
-        .snapshots()
+        .safeSnapshots()
         .map(
           (snapshot) => snapshot.docs
               .map(
@@ -178,7 +179,7 @@ class OfficeService {
 
   /// جميع المكاتب النشطة والمنشورة للعامة
   static Stream<List<OfficeModel>> activeOffices() {
-    return _offices.where('status', isEqualTo: 'active').snapshots().map(
+    return _offices.where('status', isEqualTo: 'active').safeSnapshots().map(
           (snapshot) => snapshot.docs
               .map(
                 (doc) => OfficeModel.fromMap(
