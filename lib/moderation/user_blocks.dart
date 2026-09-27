@@ -65,7 +65,10 @@ class UserBlocks extends ChangeNotifier {
   }
 
   Future<void> block(String targetUid,
-      {String targetPath = '', String officeId = ''}) async {
+      {String targetPath = '',
+      String officeId = '',
+      String reason = 'حظر مستخدم مسيء',
+      String details = ''}) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || targetUid.isEmpty || uid == targetUid) {
       throw StateError('سجّل الدخول لحظر مستخدم آخر.');
@@ -89,8 +92,8 @@ class UserBlocks extends ChangeNotifier {
       'userId': uid,
       'targetUid': targetUid,
       'targetPath': targetPath,
-      'reason': 'حظر مستخدم مسيء',
-      'details': '',
+      'reason': reason,
+      'details': details,
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -110,43 +113,6 @@ class UserBlocks extends ChangeNotifier {
       }
       rethrow;
     }
-  }
-}
-
-Future<void> showBlockUserDialog(BuildContext context, String uid,
-    {String targetPath = '', String officeId = ''}) async {
-  if (FirebaseAuth.instance.currentUser == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('سجّل الدخول أولاً لحظر المستخدم.')));
-    return;
-  }
-  if (uid.isEmpty || uid == FirebaseAuth.instance.currentUser?.uid) return;
-  final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-            title: const Text('حظر المستخدم؟'),
-            content: const Text(
-                'ستختفي إعلاناته ومحتواه عنك فوراً، وسنرسل بلاغاً للإدارة لمراجعته.'),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('إلغاء')),
-              FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('حظر وإبلاغ الإدارة'))
-            ],
-          ));
-  if (confirmed != true) return;
-  try {
-    await UserBlocks.instance
-        .block(uid, targetPath: targetPath, officeId: officeId);
-    if (context.mounted)
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم الحظر وإرسال البلاغ للإدارة.')));
-  } catch (_) {
-    if (context.mounted)
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تعذر حفظ الحظر. تحقق من الاتصال وأعد المحاولة.')));
   }
 }
 

@@ -1,3 +1,4 @@
+import '../../reports/report_dialog.dart';
 import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -201,7 +202,7 @@ class _PropertyRequestDetailsScreenState
             ),
           ),
           actions: [
-            IconButton(tooltip: 'حظر المستخدم', icon: const Icon(Icons.block), onPressed: () => showBlockUserDialog(context, (widget.data['userId'] ?? widget.data['publisherUid'] ?? '').toString(), targetPath: 'property_requests/${widget.requestId}')),
+            IconButton(tooltip: 'الإبلاغ عن الطلب', icon: const Icon(Icons.flag_outlined), onPressed: () => showUserContentReportDialog(context, (widget.data['userId'] ?? widget.data['publisherUid'] ?? '').toString(), targetPath: 'property_requests/${widget.requestId}')),
             if (_isAdmin)
               PopupMenuButton<String>(
                 tooltip: 'إدارة الطلب',

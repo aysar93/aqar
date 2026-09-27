@@ -2,12 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'content_report.dart';
+import '../moderation/user_blocks.dart';
 
 Future<void> showContentReportDialog(BuildContext context,
-    {required bool isOffice,
+    {bool isOffice = false,
     required String targetId,
     required String title,
-    String? officeOwnerId}) async {
+    String? officeOwnerId,
+    String? targetUid,
+    String? targetPath}) async {
   if (FirebaseAuth.instance.currentUser == null) {
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('سجّل الدخول أولاً لإرسال البلاغ.')));
@@ -18,17 +21,18 @@ Future<void> showContentReportDialog(BuildContext context,
         const SnackBar(content: Text('تعذر تحديد الإعلان. أعد فتح الصفحة.')));
     return;
   }
-  final sent = await showDialog<bool>(
+  final sent = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _ReportDialog(
           isOffice: isOffice,
           targetId: targetId,
           title: title,
-          officeOwnerId: officeOwnerId));
-  if (sent == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('تم إرسال البلاغ إلى الإدارة للمراجعة. شكراً لك.')));
+          officeOwnerId: officeOwnerId,
+          targetUid: targetUid ?? officeOwnerId,
+          targetPath: targetPath));
+  if (sent != null && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent)));
   }
 }
 
@@ -37,10 +41,12 @@ class _ReportDialog extends StatefulWidget {
       {required this.isOffice,
       required this.targetId,
       required this.title,
-      this.officeOwnerId});
+      this.officeOwnerId,
+      this.targetUid,
+      this.targetPath});
   final bool isOffice;
   final String targetId, title;
-  final String? officeOwnerId;
+  final String? officeOwnerId, targetUid, targetPath;
   @override
   State<_ReportDialog> createState() => _ReportDialogState();
 }
@@ -48,7 +54,7 @@ class _ReportDialog extends StatefulWidget {
 class _ReportDialogState extends State<_ReportDialog> {
   final _details = TextEditingController();
   String? _reason, _error;
-  bool _sending = false;
+  bool _sending = false, _block = false;
   @override
   void dispose() {
     _details.dispose();
@@ -72,21 +78,45 @@ class _ReportDialogState extends State<_ReportDialog> {
       _error = null;
     });
     try {
-      await FirebaseFirestore.instance
-          .collection(widget.isOffice ? 'office_reports' : 'property_reports')
-          .add({
-        widget.isOffice ? 'officeId' : 'propertyId': widget.targetId,
-        if (widget.isOffice) 'officeOwnerId': widget.officeOwnerId ?? '',
-        'targetTitle': widget.title.length > 300
-            ? widget.title.substring(0, 300)
-            : widget.title,
-        'userId': user.uid,
-        'reason': _reason,
-        'details': _details.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'pending',
-      });
-      if (mounted) Navigator.pop(context, true);
+      if (_block) {
+        await UserBlocks.instance.block(widget.targetUid!,
+            targetPath: widget.targetPath ??
+                '${widget.isOffice ? 'offices' : 'properties'}/${widget.targetId}',
+            officeId: widget.isOffice ? widget.targetId : '',
+            reason: _reason!,
+            details: _details.text.trim());
+      } else if (widget.targetPath != null) {
+        await FirebaseFirestore.instance.collection('user_reports').add({
+          'userId': user.uid,
+          'targetUid': widget.targetUid,
+          'targetPath': widget.targetPath,
+          'reason': _reason,
+          'details': _details.text.trim(),
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await FirebaseFirestore.instance
+            .collection(widget.isOffice ? 'office_reports' : 'property_reports')
+            .add({
+          widget.isOffice ? 'officeId' : 'propertyId': widget.targetId,
+          if (widget.isOffice) 'officeOwnerId': widget.officeOwnerId ?? '',
+          'targetTitle': widget.title.length > 300
+              ? widget.title.substring(0, 300)
+              : widget.title,
+          'userId': user.uid,
+          'reason': _reason,
+          'details': _details.text.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'status': 'pending',
+        });
+      }
+      if (mounted)
+        Navigator.pop(
+            context,
+            _block
+                ? 'تم الحظر وإرسال البلاغ للإدارة.'
+                : 'تم إرسال البلاغ إلى الإدارة للمراجعة. شكراً لك.');
     } catch (_) {
       if (mounted)
         setState(() {
@@ -102,8 +132,11 @@ class _ReportDialogState extends State<_ReportDialog> {
       child: Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            title: Text(
-                widget.isOffice ? 'الإبلاغ عن المكتب' : 'الإبلاغ عن العقار'),
+            title: Text(widget.targetPath != null
+                ? 'الإبلاغ عن المحتوى'
+                : widget.isOffice
+                    ? 'الإبلاغ عن المكتب'
+                    : 'الإبلاغ عن العقار'),
             content: SizedBox(
                 width: 420,
                 child: SingleChildScrollView(
@@ -142,6 +175,20 @@ class _ReportDialogState extends State<_ReportDialog> {
                           decoration: const InputDecoration(
                               labelText: 'تفاصيل تساعدنا في المراجعة',
                               border: OutlineInputBorder())),
+                      if ((widget.targetUid ?? '').isNotEmpty &&
+                          widget.targetUid !=
+                              FirebaseAuth.instance.currentUser?.uid)
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _block,
+                          onChanged: _sending
+                              ? null
+                              : (value) =>
+                                  setState(() => _block = value ?? false),
+                          title: const Text('حظر المستخدم أيضًا'),
+                          subtitle: const Text(
+                              'ستختفي إعلاناته ومحتواه عنك فورًا، ويصل البلاغ إلى الإدارة للمراجعة.'),
+                        ),
                       if (_error != null)
                         Text(_error!,
                             style: const TextStyle(color: Colors.red)),
@@ -152,7 +199,21 @@ class _ReportDialogState extends State<_ReportDialog> {
                   child: const Text('إلغاء')),
               FilledButton(
                   onPressed: _sending ? null : _send,
-                  child: Text(_sending ? 'جارٍ الإرسال…' : 'إرسال البلاغ'))
+                  child: Text(_sending
+                      ? 'جارٍ الإرسال…'
+                      : _block
+                          ? 'إرسال البلاغ وحظر المستخدم'
+                          : 'إرسال البلاغ'))
             ],
           )));
+}
+
+Future<void> showUserContentReportDialog(BuildContext context, String uid,
+    {required String targetPath}) async {
+  if (uid.isEmpty || uid == FirebaseAuth.instance.currentUser?.uid) return;
+  await showContentReportDialog(context,
+      targetId: targetPath,
+      title: 'الإبلاغ عن محتوى المستخدم',
+      targetUid: uid,
+      targetPath: targetPath);
 }

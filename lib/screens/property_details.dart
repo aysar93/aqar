@@ -1381,9 +1381,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 : null,
           ),
           IconButton(
-              tooltip: 'حظر صاحب التعليق',
-              icon: const Icon(Icons.block),
-              onPressed: () => showBlockUserDialog(
+              tooltip: 'الإبلاغ عن التعليق',
+              icon: const Icon(Icons.flag_outlined),
+              onPressed: () => showUserContentReportDialog(
                   context, (data['userId'] ?? '').toString(),
                   targetPath:
                       'properties/${widget.docId}/comments/$commentId')),
@@ -1655,14 +1655,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       return const SizedBox.shrink();
                                     return Column(children: [
                                       TextButton.icon(
-                                          onPressed: () => showBlockUserDialog(
+                                          onPressed: () => showUserContentReportDialog(
                                               context,
                                               (reply['userId'] ?? '')
                                                   .toString(),
                                               targetPath:
                                                   'properties/${widget.docId}/comments/$commentId/replies/${doc.id}'),
-                                          icon: const Icon(Icons.block),
-                                          label: const Text('حظر صاحب الرد')),
+                                          icon: const Icon(Icons.flag_outlined),
+                                          label: const Text('الإبلاغ عن الرد')),
                                       Container(
                                         margin: const EdgeInsets.only(
                                           top: 10,
@@ -2035,13 +2035,6 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                         Row(
                           children: [
-                            IconButton(
-                                tooltip: 'حظر المستخدم',
-                                icon: const Icon(Icons.block,
-                                    color: Colors.white),
-                                onPressed: () => showBlockUserDialog(
-                                    context, widget.publisherUid,
-                                    targetPath: 'properties/${widget.docId}')),
                             Container(
                               width: AqarSizes.detailsTopButton(context),
                               height: AqarSizes.detailsTopButton(context),
@@ -2061,7 +2054,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     context,
                                     isOffice: false,
                                     targetId: widget.docId ?? '',
-                                    title: widget.title),
+                                    title: widget.title, targetUid: widget.publisherUid),
                               ),
                             ),
                             const SizedBox(width: 12),

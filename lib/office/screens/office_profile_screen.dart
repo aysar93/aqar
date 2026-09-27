@@ -324,9 +324,6 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
                   },
                 ),
               if (!isOwner)
-                ListTile(leading: const Icon(Icons.block), title: const Text('حظر المستخدم'),
-                  onTap: () { Navigator.pop(sheetContext); showBlockUserDialog(context, office.ownerId, targetPath: 'offices/${office.id}', officeId: office.id); }),
-              if (!isOwner)
                 ListTile(
                   leading: const Icon(
                     Icons.flag_outlined,
@@ -2994,7 +2991,7 @@ class _ReviewCard extends StatelessWidget {
               ),
             ],
           ),
-          TextButton.icon(onPressed: () => showBlockUserDialog(context, review.userId, targetPath: 'office_reviews/${review.id}'), icon: const Icon(Icons.block), label: const Text('حظر صاحب التقييم')),
+          TextButton.icon(onPressed: () => showUserContentReportDialog(context, review.userId, targetPath: 'office_reviews/${review.id}'), icon: const Icon(Icons.flag_outlined), label: const Text('الإبلاغ عن التقييم')),
           if (review.comment.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
