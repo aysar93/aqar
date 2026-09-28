@@ -1,3 +1,4 @@
+import '../widgets/home/keep_alive_section.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -241,9 +242,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
 
-              const BannerSlider(),
+              const KeepAliveSection(child: BannerSlider()),
 
-              HorizontalPropertiesSection(
+              KeepAliveSection(
+                  child: HorizontalPropertiesSection(
                 title: "⭐ العقارات المميزة",
                 stream: featuredStream,
                 onViewAll: () {
@@ -256,9 +258,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-              ),
+              )),
 
-              HorizontalPropertiesSection(
+              KeepAliveSection(
+                  child: HorizontalPropertiesSection(
                 title: "🆕 أحدث العقارات",
                 stream: latestStream,
                 onViewAll: () {
@@ -271,9 +274,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-              ),
+              )),
 
-              HorizontalPropertiesSection(
+              KeepAliveSection(
+                  child: HorizontalPropertiesSection(
                 title: "🔥 الأكثر مشاهدة",
                 stream: mostViewedStream,
                 onViewAll: () {
@@ -286,10 +290,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-              ),
-              const PropertyRequestsSection(),
+              )),
+              const KeepAliveSection(child: PropertyRequestsSection()),
 
-              const FeaturedOfficesSection(),
+              const KeepAliveSection(child: FeaturedOfficesSection()),
 
               const WhyAqarSection(),
 

@@ -238,6 +238,12 @@ class _HorizontalPropertiesSectionState
                       pageSnapping: true,
                       padEnds: false,
                       itemCount: properties.length,
+                      findChildIndexCallback: (key) {
+                        if (key is! ValueKey<String>) return null;
+                        final index = properties
+                            .indexWhere((item) => item.id == key.value);
+                        return index < 0 ? null : index;
+                      },
                       onPageChanged: (index) {
                         setState(() => _currentPage = index);
                       },
@@ -245,6 +251,7 @@ class _HorizontalPropertiesSectionState
                         final property = properties[index];
 
                         return Padding(
+                          key: ValueKey(property.id),
                           padding: const EdgeInsets.only(right: 8),
                           child: SizedBox(
                             width: double.infinity,

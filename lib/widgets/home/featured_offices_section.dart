@@ -88,6 +88,12 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
                     controller: _pageController,
                     physics: const BouncingScrollPhysics(),
                     itemCount: offices.length,
+                    findChildIndexCallback: (key) {
+                      if (key is! ValueKey<String>) return null;
+                      final index =
+                          offices.indexWhere((item) => item.id == key.value);
+                      return index < 0 ? null : index;
+                    },
                     onPageChanged: (index) {
                       if (mounted) {
                         setState(() => _currentPage = index);
@@ -97,6 +103,7 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
                       final office = offices[index];
 
                       return Padding(
+                        key: ValueKey(office.id),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                         ),

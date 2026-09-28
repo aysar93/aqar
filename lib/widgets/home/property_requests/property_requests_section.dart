@@ -47,10 +47,15 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
 
   int _currentPage = 0;
   bool _isAdmin = false;
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _requestsStream;
 
   @override
   void initState() {
     super.initState();
+    _requestsStream = FirebaseFirestore.instance
+        .collection('property_requests')
+        .where('status', isEqualTo: 'approved')
+        .safeSnapshots();
     _checkAdmin();
   }
 
@@ -95,13 +100,7 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('property_requests')
-          .where(
-            'status',
-            isEqualTo: 'approved',
-          )
-          .safeSnapshots(),
+      stream: _requestsStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
 
@@ -182,6 +181,12 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                       padEnds: false,
                       physics: const BouncingScrollPhysics(),
                       itemCount: requests.length,
+                      findChildIndexCallback: (key) {
+                        if (key is! ValueKey<String>) return null;
+                        final index =
+                            requests.indexWhere((item) => item.id == key.value);
+                        return index < 0 ? null : index;
+                      },
                       onPageChanged: (index) {
                         if (!mounted) return;
 
@@ -195,6 +200,7 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                         final data = doc.data() as Map<String, dynamic>;
 
                         return AnimatedBuilder(
+                          key: ValueKey(doc.id),
                           animation: _pageController,
                           builder: (context, child) {
                             double scale = 1.0;
