@@ -1,6 +1,6 @@
 # App Review 1.2 — عقارات الأنبار
 
-الإصدار المعدّ للإرسال: **1.0.3 (15)**. تُختبر هذه النسخة على iPhone فعلي وتُرفع إلى App Store Connect قبل إرسال الرد أدناه. نجاح فحص GitHub غير الموقّع لا ينتج IPA موقّعًا ولا يرفع التطبيق إلى Apple.
+الإصدار المعدّ للإرسال: **1.0.3 (16)**. تُختبر هذه النسخة على iPhone فعلي وتُرفع إلى App Store Connect قبل إرسال الرد أدناه. نجاح فحص GitHub غير الموقّع لا ينتج IPA موقّعًا ولا يرفع التطبيق إلى Apple.
 
 ## التغييرات
 
@@ -34,7 +34,7 @@
 
 Hello App Review Team,
 
-We have addressed Guideline 1.2 in Anbar Real Estate, version 1.0.3, build 15.
+We have addressed Guideline 1.2 in Anbar Real Estate, version 1.0.3, build 16.
 
 Users must explicitly accept our EULA when creating a new account, including when completing a new social account. The terms state that objectionable content and abusive users are not tolerated. Existing users can sign in without repeated consent prompts. The full terms remain accessible from the sign-in and registration screens.
 
