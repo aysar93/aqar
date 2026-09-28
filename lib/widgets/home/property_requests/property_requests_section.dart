@@ -103,17 +103,7 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
           )
           .safeSnapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return const SizedBox(
-            height: 330,
-            child: Center(
-              child: CircularProgressIndicator(
-                color: _gold,
-              ),
-            ),
-          );
-        }
+        if (!snapshot.hasData) return const SizedBox.shrink();
 
         if (snapshot.hasError) {
           debugPrint(

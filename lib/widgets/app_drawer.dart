@@ -1,4 +1,3 @@
-import '../moderation/blocked_users_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -492,12 +491,6 @@ class _AppDrawerState extends State<AppDrawer> {
                         );
                       }),
                       const Divider(height: 1),
-                      drawerItem(Icons.block, 'المستخدمون المحظورون', () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const BlockedUsersScreen()));
-                      }),
                       drawerItem(Icons.settings_rounded, "الإعدادات", () async {
                         await Navigator.push(
                           context,

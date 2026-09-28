@@ -241,10 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
 
-              const SizedBox(height: 30),
               const BannerSlider(),
-
-              const SizedBox(height: 24),
 
               HorizontalPropertiesSection(
                 title: "⭐ العقارات المميزة",
@@ -261,8 +258,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
 
-              const SizedBox(height: 24),
-
               HorizontalPropertiesSection(
                 title: "🆕 أحدث العقارات",
                 stream: latestStream,
@@ -278,8 +273,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
 
-              const SizedBox(height: 24),
-
               HorizontalPropertiesSection(
                 title: "🔥 الأكثر مشاهدة",
                 stream: mostViewedStream,
@@ -294,14 +287,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 24),
               const PropertyRequestsSection(),
 
-              const SizedBox(height: 20),
-
               const FeaturedOfficesSection(),
-
-              const SizedBox(height: 32),
 
               const WhyAqarSection(),
 

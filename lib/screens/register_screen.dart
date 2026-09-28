@@ -28,7 +28,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _error = '';
 
   Future<void> _register() async {
-    if (!_acceptedTerms || _loading) return;
+    if (_loading) return;
+    if (!_acceptedTerms) {
+      setState(() => _error =
+          'يرجى قراءة شروط الاستخدام والموافقة عليها قبل إنشاء الحساب.');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_error)));
+      return;
+    }
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
@@ -253,8 +260,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 : (value) =>
                                     setState(() => _acceptedTerms = value)),
                         ElevatedButton(
-                          onPressed:
-                              _loading || !_acceptedTerms ? null : _register,
+                          onPressed: _loading ? null : _register,
                           child: _loading
                               ? const SizedBox.square(
                                   dimension: 24,

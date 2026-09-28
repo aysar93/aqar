@@ -4,7 +4,7 @@
 
 ## التغييرات
 
-- موافقة غير محددة مسبقًا على EULA قبل التسجيل والدخول بالبريد/الهاتف وApple وGoogle وFacebook. تُحفظ الموافقة في `users/{uid}/consents/2026-09-27` مع توقيت الخادم. الحسابات ذات الجلسات السابقة مطالبة بالموافقة أيضًا.
+- موافقة غير محددة مسبقًا على EULA عند إنشاء حساب جديد بالهاتف أو عبر Apple وGoogle وFacebook. تُحفظ الموافقة في `users/{uid}/consents/2026-09-27` مع توقيت الخادم. لا تُطلب الموافقة عند تشغيل التطبيق أو تسجيل الدخول لحساب قائم.
 - سياسة صريحة بعدم التسامح مع المحتوى المسيء والمستخدمين المسيئين، مع إزالة المخالفات وإيقاف الحسابات ومراجعة البلاغات خلال 24 ساعة.
 - الإبقاء على بلاغات العقارات والمكاتب الحالية وقواعدها الخاصة؛ اختبارات محاكي تثبت حفظها وخصوصيتها ومنع التلاعب بهوية المبلّغ أو نتيجة المراجعة.
 - حظر شخصي من تفاصيل العقار والمكتب والطلب والتعليقات والردود والتقييمات. يُحفظ الحظر والبلاغ الإداري معًا في عملية ذرية. تختفي مواد الناشر من القوائم والتفاصيل والمفضلة والخريطة والريلز المرتبطة. صفحة «المستخدمون المحظورون» تسمح بإلغاء الحظر دون حذف البلاغ.
@@ -22,10 +22,10 @@
 ## تسجيل فيديو iPhone
 
 1. ثبّت النسخة الجديدة من TestFlight على **iPhone فعلي**، وجهّز حسابي مستخدمين A وB وإعلانين معتمدين لـB وتعليقًا معتمدًا له على إعلان مستخدم آخر. استخدم محتوى تجريبيًا غير مسيء، وأعطِ App Review حسابًا تجريبيًا يعمل.
-2. سجّل الخروج، ثم ابدأ «تسجيل الشاشة» من مركز التحكم. افتح التسجيل ثم تسجيل الدخول: أظهر نص عدم التسامح ومعلومات التواصل، وأن الموافقة غير محددة وأن المتابعة لا تعمل قبل اختيارها. افتح الشروط ثم وافق وسجل دخول A.
+2. سجّل الخروج، ثم ابدأ «تسجيل الشاشة» من مركز التحكم. افتح إنشاء حساب جديد: أظهر نص عدم التسامح ومعلومات التواصل، وأن الموافقة غير محددة وأن محاولة التسجيل تعرض رسالة قبل الموافقة. افتح الشروط ثم وافق وأكمل التسجيل. أظهر أن تسجيل الدخول لحساب قائم يعمل دون مربع موافقة.
 3. افتح أحد إعلانات B، واضغط زر الإبلاغ الحالي، واختر السبب ثم أرسل؛ أظهر رسالة نجاح الإرسال.
 4. أظهر إعلانات B في القائمة والمفضلة والخريطة إن كان له موقع. افتح الإعلان واضغط زر الإبلاغ، واختر السبب، وفعّل «حظر المستخدم أيضًا» ثم اضغط «إرسال البلاغ وحظر المستخدم». أظهر اختفاء الإعلان المفتوح، ثم ارجع إلى القوائم لإظهار اختفاء باقي إعلاناته وتعليقاته فورًا. أعد فتح التطبيق لإثبات استمرار الحظر.
-5. افتح «المستخدمون المحظورون» وأظهر الحظر المحفوظ. افتح «تواصل معنا» وأظهر الهاتف وواتساب.
+5. افتح «الإعدادات» ثم «المستخدمون المحظورون» وأظهر الحظر المحفوظ. افتح «تواصل معنا» وأظهر الهاتف وواتساب.
 6. في لقطة منفصلة بحساب الإدارة، افتح «بلاغات المحتوى»، وأظهر البلاغ العادي وبلاغ الحظر، ثم افتح محتواهما. على المحتوى التجريبي فقط، أظهر الحذف وحظر المستخدم وتسجيل النتيجة. لا تكشف بيانات مستخدمين حقيقيين أو كلمات مرور في الفيديو.
 7. أظهر نشر تعليق أو تقييم سليم مباشرةً، وكذلك إعلان مكتب موثق. جرّب نصًا اختباريًا يتضمن `PORN` لإظهار رفض الفلتر، دون نشر مادة مسيئة فعلية.
 8. احتفظ بالتسجيل الأصلي؛ لا تسرّع الخطوات المهمة. ارفق الفيديو في App Store Connect أو أضف رابطًا يمكن لفريق Apple فتحه دون طلب صلاحية. أضف رقم البناء وبيانات حساب المراجعة في App Review Information.
@@ -36,11 +36,11 @@ Hello App Review Team,
 
 We have addressed Guideline 1.2 in Anbar Real Estate, version 1.0.3, build 15.
 
-Users must explicitly accept our EULA before registering or signing in, including social sign-in. The terms state that objectionable content and abusive users are not tolerated. Existing signed-in users must also accept the current terms.
+Users must explicitly accept our EULA when creating a new account, including when completing a new social account. The terms state that objectionable content and abusive users are not tolerated. Existing users can sign in without repeated consent prompts. The full terms remain accessible from the sign-in and registration screens.
 
 We have added Arabic and English objectionable-text filtering in the app and in server-enforced Firestore rules. Verified offices, comments, replies, and reviews retain immediate publication. Users can report objectionable content, including images, and administrators can remove reported content and suspend abusive accounts. Reports are reviewed within 24 hours.
 
-The existing report action is available on property and office pages. Users can block an abusive publisher by opening Report, selecting a reason, enabling the optional block checkbox, and submitting the report. Blocking immediately hides that publisher's content for the blocking user and creates an administrator report. Blocks persist across app restarts and can be managed from the Blocked Users page.
+The existing report action is available on property and office pages. Users can block an abusive publisher by opening Report, selecting a reason, enabling the optional block checkbox, and submitting the report. Blocking immediately hides that publisher's content for the blocking user and creates an administrator report. Blocks persist across app restarts and can be managed from Settings > Blocked Users.
 
 Our contact phone and WhatsApp number are clearly available in the terms and Contact Us screen, including before sign-in.
 

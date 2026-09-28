@@ -1,4 +1,3 @@
-import '../moderation/eula.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -428,8 +427,7 @@ class _MainShellState extends State<MainShell> {
   // ==================================================
 
   @override
-  Widget build(BuildContext context) =>
-      SessionConsentGate(child: _buildContent(context));
+  Widget build(BuildContext context) => _buildContent(context);
 
   Widget _buildContent(BuildContext context) {
     final bool hideBottomBar = currentIndex == 4;

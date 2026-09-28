@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../moderation/eula.dart';
+import '../bottom_sheets/terms_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
@@ -18,6 +21,9 @@ import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  // Keep AuthGate on this route until federated account setup finishes.
+  static bool completingSocialSignIn = false;
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -29,7 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
-  bool _acceptedTerms = false;
   bool _obscure = true;
   bool _rememberMe = false;
   bool _showRecovery = false;
@@ -67,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (!_acceptedTerms || _loading) return;
+    if (_loading) return;
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
@@ -85,8 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       await _saveRememberPreference();
       if (!mounted) return;
-      await recordEulaConsent();
-      if (!mounted) return;
       await context.read<UserProvider>().refresh();
       if (!mounted) return;
       _openApp();
@@ -97,33 +100,52 @@ class _LoginScreenState extends State<LoginScreen> {
         _showRecovery = true;
       });
     } catch (_) {
-      if (mounted)
-        setState(
-            () => _error = 'تعذر إكمال الدخول أو حفظ الموافقة. حاول مجدداً.');
+      if (mounted) {
+        setState(() => _error = 'تعذر إكمال تسجيل الدخول. حاول مجدداً.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _socialLogin(
-    Future<dynamic> Function() signIn,
+    Future<UserCredential?> Function() signIn,
     String provider,
   ) async {
-    if (!_acceptedTerms || _loading) return;
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = '';
     });
+    var completed = false;
+    LoginScreen.completingSocialSignIn = true;
     try {
       final result = await signIn();
       if (result == null) return;
+      final isNewAccount = result.additionalUserInfo?.isNewUser == true ||
+          !(await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(result.user!.uid)
+                  .get())
+              .exists;
+      if (isNewAccount) {
+        if (!mounted) {
+          await FirebaseAuth.instance.signOut();
+          return;
+        }
+        final accepted = await showNewAccountConsent(context);
+        if (!accepted) {
+          await FirebaseAuth.instance.signOut();
+          return;
+        }
+        await recordEulaConsent();
+      }
       await UserService.createOrUpdateSocialUser(result.user!);
       await UserService.completeSignIn(result.user!);
       if (!mounted) return;
-      await recordEulaConsent();
-      if (!mounted) return;
       await context.read<UserProvider>().refresh();
       if (!mounted) return;
+      completed = true;
       _openApp();
     } on AuthFailure catch (failure) {
       if (mounted) setState(() => _error = failure.message);
@@ -134,6 +156,8 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _error = 'تعذر تسجيل الدخول بواسطة $provider: $e');
       }
     } finally {
+      if (!completed) await FirebaseAuth.instance.signOut();
+      LoginScreen.completingSocialSignIn = false;
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -263,7 +287,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? 'يرجى إدخال كلمة المرور'
                                 : null,
                           ),
-                          Row(
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Checkbox(
                                 value: _rememberMe,
@@ -276,7 +302,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       },
                               ),
                               const Text('تذكرني'),
-                              const Spacer(),
                               TextButton(
                                 onPressed: _contactSupport,
                                 child: const Text('هل نسيت كلمة المرور؟'),
@@ -310,15 +335,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                           ],
                           const SizedBox(height: 12),
-                          EulaConsent(
-                              accepted: _acceptedTerms,
-                              onChanged: _loading
-                                  ? null
-                                  : (value) =>
-                                      setState(() => _acceptedTerms = value)),
+                          TextButton(
+                              onPressed: () => showTermsSheet(context),
+                              child: const Text('شروط الاستخدام')),
                           ElevatedButton(
-                            onPressed:
-                                _loading || !_acceptedTerms ? null : _login,
+                            onPressed: _loading ? null : _login,
                             child: _loading
                                 ? const SizedBox.square(
                                     dimension: 24,
@@ -337,7 +358,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton(
-                            onPressed: (_loading || !_acceptedTerms)
+                            onPressed: (_loading)
                                 ? null
                                 : () {
                                     Navigator.push(
@@ -367,46 +388,44 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                           ),
-                          Row(
+                          OverflowBar(
+                            spacing: 12,
+                            overflowSpacing: 8,
+                            alignment: MainAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: (_loading || !_acceptedTerms)
-                                      ? null
-                                      : () => _socialLogin(
-                                            GoogleAuthService.signInWithGoogle,
-                                            'Google',
-                                          ),
-                                  icon: const FaIcon(
-                                    FontAwesomeIcons.google,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Google'),
+                              OutlinedButton.icon(
+                                onPressed: (_loading)
+                                    ? null
+                                    : () => _socialLogin(
+                                          GoogleAuthService.signInWithGoogle,
+                                          'Google',
+                                        ),
+                                icon: const FaIcon(
+                                  FontAwesomeIcons.google,
+                                  size: 18,
                                 ),
+                                label: const Text('Google'),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: (_loading || !_acceptedTerms)
-                                      ? null
-                                      : () => _socialLogin(
-                                            FacebookAuthService
-                                                .signInWithFacebook,
-                                            'Facebook',
-                                          ),
-                                  icon: const FaIcon(
-                                    FontAwesomeIcons.facebook,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Facebook'),
+                              OutlinedButton.icon(
+                                onPressed: (_loading)
+                                    ? null
+                                    : () => _socialLogin(
+                                          FacebookAuthService
+                                              .signInWithFacebook,
+                                          'Facebook',
+                                        ),
+                                icon: const FaIcon(
+                                  FontAwesomeIcons.facebook,
+                                  size: 18,
                                 ),
+                                label: const Text('Facebook'),
                               ),
                             ],
                           ),
                           if (defaultTargetPlatform == TargetPlatform.iOS) ...[
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
-                              onPressed: (_loading || !_acceptedTerms)
+                              onPressed: (_loading)
                                   ? null
                                   : () => _socialLogin(
                                         AppleAuthService.signInWithApple,

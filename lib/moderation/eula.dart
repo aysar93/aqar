@@ -26,7 +26,7 @@ class EulaConsent extends StatelessWidget {
         Wrap(children: [
           TextButton(
               onPressed: () => showTermsSheet(context),
-              child: const Text('قراءة شروط الاستخدام كاملة')),
+              child: const Text('شروط الاستخدام')),
           TextButton(
               onPressed: () => showContactSheet(context),
               child: const Text('التواصل مع الإدارة')),
@@ -34,7 +34,7 @@ class EulaConsent extends StatelessWidget {
         CheckboxListTile(
             value: accepted,
             onChanged: onChanged == null ? null : (v) => onChanged!(v == true),
-            title: const Text('قرأت شروط الاستخدام وأوافق عليها صراحةً'),
+            title: const Text('قرأت شروط الاستخدام وأوافق عليها صراحة'),
             controlAffinity: ListTileControlAffinity.leading),
       ]);
 }
@@ -135,4 +135,32 @@ class _SessionConsentGateState extends State<SessionConsentGate> {
                       child: const Text('الموافقة والمتابعة')),
                 ])));
   }
+}
+
+/// Only used to complete a new federated account, never on app startup.
+Future<bool> showNewAccountConsent(BuildContext context) async {
+  var accepted = false;
+  return await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+            builder: (context, setState) => AlertDialog(
+                  title: const Text('إنشاء حساب جديد'),
+                  content: SingleChildScrollView(
+                      child: EulaConsent(
+                          accepted: accepted,
+                          onChanged: (value) =>
+                              setState(() => accepted = value))),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('إلغاء')),
+                    FilledButton(
+                        onPressed: accepted
+                            ? () => Navigator.pop(context, true)
+                            : null,
+                        child: const Text('الموافقة وإنشاء الحساب')),
+                  ],
+                )),
+      ) ??
+      false;
 }

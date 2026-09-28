@@ -1,3 +1,4 @@
+import '../moderation/blocked_users_screen.dart';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -703,6 +704,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
 
                   const SizedBox(height: 25),
+
+                  Card(
+                    color: const Color(0xff1E293B),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    child: ListTile(
+                      leading:
+                          const Icon(Icons.block, color: Color(0xffD4AF37)),
+                      title: const Text('المستخدمون المحظورون',
+                          style: TextStyle(color: Colors.white)),
+                      trailing:
+                          const Icon(Icons.chevron_left, color: Colors.white60),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const BlockedUsersScreen())),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
                   //--------------------------------
                   // Notifications

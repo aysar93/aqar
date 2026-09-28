@@ -40,14 +40,7 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
     return StreamBuilder<List<OfficeModel>>(
       stream: _featuredOfficesStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 260,
-            child: Center(
-              child: CircularProgressIndicator(color: gold),
-            ),
-          );
-        }
+        if (!snapshot.hasData) return const SizedBox.shrink();
 
         if (snapshot.hasError) {
           return const SizedBox.shrink();

@@ -9,7 +9,9 @@ import '../services/property_service.dart';
 import '../screens/property_details.dart';
 
 class BannerSlider extends StatefulWidget {
-  const BannerSlider({super.key});
+  const BannerSlider({super.key, this.stream});
+
+  final Stream<List<BannerModel>>? stream;
 
   @override
   State<BannerSlider> createState() => _BannerSliderState();
@@ -24,22 +26,32 @@ class _BannerSliderState extends State<BannerSlider>
 
   int _currentIndex = 0;
 
-  // آخر ارتفاع مستخدم للبنر.
-  // نحتفظ به مؤقتًا عند اختفاء البنرات حتى لا يتحرك
-  // محتوى الـ ListView فجأة.
-  double _reservedHeight = 0.0;
-
-  // هل كانت هناك بنرات ظاهرة قبل وصول القائمة الفارغة؟
-  bool _hadBanners = false;
-
-  // يمنع جدولة أكثر من عملية إخفاء في نفس الوقت.
-  bool _hideScheduled = false;
-
   @override
   void initState() {
     super.initState();
 
-    _bannersStream = BannerService.activeBanners();
+    _bannersStream = (widget.stream ?? BannerService.activeBanners())
+        .asyncMap((banners) async {
+      final valid = await Future.wait(banners.map((banner) async {
+        final uri = Uri.tryParse(banner.imageUrl.trim());
+        if (uri == null ||
+            !['http', 'https'].contains(uri.scheme) ||
+            uri.host.isEmpty ||
+            !mounted) {
+          return false;
+        }
+        var loaded = true;
+        await precacheImage(NetworkImage(banner.imageUrl.trim()), context,
+            onError: (_, __) {
+          loaded = false;
+        });
+        return loaded;
+      }));
+      return [
+        for (var i = 0; i < banners.length; i++)
+          if (valid[i]) banners[i]
+      ];
+    });
   }
 
   Future<void> _openBanner(BannerModel banner) async {
@@ -142,26 +154,6 @@ class _BannerSliderState extends State<BannerSlider>
     }
   }
 
-  void _scheduleHide() {
-    if (_hideScheduled) return;
-
-    _hideScheduled = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      _hideScheduled = false;
-
-      if (!_hadBanners) return;
-
-      setState(() {
-        _hadBanners = false;
-        _reservedHeight = 0.0;
-        _currentIndex = 0;
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -175,43 +167,10 @@ class _BannerSliderState extends State<BannerSlider>
     return StreamBuilder<List<BannerModel>>(
       stream: _bannersStream,
       builder: (context, snapshot) {
-        // ==========================================================
-        // انتظار أول نتيجة من Firestore.
-        //
-        // إذا لم تظهر البنرات بعد، لا نحجز مساحة ضخمة مثل 175.
-        // ==========================================================
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-
-        // ==========================================================
-        // خطأ أو لا توجد بنرات.
-        //
-        // إذا كانت البنرات موجودة قبل قليل، نحافظ مؤقتًا على
-        // آخر ارتفاع حتى يكتمل الـFrame، ثم نصفر الارتفاع.
-        //
-        // بهذه الطريقة لا يحدث تغيير مفاجئ في موضع الأقسام.
-        // ==========================================================
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          if (_hadBanners) {
-            _scheduleHide();
-
-            return SizedBox(
-              height: _reservedHeight,
-            );
-          }
-
           return const SizedBox.shrink();
         }
-
         final banners = snapshot.data!;
-
-        // ==========================================================
-        // لدينا بنرات.
-        // ==========================================================
-        _hadBanners = true;
-        _reservedHeight = totalHeight;
 
         // حماية المؤشر من الخروج عن عدد البنرات.
         if (banners.length <= 1) {
@@ -220,79 +179,81 @@ class _BannerSliderState extends State<BannerSlider>
           _currentIndex = 0;
         }
 
-        return AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            height: totalHeight,
-            width: double.infinity,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: bannerHeight,
-                  width: double.infinity,
-                  child: CarouselSlider.builder(
-                    itemCount: banners.length,
-                    itemBuilder: (
-                      context,
-                      index,
-                      realIndex,
-                    ) {
-                      final banner = banners[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                        ),
-                        child: _ReferenceBannerCard(
-                          banner: banner,
-                          onTap: () => _openBanner(banner),
-                        ),
-                      );
-                    },
-                    options: CarouselOptions(
+        return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: totalHeight,
+                width: double.infinity,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
                       height: bannerHeight,
-                      viewportFraction: banners.length > 1 ? 0.91 : 1.0,
-                      enlargeCenterPage: false,
-                      padEnds: true,
-                      enableInfiniteScroll: banners.length > 1,
-                      autoPlay: banners.length > 1,
-                      autoPlayInterval: const Duration(seconds: 5),
-                      autoPlayAnimationDuration:
-                          const Duration(milliseconds: 650),
-                      autoPlayCurve: Curves.easeOutCubic,
-                      onPageChanged: (
-                        index,
-                        reason,
-                      ) {
-                        if (!mounted) return;
+                      width: double.infinity,
+                      child: CarouselSlider.builder(
+                        itemCount: banners.length,
+                        itemBuilder: (
+                          context,
+                          index,
+                          realIndex,
+                        ) {
+                          final banner = banners[index];
 
-                        if (_currentIndex != index) {
-                          setState(() {
-                            _currentIndex = index;
-                          });
-                        }
-                      },
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                            ),
+                            child: _ReferenceBannerCard(
+                              banner: banner,
+                              onTap: () => _openBanner(banner),
+                            ),
+                          );
+                        },
+                        options: CarouselOptions(
+                          height: bannerHeight,
+                          viewportFraction: banners.length > 1 ? 0.91 : 1.0,
+                          enlargeCenterPage: false,
+                          padEnds: true,
+                          enableInfiniteScroll: banners.length > 1,
+                          autoPlay: banners.length > 1,
+                          autoPlayInterval: const Duration(seconds: 5),
+                          autoPlayAnimationDuration:
+                              const Duration(milliseconds: 650),
+                          autoPlayCurve: Curves.easeOutCubic,
+                          onPageChanged: (
+                            index,
+                            reason,
+                          ) {
+                            if (!mounted) return;
+
+                            if (_currentIndex != index) {
+                              setState(() {
+                                _currentIndex = index;
+                              });
+                            }
+                          },
+                        ),
+                      ),
                     ),
-                  ),
+
+                    // ==================================================
+                    // المؤشر
+                    // ==================================================
+                    if (banners.length > 1) const SizedBox(height: 7),
+
+                    if (banners.length > 1)
+                      _ReferenceIndicator(
+                        count: banners.length,
+                        currentIndex: _currentIndex,
+                      ),
+                  ],
                 ),
-
-                // ==================================================
-                // المؤشر
-                // ==================================================
-                if (banners.length > 1) const SizedBox(height: 7),
-
-                if (banners.length > 1)
-                  _ReferenceIndicator(
-                    count: banners.length,
-                    currentIndex: _currentIndex,
-                  ),
-              ],
-            ),
-          ),
-        );
+              ),
+            ));
       },
     );
   }

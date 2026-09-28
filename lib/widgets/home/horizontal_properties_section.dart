@@ -102,39 +102,10 @@ class _HorizontalPropertiesSectionState
           'renderState=${snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData ? "Waiting" : snapshot.hasError ? "Error" : debugItemCount == 0 ? "Empty" : "Loaded"}',
         );
 
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return SizedBox(
-            height: AqarSizes.horizontalSectionHeight(context),
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
         }
-
-        if (snapshot.hasError) {
-          debugPrint("HorizontalPropertiesSection ERROR:");
-          debugPrint(snapshot.error.toString());
-
-          return SizedBox(
-            height: 180,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  snapshot.error.toString(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        final properties = snapshot.data ?? [];
+        final properties = snapshot.data!;
 
         return Container(
           margin: EdgeInsets.only(
