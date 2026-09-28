@@ -36,7 +36,7 @@ Hello App Review Team,
 
 We have addressed Guideline 1.2 in Anbar Real Estate, version 1.0.3, build 16.
 
-Users must explicitly accept our EULA when creating a new account, including when completing a new social account. The terms state that objectionable content and abusive users are not tolerated. Existing users can sign in without repeated consent prompts. The full terms remain accessible from the sign-in and registration screens.
+Users must explicitly accept our EULA when creating a new account, including when completing a new social account. The terms state that objectionable content and abusive users are not tolerated. Existing users can sign in without repeated consent prompts. The full terms remain accessible during registration and from the app menu.
 
 We have added Arabic and English objectionable-text filtering in the app and in server-enforced Firestore rules. Verified offices, comments, replies, and reviews retain immediate publication. Users can report objectionable content, including images, and administrators can remove reported content and suspend abusive accounts. Reports are reviewed within 24 hours.
 

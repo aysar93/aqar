@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../moderation/eula.dart';
-import '../bottom_sheets/terms_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
@@ -204,6 +203,21 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Widget _socialButton(String label, FaIconData icon,
+          Future<UserCredential?> Function() signIn) =>
+      OutlinedButton(
+        style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12)),
+        onPressed: _loading ? null : () => _socialLogin(signIn, label),
+        child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              FaIcon(icon, size: 18),
+              const SizedBox(width: 5),
+              Text(label),
+            ])),
+      );
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -291,17 +305,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             alignment: WrapAlignment.spaceBetween,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Checkbox(
-                                value: _rememberMe,
-                                onChanged: _loading
-                                    ? null
-                                    : (value) {
-                                        setState(
-                                          () => _rememberMe = value ?? false,
-                                        );
-                                      },
-                              ),
-                              const Text('تذكرني'),
+                              Row(mainAxisSize: MainAxisSize.min, children: [
+                                Checkbox(
+                                  value: _rememberMe,
+                                  onChanged: _loading
+                                      ? null
+                                      : (value) {
+                                          setState(
+                                            () => _rememberMe = value ?? false,
+                                          );
+                                        },
+                                ),
+                                const Text('تذكرني'),
+                              ]),
                               TextButton(
                                 onPressed: _contactSupport,
                                 child: const Text('هل نسيت كلمة المرور؟'),
@@ -335,9 +351,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                           ],
                           const SizedBox(height: 12),
-                          TextButton(
-                              onPressed: () => showTermsSheet(context),
-                              child: const Text('شروط الاستخدام')),
                           ElevatedButton(
                             onPressed: _loading ? null : _login,
                             child: _loading
@@ -388,56 +401,28 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                           ),
-                          OverflowBar(
-                            spacing: 12,
-                            overflowSpacing: 8,
-                            alignment: MainAxisAlignment.center,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: (_loading)
-                                    ? null
-                                    : () => _socialLogin(
-                                          GoogleAuthService.signInWithGoogle,
-                                          'Google',
-                                        ),
-                                icon: const FaIcon(
-                                  FontAwesomeIcons.google,
-                                  size: 18,
-                                ),
-                                label: const Text('Google'),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: (_loading)
-                                    ? null
-                                    : () => _socialLogin(
-                                          FacebookAuthService
-                                              .signInWithFacebook,
-                                          'Facebook',
-                                        ),
-                                icon: const FaIcon(
-                                  FontAwesomeIcons.facebook,
-                                  size: 18,
-                                ),
-                                label: const Text('Facebook'),
-                              ),
+                          Row(children: [
+                            Expanded(
+                                child: _socialButton(
+                                    'Google',
+                                    FontAwesomeIcons.google,
+                                    GoogleAuthService.signInWithGoogle)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                                child: _socialButton(
+                                    'Facebook',
+                                    FontAwesomeIcons.facebook,
+                                    FacebookAuthService.signInWithFacebook)),
+                            if (defaultTargetPlatform ==
+                                TargetPlatform.iOS) ...[
+                              const SizedBox(width: 6),
+                              Expanded(
+                                  child: _socialButton(
+                                      'Apple',
+                                      FontAwesomeIcons.apple,
+                                      AppleAuthService.signInWithApple)),
                             ],
-                          ),
-                          if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                            const SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              onPressed: (_loading)
-                                  ? null
-                                  : () => _socialLogin(
-                                        AppleAuthService.signInWithApple,
-                                        'Apple',
-                                      ),
-                              icon: const FaIcon(
-                                FontAwesomeIcons.apple,
-                                size: 20,
-                              ),
-                              label: const Text('المتابعة باستخدام Apple'),
-                            ),
-                          ],
+                          ]),
                         ],
                       ),
                     ),

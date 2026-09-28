@@ -7,6 +7,7 @@ import 'package:aqar/screens/register_screen.dart';
 import 'package:aqar/widgets/home/horizontal_properties_section.dart';
 import 'package:aqar/widgets/home/why_aqar_section.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,7 +70,19 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
       await tester.pumpAndSettle();
-      expect(find.text('شروط الاستخدام'), findsOneWidget);
+      expect(find.text('شروط الاستخدام'), findsNothing);
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        expect(find.text('Apple'), findsOneWidget);
+        expect(tester.getCenter(find.text('Apple')).dy,
+            closeTo(tester.getCenter(find.text('Google')).dy, 1));
+      } else {
+        expect(find.text('Apple'), findsNothing);
+      }
+      expect(tester.getCenter(find.text('Facebook')).dy,
+          closeTo(tester.getCenter(find.text('Google')).dy, 1));
+      final checkbox = tester.getRect(find.byType(Checkbox));
+      final remember = tester.getRect(find.text('تذكرني'));
+      expect((checkbox.left - remember.right).abs(), lessThanOrEqualTo(8));
       expect(find.byType(Checkbox), findsOneWidget); // Remember me only.
       expect(find.byType(CheckboxListTile), findsNothing);
       expect(tester.takeException(), isNull);
@@ -91,6 +104,8 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
-    });
+    },
+        variant: TargetPlatformVariant(
+            {TargetPlatform.iOS, TargetPlatform.android}));
   }
 }

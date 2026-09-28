@@ -119,28 +119,36 @@ class UserBlocks extends ChangeNotifier {
 /// Re-emits cached query results on a block, including already mounted feeds.
 extension SafeQuery<T extends Object?> on Query<T> {
   Stream<QuerySnapshot<T>> safeSnapshots() {
-    late StreamController<QuerySnapshot<T>> controller;
-    StreamSubscription<QuerySnapshot<T>>? subscription;
-    QuerySnapshot<T>? latest;
-    void emit() {
-      if (latest != null && !controller.isClosed)
-        controller.add(_VisibleSnapshot(latest!));
-    }
+    // Firestore streams can be listened to again after a lazy list/tab disposes
+    // its StreamBuilder. Each listener owns and cleans up its subscription.
+    return Stream<QuerySnapshot<T>>.multi((controller) {
+      QuerySnapshot<T>? latest;
+      var cancelled = false;
+      void emit() {
+        if (!cancelled && latest != null) {
+          controller.add(_VisibleSnapshot(latest!));
+        }
+      }
 
-    controller = StreamController<QuerySnapshot<T>>(
-      onListen: () {
-        UserBlocks.instance.addListener(emit);
-        subscription = snapshots().listen((s) {
-          latest = s;
-          emit();
-        }, onError: controller.addError);
-      },
-      onCancel: () async {
+      UserBlocks.instance.addListener(emit);
+      final subscription = snapshots().listen(
+          (snapshot) {
+            latest = snapshot;
+            emit();
+          },
+          onError: controller.addError,
+          onDone: () {
+            UserBlocks.instance.removeListener(emit);
+            controller.close();
+          });
+      controller.onPause = subscription.pause;
+      controller.onResume = subscription.resume;
+      controller.onCancel = () {
+        cancelled = true;
         UserBlocks.instance.removeListener(emit);
-        await subscription?.cancel();
-      },
-    );
-    return controller.stream;
+        return subscription.cancel();
+      };
+    }, isBroadcast: true);
   }
 }
 
