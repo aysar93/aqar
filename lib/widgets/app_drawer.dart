@@ -1,9 +1,13 @@
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
+import 'navigation/custom_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:aqar/services/share_origin.dart';
+import 'package:aqar/services/app_store_links.dart';
 import '../screens/login_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/my_properties_screen.dart';
@@ -123,9 +127,9 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 
-  Widget section(List<Widget> children) {
+  Widget section(List<Widget> children, {double spacingScale = 1}) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 14, vertical: 8 * spacingScale),
       decoration: BoxDecoration(
         color: const Color(0xff1E293B),
         borderRadius: BorderRadius.circular(18),
@@ -137,10 +141,11 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 
-  Widget guestHeader() {
+  Widget guestHeader({double spacingScale = 1}) {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(22),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16 * spacingScale),
+      padding:
+          EdgeInsets.symmetric(horizontal: 22, vertical: 22 * spacingScale),
       decoration: BoxDecoration(
         color: const Color(0xff1E293B),
         borderRadius: BorderRadius.circular(22),
@@ -156,7 +161,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 ? const Icon(Icons.person, color: Colors.black, size: 34)
                 : null,
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 18 * spacingScale),
           const Text(
             "مرحباً بك 👋",
             style: TextStyle(
@@ -165,13 +170,13 @@ class _AppDrawerState extends State<AppDrawer> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10 * spacingScale),
           const Text(
             "يمكنك تصفح جميع العقارات بدون تسجيل، وللاستفادة من جميع خدمات التطبيق قم بتسجيل الدخول",
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white70, height: 1.6),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 18 * spacingScale),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -207,7 +212,8 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 
-  Widget userHeader(User user, UserProvider userProvider) {
+  Widget userHeader(User user, UserProvider userProvider,
+      {double spacingScale = 1}) {
     final bool showOfficeIdentity = isOfficeMode && myOffice != null;
     final String displayName = showOfficeIdentity
         ? myOffice!.name
@@ -216,8 +222,9 @@ class _AppDrawerState extends State<AppDrawer> {
         showOfficeIdentity ? myOffice!.logoUrl : userProvider.photoUrl;
 
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 12 * spacingScale),
+      padding:
+          EdgeInsets.symmetric(horizontal: 14, vertical: 14 * spacingScale),
       decoration: BoxDecoration(
         color: const Color(0xff1E293B),
         borderRadius: BorderRadius.circular(22),
@@ -272,7 +279,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10 * spacingScale),
           Text(
             displayName,
             textAlign: TextAlign.center,
@@ -284,7 +291,7 @@ class _AppDrawerState extends State<AppDrawer> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6 * spacingScale),
           if ((showOfficeIdentity ? myOffice!.email : email).isNotEmpty)
             Text(
               showOfficeIdentity ? myOffice!.email : email,
@@ -292,13 +299,13 @@ class _AppDrawerState extends State<AppDrawer> {
               style: const TextStyle(color: Colors.white70),
             ),
           if (!showOfficeIdentity && userProvider.phone.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: 6 * spacingScale),
             Text(
               "📞 ${userProvider.phone}",
               style: const TextStyle(color: Colors.white60),
             ),
           ],
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * spacingScale),
           if (!officeLoading && myOffice == null) ...[
             SizedBox(
               width: double.infinity,
@@ -413,7 +420,7 @@ class _AppDrawerState extends State<AppDrawer> {
               ),
             ),
             if (isOfficeMode) ...[
-              const SizedBox(height: 10),
+              SizedBox(height: 10 * spacingScale),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -452,6 +459,16 @@ class _AppDrawerState extends State<AppDrawer> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final userProvider = context.watch<UserProvider>();
+    final isAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final mediaQuery = MediaQuery.of(context);
+    // SafeArea consumes padding.bottom, but an enclosing Scaffold can remove
+    // that padding while retaining the system's viewPadding.
+    final scrollBottomReserve = isAndroid
+        ? CustomBottomBar.height +
+            math.max(
+                0.0, mediaQuery.viewPadding.bottom - mediaQuery.padding.bottom)
+        : 0.0;
 
     if (loading) {
       return const Drawer(
@@ -465,102 +482,82 @@ class _AppDrawerState extends State<AppDrawer> {
     return Drawer(
       backgroundColor: const Color(0xff0F172A),
       child: SafeArea(
-        child: Column(
-          children: [
-            user == null ? guestHeader() : userHeader(user, userProvider),
-            Expanded(
-              child: ListView(
-                children: [
-                  if (user != null)
-                    section([
-                      drawerItem(Icons.home_work_rounded, "اعلاناتي", () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MyPropertiesScreen(),
-                          ),
-                        );
-                      }),
-                      const Divider(height: 1),
-                      drawerItem(Icons.favorite_rounded, "المفضلة", () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FavoritesScreen(),
-                          ),
-                        );
-                      }),
-                      const Divider(height: 1),
-                      drawerItem(Icons.settings_rounded, "الإعدادات", () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsScreen(),
-                          ),
-                        );
+        child: LayoutBuilder(builder: (context, constraints) {
+          // Reduce only spare vertical space on shorter Android viewports.
+          final spacingScale =
+              !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+                  ? (1 - (720 - constraints.maxHeight) / 360).clamp(0.6, 1.0)
+                  : 1.0;
+          Widget compactSection(List<Widget> children) =>
+              section(children, spacingScale: spacingScale);
+          return Column(
+            children: [
+              user == null
+                  ? guestHeader(spacingScale: spacingScale)
+                  : userHeader(user, userProvider, spacingScale: spacingScale),
+              Expanded(
+                child: ListView(
+                  primary: isAndroid ? false : null,
+                  padding: isAndroid
+                      ? EdgeInsets.only(bottom: scrollBottomReserve)
+                      : null,
+                  children: [
+                    if (user != null)
+                      compactSection([
+                        drawerItem(Icons.home_work_rounded, "اعلاناتي", () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MyPropertiesScreen(),
+                            ),
+                          );
+                        }),
+                        const Divider(height: 1),
+                        drawerItem(Icons.favorite_rounded, "المفضلة", () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FavoritesScreen(),
+                            ),
+                          );
+                        }),
+                        const Divider(height: 1),
+                        drawerItem(Icons.settings_rounded, "الإعدادات",
+                            () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SettingsScreen(),
+                            ),
+                          );
 
-                        if (!mounted) return;
+                          if (!mounted) return;
 
-                        await loadUser();
-                      }),
+                          await loadUser();
+                        }),
+                      ]),
+                    compactSection([
+                      drawerItem(
+                        Icons.query_stats_rounded,
+                        " اسعار العقارات",
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PropertyStatisticsScreen(),
+                            ),
+                          );
+                        },
+                      ),
                     ]),
-                  section([
-                    drawerItem(
-                      Icons.query_stats_rounded,
-                      " اسعار العقارات",
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const PropertyStatisticsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ]),
-                  section([
-                    drawerItem(Icons.phone, "تواصل معنا", () {
-                      showContactSheet(context);
-                    }),
-                    const Divider(height: 1),
-                    drawerItem(Icons.location_on, "موقع المكتب", () async {
-                      final url = Uri.parse(
-                        "https://maps.google.com/?q=الرمادي+حي+الجمهوري",
-                      );
-
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(
-                          url,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    }),
-                    const Divider(height: 1),
-                    drawerItem(Icons.description, "شروط الاستخدام", () {
-                      showTermsSheet(context);
-                    }),
-                    const Divider(height: 1),
-                    drawerItem(Icons.verified_user, "سياسة الخصوصية", () {
-                      showPrivacySheet(context);
-                    }),
-                    const Divider(height: 1),
-                    drawerItem(Icons.quiz_rounded, "الأسئلة الشائعة", () {
-                      showFaqSheet(context);
-                    }),
-                    const Divider(height: 1),
-                    drawerItem(Icons.share_rounded, "مشاركة التطبيق", () {
-                      Share.share(
-                        "حمّل تطبيق عقارات الانبار واستعرض أفضل العقارات بسهولة.\n\nhttps://play.google.com/store/apps/details?id=com.andalus.aqar",
-                        sharePositionOrigin: shareOrigin(context),
-                      );
-                    }),
-                    const Divider(height: 1),
-                    drawerItem(
-                      Icons.star_rate_rounded,
-                      "تقييم التطبيق",
-                      () async {
+                    compactSection([
+                      drawerItem(Icons.phone, "تواصل معنا", () {
+                        showContactSheet(context);
+                      }),
+                      const Divider(height: 1),
+                      drawerItem(Icons.location_on, "موقع المكتب", () async {
                         final url = Uri.parse(
-                          "https://play.google.com/store/apps/details?id=com.andalus.aqar&showAllReviews=true",
+                          "https://maps.google.com/?q=الرمادي+حي+الجمهوري",
                         );
 
                         if (await canLaunchUrl(url)) {
@@ -569,56 +566,90 @@ class _AppDrawerState extends State<AppDrawer> {
                             mode: LaunchMode.externalApplication,
                           );
                         }
-                      },
-                    ),
-                    const Divider(height: 1),
-                    drawerItem(Icons.info_outline_rounded, "عن التطبيق", () {
-                      showAboutSheet(context);
-                    }),
-                  ]),
-                  if (isAdmin)
-                    section([
+                      }),
+                      const Divider(height: 1),
+                      drawerItem(Icons.description, "شروط الاستخدام", () {
+                        showTermsSheet(context);
+                      }),
+                      const Divider(height: 1),
+                      drawerItem(Icons.verified_user, "سياسة الخصوصية", () {
+                        showPrivacySheet(context);
+                      }),
+                      const Divider(height: 1),
+                      drawerItem(Icons.quiz_rounded, "الأسئلة الشائعة", () {
+                        showFaqSheet(context);
+                      }),
+                      const Divider(height: 1),
+                      drawerItem(Icons.share_rounded, "مشاركة التطبيق", () {
+                        Share.share(
+                          AppStoreLinks.shareMessage,
+                          sharePositionOrigin: shareOrigin(context),
+                        );
+                      }),
+                      const Divider(height: 1),
                       drawerItem(
-                        Icons.admin_panel_settings_rounded,
-                        "لوحة الإدارة",
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AdminDashboard(),
-                            ),
-                          );
-                        },
-                      ),
-                    ]),
-                  if (user != null)
-                    section([
-                      drawerItem(
-                        Icons.logout_rounded,
-                        "تسجيل الخروج",
+                        Icons.star_rate_rounded,
+                        "تقييم التطبيق",
                         () async {
-                          await FirebaseAuth.instance.signOut();
+                          final url = AppStoreLinks.ratingUri(defaultTargetPlatform);
 
-                          if (!context.mounted) return;
-
-                          context.read<UserProvider>().clear();
-
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                            (route) => false,
-                          );
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
                         },
                       ),
+                      const Divider(height: 1),
+                      drawerItem(Icons.info_outline_rounded, "عن التطبيق", () {
+                        showAboutSheet(context);
+                      }),
                     ]),
-                  const SizedBox(height: 20),
-                ],
+                    if (isAdmin)
+                      compactSection([
+                        drawerItem(
+                          Icons.admin_panel_settings_rounded,
+                          "لوحة الإدارة",
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AdminDashboard(),
+                              ),
+                            );
+                          },
+                        ),
+                      ]),
+                    if (user != null)
+                      compactSection([
+                        drawerItem(
+                          Icons.logout_rounded,
+                          "تسجيل الخروج",
+                          () async {
+                            await FirebaseAuth.instance.signOut();
+
+                            if (!context.mounted) return;
+
+                            context.read<UserProvider>().clear();
+
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                        ),
+                      ]),
+                    SizedBox(height: 20 * spacingScale),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        }),
       ),
     );
   }

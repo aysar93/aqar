@@ -214,6 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 15),
 
               CategoriesSection(
+                responsiveAndroidHome: true,
                 selectedCategory: selectedCategory,
                 onCategorySelected: (category) {
                   if (category == "المكاتب") {

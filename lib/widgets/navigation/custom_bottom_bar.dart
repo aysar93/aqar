@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'bottom_nav_item.dart';
 import 'add_property_button.dart';
 
 class CustomBottomBar extends StatelessWidget {
+  static const double height = 82;
   final int currentIndex;
   final Function(int) onTap;
   final VoidCallback onAddTap;
@@ -17,8 +19,13 @@ class CustomBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+            ? MediaQuery.paddingOf(context).bottom
+            : 0.0;
     return Container(
-      height: 82,
+      height: height + bottomInset,
+      padding: EdgeInsets.only(bottom: bottomInset),
       decoration: const BoxDecoration(
         color: Color(0xff1E293B),
         borderRadius: BorderRadius.only(

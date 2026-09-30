@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/design/aqar_sizes.dart';
 import '../../core/design/aqar_spacing.dart';
@@ -5,11 +7,13 @@ import '../../core/design/aqar_radius.dart';
 import '../../core/design/aqar_text.dart';
 
 class CategoriesSection extends StatelessWidget {
+  final bool responsiveAndroidHome;
   final String selectedCategory;
   final ValueChanged<String> onCategorySelected;
 
   const CategoriesSection({
     super.key,
+    this.responsiveAndroidHome = false,
     required this.selectedCategory,
     required this.onCategorySelected,
   });
@@ -51,6 +55,45 @@ class CategoriesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final defaultWidth = AqarSizes.categoryWidth(context);
+    if (!responsiveAndroidHome ||
+        kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android) {
+      return _buildCategories(context, defaultWidth);
+    }
+    return LayoutBuilder(builder: (context, constraints) {
+      final spacing = AqarSpacing.xs(context);
+      // Five complete cards and three quarters of the next, when content fits.
+      final targetWidth = (constraints.maxWidth - 5 * spacing) / 5.75;
+      final labelStyle = DefaultTextStyle.of(context).style.merge(TextStyle(
+            fontSize: AqarText.category(context),
+            fontWeight: FontWeight.bold,
+          ));
+      var minimumWidth = math.max(
+        kMinInteractiveDimension,
+        (AqarSizes.categoryIcon(context) +
+                2 * AqarSizes.categoryCirclePadding(context) +
+                2) *
+            1.04,
+      );
+      for (final category in _categories) {
+        final painter = TextPainter(
+          text: TextSpan(text: category['title'] as String, style: labelStyle),
+          textDirection: TextDirection.rtl,
+          textScaler: MediaQuery.textScalerOf(context),
+          locale: Localizations.maybeLocaleOf(context),
+          maxLines: 1,
+        )..layout();
+        minimumWidth = math.max(minimumWidth, painter.width + 2 * spacing);
+        painter.dispose();
+      }
+      // Keep icons, labels and tap targets readable on very narrow screens.
+      final width = math.max(minimumWidth, math.min(defaultWidth, targetWidth));
+      return _buildCategories(context, width);
+    });
+  }
+
+  Widget _buildCategories(BuildContext context, double cardWidth) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: SizedBox(
@@ -85,7 +128,7 @@ class CategoriesSection extends StatelessWidget {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
-                      width: AqarSizes.categoryWidth(context),
+                      width: cardWidth,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,

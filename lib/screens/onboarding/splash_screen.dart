@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'premium_splash.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,150 +12,112 @@ import '../../app_updates/app_update_gate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _pulseAnimation;
-
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  late final AnimationController _controller;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _started = false;
+  bool _navigating = false;
 
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeIn,
-      ),
-    );
-
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.08,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _controller.repeat(reverse: true);
-
-    playWelcomeSound();
-
-    Timer(
-      const Duration(seconds: 4),
-      checkIntro,
-    );
+    WidgetsBinding.instance.addObserver(this);
+    _controller =
+        AnimationController(vsync: this, duration: PremiumSplash.duration)
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed) unawaited(_finish());
+          });
   }
 
-  Future<void> checkIntro() async {
-    final prefs = await SharedPreferences.getInstance();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      unawaited(_start());
+    }
+  }
 
-    final seen = prefs.getBool("onboarding_seen") ?? false;
-
+  Future<void> _start() async {
+    await precacheImage(const AssetImage('assets/images/logo.png'), context);
     if (!mounted) return;
+    try {
+      await _audioPlayer.setAudioContext(
+        AudioContext(
+          iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+          android:
+              const AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
+        ),
+      );
+      await _audioPlayer.setVolume(.32);
+      await _audioPlayer.setSource(AssetSource('audio/premium_splash.wav'));
+    } catch (_) {
+      /* Audio is optional; never block startup on audio failure. */
+    }
+    if (!mounted) return;
+    _controller.forward();
+    unawaited(_audioPlayer.resume().catchError((Object _) {}));
+  }
 
-    if (seen) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const AuthGate(),
-        ),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const OnboardingScreen(),
-        ),
-      );
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _started && !_navigating) {
+      if (_controller.value > 0 && !_controller.isCompleted) {
+        _controller.forward();
+        unawaited(
+          _audioPlayer
+              .seek(Duration(milliseconds: (_controller.value * 4600).round()))
+              .then((_) => _audioPlayer.resume())
+              .catchError((Object _) {}),
+        );
+      }
+    } else if (state != AppLifecycleState.resumed) {
+      _controller.stop();
+      unawaited(_audioPlayer.pause().catchError((Object _) {}));
     }
   }
 
-  Future<void> playWelcomeSound() async {
+  Future<void> _finish() async {
+    if (_navigating || !mounted) return;
+    _navigating = true;
+    bool seen = false;
     try {
-      await _audioPlayer.play(
-        AssetSource('audio/logo_intro.mp3'),
-      );
-    } catch (e) {
-      debugPrint(
-        "Welcome sound not found: $e",
-      );
+      seen =
+          (await SharedPreferences.getInstance()).getBool('onboarding_seen') ??
+              false;
+    } catch (_) {
+      /* Default to onboarding when preferences are unavailable. */
     }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 240),
+        pageBuilder: (_, __, ___) =>
+            seen ? const AuthGate() : const OnboardingScreen(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
-
-    _audioPlayer.dispose();
-
+    unawaited(_audioPlayer.dispose());
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xff0F172A),
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ScaleTransition(
-            scale: _pulseAnimation,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  height: 150,
-                  width: 150,
-                  child: Image.asset(
-                    "assets/images/logo.png",
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(height: 25),
-                const Text(
-                  "عقارات الانبار",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  "المكان المناسب لجميع احتياجاتكم العقارية",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffD4AF37),
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: PremiumSplash.background,
+        body: PremiumSplash(animation: _controller),
+      );
 }
 
 // بوابة الدخول الحالية
