@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'fcm_service.dart';
 import 'iraqi_phone_service.dart';
+import '../analytics/services/app_activity_service.dart';
 
 class AuthFailure implements Exception {
   const AuthFailure(this.message);
@@ -195,7 +196,7 @@ class PasswordAuthService {
     final reference = _firestore.collection('users').doc(user.uid);
     final snapshot = await reference.get();
     if (snapshot.exists && snapshot.data()?['isBlocked'] == true) {
-      await _auth.signOut();
+      await AppActivityService.instance.signOut();
       throw const AuthFailure('تم إيقاف هذا الحساب، يرجى التواصل مع الإدارة');
     }
     await reference.set(

@@ -51,6 +51,9 @@ Future<void> main() async {
     ChangeNotifierProvider(create: (_) => UserProvider()),
   ], child: const AqarApp()));
 
+  // Observe auth immediately, independently of notification initialization.
+  unawaited(AppActivityService.instance.initialize());
+
   // Network-dependent services must never block the first Flutter frame.
   // This is especially important on fresh installs, simulators, or when
   // notification/analytics permissions have not been provisioned yet.
@@ -70,22 +73,6 @@ Future<void> _initializeBackgroundServices() async {
     DeepLinkService.initialize();
   } catch (e) {
     debugPrint('DeepLinkService initialization failed: $e');
-  }
-
-  // Guests intentionally have no Firebase user. If a guest signs in later in
-  // this app session, initialize presence/activity for that real user then.
-  final user = FirebaseAuth.instance.currentUser ??
-      await FirebaseAuth.instance.authStateChanges().firstWhere(
-            (user) => user != null && !user.isAnonymous,
-          );
-
-  if (user != null && !user.isAnonymous) {
-    try {
-      await AppActivityService.instance.initialize();
-    } catch (error, stack) {
-      debugPrint('App activity initialization failed: $error');
-      await FirebaseCrashlytics.instance.recordError(error, stack);
-    }
   }
 }
 

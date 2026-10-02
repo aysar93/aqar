@@ -40,6 +40,8 @@ class AnalyticsSummary {
     required this.registeredUsers,
     required this.guests,
     required this.averageDurationSeconds,
+    this.registeredUniqueUsers = 0,
+    this.completedSessions = 0,
   });
 
   final int sessions;
@@ -47,6 +49,8 @@ class AnalyticsSummary {
   final int registeredUsers;
   final int guests;
   final int averageDurationSeconds;
+  final int registeredUniqueUsers;
+  final int completedSessions;
 }
 
 class ActivityUser {
@@ -58,6 +62,7 @@ class ActivityUser {
     this.userId,
     this.photoUrl = '',
     this.platform = 'unknown',
+    this.provider = '',
   });
 
   final String id;
@@ -67,6 +72,7 @@ class ActivityUser {
   final DateTime? lastSeen;
   final bool isGuest;
   final String platform;
+  final String provider;
 
   factory ActivityUser.fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> document,
@@ -76,23 +82,25 @@ class ActivityUser {
     final isGuest = data['isGuest'] as bool? ?? true;
     final storedName = (data['displayName'] ?? '').toString().trim();
     final storedPhoto = (data['photoUrl'] ?? '').toString().trim();
-    final storedUserId = (data['userId'] ?? '').toString().trim();
 
     return ActivityUser(
       id: document.id,
-      userId: storedUserId.isEmpty ? null : storedUserId,
+      // The protected document ID is the UID; provider/profile data is metadata.
+      userId: isGuest ? null : document.id,
       displayName:
           storedName.isNotEmpty ? storedName : (isGuest ? 'زائر' : 'مستخدم'),
       photoUrl: storedPhoto,
       lastSeen: (data['lastSeen'] as Timestamp?)?.toDate(),
       isGuest: isGuest,
       platform: data['platform']?.toString() ?? 'unknown',
+      provider: data['provider']?.toString() ?? '',
     );
   }
 
   ActivityUser withProfile({
     required String name,
     required String imageUrl,
+    String provider = '',
   }) {
     return ActivityUser(
       id: id,
@@ -102,8 +110,17 @@ class ActivityUser {
       lastSeen: lastSeen,
       isGuest: isGuest,
       platform: platform,
+      provider: provider.isEmpty ? this.provider : provider,
     );
   }
+}
+
+class ActivityPage {
+  const ActivityPage(
+      {required this.users, required this.cursor, required this.hasMore});
+  final List<ActivityUser> users;
+  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final bool hasMore;
 }
 
 class ChartPoint {

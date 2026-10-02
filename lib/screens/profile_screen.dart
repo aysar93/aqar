@@ -1,3 +1,4 @@
+import '../analytics/services/app_activity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
@@ -549,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icons.logout,
                 "تسجيل الخروج",
                 () {
-                  FirebaseAuth.instance.signOut().then((_) {
+                  AppActivityService.instance.signOut().then((_) {
                     if (context.mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,

@@ -13,15 +13,24 @@ class AnalyticsService {
   Future<List<Map<String, dynamic>>>? _cachedSessions;
 
   final Map<String, _UserProfile> _profileCache = {};
+  DateTime? _serverNow;
+
+  void setServerNow(DateTime now) => _serverNow = now;
+
+  void invalidateSessions() {
+    _cachedSessions = null;
+    _cacheCreatedAt = null;
+  }
 
   Future<List<Map<String, dynamic>>> _sessions(
     AnalyticsPeriod period,
   ) {
-    final now = DateTime.now();
+    final now = _serverNow ?? DateTime.now();
+    final cacheNow = DateTime.now();
 
     final cacheIsValid = _cachedPeriod == period &&
         _cacheCreatedAt != null &&
-        now.difference(_cacheCreatedAt!) < const Duration(seconds: 15) &&
+        cacheNow.difference(_cacheCreatedAt!) < const Duration(seconds: 15) &&
         _cachedSessions != null;
 
     if (cacheIsValid) {
@@ -31,7 +40,7 @@ class AnalyticsService {
     final start = Timestamp.fromDate(period.start(now));
 
     _cachedPeriod = period;
-    _cacheCreatedAt = now;
+    _cacheCreatedAt = cacheNow;
 
     _cachedSessions = _db
         .collection('app_sessions')
@@ -39,11 +48,16 @@ class AnalyticsService {
           'startedAt',
           isGreaterThanOrEqualTo: start,
         )
+        .where('startedAt', isLessThanOrEqualTo: Timestamp.fromDate(now))
         .get()
         .then(
           (snapshot) =>
               snapshot.docs.map((document) => document.data()).toList(),
-        );
+        )
+        .catchError((Object error, StackTrace stack) {
+      invalidateSessions();
+      Error.throwWithStackTrace(error, stack);
+    });
 
     return _cachedSessions!;
   }
@@ -54,6 +68,7 @@ class AnalyticsService {
     final sessions = await _sessions(period);
 
     final visitors = <String>{};
+    final registeredVisitors = <String>{};
 
     var registered = 0;
     var guests = 0;
@@ -73,6 +88,8 @@ class AnalyticsService {
         guests++;
       } else {
         registered++;
+        final uid = (data['userId'] ?? visitorId).toString().trim();
+        if (uid.isNotEmpty) registeredVisitors.add(uid);
       }
 
       final endedAt = data['endedAt'];
@@ -91,29 +108,36 @@ class AnalyticsService {
       guests: guests,
       averageDurationSeconds:
           completedSessions == 0 ? 0 : totalDuration ~/ completedSessions,
+      registeredUniqueUsers: registeredVisitors.length,
+      completedSessions: completedSessions,
     );
   }
 
-  Stream<List<ActivityUser>> activeLast24Hours() {
-    final start = Timestamp.fromDate(
-      DateTime.now().subtract(const Duration(hours: 24)),
-    );
-
-    return _db
+  Future<ActivityPage> activeLast24Hours({
+    required DateTime windowEnd,
+    DocumentSnapshot<Map<String, dynamic>>? after,
+  }) async {
+    final start =
+        Timestamp.fromDate(windowEnd.subtract(const Duration(hours: 24)));
+    var query = _db
         .collection('user_activity')
+        .where('isGuest', isEqualTo: false)
         .where(
           'lastSeen',
           isGreaterThanOrEqualTo: start,
         )
+        .where('lastSeen', isLessThanOrEqualTo: Timestamp.fromDate(windowEnd))
         .orderBy('lastSeen', descending: true)
-        .limit(100)
-        .snapshots()
-        .asyncMap((snapshot) async {
-      final activityUsers =
-          snapshot.docs.map(ActivityUser.fromFirestore).toList();
-
-      return _attachUserProfiles(activityUsers);
-    });
+        .limit(30);
+    if (after != null) query = query.startAfterDocument(after);
+    final snapshot = await query.get();
+    final users = await _attachUserProfiles(
+        snapshot.docs.map(ActivityUser.fromFirestore).toList());
+    return ActivityPage(
+      users: users,
+      cursor: snapshot.docs.isEmpty ? null : snapshot.docs.last,
+      hasMore: snapshot.docs.length == 30,
+    );
   }
 
   Future<List<ActivityUser>> _attachUserProfiles(
@@ -130,7 +154,10 @@ class AnalyticsService {
         .toSet();
 
     final missingUserIds = registeredUserIds
-        .where((userId) => !_profileCache.containsKey(userId))
+        .where((userId) =>
+            !_profileCache.containsKey(userId) ||
+            DateTime.now().difference(_profileCache[userId]!.cachedAt) >=
+                const Duration(minutes: 5))
         .toList();
 
     for (var start = 0; start < missingUserIds.length; start += 30) {
@@ -140,10 +167,6 @@ class AnalyticsService {
 
       final userIdsChunk = missingUserIds.sublist(start, end);
 
-      for (final userId in userIdsChunk) {
-        _profileCache[userId] = const _UserProfile();
-      }
-
       final usersSnapshot = await _db
           .collection('users')
           .where(
@@ -151,6 +174,11 @@ class AnalyticsService {
             whereIn: userIdsChunk,
           )
           .get();
+
+      // Cache absent profiles only after the batch succeeds, never on failure.
+      for (final userId in userIdsChunk) {
+        _profileCache[userId] = _UserProfile();
+      }
 
       for (final document in usersSnapshot.docs) {
         final data = document.data();
@@ -176,6 +204,12 @@ class AnalyticsService {
         _profileCache[document.id] = _UserProfile(
           name: name,
           photoUrl: photoUrl,
+          provider: _firstNonEmpty([
+            data['provider'],
+            if (data['providers'] is List &&
+                (data['providers'] as List).isNotEmpty)
+              (data['providers'] as List).first
+          ]),
         );
       }
     }
@@ -194,6 +228,7 @@ class AnalyticsService {
       return activityUser.withProfile(
         name: profile.name,
         imageUrl: profile.photoUrl,
+        provider: profile.provider,
       );
     }).toList();
   }
@@ -264,11 +299,14 @@ class AnalyticsService {
 }
 
 class _UserProfile {
-  const _UserProfile({
+  _UserProfile({
     this.name = '',
     this.photoUrl = '',
-  });
+    this.provider = '',
+  }) : cachedAt = DateTime.now();
 
   final String name;
   final String photoUrl;
+  final String provider;
+  final DateTime cachedAt;
 }

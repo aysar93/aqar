@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/user_provider.dart';
+import '../analytics/services/app_activity_service.dart';
 import '../services/apple_auth_service.dart';
 import '../services/facebook_auth_service.dart';
 import '../services/google_auth_service.dart';
@@ -80,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _showRecovery = false;
     });
     try {
+      await AppActivityService.instance.beginSignIn();
       final credential = await PasswordAuthService.signIn(
         identifier: _identifierController.text,
         password: _passwordController.text,
@@ -103,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _error = 'تعذر إكمال تسجيل الدخول. حاول مجدداً.');
       }
     } finally {
+      await AppActivityService.instance.finishSignIn();
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -119,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
     var completed = false;
     LoginScreen.completingSocialSignIn = true;
     try {
+      await AppActivityService.instance.beginSignIn();
       final result = await signIn();
       if (result == null) return;
       final isNewAccount = result.additionalUserInfo?.isNewUser == true ||
@@ -129,12 +133,12 @@ class _LoginScreenState extends State<LoginScreen> {
               .exists;
       if (isNewAccount) {
         if (!mounted) {
-          await FirebaseAuth.instance.signOut();
+          await AppActivityService.instance.signOut();
           return;
         }
         final accepted = await showNewAccountConsent(context);
         if (!accepted) {
-          await FirebaseAuth.instance.signOut();
+          await AppActivityService.instance.signOut();
           return;
         }
         await recordEulaConsent();
@@ -155,8 +159,9 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _error = 'تعذر تسجيل الدخول بواسطة $provider: $e');
       }
     } finally {
-      if (!completed) await FirebaseAuth.instance.signOut();
+      if (!completed) await AppActivityService.instance.signOut();
       LoginScreen.completingSocialSignIn = false;
+      await AppActivityService.instance.finishSignIn();
       if (mounted) setState(() => _loading = false);
     }
   }

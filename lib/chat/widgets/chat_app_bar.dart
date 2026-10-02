@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isClosed;
   final VoidCallback onBack;
+  final VoidCallback? onSettings;
 
   const ChatAppBar({
     super.key,
     required this.isClosed,
     required this.onBack,
+    this.onSettings,
   });
 
   @override
@@ -17,6 +19,14 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: const Color(0xFF0F172A),
       elevation: 0,
       centerTitle: false,
+      actions: [
+        if (onSettings != null)
+          IconButton(
+            tooltip: 'إعدادات المحادثة',
+            onPressed: onSettings,
+            icon: const Icon(Icons.more_vert, color: Color(0xFFD4AF37)),
+          )
+      ],
       leading: IconButton(
         tooltip: "رجوع",
         onPressed: onBack,
@@ -73,7 +83,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isClosed ? "المحادثة مغلقة" : "متصل",
+                      isClosed ? "المحادثة مغلقة" : "فريق خدمة العملاء",
                       style: TextStyle(
                         color: isClosed ? Colors.redAccent : Colors.greenAccent,
                         fontSize: 12,

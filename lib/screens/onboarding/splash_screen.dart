@@ -1,3 +1,4 @@
+import '../../analytics/services/app_activity_service.dart';
 import 'dart:async';
 import 'premium_splash.dart';
 import 'package:flutter/material.dart';
@@ -153,7 +154,7 @@ class AuthGate extends StatelessWidget {
                 );
               }
               if (userSnapshot.data?['isBlocked'] == true) {
-                FirebaseAuth.instance.signOut();
+                AppActivityService.instance.signOut();
                 return const LoginScreen();
               }
               return const AppUpdateGate(child: MainShell());

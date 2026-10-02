@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:aqar/chat/utils/time_formatter.dart';
 import 'admin_chat_screen.dart';
+import 'chat_settings_screen.dart';
 import '../my_properties_screen.dart';
 
 class AdminChatListScreen extends StatefulWidget {
@@ -201,6 +202,15 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
           elevation: 0,
           centerTitle: false,
           titleSpacing: 18,
+          actions: [
+            IconButton(
+                tooltip: 'إعدادات المحادثات',
+                icon: const Icon(Icons.tune_rounded, color: _gold),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ChatSettingsScreen())))
+          ],
           title: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

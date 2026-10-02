@@ -25,6 +25,7 @@ import '../features/property_card/property_card_data.dart';
 import '../features/property_card/property_card_preview_screen.dart';
 import 'dart:async';
 import '../reports/report_dialog.dart';
+import '../chat/chat_screen.dart';
 
 class PropertyDetails extends StatefulWidget {
   final PropertyModel? property;
@@ -714,6 +715,40 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                 ),
               ],
             ),
+            SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    if (FirebaseAuth.instance.currentUser == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content:
+                              Text('سجّل الدخول للاستفسار عن هذا العقار')));
+                      return;
+                    }
+                    final id = widget.docId ?? widget.property?.id;
+                    if (id == null || id.isEmpty) return;
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => ChatScreen(initialProperty: {
+                                  'id': id,
+                                  'title': widget.title,
+                                  'imageUrl': widget.imageUrl,
+                                  'price': widget.property?.price ??
+                                      num.tryParse(
+                                          widget.price.replaceAll(',', '')) ??
+                                      0,
+                                  'location': widget.location,
+                                  'adType': widget.adType,
+                                  'number': widget.propertyNumber,
+                                })));
+                  },
+                  style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12)),
+                  child: const Text('استفسر عن هذا العقار مع الإدارة'),
+                )),
+            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -1655,12 +1690,13 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       return const SizedBox.shrink();
                                     return Column(children: [
                                       TextButton.icon(
-                                          onPressed: () => showUserContentReportDialog(
-                                              context,
-                                              (reply['userId'] ?? '')
-                                                  .toString(),
-                                              targetPath:
-                                                  'properties/${widget.docId}/comments/$commentId/replies/${doc.id}'),
+                                          onPressed: () =>
+                                              showUserContentReportDialog(
+                                                  context,
+                                                  (reply['userId'] ?? '')
+                                                      .toString(),
+                                                  targetPath:
+                                                      'properties/${widget.docId}/comments/$commentId/replies/${doc.id}'),
                                           icon: const Icon(Icons.flag_outlined),
                                           label: const Text('الإبلاغ عن الرد')),
                                       Container(
@@ -2054,7 +2090,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     context,
                                     isOffice: false,
                                     targetId: widget.docId ?? '',
-                                    title: widget.title, targetUid: widget.publisherUid),
+                                    title: widget.title,
+                                    targetUid: widget.publisherUid),
                               ),
                             ),
                             const SizedBox(width: 12),

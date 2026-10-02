@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/notification_service.dart';
@@ -11,6 +12,13 @@ class ChatService {
   /// إنشاء أو الحصول على المحادثة
   Future<String> getOrCreateChat(User user) async {
     final uid = user.uid;
+    try {
+      final cached = await _firestore
+          .collection('chats')
+          .doc(uid)
+          .get(const GetOptions(source: Source.cache));
+      if (cached.exists) return uid;
+    } catch (_) {/* No cached conversation yet. */}
 
     final doc = await _firestore.collection("chats").doc(uid).get();
 
@@ -43,16 +51,21 @@ class ChatService {
     required String chatId,
     String message = "",
     String imageUrl = "",
+    String imagePath = '',
     String type = "text",
     double? latitude,
     double? longitude,
     required String senderType,
+    String replyToId = '',
+    Map<String, dynamic>? property,
+    String audioUrl = '',
+    String audioPath = '',
+    int audioSeconds = 0,
   }) async {
     final currentUser = _auth.currentUser;
 
     if (senderType != "admin" && currentUser == null) {
-      debugPrint("CHAT SEND BLOCKED: Guest user is not authenticated.");
-      return;
+      throw StateError('سجّل الدخول لإرسال رسالة');
     }
 
     final senderId = senderType == "admin" ? "admin" : currentUser!.uid;
@@ -60,23 +73,28 @@ class ChatService {
     if (senderType == "user") {
       final chatDoc = await _firestore.collection("chats").doc(chatId).get();
       if (chatDoc.data()?["isBlocked"] == true) {
-        debugPrint("CHAT SEND BLOCKED: user is blocked by admin.");
-        return;
+        throw StateError('الحساب محظور من المحادثة');
       }
     }
 
-    await _firestore
-        .collection("chats")
-        .doc(chatId)
-        .collection("messages")
-        .add({
+    final messageReference =
+        _firestore.collection("chats").doc(chatId).collection("messages").doc();
+    final batch = _firestore.batch();
+    batch.set(messageReference, {
       "senderId": senderId,
       "senderType": senderType,
       "message": message,
       "imageUrl": imageUrl,
+      'imagePath': imagePath,
       "type": type,
       "latitude": latitude,
       "longitude": longitude,
+      'replyToId': replyToId,
+      if (property != null) 'property': property,
+      'audioUrl': audioUrl,
+      'audioPath': audioPath,
+      'audioSeconds': audioSeconds,
+      'authorUid': currentUser?.uid ?? '',
       "isRead": false,
       "status": "sent",
       "createdAt": FieldValue.serverTimestamp(),
@@ -84,12 +102,17 @@ class ChatService {
       "readAt": null,
     });
 
-    await _firestore.collection("chats").doc(chatId).update({
-      "lastMessage": type == "image"
-          ? "📷 صورة"
-          : type == "location"
-              ? "📍 الموقع"
-              : message,
+    batch.update(_firestore.collection("chats").doc(chatId), {
+      'lastMessageId': messageReference.id,
+      "lastMessage": type == 'audio'
+          ? 'رسالة صوتية'
+          : type == 'property'
+              ? 'عقار: ${property?['title'] ?? ''}'
+              : type == "image"
+                  ? "📷 صورة"
+                  : type == "location"
+                      ? "📍 الموقع"
+                      : message,
       "lastSender": senderType,
       "updatedAt": FieldValue.serverTimestamp(),
       "unreadAdmin": senderType == "user"
@@ -99,7 +122,23 @@ class ChatService {
           ? FieldValue.increment(1)
           : FieldValue.increment(0),
     });
+    await batch.commit();
+    unawaited(_notify(
+        chatId: chatId,
+        messageId: messageReference.id,
+        type: type,
+        message: message,
+        senderType: senderType,
+        currentUser: currentUser));
+  }
 
+  Future<void> _notify(
+      {required String chatId,
+      required String messageId,
+      required String type,
+      required String message,
+      required String senderType,
+      User? currentUser}) async {
 // =======================================================
 // إرسال إشعار للطرف الآخر
 // =======================================================
@@ -113,12 +152,23 @@ class ChatService {
       }
 
       final chatData = chatDoc.data() ?? <String, dynamic>{};
+      final original = await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc(messageId)
+          .get();
+      if (!original.exists || original.data()?['deletedAt'] != null) return;
 
-      final notificationMessage = type == "image"
-          ? "📷 صورة"
-          : type == "location"
-              ? "📍 تم إرسال موقع"
-              : message;
+      final notificationMessage = type == 'audio'
+          ? 'رسالة صوتية'
+          : type == 'property'
+              ? 'بطاقة عقار'
+              : type == "image"
+                  ? "📷 صورة"
+                  : type == "location"
+                      ? "📍 تم إرسال موقع"
+                      : message;
 
       // =====================================================
 // الأدمن أرسل -> الإشعار للمستخدم صاحب المحادثة
@@ -137,6 +187,7 @@ class ChatService {
           title: title,
           message: notificationMessage,
           unreadCount: unreadCount,
+          messageId: messageId,
         );
 
         return;
@@ -180,6 +231,7 @@ class ChatService {
           title: title,
           message: notificationMessage,
           unreadCount: unreadCount,
+          messageId: messageId,
         );
       }
     } catch (e, stackTrace) {
@@ -265,13 +317,58 @@ class ChatService {
   }
 
   /// بث الرسائل
-  Stream<QuerySnapshot> messages(String chatId) {
-    return _firestore
-        .collection("chats")
+  Stream<QuerySnapshot> messages(String chatId, {int? limit}) {
+    final query = _firestore
+        .collection('chats')
         .doc(chatId)
-        .collection("messages")
-        .orderBy("createdAt")
-        .snapshots();
+        .collection('messages')
+        .orderBy('createdAt');
+    return (limit == null ? query : query.limitToLast(limit)).snapshots();
+  }
+
+  Future<void> deleteForEveryone(String chatId, String messageId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw StateError('Sign in required');
+    final chat = _firestore.collection('chats').doc(chatId);
+    final message = chat.collection('messages').doc(messageId);
+    await _firestore.runTransaction((transaction) async {
+      final chatSnapshot = await transaction.get(chat);
+      final snapshot = await transaction.get(message);
+      final data = snapshot.data();
+      if (data == null) throw StateError('Message missing');
+      if (data['deletedAt'] != null) return;
+      final tombstone = <String, dynamic>{
+        for (final key in [
+          'senderId',
+          'senderType',
+          'authorUid',
+          'createdAt',
+          'isRead',
+          'status',
+          'deliveredAt',
+          'readAt'
+        ])
+          if (data.containsKey(key)) key: data[key],
+        'type': 'deleted',
+        'message': '',
+        'deletedBy': uid,
+        'deletedAt': FieldValue.serverTimestamp(),
+      };
+      transaction.set(message, tombstone);
+      if (chatSnapshot.data()?['lastMessageId'] == messageId) {
+        transaction.update(chat, {
+          'lastMessage': 'تم حذف هذه الرسالة',
+          'updatedAt': FieldValue.serverTimestamp()
+        });
+      }
+    });
+  }
+
+  Future<void> setTyping(String chatId, bool admin, bool typing) async {
+    await _firestore.collection('chats').doc(chatId).update({
+      admin ? 'adminTypingAt' : 'userTypingAt':
+          typing ? FieldValue.serverTimestamp() : null,
+    });
   }
 
   /// بث المحادثات للأدمن

@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function admin() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true; }
+    function active() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false; }
+    match /chat_images/{chatId}/{authorUid}/{fileName} {
+      allow read: if signedIn() && (request.auth.uid == chatId || admin());
+      allow create: if active() && request.auth.uid == authorUid &&
+        (request.auth.uid == chatId || admin()) &&
+        firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('isClosed', false) == false &&
+        firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('isBlocked', false) == false &&
+        firestore.get(/databases/(default)/documents/settings/app_settings).data.get('allowChat', true) == true &&
+        fileName.matches('[0-9]+[.](jpg|png)') && request.resource.size <= 10 * 1024 * 1024 &&
+        request.resource.contentType in ['image/jpeg', 'image/png'];
+      allow update: if false;
+      allow delete: if active() && request.auth.uid == authorUid;
+    }
+    match /chat_audio/{chatId}/{authorUid}/{fileName} {
+      allow read: if signedIn() && (request.auth.uid == chatId || admin());
+      allow create: if active() && request.auth.uid == authorUid &&
+        (request.auth.uid == chatId || admin()) &&
+        firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('isClosed', false) == false &&
+        firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('isBlocked', false) == false &&
+        firestore.get(/databases/(default)/documents/settings/app_settings).data.get('allowChat', true) == true &&
+        firestore.get(/databases/(default)/documents/settings/app_settings).data.get('chatPreferences', {}).get('voiceEnabled', true) == true &&
+        fileName.matches('[0-9]+[.]m4a') && request.resource.size <= 5 * 1024 * 1024 && request.resource.contentType == 'audio/mp4';
+      allow update: if false;
+      allow delete: if active() && request.auth.uid == authorUid;
+    }
+  }
+}

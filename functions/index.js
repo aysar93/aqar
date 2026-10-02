@@ -9,6 +9,8 @@ const crypto = require("crypto");
 initializeApp();
 
 const db = getFirestore();
+Object.assign(exports, require('./chat_functions'));
+Object.assign(exports, require('./analytics_presence_access'));
 
 function normalizeIraqiPhone(input) {
   const localizedDigits = {

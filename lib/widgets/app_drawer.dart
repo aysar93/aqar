@@ -1,3 +1,4 @@
+import '../analytics/services/app_activity_service.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'navigation/custom_bottom_bar.dart';
@@ -627,7 +628,7 @@ class _AppDrawerState extends State<AppDrawer> {
                           Icons.logout_rounded,
                           "تسجيل الخروج",
                           () async {
-                            await FirebaseAuth.instance.signOut();
+                            await AppActivityService.instance.signOut();
 
                             if (!context.mounted) return;
 

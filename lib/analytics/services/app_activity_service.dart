@@ -1,59 +1,157 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart';
 
 import 'presence_service.dart';
 import 'visit_tracking_service.dart';
 
+/// One observer and one auth subscription; transitions are always serialized.
 class AppActivityService with WidgetsBindingObserver {
-  AppActivityService._();
+  AppActivityService({
+    FirebaseAuth? auth,
+    VisitTrackingService? visits,
+    PresenceService? presence,
+  })  : _auth = auth ?? FirebaseAuth.instance,
+        visits = visits ?? VisitTrackingService(),
+        presence = presence ?? PresenceService();
 
-  static final instance = AppActivityService._();
-
-  final visits = VisitTrackingService();
-  final presence = PresenceService();
-
-  bool _started = false;
-  bool _isForeground = false;
+  static final instance = AppActivityService();
+  final FirebaseAuth _auth;
+  final VisitTrackingService visits;
+  final PresenceService presence;
+  StreamSubscription<User?>? _authSubscription;
+  Future<void> _transitions = Future.value();
+  String? _trackingUid;
+  bool _foreground = true;
+  bool _signInPending = false;
+  bool _signingOut = false;
+  Future<void>? _signOutOperation;
 
   Future<void> initialize() async {
-    if (_started) return;
-
-    _started = true;
+    if (_authSubscription != null) return;
+    final state = WidgetsBinding.instance.lifecycleState;
+    _foreground = state == null || state == AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
-
-    await _foreground();
+    _authSubscription = _auth.authStateChanges().listen(
+          (_) => unawaited(_enqueue(_reconcile)),
+          onError: (Object error, StackTrace stack) =>
+              _log('Auth observer', error, stack),
+        );
+    await _enqueue(_reconcile);
   }
 
-  Future<void> _foreground() async {
-    if (_isForeground) return;
-
-    _isForeground = true;
-
-    final sessionId = await visits.startSession();
-    await presence.connect(sessionId);
+  Future<void> _enqueue(Future<void> Function() action) {
+    final next = _transitions.then((_) => action());
+    // A failure must not poison the queue or block a later login.
+    _transitions = next.catchError((Object error, StackTrace stack) {
+      _log('Activity transition', error, stack);
+    });
+    return _transitions;
   }
 
-  Future<void> _background() async {
-    if (!_isForeground) return;
+  Future<void> _reconcile() async {
+    final user = _auth.currentUser;
+    final desired = !_signInPending &&
+            !_signingOut &&
+            _foreground &&
+            user != null &&
+            !user.isAnonymous
+        ? user
+        : null;
+    if (_trackingUid != desired?.uid) await _stopCurrent();
+    if (desired == null) return;
 
-    _isForeground = false;
+    // Presence must not depend on a Firestore write acknowledgment.
+    await presence.connect(desired.uid);
+    _trackingUid = desired.uid;
+    if (_auth.currentUser?.uid != desired.uid ||
+        _signInPending ||
+        _signingOut ||
+        !_foreground) {
+      return;
+    }
+    // Session ID is reserved synchronously; neither write blocks the other.
+    await Future.wait([
+      _safely('Session start', visits.startSession(desired)),
+      _safely('Activity write', visits.recordActivity(desired)),
+    ]);
+  }
 
+  Future<void> _safely<T>(String label, Future<T> operation) async {
+    try {
+      await operation;
+    } catch (error, stack) {
+      _log(label, error, stack);
+    }
+  }
+
+  Future<void> _stopCurrent() async {
+    _trackingUid = null;
     await Future.wait([
       presence.disconnect(),
       visits.endSession(),
-    ]);
+    ].map((operation) => operation.catchError((Object error, StackTrace stack) {
+          _log('Activity cleanup', error, stack);
+        })));
+  }
+
+  /// Suspend tracking before native auth/consent/profile setup begins.
+  Future<void> beginSignIn() async {
+    _signInPending = true;
+    await _enqueue(_stopCurrent);
+  }
+
+  Future<void> finishSignIn() async {
+    _signInPending = false;
+    await _enqueue(_reconcile);
+  }
+
+  /// Remove this connection while the previous auth token is still valid.
+  Future<void> signOut() {
+    return _signOutOperation ??= _performSignOut().whenComplete(() {
+      _signOutOperation = null;
+    });
+  }
+
+  Future<void> _performSignOut() async {
+    _signingOut = true;
+    try {
+      await _enqueue(_stopCurrent);
+      await _auth.signOut();
+    } finally {
+      _signingOut = false;
+      await _enqueue(_reconcile);
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _foreground();
-      return;
-    }
-
-    if (state == AppLifecycleState.paused ||
+      _foreground = true;
+    } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
-      _background();
+      _foreground = false;
+      // Preserve the boundary even if resumed arrives before the queue runs.
+      unawaited(_enqueue(_stopCurrent));
+      return;
+    } else {
+      return; // Native auth dialogs may temporarily make the app inactive.
     }
+    unawaited(_enqueue(_reconcile));
+  }
+
+  Future<void> dispose() async {
+    _foreground = false;
+    WidgetsBinding.instance.removeObserver(this);
+    await _authSubscription?.cancel();
+    _authSubscription = null;
+    await _enqueue(_stopCurrent);
+  }
+
+  static void _log(String label, Object error, StackTrace stack) {
+    debugPrint('$label failed: $error');
+    debugPrintStack(stackTrace: stack);
   }
 }

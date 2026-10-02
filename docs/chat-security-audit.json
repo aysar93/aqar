@@ -1,0 +1,18 @@
+{
+  "score": 4,
+  "summary": "Chat follow-up audit: direct Firestore tombstones enforce original authorship, server time, a bounded configured window, preserved identity/receipt metadata, empty payload, and irreversible deletion. Emulator tests cover forgery, expired and foreign deletion. Admin moderation uses server-controlled user roles. Current media uses the existing Cloudinary preset; Firebase Storage/functions are not activated on Spark.",
+  "findings": [
+    {
+      "check": "Storage Abuse",
+      "severity": "minor",
+      "issue": "Payload and file sizes are bounded, but authenticated senders do not have a per-minute message/upload quota.",
+      "recommendation": "Add a server-owned rate limit if traffic or abuse monitoring requires it. Do not enforce quotas using client-editable timestamps."
+    },
+    {
+      "check": "Legacy media",
+      "severity": "minor",
+      "issue": "Cloudinary message payloads are removed for both participants, but physical assets and delivered notifications need signed backend cleanup. Current images and audio use Cloudinary because Firebase Storage is not provisioned.",
+      "recommendation": "Use a signed backend migration/cleanup for legacy Cloudinary assets if physical erasure of old uploaded files is required."
+    }
+  ]
+}

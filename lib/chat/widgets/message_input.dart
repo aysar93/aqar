@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +9,7 @@ import '../services/chat_service.dart';
 
 class MessageInput extends StatefulWidget {
   final TextEditingController controller;
-  final VoidCallback onSend;
+  final FutureOr<void> Function() onSend;
   final bool enabled;
 
   final String chatId;
@@ -29,6 +30,25 @@ class MessageInput extends StatefulWidget {
 
 class _MessageInputState extends State<MessageInput> {
   final ImagePicker picker = ImagePicker();
+  bool _busy = false;
+
+  Future<void> _perform(FutureOr<void> Function() action) async {
+    if (_busy || !widget.enabled) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'تعذر الإرسال. تحقق من الاتصال والصلاحيات ثم حاول مجدداً')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> pickImage() async {
     final XFile? image = await picker.pickImage(
@@ -52,6 +72,13 @@ class _MessageInputState extends State<MessageInput> {
   }
 
   Future<void> sendLocation() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('فعّل خدمة الموقع لإرسال موقعك')));
+      }
+      return;
+    }
     LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied) {
@@ -60,10 +87,15 @@ class _MessageInputState extends State<MessageInput> {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('السماح بالوصول إلى الموقع مطلوب لمشاركته')));
+      }
       return;
     }
 
-    final position = await Geolocator.getCurrentPosition();
+    final position = await Geolocator.getCurrentPosition()
+        .timeout(const Duration(seconds: 20));
 
     await ChatService().sendMessage(
       chatId: widget.chatId,
@@ -93,7 +125,8 @@ class _MessageInputState extends State<MessageInput> {
             Expanded(
               child: TextField(
                 controller: widget.controller,
-                enabled: widget.enabled,
+                enabled: widget.enabled && !_busy,
+                textCapitalization: TextCapitalization.sentences,
                 minLines: 1,
                 maxLines: 5,
                 style: const TextStyle(
@@ -102,7 +135,7 @@ class _MessageInputState extends State<MessageInput> {
                 decoration: InputDecoration(
                   hintText: widget.enabled
                       ? "اكتب رسالتك"
-                      : "تم إغلاق المحادثة من قبل الإدارة",
+                      : "الإرسال غير متاح حالياً",
                   hintStyle: const TextStyle(
                     color: Colors.white54,
                   ),
@@ -135,7 +168,10 @@ class _MessageInputState extends State<MessageInput> {
               radius: 22,
               backgroundColor: const Color(0xFF0F172A),
               child: IconButton(
-                onPressed: widget.enabled ? sendLocation : null,
+                tooltip: 'مشاركة الموقع',
+                onPressed: widget.enabled && !_busy
+                    ? () => _perform(sendLocation)
+                    : null,
                 icon: const Icon(
                   Icons.location_on,
                   color: Color(0xFFD4AF37),
@@ -147,7 +183,9 @@ class _MessageInputState extends State<MessageInput> {
               radius: 22,
               backgroundColor: const Color(0xFF0F172A),
               child: IconButton(
-                onPressed: widget.enabled ? pickImage : null,
+                tooltip: 'إرسال صورة',
+                onPressed:
+                    widget.enabled && !_busy ? () => _perform(pickImage) : null,
                 icon: const Icon(
                   Icons.photo,
                   color: Color(0xFFD4AF37),
@@ -160,11 +198,20 @@ class _MessageInputState extends State<MessageInput> {
               backgroundColor:
                   widget.enabled ? const Color(0xFFD4AF37) : Colors.grey,
               child: IconButton(
-                onPressed: widget.enabled ? widget.onSend : null,
-                icon: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.black,
-                ),
+                tooltip: 'إرسال الرسالة',
+                onPressed: widget.enabled && !_busy
+                    ? () => _perform(widget.onSend)
+                    : null,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.black))
+                    : const Icon(
+                        Icons.send_rounded,
+                        color: Colors.black,
+                      ),
               ),
             ),
           ],

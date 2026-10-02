@@ -1,0 +1,34 @@
+{
+  "score": 4,
+  "summary": "Scoped prototype audit of local Activity/Session/Presence rules only. Emulator negative/positive tests pass; production deployment and physical-device acceptance are pending. Existing unrelated rules were preserved.",
+  "findings": [
+    {
+      "check": "Authority Source",
+      "severity": "minor",
+      "issue": "RTDB ACL revocation follows an asynchronous Firestore role trigger. It is not atomic with the role change.",
+      "recommendation": "Deploy and monitor both ACL functions with the rules; verify promotion, ban, deletion and revocation in release acceptance. Never authorize admins writes from clients."
+    },
+    {
+      "check": "Business Logic vs. Rules",
+      "severity": "minor",
+      "issue": "New counter deliberately excludes legacy online flags; old app versions without connections cannot contribute reliably.",
+      "recommendation": "Coordinate rollout and document temporary undercount. No data deletion or mass migration is included."
+    },
+    {
+      "check": "Field-Level vs. Identity-Level Security",
+      "severity": "minor",
+      "issue": "An authenticated client can manipulate its own telemetry (e.g. reported session duration or keeping its own connection record). Cross-UID writes and client admin escalation are denied.",
+      "recommendation": "Treat client telemetry as operational statistics, not billing/security attestation. Evaluate server validation or rate limiting separately if abuse appears."
+    }
+  ],
+  "validated": [
+    "Activity and session validators shared across create/update, UID immutable and non-anonymous ownership enforced.",
+    "Server timestamp required for activity, session creation and end; duration nonnegative integer; display names and IDs bounded.",
+    "Only the owner can access their tiny connection; admins can read only the indexed connections query.",
+    "Admin ACL is server-only and derived from current Firestore role, not request data.",
+    "Legacy whole-node replacement is denied when new connections exist; one device cannot erase the other devices.",
+    "Guest Firestore writes remain denied; no public presence read.",
+    "RTDB keys bounded, connection values numeric server timestamps, unknown legacy fields rejected.",
+    "Emulator matrix covers Android/iOS provider tokens, foreign writes, role escalation, logout removal and transport disconnect."
+  ]
+}

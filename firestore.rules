@@ -825,76 +825,155 @@ match /reel_event_dedup/{eventId} {
 // الدردشة
 // ==================================================
 match /chats/{chatId} {
-
-  // المستخدم يرى محادثته فقط أو الأدمن
-  allow read: if isSignedIn() &&
-    (
-      request.auth.uid == chatId ||
-      isAdmin()
-    );
-
-  // إنشاء المحادثة للمستخدم نفسه أو الأدمن
-  allow create: if activeUser() && cleanContent(request.resource.data) &&
-    (
-      request.auth.uid == chatId ||
-      isAdmin()
-    );
-
-  // تحديث المحادثة لصاحبها أو الأدمن
-  allow update: if activeUser() && cleanContent(request.resource.data) &&
-    (
-      request.auth.uid == chatId ||
-      isAdmin()
-    );
-
-  // حذف المحادثة للأدمن فقط
+  function participant() { return isSignedIn() && (request.auth.uid == chatId || isAdmin()); }
+  function chatSettings() { return get(/databases/$(database)/documents/settings/app_settings).data; }
+  function canSend() {
+    let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+    return activeUser() && participant() && chat.get('isClosed', false) == false &&
+      chat.get('isBlocked', false) == false && chatSettings().get('allowChat', true) == true;
+  }
+  function validDeletedPreview() {
+    let id = resource.data.get('lastMessageId', '');
+    let after = getAfter(/databases/$(database)/documents/chats/$(chatId)/messages/$(id)).data;
+    return id != '' && request.resource.data.get('lastMessageId', '') == id &&
+      request.resource.data.lastSender == resource.data.lastSender &&
+      request.resource.data.lastMessage == 'تم حذف هذه الرسالة' &&
+      request.resource.data.updatedAt == request.time && after.type == 'deleted' &&
+      after.deletedAt == request.time && after.deletedBy == request.auth.uid;
+  }
+  allow read: if participant();
+  allow create: if activeUser() && (request.auth.uid == chatId || isAdmin()) && cleanContent(request.resource.data) &&
+    request.resource.data.keys().hasOnly(['userId', 'userName', 'userPhone', 'lastMessage', 'lastSender', 'unreadAdmin', 'unreadUser',
+      'isClosed', 'isPinned', 'isArchived', 'isMuted', 'isBlocked', 'createdAt', 'updatedAt']) &&
+    request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time &&
+    request.resource.data.userId == chatId && request.resource.data.isBlocked == false &&
+    request.resource.data.isClosed == false && request.resource.data.unreadUser == 0 && request.resource.data.unreadAdmin == 0;
+  allow update: if participant() && activeUser() && cleanContent(request.resource.data) &&
+    (isAdmin() || (
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'lastMessage', 'lastMessageId', 'lastSender', 'updatedAt', 'unreadUser', 'unreadAdmin', 'userTypingAt'
+      ]) && request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 5000 &&
+      request.resource.data.unreadUser is int && request.resource.data.unreadUser >= 0 &&
+      request.resource.data.unreadAdmin is int && request.resource.data.unreadAdmin >= 0 &&
+      request.resource.data.unreadUser in [resource.data.unreadUser, 0] &&
+      request.resource.data.unreadAdmin in [resource.data.unreadAdmin, resource.data.unreadAdmin + 1] &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMessage', 'lastMessageId', 'lastSender', 'updatedAt']) ||
+        ((request.resource.data.lastSender == 'user' && request.resource.data.updatedAt == request.time && canSend()) || validDeletedPreview())) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userTypingAt']) ||
+        request.resource.data.userTypingAt == null || request.resource.data.userTypingAt == request.time)
+    ));
   allow delete: if isAdmin();
 
-  // ==========================
-  // الرسائل
-  // ==========================
   match /messages/{messageId} {
-
-    allow read: if isSignedIn() &&
-      (
-        request.auth.uid == chatId ||
-        isAdmin()
-      );
-
-    allow create: if activeUser() && cleanContent(request.resource.data) &&
-      (
-        request.auth.uid == chatId ||
-        isAdmin()
-      );
-
-    allow update: if activeUser() && cleanContent(request.resource.data) &&
-  (
-    request.auth.uid == chatId ||
-    isAdmin()
-  );
-
-    allow delete: if isAdmin();
+    function validPayload(d) {
+      return d.message is string && d.message.size() <= 5000 && cleanText(d, 'message') &&
+        d.type in ['text', 'image', 'location', 'property', 'audio'] &&
+        d.imageUrl is string && d.imageUrl.size() <= 2048 &&
+        d.get('imagePath', '') is string && d.get('imagePath', '').size() <= 512 &&
+        (d.get('imagePath', '') == '' || d.imagePath.matches('chat_images/' + chatId + '/' + request.auth.uid + '/[0-9]+[.](jpg|png)')) &&
+        d.get('audioUrl', '') is string && d.get('audioUrl', '').size() <= 2048 &&
+        d.get('audioPath', '') is string && d.get('audioPath', '').size() <= 512 &&
+        d.get('replyToId', '') is string && d.get('replyToId', '').size() <= 128 &&
+        (d.type != 'location' || (d.latitude is number && d.latitude >= -90 && d.latitude <= 90 &&
+          d.longitude is number && d.longitude >= -180 && d.longitude <= 180)) &&
+        (d.get('replyToId', '') == '' || exists(/databases/$(database)/documents/chats/$(chatId)/messages/$(d.replyToId))) &&
+        (d.type != 'audio' || (chatSettings().get('chatPreferences', {}).get('voiceEnabled', true) == true &&
+          d.audioSeconds is int && d.audioSeconds > 0 && d.audioSeconds <= chatSettings().get('chatPreferences', {}).get('voiceSeconds', 120) &&
+          (d.audioPath.matches('chat_audio/' + chatId + '/' + request.auth.uid + '/[0-9]+[.]m4a') || (d.audioPath == '' && d.audioUrl.matches('https://res[.]cloudinary[.]com/hwxcrlcj/video/upload/.+'))) )) &&
+        (d.type != 'property' || (d.property is map && d.property.keys().hasOnly(['id', 'title', 'imageUrl', 'price', 'location', 'adType', 'number']) &&
+          d.property.id is string && d.property.id.size() <= 128 &&
+          d.property.title is string && d.property.title.size() <= 300 &&
+          d.property.location is string && d.property.location.size() <= 300 &&
+          d.property.imageUrl is string && d.property.imageUrl.size() <= 2048 &&
+          d.property.price is number && d.property.price >= 0 && d.property.number is int &&
+          d.property.adType is string && d.property.adType.size() <= 50 &&
+          get(/databases/$(database)/documents/properties/$(d.property.id)).data.status in ['approved', 'published']));
+    }
+    allow read: if participant();
+    allow create: if canSend() && validPayload(request.resource.data) &&
+      request.resource.data.keys().hasOnly(['senderId', 'senderType', 'authorUid', 'message', 'imageUrl', 'type', 'latitude', 'longitude',
+        'replyToId', 'property', 'imagePath', 'audioUrl', 'audioPath', 'audioSeconds', 'isRead', 'status', 'createdAt', 'deliveredAt', 'readAt']) &&
+      request.resource.data.createdAt == request.time && request.resource.data.status == 'sent' && request.resource.data.isRead == false &&
+      request.resource.data.get('deletedAt', null) == null &&
+      ((isAdmin() && request.resource.data.senderId == 'admin' && request.resource.data.senderType == 'admin' && request.resource.data.get('authorUid', request.auth.uid) == request.auth.uid) ||
+        (request.auth.uid == chatId && request.resource.data.senderId == request.auth.uid && request.resource.data.senderType == 'user' &&
+          request.resource.data.get('authorUid', request.auth.uid) == request.auth.uid));
+    function validTombstone() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let configured = chatSettings().get('chatPreferences', {}).get('deleteHours', 24);
+      let hours = configured is int && configured >= 1 && configured <= 168 ? configured : 24;
+      return before.get('deletedAt', null) == null &&
+        (isAdmin() || (before.senderType == 'user' && before.senderId == request.auth.uid &&
+          before.get('authorUid', before.senderId) == request.auth.uid &&
+          before.createdAt is timestamp && request.time >= before.createdAt &&
+          request.time < before.createdAt + duration.value(hours, 'h'))) &&
+        after.keys().hasOnly(['senderId', 'senderType', 'authorUid', 'createdAt', 'isRead', 'status',
+          'deliveredAt', 'readAt', 'type', 'message', 'deletedAt', 'deletedBy']) &&
+        after.senderId == before.senderId && after.senderType == before.senderType &&
+        after.get('authorUid', '') == before.get('authorUid', '') &&
+        after.createdAt == before.createdAt && after.get('isRead', false) == before.get('isRead', false) &&
+        after.get('status', '') == before.get('status', '') &&
+        after.get('deliveredAt', null) == before.get('deliveredAt', null) &&
+        after.get('readAt', null) == before.get('readAt', null) &&
+        after.type == 'deleted' && after.message == '' &&
+        after.deletedBy == request.auth.uid && after.deletedAt == request.time;
+    }
+    allow update: if participant() && activeUser() && validTombstone();
+    // Received-message acknowledgements cannot alter original content.
+    allow update: if participant() && activeUser() && resource.data.get('deletedAt', null) == null &&
+      (isAdmin() || resource.data.senderType in ['admin', 'system']) &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'isRead', 'readAt', 'deliveredAt']) &&
+      request.resource.data.status in ['delivered', 'read'] &&
+      (request.resource.data.status != 'read' || (request.resource.data.isRead == true && request.resource.data.readAt == request.time)) &&
+      request.resource.data.deliveredAt == request.time;
+    allow delete: if false;
+  }
+  match /deletionAudit/{messageId} {
+    allow read: if isAdmin();
+    allow write: if false;
   }
 }
 // ==================================================
 // جلسات وزيارات التطبيق
 // ==================================================
+function validTrackedSession(d) {
+  return d.keys().hasOnly(['visitorId', 'userId', 'displayName', 'isGuest',
+      'platform', 'startedAt', 'endedAt', 'durationSeconds']) &&
+    d.keys().hasAll(['visitorId', 'userId', 'isGuest', 'platform',
+      'startedAt', 'endedAt', 'durationSeconds']) &&
+    d.visitorId == request.auth.uid && d.userId == request.auth.uid &&
+    d.isGuest == false && d.platform is string && d.platform.size() <= 32 &&
+    d.startedAt is timestamp &&
+    (d.endedAt == null || d.endedAt is timestamp) &&
+    d.durationSeconds is int && d.durationSeconds >= 0 &&
+    (!('displayName' in d) || d.displayName == null ||
+      (d.displayName is string && d.displayName.size() <= 256));
+}
+
 match /app_sessions/{sessionId} {
 
   // المستخدم ينشئ جلسة لنفسه فقط
   allow create: if
     isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validTrackedSession(request.resource.data) &&
     request.resource.data.visitorId == request.auth.uid &&
     request.resource.data.isGuest is bool &&
     request.resource.data.platform is string &&
     request.resource.data.startedAt == request.time &&
+    request.resource.data.endedAt == null &&
     request.resource.data.durationSeconds == 0;
 
   // المستخدم يستطيع إنهاء جلسته فقط
   allow update: if
     isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validTrackedSession(request.resource.data) &&
     resource.data.visitorId == request.auth.uid &&
     request.resource.data.visitorId == resource.data.visitorId &&
+    resource.data.endedAt == null &&
+    request.resource.data.endedAt == request.time &&
     request.resource.data
         .diff(resource.data)
         .affectedKeys()
@@ -913,11 +992,27 @@ match /app_sessions/{sessionId} {
 // ==================================================
 // آخر نشاط للمستخدمين والزوار
 // ==================================================
+function validUserActivity(d) {
+  return d.keys().hasAll(['userId', 'isGuest', 'platform', 'lastSeen']) &&
+    d.userId == request.auth.uid && d.isGuest == false &&
+    d.platform is string && d.platform.size() <= 32 &&
+    d.lastSeen == request.time &&
+    (!('displayName' in d) || d.displayName == null ||
+      (d.displayName is string && d.displayName.size() <= 256)) &&
+    (!('lastSessionId' in d) ||
+      (d.lastSessionId is string && d.lastSessionId.size() <= 128));
+}
+
 match /user_activity/{visitorId} {
 
   // إنشاء سجل النشاط لصاحب الحساب فقط
   allow create: if
     isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validUserActivity(request.resource.data) &&
+    request.resource.data.keys().hasOnly([
+      'userId', 'displayName', 'isGuest', 'platform', 'lastSeen', 'lastSessionId'
+    ]) &&
     visitorId == request.auth.uid &&
     request.resource.data.lastSeen == request.time &&
     request.resource.data.isGuest is bool &&
@@ -926,6 +1021,8 @@ match /user_activity/{visitorId} {
   // تحديث آخر النشاط لصاحب الحساب فقط
   allow update: if
     isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validUserActivity(request.resource.data) &&
     visitorId == request.auth.uid &&
     request.resource.data.lastSeen == request.time &&
     request.resource.data

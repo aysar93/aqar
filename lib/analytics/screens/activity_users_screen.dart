@@ -1,289 +1,222 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
 import '../models/analytics_models.dart';
 import '../services/analytics_service.dart';
+import '../services/app_activity_service.dart';
 
 class ActivityUsersScreen extends StatefulWidget {
-  const ActivityUsersScreen({super.key});
+  const ActivityUsersScreen({super.key, this.service, this.serverNow});
+  final AnalyticsService? service;
+  final Future<DateTime> Function()? serverNow;
 
   @override
   State<ActivityUsersScreen> createState() => _ActivityUsersScreenState();
 }
 
 class _ActivityUsersScreenState extends State<ActivityUsersScreen> {
-  late final AnalyticsService _analyticsService;
-  late final Stream<List<ActivityUser>> _usersStream;
+  late final AnalyticsService _service;
+  final List<ActivityUser> _users = [];
+  ActivityPage? _page;
+  DateTime? _windowEnd;
+  bool _loading = false;
+  Object? _error;
+  int _request = 0;
 
   @override
   void initState() {
     super.initState();
+    _service = widget.service ?? AnalyticsService();
+    _load();
+  }
 
-    _analyticsService = AnalyticsService();
-    _usersStream = _analyticsService.activeLast24Hours();
+  Future<void> _load({bool refresh = false}) async {
+    if (_loading) return;
+    final request = ++_request;
+    setState(() {
+      _loading = true;
+      _error = null;
+      if (refresh) {
+        _users.clear();
+        _page = null;
+        _windowEnd = null;
+      }
+    });
+    try {
+      final windowEnd = _windowEnd ??
+          await (widget.serverNow?.call() ??
+              AppActivityService.instance.presence.serverNow());
+      final page = await _service.activeLast24Hours(
+        windowEnd: windowEnd,
+        after: _page?.cursor,
+      );
+      if (!mounted || request != _request) return;
+      setState(() {
+        _windowEnd = windowEnd;
+        _page = page;
+        final known = _users.map((user) => user.id).toSet();
+        _users.addAll(page.users.where((user) => known.add(user.id)));
+      });
+    } catch (error, stack) {
+      debugPrint('Active users failed: $error');
+      debugPrintStack(stackTrace: stack);
+      if (mounted && request == _request) setState(() => _error = error);
+    } finally {
+      if (mounted && request == _request) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    ++_request;
+    // One-shot paginated queries: no Firebase listener survives this page.
+    super.dispose();
   }
 
   String _lastSeen(DateTime? value) {
-    if (value == null) {
-      return 'وقت النشاط غير معروف';
-    }
-
-    final difference = DateTime.now().difference(value);
-
-    if (difference.isNegative || difference.inMinutes < 1) {
-      return 'نشط الآن';
-    }
-
-    if (difference.inHours < 1) {
-      return 'منذ ${difference.inMinutes} دقيقة';
-    }
-
-    if (difference.inHours == 1) {
-      return 'منذ ساعة';
-    }
-
-    return 'منذ ${difference.inHours} ساعات';
+    if (value == null) return 'وقت النشاط غير معروف';
+    // Compare with the same server-adjusted clock used for the query window.
+    final now = _windowEnd ?? DateTime.now();
+    final elapsed = now.difference(value);
+    if (elapsed.isNegative || elapsed.inMinutes < 1) return 'منذ أقل من دقيقة';
+    if (elapsed.inHours < 1) return 'منذ ${elapsed.inMinutes} دقيقة';
+    if (elapsed.inHours == 1) return 'منذ ساعة';
+    return 'منذ ${elapsed.inHours} ساعات';
   }
 
-  String _platformName(String platform) {
-    switch (platform.toLowerCase()) {
-      case 'android':
-        return 'Android';
-      case 'ios':
-        return 'iPhone';
-      case 'windows':
-        return 'Windows';
-      case 'macos':
-        return 'macOS';
-      case 'linux':
-        return 'Linux';
-      default:
-        return 'جهاز غير معروف';
-    }
-  }
+  String _platform(String value) => switch (value.toLowerCase()) {
+        'android' => 'Android',
+        'ios' => 'iOS',
+        _ => 'المنصة غير معروفة',
+      };
+
+  String _provider(String value) => switch (value.toLowerCase()) {
+        'google.com' => 'Google',
+        'apple.com' => 'Apple',
+        'facebook.com' => 'Facebook',
+        'phone' => 'Phone',
+        'password' => 'Email / Phone',
+        _ => '',
+      };
 
   @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
-        appBar: AppBar(
-          backgroundColor: const Color(0xff0F172A),
-          elevation: 0,
-          centerTitle: true,
-          title: const Text('نشطون آخر 24 ساعة'),
-        ),
-        body: StreamBuilder<List<ActivityUser>>(
-          stream: _usersStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const _MessageView(
-                icon: Icons.error_outline,
-                message: 'تعذر تحميل نشاط المستخدمين',
-              );
-            }
-
-            if (!snapshot.hasData) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-
-            final users = snapshot.data!;
-
-            if (users.isEmpty) {
-              return const _MessageView(
-                icon: Icons.people_outline,
-                message: 'لا يوجد مستخدمون نشطون مؤخرًا',
-              );
-            }
-
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: users.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final user = users[index];
-
-                return Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xff1E293B),
-                    borderRadius: BorderRadius.circular(18),
+  Widget build(BuildContext context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          appBar: AppBar(title: const Text('نشطون آخر 24 ساعة')),
+          body: RefreshIndicator(
+            onRefresh: () => _load(refresh: true),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                const Text('المستخدمون المسجلون • مرتّبون حسب آخر نشاط',
+                    style: TextStyle(color: Colors.white54, fontSize: 12)),
+                const SizedBox(height: 16),
+                if (_users.isEmpty && !_loading && _error == null)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 80),
+                    child: Column(children: [
+                      Icon(Icons.people_outline_rounded,
+                          color: AppTheme.primaryColor, size: 38),
+                      SizedBox(height: 14),
+                      Text('لا يوجد مستخدمون نشطون خلال آخر 24 ساعة',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppTheme.textGrey)),
+                    ]),
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    leading: _UserAvatar(user: user),
-                    title: Row(
-                      children: [
+                ..._users.map((user) {
+                  final provider = _provider(user.provider);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                          color: AppTheme.cardColor,
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Row(children: [
+                        _UserAvatar(user: user),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            user.displayName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _UserTypeBadge(isGuest: user.isGuest),
-                      ],
+                            child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(user.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 5),
+                            Text(_lastSeen(user.lastSeen),
+                                style: const TextStyle(
+                                    color: AppTheme.textGrey, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Text(
+                                [
+                                  _platform(user.platform),
+                                  if (provider.isNotEmpty) provider
+                                ].join(' • '),
+                                textDirection: TextDirection.ltr,
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 11)),
+                          ],
+                        )),
+                      ]),
                     ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        '${_lastSeen(user.lastSeen)}'
-                        ' • '
-                        '${_platformName(user.platform)}',
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
+                  );
+                }),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Column(children: [
+                      const Text('تعذر تحميل المستخدمين. حاول مرة أخرى.',
+                          style: TextStyle(color: AppTheme.textGrey)),
+                      TextButton(
+                          onPressed: () => _load(),
+                          child: const Text('إعادة المحاولة')),
+                    ]),
                   ),
-                );
-              },
-            );
-          },
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                else if (_error == null && _page?.hasMore == true)
+                  TextButton.icon(
+                    onPressed: () => _load(),
+                    icon: const Icon(Icons.expand_more_rounded),
+                    label: const Text('تحميل 30 مستخدمًا إضافيًا'),
+                  ),
+              ],
+            ),
+          ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _UserAvatar extends StatelessWidget {
-  const _UserAvatar({
-    required this.user,
-  });
-
+  const _UserAvatar({required this.user});
   final ActivityUser user;
 
   @override
-  Widget build(BuildContext context) {
-    final imageUrl = user.photoUrl.trim();
-
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.blue.withValues(alpha: 0.15),
-        border: Border.all(
-          color: user.isGuest
-              ? Colors.white24
-              : Colors.blue.withValues(alpha: 0.45),
+  Widget build(BuildContext context) => Container(
+        width: 48,
+        height: 48,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppTheme.primaryColor.withValues(alpha: 0.10),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: imageUrl.isEmpty || user.isGuest
-          ? _fallbackIcon()
-          : Image.network(
-              imageUrl,
-              width: 52,
-              height: 52,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _fallbackIcon(),
-              loadingBuilder: (
-                context,
-                child,
-                loadingProgress,
-              ) {
-                if (loadingProgress == null) {
-                  return child;
-                }
+        child: user.photoUrl.trim().isEmpty
+            ? _fallback()
+            : Image.network(user.photoUrl,
+                fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback()),
+      );
 
-                return const Padding(
-                  padding: EdgeInsets.all(15),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _fallbackIcon() {
-    return Icon(
-      user.isGuest ? Icons.person_outline_rounded : Icons.person_rounded,
-      color: user.isGuest ? Colors.white54 : Colors.blue,
-      size: 29,
-    );
-  }
-}
-
-class _UserTypeBadge extends StatelessWidget {
-  const _UserTypeBadge({
-    required this.isGuest,
-  });
-
-  final bool isGuest;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isGuest ? Colors.orange : Colors.green;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        isGuest ? 'زائر' : 'مسجل',
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-class _MessageView extends StatelessWidget {
-  const _MessageView({
-    required this.icon,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: Colors.white38,
-              size: 52,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _fallback() => const Icon(Icons.person_outline_rounded,
+      color: AppTheme.primaryColor, size: 27);
 }

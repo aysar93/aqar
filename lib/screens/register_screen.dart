@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/user_provider.dart';
+import '../analytics/services/app_activity_service.dart';
 import '../services/iraqi_phone_service.dart';
 import '../services/password_auth_service.dart';
 import 'main_shell.dart';
@@ -43,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = '';
     });
     try {
+      await AppActivityService.instance.beginSignIn();
       await PasswordAuthService.register(
         name: _nameController.text,
         phone: _phoneController.text,
@@ -69,6 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() => _error =
             'تعذر إكمال الدخول أو حفظ الموافقة. تحقق من الاتصال وحاول مجدداً.');
     } finally {
+      await AppActivityService.instance.finishSignIn();
       if (mounted) setState(() => _loading = false);
     }
   }

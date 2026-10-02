@@ -1,3 +1,4 @@
+import '../analytics/services/app_activity_service.dart';
 import '../moderation/blocked_users_screen.dart';
 import 'dart:io';
 
@@ -434,6 +435,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       await user.reauthenticateWithCredential(credential);
 
+      await AppActivityService.instance.beginSignIn();
+
       await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
@@ -476,6 +479,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("حدث خطأ:\n$e")));
+    } finally {
+      await AppActivityService.instance.finishSignIn();
     }
   }
 

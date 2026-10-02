@@ -236,6 +236,7 @@ class NotificationService {
 // =========================================================
 
   static Future<void> sendChatNotification({
+    String messageId = '',
     required String userId,
     required String chatId,
     required String title,
@@ -265,6 +266,7 @@ class NotificationService {
       'userId': userId,
       'chatId': chatId,
       'unreadCount': unreadCount,
+      if (messageId.isNotEmpty) 'messageId': messageId,
       'readBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -298,21 +300,30 @@ class NotificationService {
       return;
     }
 
-    final notificationId = 'chat_${chatId}_$userId';
-
-    final ref = _firestore.collection('notifications').doc(notificationId);
-
-    final doc = await ref.get();
-
-    if (!doc.exists) {
-      return;
+    // Includes both the collapsed human-message notification and daily away replies.
+    final snapshot = await _firestore
+        .collection('notifications')
+        .where('userId', isEqualTo: userId)
+        .where('chatId', isEqualTo: chatId)
+        .where('type', isEqualTo: 'chat_message')
+        .get();
+    final unread = snapshot.docs.where((doc) {
+      final data = doc.data();
+      return !(data['readBy'] is List &&
+              (data['readBy'] as List).contains(userId)) ||
+          data['unreadCount'] != 0;
+    }).toList();
+    for (var start = 0; start < unread.length; start += 400) {
+      final batch = _firestore.batch();
+      for (final doc in unread.skip(start).take(400)) {
+        batch.update(doc.reference, {
+          'unreadCount': 0,
+          'readBy': FieldValue.arrayUnion([userId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
     }
-
-    await ref.update({
-      'unreadCount': 0,
-      'readBy': FieldValue.arrayUnion([userId]),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
   }
 
   // =========================================================

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_shell.dart';
+import '../analytics/services/app_activity_service.dart';
 
 class OtpScreen extends StatefulWidget {
   final String verificationId;
@@ -31,6 +32,7 @@ class _OtpScreenState extends State<OtpScreen> {
     });
 
     try {
+      await AppActivityService.instance.beginSignIn();
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: widget.verificationId,
         smsCode: codeController.text.trim(),
@@ -50,11 +52,15 @@ class _OtpScreenState extends State<OtpScreen> {
         (route) => false,
       );
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       setState(() {
         error = e.message ?? "رمز غير صحيح";
       });
+    } finally {
+      await AppActivityService.instance.finishSignIn();
     }
 
+    if (!mounted) return;
     setState(() {
       loading = false;
     });

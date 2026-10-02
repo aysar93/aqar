@@ -1,3 +1,4 @@
+import '../analytics/services/app_activity_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -70,7 +71,7 @@ class _MainShellState extends State<MainShell> {
         .listen((snapshot) {
       final data = snapshot.data() ?? {};
       if (data['isBlocked'] == true) {
-        FirebaseAuth.instance.signOut();
+        AppActivityService.instance.signOut();
         if (mounted)
           Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const LoginScreen()),

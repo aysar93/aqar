@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'fcm_service.dart';
 import 'password_auth_service.dart';
 import 'iraqi_phone_service.dart';
+import '../analytics/services/app_activity_service.dart';
 
 class UserService {
   static final _users = FirebaseFirestore.instance.collection('users');
@@ -110,7 +111,7 @@ class UserService {
   static Future<void> completeSignIn(User user) async {
     final doc = await _users.doc(user.uid).get();
     if (doc.data()?['isBlocked'] == true) {
-      await FirebaseAuth.instance.signOut();
+      await AppActivityService.instance.signOut();
       throw const AuthFailure('تم إيقاف هذا الحساب، يرجى التواصل مع الإدارة');
     }
     await _users.doc(user.uid).set({
