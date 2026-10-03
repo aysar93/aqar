@@ -14,3 +14,7 @@ Validation: eight isolated push-token tests passed. No APNs delivery test perfor
 APNs key AuthKey_L74V23VW58.p8 was identified from the user-provided folder and screenshot as an Apple Push Notifications service key. Private key was not copied into the repository or displayed. OneSignal setup is prepared but has not been executed: Apple Team ID is still required from the user.
 
 Activation of local code fixes requires a new iOS build. External Apple setup and delivery verification remain outstanding.
+
+## APNs configuration completed
+Saved through authenticated OneSignal dashboard on 2026-10-04. Read-only API verification returned HTTP 200: bundle ID com.andalus.aqar, environment production, P8 key present, Team ID and Key ID present. Actual iPhone delivery test remains pending. Local Flutter token fixes still require inclusion in a new iOS build.
+

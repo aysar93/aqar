@@ -60,11 +60,11 @@
     "live_activities"
   ],
   "apple": {
-    "bundleId": null,
-    "environment": null,
-    "hasP8Key": false,
+    "bundleId": "com.andalus.aqar",
+    "environment": "production",
+    "hasP8Key": true,
     "hasCertificate": false,
-    "hasTeamId": false,
-    "hasKeyId": false
+    "hasTeamId": true,
+    "hasKeyId": true
   }
 }
