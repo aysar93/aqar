@@ -23,6 +23,10 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  late final _officeRequests = FirebaseFirestore.instance
+      .collection('officeRequests')
+      .where('status', isEqualTo: 'pending')
+      .snapshots();
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -117,13 +121,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 );
               },
             ),
-            adminButton(
-              context,
-              icon: Icons.business_rounded,
-              title: "إدارة المكاتب",
-              subtitle: "إدارة واعتماد المكاتب العقارية",
-              color: const Color(0xffD4AF37),
-              page: const OfficeManagementScreen(),
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _officeRequests,
+              builder: (context, snapshot) {
+                final count = snapshot.data?.docs.length ?? 0;
+                return adminButton(
+                  context,
+                  icon: Icons.business_rounded,
+                  title: 'إدارة المكاتب',
+                  subtitle: count > 0
+                      ? '$count طلب انضمام بانتظار المراجعة'
+                      : 'إدارة واعتماد المكاتب العقارية',
+                  color: const Color(0xffD4AF37),
+                  page: const OfficeManagementScreen(),
+                  badgeCount: count,
+                );
+              },
             ),
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance

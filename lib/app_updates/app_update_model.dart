@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class AppUpdateFeature {
   final String title;
@@ -33,6 +34,7 @@ class AppUpdateModel {
   final String title;
   final String description;
   final String storeUrl;
+  final String iosStoreUrl;
   final bool isMandatory;
   final bool isActive;
   final List<AppUpdateFeature> features;
@@ -47,6 +49,7 @@ class AppUpdateModel {
     required this.title,
     required this.description,
     required this.storeUrl,
+    this.iosStoreUrl = '',
     required this.isMandatory,
     required this.isActive,
     required this.features,
@@ -68,6 +71,7 @@ class AppUpdateModel {
       title: (data['title'] ?? 'تحديث جديد متاح!').toString(),
       description: (data['description'] ?? '').toString(),
       storeUrl: (data['storeUrl'] ?? '').toString(),
+      iosStoreUrl: (data['iosStoreUrl'] ?? '').toString(),
       isMandatory: data['isMandatory'] == true,
       isActive: data['isActive'] == true,
       features: rawFeatures is List
@@ -92,6 +96,7 @@ class AppUpdateModel {
         'title': title.trim(),
         'description': description.trim(),
         'storeUrl': storeUrl.trim(),
+        'iosStoreUrl': iosStoreUrl.trim(),
         'isMandatory': isMandatory,
         'isActive': isActive,
         'features': features.map((e) => e.toMap()).toList(),
@@ -100,6 +105,11 @@ class AppUpdateModel {
         'updatedAt': updatedAt == null ? null : Timestamp.fromDate(updatedAt!),
         'createdAt': createdAt == null ? null : Timestamp.fromDate(createdAt!),
       };
+
+  String storeUrlForPlatform(TargetPlatform platform) =>
+      (platform == TargetPlatform.iOS ? iosStoreUrl : storeUrl).trim();
+
+  String get deviceStoreUrl => storeUrlForPlatform(defaultTargetPlatform);
 
   static int _toInt(dynamic value) {
     if (value is int) return value;

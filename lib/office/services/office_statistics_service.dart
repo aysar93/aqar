@@ -39,14 +39,6 @@ class OfficeStatisticsService {
     return _firestore.collection('properties');
   }
 
-  CollectionReference<Map<String, dynamic>> get _reviews {
-    return _firestore.collection('office_reviews');
-  }
-
-  CollectionReference<Map<String, dynamic>> get _followers {
-    return _firestore.collection('office_followers');
-  }
-
   CollectionReference<Map<String, dynamic>> get _officeEvents {
     return _firestore.collection('office_events');
   }
@@ -55,11 +47,11 @@ class OfficeStatisticsService {
   // جلب إحصائيات المكتب
   // ═════════════════════════════════════════════
 
-  Future<OfficeStatisticsModel> getStatistics(
-    String officeId,
-  ) async {
-    final officeSnapshot = await _offices.doc(officeId).get();
+  Future<OfficeStatisticsModel> getStatistics(String officeId) async =>
+      _calculateStatistics(officeId, await _offices.doc(officeId).get());
 
+  Future<OfficeStatisticsModel> _calculateStatistics(String officeId,
+      DocumentSnapshot<Map<String, dynamic>> officeSnapshot) async {
     if (!officeSnapshot.exists) {
       throw StateError(
         'المكتب غير موجود',
@@ -75,24 +67,6 @@ class OfficeStatisticsService {
         )
         .get();
 
-    final reviewsSnapshot = await _reviews
-        .where(
-          'officeId',
-          isEqualTo: officeId,
-        )
-        .get();
-
-    final followersSnapshot = await _followers
-        .where(
-          'officeId',
-          isEqualTo: officeId,
-        )
-        .where(
-          'isActive',
-          isEqualTo: true,
-        )
-        .get();
-
     final eventsSnapshot = await _officeEvents
         .where(
           'officeId',
@@ -101,7 +75,6 @@ class OfficeStatisticsService {
         .get();
 
     final properties = propertiesSnapshot.docs;
-    final reviews = reviewsSnapshot.docs;
     final events = eventsSnapshot.docs;
 
     int activeProperties = 0;
@@ -183,25 +156,8 @@ class OfficeStatisticsService {
       );
     }
 
-    final publishedReviews = reviews.where((document) {
-      final data = document.data();
-
-      return (data['status']?.toString() ?? 'published') == 'published';
-    }).toList();
-
-    double averageRating = 0;
-
-    if (publishedReviews.isNotEmpty) {
-      double ratingTotal = 0;
-
-      for (final review in publishedReviews) {
-        ratingTotal += _doubleValue(
-          review.data()['rating'],
-        );
-      }
-
-      averageRating = ratingTotal / publishedReviews.length;
-    }
+    // Already server-maintained and verified; no child scans for summaries.
+    final averageRating = _doubleValue(officeData['rating']);
 
     // نحافظ على المشاهدات التاريخية الموجودة داخل العقارات،
     // ونكملها بأحداث المشاهدة القديمة عند الحاجة.
@@ -227,8 +183,8 @@ class OfficeStatisticsService {
       totalViews: totalViews,
       totalFavorites: totalFavorites,
       totalShares: totalShares,
-      followersCount: followersSnapshot.docs.length,
-      reviewsCount: publishedReviews.length,
+      followersCount: _intValue(officeData['followersCount']),
+      reviewsCount: _intValue(officeData['reviewsCount']),
       averageRating: averageRating,
       phoneClicks: eventStats.phoneClicks,
       whatsappClicks: eventStats.whatsappClicks,
@@ -262,10 +218,8 @@ class OfficeStatisticsService {
     String officeId,
   ) {
     return _offices.doc(officeId).snapshots().asyncMap(
-      (_) async {
-        return getStatistics(officeId);
-      },
-    );
+          (snapshot) => _calculateStatistics(officeId, snapshot),
+        );
   }
 
   // ═════════════════════════════════════════════
@@ -411,7 +365,7 @@ class OfficeStatisticsService {
 
     // تحديث طابع المزامنة يجعل watchStatistics يعيد الحساب
     // مباشرة بعد تسجيل أي مشاهدة أو نقرة.
-    await _touchStatistics(officeId);
+    if (type != 'view') await _touchStatistics(officeId);
   }
 
   Future<void> _touchStatistics(String officeId) async {

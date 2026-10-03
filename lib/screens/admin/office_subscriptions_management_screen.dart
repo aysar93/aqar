@@ -370,7 +370,9 @@ class _OfficeSubscriptionsManagementScreenState
               _InfoRow(
                 icon: Icons.account_balance_wallet_outlined,
                 title: 'الدفع',
-                value: _paymentLabel(subscription.paymentStatus),
+                value: subscription.paymentMethod == 'gift'
+                    ? 'هدية من الإدارة'
+                    : _paymentLabel(subscription.paymentStatus),
               ),
               if (subscription.createdAt != null)
                 _InfoRow(
@@ -698,9 +700,11 @@ class _OfficeSubscriptionsManagementScreenState
                   ),
                   _DetailRow(
                     'طريقة الدفع',
-                    subscription.paymentMethod.isEmpty
-                        ? 'غير محددة'
-                        : subscription.paymentMethod,
+                    subscription.paymentMethod == 'gift'
+                        ? 'هدية من الإدارة'
+                        : subscription.paymentMethod.isEmpty
+                            ? 'غير محددة'
+                            : subscription.paymentMethod,
                   ),
                   _DetailRow(
                     'مرجع الدفع',

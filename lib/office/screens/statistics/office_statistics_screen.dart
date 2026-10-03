@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/office_statistics_model.dart';
 import '../../services/office_statistics_service.dart';
 
-class OfficeStatisticsScreen extends StatelessWidget {
+class OfficeStatisticsScreen extends StatefulWidget {
   const OfficeStatisticsScreen({
     super.key,
     required this.officeId,
@@ -15,8 +15,20 @@ class OfficeStatisticsScreen extends StatelessWidget {
   final String ownerUid;
 
   @override
+  State<OfficeStatisticsScreen> createState() => _OfficeStatisticsScreenState();
+}
+
+class _OfficeStatisticsScreenState extends State<OfficeStatisticsScreen> {
+  late final Stream<OfficeStatisticsModel> _statistics;
+  @override
+  void initState() {
+    super.initState();
+    _statistics = OfficeStatisticsService().watchStatistics(widget.officeId);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isOwner = FirebaseAuth.instance.currentUser?.uid == ownerUid;
+    final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.ownerUid;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -39,7 +51,7 @@ class OfficeStatisticsScreen extends StatelessWidget {
                 message: 'ليس لديك صلاحية لعرض الإحصائيات',
               )
             : StreamBuilder<OfficeStatisticsModel>(
-                stream: OfficeStatisticsService().watchStatistics(officeId),
+                stream: _statistics,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const _StatisticsLoading();

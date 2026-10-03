@@ -34,6 +34,17 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ValueNotifier<String> _queryNotifier = ValueNotifier<String>('');
 
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _properties;
+  @override
+  void initState() {
+    super.initState();
+    _properties = FirebaseFirestore.instance
+        .collection('properties')
+        .where('userId', isEqualTo: widget.publisherUid)
+        .where('status', isEqualTo: 'approved')
+        .safeSnapshots();
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -62,10 +73,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
           ),
         ),
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('properties')
-              .where('userId', isEqualTo: widget.publisherUid)
-              .safeSnapshots(),
+          stream: _properties,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -420,7 +428,8 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
           ownerWhatsapp: (data['ownerWhatsapp'] ?? '').toString(),
           publisherPhone: (data['publisherPhone'] ?? '').toString(),
           publisherWhatsapp: (data['publisherWhatsapp'] ?? '').toString(),
-          publisherUid: (data['publisherUid'] ?? data['userId'] ?? '').toString(),
+          publisherUid:
+              (data['publisherUid'] ?? data['userId'] ?? '').toString(),
           publisherName: (data['publisherName'] ?? '').toString(),
           publisherEmail: (data['publisherEmail'] ?? '').toString(),
           images: (data['images'] as List?) ?? [],

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/office_model.dart';
-import '../models/office_statistics_model.dart';
-import '../services/office_statistics_service.dart';
 
 class OfficeCard extends StatelessWidget {
   final OfficeModel office;
@@ -20,58 +18,45 @@ class OfficeCard extends StatelessWidget {
     const gold = Color(0xFFD4AF37);
     const background = Color(0xFF1E293B);
 
-    return StreamBuilder<OfficeStatisticsModel>(
-      stream: OfficeStatisticsService().watchStatistics(office.id),
-      builder: (context, snapshot) {
-        final statistics = snapshot.data;
-
-        final propertiesCount =
-            statistics?.totalProperties ?? office.propertiesCount;
-
-        final followersCount =
-            statistics?.followersCount ?? office.followersCount;
-
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: background,
             borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: background,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: gold.withValues(alpha: 0.16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.20),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCover(context, gold),
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: _buildInfo(
-                      context,
-                      gold,
-                      propertiesCount,
-                      followersCount,
-                    ),
-                  ),
-                ],
-              ),
+            border: Border.all(
+              color: gold.withValues(alpha: 0.16),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        );
-      },
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildCover(context, gold),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: _buildInfo(
+                  context,
+                  gold,
+                  office.propertiesCount,
+                  office.followersCount,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 import '../../moderation/user_blocks.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -24,8 +25,23 @@ class ReelsScreen extends StatefulWidget {
 }
 
 class _ReelsScreenState extends State<ReelsScreen> {
+  late final ReelFeedController _feed;
   int _index = 0;
   String _category = 'الكل';
+  @override
+  void initState() {
+    super.initState();
+    _feed = ReelService.instance.createFeed();
+    if (widget.initialReelId != null) {
+      _feed.includeInitial(widget.initialReelId!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _feed.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,16 +49,16 @@ class _ReelsScreenState extends State<ReelsScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: StreamBuilder<List<ReelModel>>(
-          stream: ReelService.instance.publicReels(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) return _message('تعذر تحميل الريلز');
-            if (!snapshot.hasData) {
+        body: AnimatedBuilder(
+          animation: _feed,
+          builder: (context, _) {
+            if (_feed.error != null) return _message('تعذر تحميل الريلز');
+            if (!_feed.loaded) {
               return const Center(
                   child:
                       CircularProgressIndicator(color: AppTheme.primaryColor));
             }
-            final all = snapshot.data!
+            final all = _feed.reels
                 .where((r) => !hiddenForViewer(context, {
                       'propertyId': r.propertyId,
                       'officeId': r.officeId,
@@ -57,10 +73,6 @@ class _ReelsScreenState extends State<ReelsScreen> {
                 return 0;
               });
             }
-            final categories = [
-              'الكل',
-              ...{for (final reel in all) reel.category}
-            ];
             final reels = _category == 'الكل'
                 ? all
                 : all.where((r) => r.category == _category).toList();
@@ -71,7 +83,11 @@ class _ReelsScreenState extends State<ReelsScreen> {
                   scrollDirection: Axis.vertical,
                   allowImplicitScrolling: true,
                   itemCount: reels.length,
-                  onPageChanged: (value) => setState(() => _index = value),
+                  onPageChanged: (value) {
+                    setState(() => _index = value);
+                    _feed.checkCurrent(reels[value]);
+                    if (value >= reels.length - 3) _feed.loadMore();
+                  },
                   itemBuilder: (_, index) => ReelPlayerCard(
                       key: ValueKey(reels[index].id),
                       reel: reels[index],
@@ -97,19 +113,33 @@ class _ReelsScreenState extends State<ReelsScreen> {
                                         color: Colors.white70, fontSize: 12)),
                               ]),
                         ),
-                        PopupMenuButton<String>(
-                          initialValue: _category,
-                          color: AppTheme.cardColor,
+                        IconButton(
                           icon: const Icon(Icons.tune_rounded,
                               color: Colors.white),
-                          onSelected: (value) => setState(() {
-                            _category = value;
-                            _index = 0;
-                          }),
-                          itemBuilder: (_) => categories
-                              .map((value) => PopupMenuItem(
-                                  value: value, child: Text(value)))
-                              .toList(),
+                          onPressed: () async {
+                            await _feed.loadCategoryCatalog();
+                            if (!context.mounted) return;
+                            final categories = [
+                              'الكل',
+                              ...{for (final r in _feed.reels) r.category}
+                            ];
+                            final value = await showMenu<String>(
+                                context: context,
+                                color: AppTheme.cardColor,
+                                initialValue: _category,
+                                position:
+                                    const RelativeRect.fromLTRB(12, 90, 12, 0),
+                                items: categories
+                                    .map((v) =>
+                                        PopupMenuItem(value: v, child: Text(v)))
+                                    .toList());
+                            if (value != null && mounted) {
+                              setState(() {
+                                _category = value;
+                                _index = 0;
+                              });
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -123,8 +153,13 @@ class _ReelsScreenState extends State<ReelsScreen> {
     );
   }
 
-  Widget _message(String text) =>
-      Center(child: Text(text, style: const TextStyle(color: Colors.white70)));
+  Widget _message(String text) => Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(text, style: const TextStyle(color: Colors.white70)),
+        if (_feed.pages.hasMore && _feed.error == null)
+          TextButton(
+              onPressed: _feed.loadMore, child: const Text('عرض المزيد')),
+      ]));
 }
 
 class ReelPlayerCard extends StatefulWidget {
@@ -136,6 +171,15 @@ class ReelPlayerCard extends StatefulWidget {
 }
 
 class _ReelPlayerCardState extends State<ReelPlayerCard> {
+  late Stream<bool> _liked, _saved;
+  StreamSubscription<User?>? _auth;
+  String? _actor;
+  void _interactions() {
+    _actor = FirebaseAuth.instance.currentUser?.uid;
+    _liked = ReelService.instance.liked(widget.reel.id);
+    _saved = ReelService.instance.saved(widget.reel.id);
+  }
+
   VideoPlayerController? _controller;
   bool _muted = false;
   bool _ended = false;
@@ -145,6 +189,10 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
   @override
   void initState() {
     super.initState();
+    _interactions();
+    _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (mounted && user?.uid != _actor) setState(_interactions);
+    });
     _prepare();
   }
 
@@ -197,6 +245,7 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
 
   @override
   void dispose() {
+    _auth?.cancel();
     _controller?.removeListener(_listen);
     _controller?.dispose();
     super.dispose();
@@ -415,7 +464,8 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
             bottom: 110,
             child: Column(children: [
               StreamBuilder<bool>(
-                stream: ReelService.instance.liked(widget.reel.id),
+                key: ValueKey('like-$_actor'),
+                stream: _liked,
                 builder: (_, s) => _action(
                     Icons.favorite_rounded, widget.reel.likes, () async {
                   if (await _requireLogin()) {
@@ -424,7 +474,8 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
                 }, active: s.data == true),
               ),
               StreamBuilder<bool>(
-                stream: ReelService.instance.saved(widget.reel.id),
+                key: ValueKey('save-$_actor'),
+                stream: _saved,
                 builder: (_, s) => _action(
                     Icons.bookmark_rounded, widget.reel.saves, () async {
                   if (await _requireLogin()) {

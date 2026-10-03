@@ -78,6 +78,28 @@ class PreviewAnalytics implements AnalyticsService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class RefreshAnalytics extends PreviewAnalytics {
+  bool fresh = false;
+  final cursors = <DocumentSnapshot<Map<String, dynamic>>?>[];
+  @override
+  Future<ActivityPage> activeLast24Hours(
+      {required DateTime windowEnd,
+      DocumentSnapshot<Map<String, dynamic>>? after}) async {
+    cursors.add(after);
+    return ActivityPage(users: [
+      ActivityUser(
+          id: 'A',
+          userId: 'A',
+          displayName: 'مستخدم الاختبار',
+          isGuest: false,
+          lastSeen: windowEnd.subtract(
+              fresh ? const Duration(seconds: 20) : const Duration(hours: 1)),
+          platform: 'ios',
+          provider: 'apple.com')
+    ], cursor: QueryDoc('cursor', {}), hasMore: after == null);
+  }
+}
+
 Widget preview(Widget screen) => MaterialApp(
       theme: ThemeData.dark().copyWith(
         colorScheme: const ColorScheme.dark(
@@ -118,6 +140,13 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('جلسات الزوار'), findsNothing);
     expect(find.text('زوار فريدون'), findsNothing);
+    expect(find.text('جلسات المسجلين'), findsNothing);
+    expect(find.text('الجلسات'), findsOneWidget);
+    expect(find.text('الحسابات الفريدة'), findsOneWidget);
+    expect(find.text('متوسط مدة الجلسة'), findsOneWidget);
+    expect(find.textContaining('بيانات الزوار غير المسجلين'), findsNothing);
+    expect(Directionality.of(tester.element(find.text('الجلسات'))),
+        TextDirection.rtl);
     await expectLater(find.byKey(const Key('preview')),
         matchesGoldenFile('../goldens/activity_dashboard.png'));
   });
@@ -172,6 +201,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(data.pages, 2);
     expect(find.text('تحميل 30 مستخدمًا إضافيًا'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'explicit refresh reloads first page and timestamp; pagination deduplicates',
+      (tester) async {
+    final data = RefreshAnalytics();
+    var clockReads = 0;
+    await tester.pumpWidget(preview(ActivityUsersScreen(
+        service: data,
+        serverNow: () async {
+          clockReads++;
+          return data.now;
+        })));
+    await tester.pumpAndSettle();
+    expect(find.text('منذ ساعة'), findsOneWidget);
+    await tester.tap(find.text('تحميل 30 مستخدمًا إضافيًا'));
+    await tester.pumpAndSettle();
+    expect(data.cursors.last, isNotNull);
+    expect(find.text('مستخدم الاختبار'), findsOneWidget);
+    expect(clockReads, 1);
+    data.fresh = true;
+    await tester.tap(find.byTooltip('تحديث النشاط'));
+    await tester.pumpAndSettle();
+    expect(data.cursors.last, isNull);
+    expect(clockReads, 2);
+    expect(find.text('منذ ساعة'), findsNothing);
+    expect(find.text('منذ أقل من دقيقة'), findsOneWidget);
+    expect(find.textContaining('البيانات محمّلة حتى'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

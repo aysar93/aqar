@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../analytics/services/app_activity_service.dart';
 
 import '../../../services/cloudinary_service.dart';
 import '../models/edit_property_data.dart';
@@ -12,57 +13,59 @@ class EditPropertyService {
 
   Future<void> updateProperty(
     EditPropertyData property,
-  ) async {
-    // =========================
-    // 1. الاحتفاظ بالصور القديمة
-    // =========================
+  ) =>
+      AppActivityService.instance.recordSuccessfulAction(() async {
+        // =========================
+        // 1. الاحتفاظ بالصور القديمة
+        // =========================
 
-    final List<String> finalImages = List<String>.from(property.existingImages);
+        final List<String> finalImages =
+            List<String>.from(property.existingImages);
 
-    // =========================
-    // 2. رفع الصور الجديدة فقط
-    // =========================
+        // =========================
+        // 2. رفع الصور الجديدة فقط
+        // =========================
 
-    for (final image in property.newImages) {
-      final uploadedUrl = await uploadToCloudinary(image);
+        for (final image in property.newImages) {
+          final uploadedUrl = await uploadToCloudinary(image);
 
-      if (uploadedUrl == null || uploadedUrl.isEmpty) {
-        throw Exception(
-          'تعذر رفع إحدى الصور الجديدة',
+          if (uploadedUrl == null || uploadedUrl.isEmpty) {
+            throw Exception(
+              'تعذر رفع إحدى الصور الجديدة',
+            );
+          }
+
+          finalImages.add(uploadedUrl);
+        }
+
+        // =========================
+        // 3. تجهيز بيانات التحديث
+        // =========================
+
+        final updateData = property.toUpdateMap(
+          finalImages: finalImages,
         );
-      }
 
-      finalImages.add(uploadedUrl);
-    }
+        // وقت آخر تعديل
+        updateData['updatedAt'] = FieldValue.serverTimestamp();
 
-    // =========================
-    // 3. تجهيز بيانات التحديث
-    // =========================
+        // =========================
+        // 4. تحديث العقار الحالي
+        // =========================
 
-    final updateData = property.toUpdateMap(
-      finalImages: finalImages,
-    );
+        await _firestore
+            .collection('properties')
+            .doc(property.docId)
+            .update(updateData);
 
-    // وقت آخر تعديل
-    updateData['updatedAt'] = FieldValue.serverTimestamp();
+        // =========================
+        // 5. تحديث البيانات المحلية
+        // =========================
 
-    // =========================
-    // 4. تحديث العقار الحالي
-    // =========================
+        property.existingImages
+          ..clear()
+          ..addAll(finalImages);
 
-    await _firestore
-        .collection('properties')
-        .doc(property.docId)
-        .update(updateData);
-
-    // =========================
-    // 5. تحديث البيانات المحلية
-    // =========================
-
-    property.existingImages
-      ..clear()
-      ..addAll(finalImages);
-
-    property.newImages.clear();
-  }
+        property.newImages.clear();
+      });
 }

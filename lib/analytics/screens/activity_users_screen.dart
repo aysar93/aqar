@@ -104,15 +104,27 @@ class _ActivityUsersScreenState extends State<ActivityUsersScreen> {
         textDirection: TextDirection.rtl,
         child: Scaffold(
           backgroundColor: AppTheme.backgroundColor,
-          appBar: AppBar(title: const Text('نشطون آخر 24 ساعة')),
+          appBar: AppBar(title: const Text('نشطون آخر 24 ساعة'), actions: [
+            IconButton(
+                tooltip: 'تحديث النشاط',
+                onPressed: _loading ? null : () => _load(refresh: true),
+                icon: const Icon(Icons.refresh_rounded)),
+          ]),
           body: RefreshIndicator(
             onRefresh: () => _load(refresh: true),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                const Text('المستخدمون المسجلون • مرتّبون حسب آخر نشاط',
+                const Text('المستخدمون المسجلون • آخر نشاط مسجل',
                     style: TextStyle(color: Colors.white54, fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(
+                    _windowEnd == null
+                        ? 'جارٍ تحميل أحدث البيانات…'
+                        : 'البيانات محمّلة حتى ${_windowEnd!.toLocal().hour.toString().padLeft(2, '0')}:${_windowEnd!.toLocal().minute.toString().padLeft(2, '0')} • اضغط تحديث لعرض الأحدث',
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 11)),
                 const SizedBox(height: 16),
                 if (_users.isEmpty && !_loading && _error == null)
                   const Padding(

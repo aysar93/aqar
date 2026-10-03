@@ -1,4 +1,5 @@
 import '../widgets/home/keep_alive_section.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,6 +34,33 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  StreamSubscription<User?>? _auth;
+  String? _actor;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _headerUser;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _notifications;
+  final Map<String, Stream<DocumentSnapshot<Map<String, dynamic>>>>
+      _headerOffices = {};
+  void _setHeaderActor(String? uid) {
+    _actor = uid;
+    _headerOffices.clear();
+    _headerUser = uid == null
+        ? null
+        : FirebaseFirestore.instance.collection('users').doc(uid).snapshots();
+    _notifications = uid == null
+        ? null
+        : FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: uid)
+            .snapshots();
+  }
+
+  @override
+  void dispose() {
+    _auth?.cancel();
+    searchController.dispose();
+    super.dispose();
+  }
+
   final searchController = TextEditingController();
   String search = '';
 
@@ -44,6 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _setHeaderActor(FirebaseAuth.instance.currentUser?.uid);
+    _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (mounted && user?.uid != _actor) {
+        setState(() => _setHeaderActor(user?.uid));
+      }
+    });
 
     featuredStream = PropertyService.featuredProperties();
     latestStream = PropertyService.latestProperties();
@@ -86,10 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // Header
               StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection("users")
-                    .doc(FirebaseAuth.instance.currentUser?.uid)
-                    .snapshots(),
+                key: ValueKey(_actor),
+                stream: _headerUser,
                 builder: (context, userSnapshot) {
                   final userData =
                       userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
@@ -110,13 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     required String photoUrl,
                   }) {
                     return StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection("notifications")
-                          .where(
-                            "userId",
-                            isEqualTo: FirebaseAuth.instance.currentUser?.uid,
-                          )
-                          .snapshots(),
+                      stream: _notifications,
                       builder: (context, notificationSnapshot) {
                         final uid = FirebaseAuth.instance.currentUser?.uid;
                         final notificationCount =
@@ -152,10 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (accountMode == 'office' && activeOfficeId.isNotEmpty) {
                     return StreamBuilder<
                         DocumentSnapshot<Map<String, dynamic>>>(
-                      stream: FirebaseFirestore.instance
-                          .collection('offices')
-                          .doc(activeOfficeId)
-                          .snapshots(),
+                      stream: _headerOffices.putIfAbsent(
+                          activeOfficeId,
+                          () => FirebaseFirestore.instance
+                              .collection('offices')
+                              .doc(activeOfficeId)
+                              .snapshots()),
                       builder: (context, officeSnapshot) {
                         final officeData = officeSnapshot.data?.data() ?? {};
                         final officeName =

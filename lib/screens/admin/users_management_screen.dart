@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../core/data/paged_query.dart';
 
 import 'widgets/search_bar_widget.dart';
 
@@ -11,6 +12,51 @@ class UsersManagementScreen extends StatefulWidget {
 }
 
 class _UsersManagementScreenState extends State<UsersManagementScreen> {
+  late final Query<Map<String, dynamic>> _usersQuery;
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _completeUsers;
+  ({int total, int admins})? _totals;
+  final _pageKey = GlobalKey<PagedQueryBuilderState<Map<String, dynamic>>>();
+  @override
+  void initState() {
+    super.initState();
+    _usersQuery = FirebaseFirestore.instance
+        .collection('users')
+        .orderBy('createdAt', descending: true);
+    _completeUsers = _usersQuery.snapshots();
+    _refreshTotals();
+  }
+
+  Future<void> _refreshTotals() async {
+    try {
+      final counts = await Future.wait([
+        _usersQuery.count().get(),
+        FirebaseFirestore.instance
+            .collection('users')
+            .where('isAdmin', isEqualTo: true)
+            .count()
+            .get(),
+      ]);
+      if (mounted) {
+        setState(() => _totals =
+            (total: counts[0].count ?? 0, admins: counts[1].count ?? 0));
+      }
+    } catch (e) {
+      debugPrint('Admin users summary: $e');
+    }
+  }
+
+  Widget _usersBuilder(
+      Widget Function(
+              BuildContext, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>)
+          builder) {
+    // Substring search and legacy missing isAdmin fields retain complete results.
+    if (_search.isNotEmpty || _filter != 'all') {
+      return StreamBuilder(stream: _completeUsers, builder: builder);
+    }
+    return PagedQueryBuilder(
+        key: _pageKey, query: _usersQuery, pageSize: 30, builder: builder);
+  }
+
   static const _bg = Color(0xff0F172A);
   static const _card = Color(0xff1E293B);
   static const _gold = Color(0xffD4AF37);
@@ -191,6 +237,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         },
         SetOptions(merge: true),
       );
+      _refreshTotals();
 
       if (!mounted) return;
 
@@ -291,6 +338,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
 
     try {
       await user.reference.delete();
+      _refreshTotals();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -396,6 +444,13 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
             ),
           ),
           actions: [
+            IconButton(
+                tooltip: 'تحديث',
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  _pageKey.currentState?.refresh();
+                  _refreshTotals();
+                }),
             if (_busy)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -409,12 +464,8 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
               ),
           ],
         ),
-        body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .orderBy('createdAt', descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
+        body: _usersBuilder(
+          (context, snapshot) {
             if (snapshot.hasError) {
               return Center(
                 child: Padding(
@@ -444,10 +495,6 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
               return _matchesSearch(data) && _matchesFilter(data);
             }).toList();
 
-            final adminCount = allDocs.where((doc) {
-              return doc.data()['isAdmin'] == true;
-            }).length;
-
             return Column(
               children: [
                 Padding(
@@ -467,7 +514,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                       Expanded(
                         child: _StatCard(
                           title: 'إجمالي المستخدمين',
-                          value: '${allDocs.length}',
+                          value: _totals?.total.toString() ?? '—',
                           icon: Icons.people_alt_outlined,
                         ),
                       ),
@@ -475,7 +522,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                       Expanded(
                         child: _StatCard(
                           title: 'المديرون',
-                          value: '$adminCount',
+                          value: _totals?.admins.toString() ?? '—',
                           icon: Icons.admin_panel_settings_outlined,
                         ),
                       ),

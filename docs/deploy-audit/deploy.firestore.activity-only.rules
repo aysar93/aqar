@@ -1,0 +1,1058 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================================================
+    // دالة التحقق من الأدمن
+    // ==================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // UGC writes require an active account. Admin authority remains server-controlled.
+    function activeUser() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false;
+    }
+    function cleanText(d, key) {
+      return !(key in d) || (d[key] is string && d[key].size() <= 10000 &&
+        !d[key].lower().replace('[ً-ٰٟـ​-‏]', '').replace('[أإآ]', 'ا').matches('(?s).*(porn|xxx|fuck|shit|اباحي|إباحي|قحبة|شرموط|كس ام|كسم|نيك|اغتصاب).*'));
+    }
+    function cleanContent(d) {
+      return cleanText(d, 'title') && cleanText(d, 'description') &&
+        cleanText(d, 'text') && cleanText(d, 'comment') && cleanText(d, 'ownerReply') &&
+        cleanText(d, 'name') && cleanText(d, 'userName');
+    }
+    function verifiedOfficePublisher(d) {
+      return d.get('officeId', '') is string && d.get('officeId', '') != '' &&
+        get(/databases/$(database)/documents/offices/$(d.officeId)).data.ownerId == request.auth.uid &&
+        get(/databases/$(database)/documents/offices/$(d.officeId)).data.isVerified == true &&
+        get(/databases/$(database)/documents/offices/$(d.officeId)).data.status == 'active';
+    }
+    function allowedPropertyStatus(d) {
+      return d.status == 'pending' || (d.status == 'approved' && verifiedOfficePublisher(d));
+    }
+    function validCommentCreate() {
+      return activeUser() && request.resource.data.userId == request.auth.uid &&
+        cleanContent(request.resource.data) && request.resource.data.get('isHidden', false) == false;
+    }
+    function validCommentUpdate() {
+      return isAdmin() || (activeUser() && resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId && cleanContent(request.resource.data) &&
+        request.resource.data.get('isHidden', false) == resource.data.get('isHidden', false) &&
+        request.resource.data.get('isPinned', false) == resource.data.get('isPinned', false));
+    }
+
+    // ==================================================
+    // العقارات
+    // ==================================================
+ 
+ match /properties/{propertyId} {
+
+      // الجميع يستطيع مشاهدة العقارات
+      allow read: if true;
+
+      // أي مستخدم مسجل يستطيع إضافة عقار
+      allow create: if activeUser() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.publisherUid == request.auth.uid && allowedPropertyStatus(request.resource.data) && cleanContent(request.resource.data);
+
+      // صاحب العقار أو الأدمن.
+      // صاحب المكتب يستطيع تمييز/إلغاء تمييز عقار مكتبه فقط.
+      allow update: if isSignedIn() &&
+        (
+          (activeUser() && resource.data.userId == request.auth.uid &&
+            request.resource.data.userId == resource.data.userId &&
+            request.resource.data.publisherUid == resource.data.publisherUid && cleanContent(request.resource.data) &&
+            (allowedPropertyStatus(request.resource.data) ||
+              (request.resource.data.status == resource.data.status && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availabilityStatus', 'updatedAt'])))) ||
+          isAdmin() ||
+          (
+            activeUser() && resource.data.officeId != null &&
+            get(/databases/$(database)/documents/offices/$(resource.data.officeId))
+              .data.ownerId == request.auth.uid &&
+            request.resource.data.officeId == resource.data.officeId &&
+            request.resource.data.diff(resource.data)
+              .affectedKeys()
+              .hasOnly(['isFeatured', 'updatedAt'])
+          ) ||
+          (
+            request.resource.data.diff(resource.data)
+                .affectedKeys()
+                .hasOnly(['views']) &&
+            request.resource.data.views is int &&
+            resource.data.views is int &&
+            request.resource.data.views ==
+                resource.data.views + 1
+          )
+        );
+
+allow delete: if isSignedIn() &&
+  (
+    resource.data.userId == request.auth.uid ||
+    isAdmin()
+  );
+
+      // ==============================================
+      // التعليقات
+      // ==============================================
+      match /comments/{commentId} {
+
+        allow read: if true;
+
+        allow create: if validCommentCreate();
+
+        allow update: if validCommentUpdate();
+        allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+        // ==========================================
+        // الردود
+        // ==========================================
+        match /replies/{replyId} {
+
+          allow read: if true;
+
+          allow create: if validCommentCreate();
+
+          allow update: if validCommentUpdate();
+        allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+        }
+      }
+    }
+    // ==================================================
+    // طلبات العقارات
+    // ==================================================
+    match /property_requests/{requestId} {
+
+      // الطلبات المعتمدة يمكن للجميع مشاهدتها.
+      // صاحب الطلب والأدمن يستطيعان مشاهدة الطلب
+      // حتى أثناء المراجعة.
+      allow read: if
+        resource.data.status == "approved" ||
+        (
+          isSignedIn() &&
+          (
+            resource.data.userId == request.auth.uid ||
+            isAdmin()
+          )
+        );
+
+      // المستخدم المسجل يستطيع إنشاء طلب خاص به فقط،
+      // ويجب أن يبدأ الطلب بحالة pending.
+      allow create: if activeUser() && cleanContent(request.resource.data) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.publisherUid == request.auth.uid &&
+        request.resource.data.status == "pending";
+
+      // صاحب الطلب يستطيع تعديل بيانات طلبه،
+      // لكنه لا يستطيع تغيير المالك أو حالة المراجعة.
+      // الأدمن يستطيع التعديل بالكامل.
+      allow update: if isSignedIn() &&
+        (
+          isAdmin() ||
+          (
+            resource.data.userId == request.auth.uid &&
+            request.resource.data.userId == resource.data.userId &&
+            request.resource.data.publisherUid == resource.data.publisherUid &&
+            request.resource.data.status == resource.data.status && activeUser() && cleanContent(request.resource.data)
+          )
+        );
+
+      // صاحب الطلب أو الأدمن يستطيع حذف الطلب.
+      allow delete: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+    }
+    
+    
+// ==================================================
+// طلبات الانضمام كمكتب عقاري
+// ==================================================
+match /officeRequests/{requestId} {
+
+  // المستخدم يرى طلبه فقط، والأدمن يرى جميع الطلبات
+  allow read: if isSignedIn() &&
+    (
+      isAdmin() ||
+      resource.data.ownerId == request.auth.uid
+    );
+
+  // المستخدم المسجل يستطيع إرسال طلب مكتب خاص به
+  // ويبدأ الطلب بحالة pending
+  allow create: if activeUser() && cleanContent(request.resource.data) &&
+    request.resource.data.ownerId == request.auth.uid &&
+    request.resource.data.status == "pending";
+
+  // الأدمن يستطيع تعديل الطلب بالكامل
+  // المستخدم يستطيع تعديل طلبه دون تغيير المالك أو الحالة
+  allow update: if isSignedIn() &&
+    (
+      isAdmin() ||
+      (
+        activeUser() && cleanContent(request.resource.data) && resource.data.ownerId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.status == resource.data.status
+      )
+    );
+
+  // صاحب الطلب أو الأدمن يستطيع الحذف
+  allow delete: if isSignedIn() &&
+    (
+      resource.data.ownerId == request.auth.uid ||
+      isAdmin()
+    );
+}
+
+    // ==================================================
+    // Collection Group (comments)
+    // مطلوب لشاشة إدارة التعليقات
+    // ==================================================
+    match /{path=**}/comments/{commentId} {
+
+      allow read: if true;
+
+      allow create: if validCommentCreate();
+
+      allow update: if validCommentUpdate();
+        allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // ==================================================
+// مشاهدات المكاتب
+// ==================================================
+match /office_events/{eventId} {
+  allow read: if true;
+  allow create: if true;
+  allow update, delete: if false;
+}
+// ==================================================
+// متابعو المكاتب
+// ==================================================
+match /office_followers/{followerId} {
+  // Only self, the office owner and an active server-authorized admin need reads.
+  function followerAdmin() {
+    return isAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false;
+  }
+  function validFollower(d) {
+    return d.keys().hasOnly(['officeId', 'userId', 'userName', 'userImageUrl', 'isActive', 'createdAt', 'updatedAt']) &&
+      d.keys().hasAll(['officeId', 'userId']) &&
+      d.officeId is string && d.officeId.size() > 0 && d.officeId.size() <= 128 &&
+      d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128 &&
+      (!('userName' in d) || (d.userName is string && d.userName.size() <= 300)) &&
+      (!('userImageUrl' in d) || (d.userImageUrl is string && d.userImageUrl.size() <= 2048)) &&
+      (!('isActive' in d) || d.isActive is bool) &&
+      (!('createdAt' in d) || d.createdAt is timestamp) &&
+      (!('updatedAt' in d) || d.updatedAt is timestamp);
+  }
+  allow read: if isSignedIn() && (followerAdmin() ||
+    resource.data.userId == request.auth.uid ||
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid);
+  allow create: if isSignedIn() && validFollower(request.resource.data) &&
+    request.resource.data.userId == request.auth.uid &&
+    request.resource.data.keys().hasAll(['isActive', 'createdAt', 'updatedAt']) &&
+    request.resource.data.isActive == true &&
+    exists(/databases/$(database)/documents/offices/$(request.resource.data.officeId));
+  allow update: if isSignedIn() && validFollower(request.resource.data) &&
+    resource.data.userId == request.auth.uid &&
+    request.resource.data.userId == resource.data.userId &&
+    request.resource.data.officeId == resource.data.officeId &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isActive', 'userName', 'userImageUrl', 'updatedAt']);
+  allow delete: if isSignedIn() && (followerAdmin() || resource.data.userId == request.auth.uid);
+}
+    
+    // ==================================================
+// المكاتب العقارية
+// ==================================================
+match /offices/{officeId} {
+  // المكتب العام ظاهر للجميع إذا كان نشطًا.
+  // المالك والإدارة يستطيعان قراءة المكتب مهما كانت حالته.
+  allow read: if resource.data.status == "active" ||
+    (
+      isSignedIn() &&
+      (
+        resource.data.ownerId == request.auth.uid ||
+        isAdmin()
+      )
+    );
+
+  // إنشاء المكتب يتم من الإدارة بعد اعتماد طلب الانضمام.
+  allow create: if isAdmin();
+
+  // الإدارة تملك صلاحية التعديل الكامل.
+  // المالك يعدّل بيانات العرض والتواصل فقط.
+  allow update: if isSignedIn() &&
+    (
+      isAdmin() ||
+      (
+        resource.data.ownerId == request.auth.uid && activeUser() && cleanContent(request.resource.data) &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "name",
+            "description",
+            "logoUrl",
+            "coverImageUrl",
+            "galleryImages",
+            "phone",
+            "whatsapp",
+            "email",
+            "website",
+            "facebook",
+            "instagram",
+            "telegram",
+            "tiktok",
+            "youtube",
+            "city",
+            "district",
+            "areaName",
+            "address",
+            "latitude",
+            "longitude",
+            "services",
+            "workingHours",
+            "establishedYear",
+            "licenseNumber",
+            "licenseImageUrl",
+            "updatedAt"
+          ])
+      )
+    );
+
+  // الحفاظ على السلوك الحالي: المالك أو الإدارة يستطيعان الحذف.
+  allow delete: if isSignedIn() &&
+    (
+      resource.data.ownerId == request.auth.uid ||
+      isAdmin()
+    );
+}
+// العلاقات التشغيلية للمكاتب: المالك يقرأ بيانات مكتبه، لكن الإدارة فقط
+// تعدل الاشتراك والإحصاءات. المراجعات والمتابعات محمية على مستوى صاحب السجل.
+
+match /office_reviews/{reviewId} {
+  allow read: if true;
+  allow create: if activeUser() && request.resource.data.userId == request.auth.uid && cleanContent(request.resource.data) && request.resource.data.status == 'published';
+  allow update: if isAdmin() || (activeUser() && cleanContent(request.resource.data) &&
+    request.resource.data.userId == resource.data.userId && request.resource.data.officeId == resource.data.officeId &&
+    request.resource.data.status == resource.data.status &&
+    (resource.data.userId == request.auth.uid ||
+      (get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid &&
+       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasOwnerReply', 'ownerReply', 'updatedAt']))));
+  allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+}
+match /office_subscriptions/{subscriptionId} {
+
+  // الأدمن يرى جميع الاشتراكات،
+  // وصاحب المكتب يرى اشتراكاته فقط.
+  allow read: if isSignedIn() &&
+    (
+      isAdmin() ||
+      resource.data.ownerId == request.auth.uid
+    );
+
+  // صاحب المكتب يستطيع إنشاء طلب اشتراك فقط
+  // لمكتبه وبحالة pending.
+  allow create: if isSignedIn() &&
+    request.resource.data.ownerId == request.auth.uid &&
+    request.resource.data.status == 'pending' &&
+    get(
+      /databases/$(database)/documents/offices/$(request.resource.data.officeId)
+    ).data.ownerId == request.auth.uid;
+
+  // الإدارة تستطيع تعديل الاشتراك بالكامل.
+  //
+  // صاحب المكتب يستطيع فقط استهلاك محاولة تمييز واحدة
+  // من اشتراكه الفعال. لا يستطيع تعديل أي حقل آخر،
+  // ولا يستطيع تجاوز الحد الأقصى لمحاولات التمييز.
+  allow update: if isAdmin() ||
+    (
+      isSignedIn() &&
+      resource.data.ownerId == request.auth.uid &&
+      resource.data.officeId == request.resource.data.officeId &&
+      resource.data.ownerId == request.resource.data.ownerId &&
+      resource.data.status == 'active' &&
+      request.resource.data.status == 'active' &&
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'featuredPropertiesUsed',
+          'updatedAt'
+        ]) &&
+      request.resource.data.featuredPropertiesUsed is int &&
+      request.resource.data.featuredPropertiesUsed ==
+        (
+          resource.data.keys().hasAll(['featuredPropertiesUsed']) &&
+          resource.data.featuredPropertiesUsed is int
+            ? resource.data.featuredPropertiesUsed + 1
+            : 1
+        ) &&
+      (
+        !resource.data.keys().hasAll(['maxFeaturedProperties']) ||
+        !(resource.data.maxFeaturedProperties is int) ||
+        resource.data.maxFeaturedProperties <= 0 ||
+        request.resource.data.featuredPropertiesUsed <=
+          resource.data.maxFeaturedProperties
+      )
+    );
+
+  // الحذف للإدارة فقط.
+  allow delete: if isAdmin();
+}
+match /office_events/{eventId} {
+  allow create: if isSignedIn();
+  allow read: if isSignedIn() && (isAdmin() ||
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid);
+  allow update, delete: if isAdmin();
+}
+
+// ==================================================
+// مدفوعات اشتراكات المكاتب
+// ==================================================
+match /subscription_payments/{paymentId} {
+
+  // الأدمن يرى جميع عمليات الدفع،
+  // وصاحب المكتب يرى عمليات الدفع الخاصة به فقط.
+  allow read: if isSignedIn() &&
+    (
+      isAdmin() ||
+      resource.data.ownerUid == request.auth.uid
+    );
+
+  // صاحب المكتب يستطيع إنشاء عملية دفع خاصة باشتراكه فقط.
+  allow create: if isSignedIn() &&
+    request.resource.data.ownerUid == request.auth.uid &&
+    request.resource.data.officeId != null &&
+    request.resource.data.subscriptionId != null;
+
+  // الإدارة فقط تستطيع اعتماد أو رفض عملية الدفع.
+  allow update: if isAdmin();
+
+  // الإدارة فقط تستطيع حذف عملية الدفع.
+  allow delete: if isAdmin();
+}
+
+// ==================================================
+// بلاغات المكاتب
+// ==================================================
+// Reports: immutable target, reporter, reason, details and creation time.
+// Older office reports may omit title/reason/details. Review fields are admin-only.
+function reportText(d, key, max) {
+  return !(key in d) || (d[key] is string && d[key].size() <= max);
+}
+function validContentReport(d, office) {
+  let target = office ? 'officeId' : 'propertyId';
+  return d.keys().hasAll([target, 'userId', 'createdAt', 'status']) &&
+    d.keys().hasOnly([target, 'officeOwnerId', 'userId', 'createdAt', 'status',
+      'targetTitle', 'reason', 'details', 'adminNotes', 'reviewedBy', 'updatedAt']) &&
+    d[target] is string && d[target].size() > 0 && d[target].size() <= 128 &&
+    d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128 &&
+    d.createdAt is timestamp &&
+    d.status in ['pending', 'in_review', 'resolved', 'dismissed'] &&
+    reportText(d, 'targetTitle', 300) && reportText(d, 'reason', 100) &&
+    reportText(d, 'details', 1500) && reportText(d, 'officeOwnerId', 128) &&
+    reportText(d, 'adminNotes', 1500) && reportText(d, 'reviewedBy', 128) &&
+    (!('updatedAt' in d) || d.updatedAt is timestamp) &&
+    (office || (!('officeOwnerId' in d) && d.keys().hasAll(['reason', 'details', 'targetTitle']))) &&
+    (!('reason' in d) || (d.reason in ['معلومات مضللة أو غير صحيحة', 'احتيال أو طلبات مشبوهة',
+      'محتوى غير مناسب', 'انتهاك حقوق أو انتحال هوية', 'إعلان مكرر أو غير متاح', 'سبب آخر'] &&
+      (d.reason != 'سبب آخر' || (d.details is string && d.details.size() > 0))));
+}
+function createContentReport(office) {
+  let d = request.resource.data;
+  return isSignedIn() && validContentReport(d, office) &&
+    d.userId == request.auth.uid && d.status == 'pending' && d.createdAt == request.time &&
+    !d.keys().hasAny(['adminNotes', 'reviewedBy', 'updatedAt']);
+}
+function reviewContentReport(office) {
+  let d = request.resource.data;
+  return isAdmin() && validContentReport(d, office) &&
+    d.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNotes', 'reviewedBy', 'updatedAt']) &&
+    d.reviewedBy == request.auth.uid && d.updatedAt == request.time;
+}
+match /{path=**}/replies/{replyId} {
+  allow read: if isAdmin();
+  allow update, delete: if isAdmin();
+}
+function reportedTargetData(d) {
+  let p = d.targetPath.split('/');
+  return p.size() == 2 ? get(/databases/$(database)/documents/$(p[0])/$(p[1])).data :
+    p.size() == 4 ? get(/databases/$(database)/documents/$(p[0])/$(p[1])/$(p[2])/$(p[3])).data :
+    get(/databases/$(database)/documents/$(p[0])/$(p[1])/$(p[2])/$(p[3])/$(p[4])/$(p[5])).data;
+}
+function validReportedTarget(d) {
+  return d.targetPath == '' ||
+    (d.targetPath.matches('(properties|offices|property_requests|office_reviews)/[^/]+|properties/[^/]+/comments/[^/]+(/replies/[^/]+)?') &&
+      (reportedTargetData(d).get('userId', '') == d.targetUid ||
+       reportedTargetData(d).get('publisherUid', '') == d.targetUid ||
+       reportedTargetData(d).get('ownerId', '') == d.targetUid));
+}
+match /user_reports/{reportId} {
+  allow create: if isSignedIn() &&
+    request.resource.data.keys().hasOnly(['userId','targetUid','targetPath','reason','details','status','createdAt']) &&
+    request.resource.data.userId == request.auth.uid &&
+    request.resource.data.targetUid is string && request.resource.data.targetUid.size() > 0 && request.resource.data.targetUid.size() <= 128 &&
+    request.resource.data.targetUid != request.auth.uid &&
+    request.resource.data.targetPath is string && request.resource.data.targetPath.size() <= 500 && validReportedTarget(request.resource.data) &&
+    request.resource.data.reason is string && request.resource.data.reason.size() > 0 && request.resource.data.reason.size() <= 100 &&
+    request.resource.data.details is string && request.resource.data.details.size() <= 1500 &&
+    request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+  allow read, delete: if isAdmin();
+  allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedBy','updatedAt']) &&
+    request.resource.data.status in ['pending','in_review','resolved','dismissed'] &&
+    request.resource.data.reviewedBy == request.auth.uid && request.resource.data.updatedAt == request.time;
+}
+match /office_reports/{reportId} {
+  allow create: if createContentReport(true) &&
+    exists(/databases/$(database)/documents/offices/$(request.resource.data.officeId)) &&
+    request.resource.data.officeOwnerId ==
+      get(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerId;
+  allow read, delete: if isAdmin();
+  allow update: if reviewContentReport(true);
+}
+match /property_reports/{reportId} {
+  allow create: if createContentReport(false) &&
+    exists(/databases/$(database)/documents/properties/$(request.resource.data.propertyId));
+  allow read, delete: if isAdmin();
+  allow update: if reviewContentReport(false);
+}
+
+   // ============================================================
+// تحديثات التطبيق (App Updates)
+// ------------------------------------------------------------
+// - المستخدمون يستطيعون قراءة التحديثات المنشورة فقط.
+// - الأدمن يستطيع قراءة جميع الإصدارات.
+// - الأدمن يستطيع إنشاء وتعديل وحذف ونشر الإصدارات.
+// - isActive = true يعني أن الإصدار ظاهر للمستخدمين.
+// - isActive = false يعني أن الإصدار محفوظ لكنه غير ظاهر.
+// ============================================================
+
+match /app_updates/{updateId} {
+  allow read: if isAdmin() || resource.data.isActive == true;
+  allow write: if isAdmin();
+}
+   // ==================================================
+// المستخدمون
+// ==================================================
+match /users/{userId} {
+
+  // قراءة المستخدم:
+  // المستخدم يستطيع قراءة بياناته،
+  // والأدمن يستطيع قراءة جميع المستخدمين.
+  allow read: if isSignedIn() &&
+    (
+      request.auth.uid == userId ||
+      isAdmin()
+    );
+
+  // إنشاء حساب المستخدم لنفسه فقط.
+  allow create: if isSignedIn() &&
+    request.auth.uid == userId &&
+    request.resource.data.isAdmin == false &&
+    request.resource.data.isBlocked == false &&
+    request.resource.data.accountType == 'user' &&
+    request.resource.data.accountMode == 'user';
+
+  // التحديث:
+// 1. المستخدم يستطيع تعديل حسابه.
+// 2. رقم الهاتف يمكن إضافته لأول مرة فقط.
+// 3. الأدمن يستطيع تعديل صلاحية isAdmin فقط.
+allow update: if isSignedIn() &&
+  (
+    (
+      request.auth.uid == userId &&
+
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'name',
+          'email',
+          'phone',
+          'photo',
+          'photoUrl',
+          'provider',
+          'providers',
+          'accountMode',
+          'activeOfficeId',
+          'notificationsEnabled',
+          'fcmToken',
+          'oneSignalId',
+          'lastLogin',
+          'updatedAt'
+        ]) &&
+
+      (
+        // إذا لم يتم تعديل رقم الهاتف
+        !request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasAny(['phone'])
+
+        ||
+
+        // السماح بإضافة رقم الهاتف لأول مرة فقط
+        (
+          (
+            !resource.data.keys().hasAny(['phone']) ||
+            resource.data.phone == null ||
+            resource.data.phone == ''
+          ) &&
+
+          request.resource.data.phone is string &&
+          request.resource.data.phone.size() >= 10 &&
+          request.resource.data.phone.size() <= 15
+        )
+      )
+    )
+
+    ||
+
+    (
+      isAdmin() &&
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'isAdmin',
+          'adminUpdatedAt', 'isBlocked', 'blockedAt', 'blockedBy'
+        ])
+    )
+  );
+
+  // الحذف:
+  // المستخدم يستطيع حذف حسابه،
+  // والأدمن يستطيع حذف أي مستخدم.
+  allow delete: if isSignedIn() &&
+    (
+      (request.auth.uid == userId && resource.data.get('isBlocked', false) == false) ||
+      isAdmin()
+    );
+
+  match /consents/{version} {
+    allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    allow create, update: if isSignedIn() && request.auth.uid == userId &&
+      request.resource.data.keys().hasOnly(['version', 'accepted', 'acceptedAt']) &&
+      version == '2026-09-27' && request.resource.data.version == version &&
+      request.resource.data.accepted == true && request.resource.data.acceptedAt == request.time;
+    allow delete: if false;
+  }
+  match /blockedUsers/{targetUid} {
+    allow read: if isSignedIn() && request.auth.uid == userId;
+    allow create, update: if isSignedIn() && request.auth.uid == userId && targetUid != userId &&
+      request.resource.data.keys().hasOnly(['targetUid', 'officeId', 'reportId', 'createdAt']) &&
+      request.resource.data.targetUid == targetUid && targetUid.size() <= 128 &&
+      request.resource.data.officeId is string && request.resource.data.officeId.size() <= 128 &&
+      (request.resource.data.officeId == '' || get(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerId == targetUid) &&
+      request.resource.data.reportId is string && request.resource.data.reportId.size() <= 128 &&
+      request.resource.data.createdAt == request.time &&
+      getAfter(/databases/$(database)/documents/user_reports/$(request.resource.data.reportId)).data.userId == userId &&
+      getAfter(/databases/$(database)/documents/user_reports/$(request.resource.data.reportId)).data.targetUid == targetUid;
+    allow delete: if isSignedIn() && request.auth.uid == userId;
+  }
+  // ==================================================
+  // المفضلة
+  // ==================================================
+  match /favorites/{favoriteId} {
+
+    allow read, write: if isSignedIn() &&
+      request.auth.uid == userId;
+  }
+}
+
+// فهرس تسجيل الدخول ورقابة المحاولات يُداران من Cloud Functions فقط.
+match /phone_login_index/{document=**} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() &&
+    (
+      (
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.authEmail == request.auth.token.email
+      ) || isAdmin()
+    );
+  allow update, delete: if isAdmin();
+}
+
+match /email_login_index/{document=**} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() &&
+    (
+      (
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.authEmail == request.auth.token.email
+      ) || isAdmin()
+    );
+  allow update, delete: if isAdmin();
+}
+
+match /auth_rate_limits/{document=**} {
+  allow read, write: if false;
+}
+
+    // ==================================================
+    // الإشعارات
+    // ==================================================
+    match /notifications/{notificationId} {
+
+      // الإنشاء للمستخدمين المسجلين والأدمن
+      allow create: if isSignedIn();
+
+      // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
+allow read: if isSignedIn() &&
+(
+  resource.data.userId == request.auth.uid ||
+  isAdmin()
+);
+
+      // التحديث لصاحب الإشعار أو الأدمن
+      allow update: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+
+      // الحذف لصاحب الإشعار أو الأدمن
+allow delete: if isSignedIn() &&
+(
+  resource.data.userId == request.auth.uid ||
+  isAdmin()
+);
+    }
+
+// ==================================================
+// البنرات الإعلانية
+// ==================================================
+match /banners/{bannerId} {
+
+  // الجميع يستطيع مشاهدة البنرات
+  allow read: if true;
+
+  // الأدمن فقط يستطيع الإضافة والتعديل والحذف
+  allow create, update, delete: if isAdmin();
+}
+
+    // ==================================================
+// إعدادات التطبيق
+// ==================================================
+match /settings/{document} {
+
+  // الجميع يستطيع قراءة الإعدادات
+  allow read: if true;
+
+  // ==================================================
+  // تحديث عداد العقارات
+  // يسمح للمستخدم المسجل بزيادة lastNumber بمقدار 1 فقط
+  // ==================================================
+  allow update: if
+    (
+      document == "properties" &&
+      isSignedIn() &&
+      request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(["lastNumber"]) &&
+      request.resource.data.lastNumber is int &&
+      resource.data.lastNumber is int &&
+      request.resource.data.lastNumber ==
+          resource.data.lastNumber + 1
+    )
+
+    ||
+
+    // ==================================================
+    // تحديث عداد طلبات العقارات
+    // يسمح للمستخدم المسجل بزيادة lastNumber بمقدار 1 فقط
+    // ==================================================
+    (
+      document == "property_requests" &&
+      isSignedIn() &&
+      request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(["lastNumber"]) &&
+      request.resource.data.lastNumber is int &&
+      resource.data.lastNumber is int &&
+      request.resource.data.lastNumber ==
+          resource.data.lastNumber + 1
+    )
+
+    ||
+
+    // الأدمن يستطيع تحديث بقية إعدادات التطبيق
+    isAdmin();
+
+  // إنشاء أو حذف مستندات settings للأدمن فقط
+  allow create, delete: if isAdmin();
+}
+
+// ==================================================
+// ريلز العقارات
+// ==================================================
+match /reels/{reelId} {
+  // الجمهور يرى المنشور الفعّال فقط، والأدمن يرى جميع الحالات.
+  allow read: if isAdmin() ||
+    (
+      (resource.data.status == "published" || resource.data.status == "scheduled") &&
+      (!("publishAt" in resource.data) || resource.data.publishAt == null || resource.data.publishAt <= request.time) &&
+      (!("expiresAt" in resource.data) || resource.data.expiresAt == null || resource.data.expiresAt > request.time)
+    );
+  allow create, update, delete: if isAdmin();
+}
+
+match /reel_likes/{interactionId} {
+  allow read: if isSignedIn() && (interactionId.matches(request.auth.uid + "_.*") || isAdmin());
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid &&
+    interactionId == request.auth.uid + "_" + request.resource.data.reelId;
+  allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+  allow update: if false;
+}
+
+match /reel_saves/{interactionId} {
+  allow read: if isSignedIn() && (interactionId.matches(request.auth.uid + "_.*") || isAdmin());
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid &&
+    interactionId == request.auth.uid + "_" + request.resource.data.reelId;
+  allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+  allow update: if false;
+}
+
+match /reel_reports/{reportId} {
+  allow create: if isSignedIn() &&
+    request.resource.data.userId == request.auth.uid &&
+    reportId == request.auth.uid + "_" + request.resource.data.reelId &&
+    request.resource.data.status == "open";
+  allow read, update, delete: if isAdmin();
+}
+
+// تُكتب من Cloud Functions فقط.
+match /reel_event_dedup/{eventId} {
+  allow read, write: if false;
+}
+// ==================================================
+// الدردشة
+// ==================================================
+match /chats/{chatId} {
+  function participant() { return isSignedIn() && (request.auth.uid == chatId || isAdmin()); }
+  function chatSettings() { return get(/databases/$(database)/documents/settings/app_settings).data; }
+  function canSend() {
+    let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+    return activeUser() && participant() && chat.get('isClosed', false) == false &&
+      chat.get('isBlocked', false) == false && chatSettings().get('allowChat', true) == true;
+  }
+  function validDeletedPreview() {
+    let id = resource.data.get('lastMessageId', '');
+    let after = getAfter(/databases/$(database)/documents/chats/$(chatId)/messages/$(id)).data;
+    return id != '' && request.resource.data.get('lastMessageId', '') == id &&
+      request.resource.data.lastSender == resource.data.lastSender &&
+      request.resource.data.lastMessage == 'تم حذف هذه الرسالة' &&
+      request.resource.data.updatedAt == request.time && after.type == 'deleted' &&
+      after.deletedAt == request.time && after.deletedBy == request.auth.uid;
+  }
+  allow read: if participant();
+  allow create: if activeUser() && (request.auth.uid == chatId || isAdmin()) && cleanContent(request.resource.data) &&
+    request.resource.data.keys().hasOnly(['userId', 'userName', 'userPhone', 'lastMessage', 'lastSender', 'unreadAdmin', 'unreadUser',
+      'isClosed', 'isPinned', 'isArchived', 'isMuted', 'isBlocked', 'createdAt', 'updatedAt']) &&
+    request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time &&
+    request.resource.data.userId == chatId && request.resource.data.isBlocked == false &&
+    request.resource.data.isClosed == false && request.resource.data.unreadUser == 0 && request.resource.data.unreadAdmin == 0;
+  allow update: if participant() && activeUser() && cleanContent(request.resource.data) &&
+    (isAdmin() || (
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'lastMessage', 'lastMessageId', 'lastSender', 'updatedAt', 'unreadUser', 'unreadAdmin', 'userTypingAt'
+      ]) && request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 5000 &&
+      request.resource.data.unreadUser is int && request.resource.data.unreadUser >= 0 &&
+      request.resource.data.unreadAdmin is int && request.resource.data.unreadAdmin >= 0 &&
+      request.resource.data.unreadUser in [resource.data.unreadUser, 0] &&
+      request.resource.data.unreadAdmin in [resource.data.unreadAdmin, resource.data.unreadAdmin + 1] &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMessage', 'lastMessageId', 'lastSender', 'updatedAt']) ||
+        ((request.resource.data.lastSender == 'user' && request.resource.data.updatedAt == request.time && canSend()) || validDeletedPreview())) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userTypingAt']) ||
+        request.resource.data.userTypingAt == null || request.resource.data.userTypingAt == request.time)
+    ));
+  allow delete: if isAdmin();
+
+  match /messages/{messageId} {
+    function validPayload(d) {
+      return d.message is string && d.message.size() <= 5000 && cleanText(d, 'message') &&
+        d.type in ['text', 'image', 'location', 'property', 'audio'] &&
+        d.imageUrl is string && d.imageUrl.size() <= 2048 &&
+        d.get('imagePath', '') is string && d.get('imagePath', '').size() <= 512 &&
+        (d.get('imagePath', '') == '' || d.imagePath.matches('chat_images/' + chatId + '/' + request.auth.uid + '/[0-9]+[.](jpg|png)')) &&
+        d.get('audioUrl', '') is string && d.get('audioUrl', '').size() <= 2048 &&
+        d.get('audioPath', '') is string && d.get('audioPath', '').size() <= 512 &&
+        d.get('replyToId', '') is string && d.get('replyToId', '').size() <= 128 &&
+        (d.type != 'location' || (d.latitude is number && d.latitude >= -90 && d.latitude <= 90 &&
+          d.longitude is number && d.longitude >= -180 && d.longitude <= 180)) &&
+        (d.get('replyToId', '') == '' || exists(/databases/$(database)/documents/chats/$(chatId)/messages/$(d.replyToId))) &&
+        (d.type != 'audio' || (chatSettings().get('chatPreferences', {}).get('voiceEnabled', true) == true &&
+          d.audioSeconds is int && d.audioSeconds > 0 && d.audioSeconds <= chatSettings().get('chatPreferences', {}).get('voiceSeconds', 120) &&
+          (d.audioPath.matches('chat_audio/' + chatId + '/' + request.auth.uid + '/[0-9]+[.]m4a') || (d.audioPath == '' && d.audioUrl.matches('https://res[.]cloudinary[.]com/hwxcrlcj/video/upload/.+'))) )) &&
+        (d.type != 'property' || (d.property is map && d.property.keys().hasOnly(['id', 'title', 'imageUrl', 'price', 'location', 'adType', 'number']) &&
+          d.property.id is string && d.property.id.size() <= 128 &&
+          d.property.title is string && d.property.title.size() <= 300 &&
+          d.property.location is string && d.property.location.size() <= 300 &&
+          d.property.imageUrl is string && d.property.imageUrl.size() <= 2048 &&
+          d.property.price is number && d.property.price >= 0 && d.property.number is int &&
+          d.property.adType is string && d.property.adType.size() <= 50 &&
+          get(/databases/$(database)/documents/properties/$(d.property.id)).data.status in ['approved', 'published']));
+    }
+    allow read: if participant();
+    allow create: if canSend() && validPayload(request.resource.data) &&
+      request.resource.data.keys().hasOnly(['senderId', 'senderType', 'authorUid', 'message', 'imageUrl', 'type', 'latitude', 'longitude',
+        'replyToId', 'property', 'imagePath', 'audioUrl', 'audioPath', 'audioSeconds', 'isRead', 'status', 'createdAt', 'deliveredAt', 'readAt']) &&
+      request.resource.data.createdAt == request.time && request.resource.data.status == 'sent' && request.resource.data.isRead == false &&
+      request.resource.data.get('deletedAt', null) == null &&
+      ((isAdmin() && request.resource.data.senderId == 'admin' && request.resource.data.senderType == 'admin' && request.resource.data.get('authorUid', request.auth.uid) == request.auth.uid) ||
+        (request.auth.uid == chatId && request.resource.data.senderId == request.auth.uid && request.resource.data.senderType == 'user' &&
+          request.resource.data.get('authorUid', request.auth.uid) == request.auth.uid));
+    function validTombstone() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let configured = chatSettings().get('chatPreferences', {}).get('deleteHours', 24);
+      let hours = configured is int && configured >= 1 && configured <= 168 ? configured : 24;
+      return before.get('deletedAt', null) == null &&
+        (isAdmin() || (before.senderType == 'user' && before.senderId == request.auth.uid &&
+          before.get('authorUid', before.senderId) == request.auth.uid &&
+          before.createdAt is timestamp && request.time >= before.createdAt &&
+          request.time < before.createdAt + duration.value(hours, 'h'))) &&
+        after.keys().hasOnly(['senderId', 'senderType', 'authorUid', 'createdAt', 'isRead', 'status',
+          'deliveredAt', 'readAt', 'type', 'message', 'deletedAt', 'deletedBy']) &&
+        after.senderId == before.senderId && after.senderType == before.senderType &&
+        after.get('authorUid', '') == before.get('authorUid', '') &&
+        after.createdAt == before.createdAt && after.get('isRead', false) == before.get('isRead', false) &&
+        after.get('status', '') == before.get('status', '') &&
+        after.get('deliveredAt', null) == before.get('deliveredAt', null) &&
+        after.get('readAt', null) == before.get('readAt', null) &&
+        after.type == 'deleted' && after.message == '' &&
+        after.deletedBy == request.auth.uid && after.deletedAt == request.time;
+    }
+    allow update: if participant() && activeUser() && validTombstone();
+    // Received-message acknowledgements cannot alter original content.
+    allow update: if participant() && activeUser() && resource.data.get('deletedAt', null) == null &&
+      (isAdmin() || resource.data.senderType in ['admin', 'system']) &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'isRead', 'readAt', 'deliveredAt']) &&
+      request.resource.data.status in ['delivered', 'read'] &&
+      (request.resource.data.status != 'read' || (request.resource.data.isRead == true && request.resource.data.readAt == request.time)) &&
+      request.resource.data.deliveredAt == request.time;
+    allow delete: if false;
+  }
+  match /deletionAudit/{messageId} {
+    allow read: if isAdmin();
+    allow write: if false;
+  }
+}
+// ==================================================
+// جلسات وزيارات التطبيق
+// ==================================================
+function isAnalyticsAdmin() {
+  return isAdmin() &&
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false;
+}
+
+function validTrackedSession(d) {
+  return d.keys().hasOnly(['visitorId', 'userId', 'displayName', 'isGuest',
+      'platform', 'startedAt', 'endedAt', 'durationSeconds']) &&
+    d.keys().hasAll(['visitorId', 'userId', 'isGuest', 'platform',
+      'startedAt', 'endedAt', 'durationSeconds']) &&
+    d.visitorId == request.auth.uid && d.userId == request.auth.uid &&
+    d.isGuest == false && d.platform is string && d.platform.size() <= 32 &&
+    d.startedAt is timestamp &&
+    (d.endedAt == null || d.endedAt is timestamp) &&
+    d.durationSeconds is int && d.durationSeconds >= 0 &&
+    (!('displayName' in d) || d.displayName == null ||
+      (d.displayName is string && d.displayName.size() <= 256));
+}
+
+match /app_sessions/{sessionId} {
+
+  // المستخدم ينشئ جلسة لنفسه فقط
+  allow create: if
+    isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validTrackedSession(request.resource.data) &&
+    request.resource.data.visitorId == request.auth.uid &&
+    request.resource.data.isGuest is bool &&
+    request.resource.data.platform is string &&
+    request.resource.data.startedAt == request.time &&
+    request.resource.data.endedAt == null &&
+    request.resource.data.durationSeconds == 0;
+
+  // المستخدم يستطيع إنهاء جلسته فقط
+  allow update: if
+    isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validTrackedSession(request.resource.data) &&
+    resource.data.visitorId == request.auth.uid &&
+    request.resource.data.visitorId == resource.data.visitorId &&
+    resource.data.endedAt == null &&
+    request.resource.data.endedAt == request.time &&
+    request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          "endedAt",
+          "durationSeconds"
+        ]) &&
+    request.resource.data.durationSeconds is int &&
+    request.resource.data.durationSeconds >= 0;
+
+  // قراءة الإحصائيات والحذف للمدير فقط
+  allow read, delete: if isAnalyticsAdmin();
+}
+
+
+// ==================================================
+// آخر نشاط للمستخدمين والزوار
+// ==================================================
+function validUserActivity(d) {
+  return d.keys().hasAll(['userId', 'isGuest', 'platform', 'lastSeen']) &&
+    d.userId == request.auth.uid && d.isGuest == false &&
+    d.platform is string && d.platform.size() <= 32 &&
+    d.lastSeen == request.time &&
+    (!('displayName' in d) || d.displayName == null ||
+      (d.displayName is string && d.displayName.size() <= 256)) &&
+    (!('lastSessionId' in d) ||
+      (d.lastSessionId is string && d.lastSessionId.size() <= 128));
+}
+
+match /user_activity/{visitorId} {
+
+  // إنشاء سجل النشاط لصاحب الحساب فقط
+  allow create: if
+    isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validUserActivity(request.resource.data) &&
+    request.resource.data.keys().hasOnly([
+      'userId', 'displayName', 'isGuest', 'platform', 'lastSeen', 'lastSessionId'
+    ]) &&
+    visitorId == request.auth.uid &&
+    request.resource.data.lastSeen == request.time &&
+    request.resource.data.isGuest is bool &&
+    request.resource.data.platform is string;
+
+  // تحديث آخر النشاط لصاحب الحساب فقط
+  allow update: if
+    isSignedIn() &&
+    request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+    validUserActivity(request.resource.data) &&
+    visitorId == request.auth.uid &&
+    request.resource.data.lastSeen == request.time &&
+    request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          "userId",
+          "displayName",
+          "isGuest",
+          "platform",
+          "lastSeen",
+          "lastSessionId"
+        ]);
+
+  // عرض قائمة النشاط وحذف السجلات للمدير فقط
+  allow read, delete: if isAnalyticsAdmin();
+}
+  }
+}

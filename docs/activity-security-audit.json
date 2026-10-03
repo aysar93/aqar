@@ -19,6 +19,12 @@
       "severity": "minor",
       "issue": "An authenticated client can manipulate its own telemetry (e.g. reported session duration or keeping its own connection record). Cross-UID writes and client admin escalation are denied.",
       "recommendation": "Treat client telemetry as operational statistics, not billing/security attestation. Evaluate server validation or rate limiting separately if abuse appears."
+    },
+    {
+      "check": "Callable abuse/cost",
+      "severity": "minor",
+      "issue": "No App Check integration or durable per-user rate limit. Authenticated clients can repeat the authorization callable; maxInstances limits concurrency, not total billing.",
+      "recommendation": "Monitor invocations and retries; stage App Check and abuse protection separately without breaking old apps."
     }
   ],
   "validated": [
@@ -29,6 +35,16 @@
     "Legacy whole-node replacement is denied when new connections exist; one device cannot erase the other devices.",
     "Guest Firestore writes remain denied; no public presence read.",
     "RTDB keys bounded, connection values numeric server timestamps, unknown legacy fields rejected.",
-    "Emulator matrix covers Android/iOS provider tokens, foreign writes, role escalation, logout removal and transport disconnect."
-  ]
+    "Emulator matrix covers Android/iOS provider tokens, foreign writes, role escalation, logout removal and transport disconnect.",
+    "Concurrent stale grant cannot overwrite a newer revocation: server readTime watermark, deny record retained, RTDB transaction.",
+    "Blocked admins denied analytics reads/deletes in Firestore and dashboard authorization in callable.",
+    "11 Firestore emulator tests and 4 RTDB/Functions integration tests; no production operations.",
+    "Callable success cache keyed by UID: ten minute monotonic TTL, shared in-flight request, invalidated at logout/permission denial; no automatic retry or polling.",
+    "Production Firestore non-Activity prefix matches local after newline normalization; prior chat changes already deployed.",
+    "Exact isolated candidate emulator tests pass; verified-admin-only rollback bridge separately tested.",
+    "Flutter analytics suite 28 passes, scoped analyzer clean."
+  ],
+  "reviewDate": "2026-10-03",
+  "costRisk": "MEDIUM",
+  "productionBaseline": "KNOWN: Firestore and RTDB rules read via GET; no production writes"
 }

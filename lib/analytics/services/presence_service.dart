@@ -1,22 +1,90 @@
 import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
 class PresenceService {
-  PresenceService({FirebaseDatabase? database, FirebaseFunctions? functions})
+  PresenceService(
+      {FirebaseDatabase? database,
+      FirebaseFunctions? functions,
+      FirebaseAuth? auth,
+      Duration Function()? elapsed})
       : _database = database ??
             FirebaseDatabase.instanceFor(
               app: Firebase.app(),
               databaseURL:
                   'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app',
             ),
-        _functions = functions;
+        _functions = functions,
+        _auth = auth,
+        _elapsed = elapsed ?? (Stopwatch()..start()).elapsedGetter;
 
   final FirebaseDatabase _database;
   final FirebaseFunctions? _functions;
+  final FirebaseAuth? _auth;
+  final Duration Function() _elapsed;
+  static const dashboardAuthorizationTtl = Duration(minutes: 10);
+  String? _authorizedUid;
+  Duration? _authorizedAt;
+  String? _authorizingUid;
+  Future<void>? _authorization;
+  int _authorizationEpoch = 0;
+
+  void invalidateDashboardAuthorization() {
+    ++_authorizationEpoch;
+    _authorizedUid = null;
+    _authorizedAt = null;
+  }
+
+  Future<void> _ensureDashboardAuthorization() async {
+    final user = (_auth ?? FirebaseAuth.instance).currentUser;
+    if (user == null || user.isAnonymous) {
+      invalidateDashboardAuthorization();
+      throw StateError('Authenticated dashboard access is required');
+    }
+    final uid = user.uid;
+    if (_authorizedUid == uid &&
+        _authorizedAt != null &&
+        _elapsed() - _authorizedAt! < dashboardAuthorizationTtl) {
+      return;
+    }
+    if (_authorizingUid == uid && _authorization != null) {
+      await _authorization;
+      if ((_auth ?? FirebaseAuth.instance).currentUser?.uid != uid) {
+        throw StateError('Dashboard account changed during authorization');
+      }
+      return;
+    }
+    invalidateDashboardAuthorization();
+    final epoch = _authorizationEpoch;
+    _authorizingUid = uid;
+    late final Future<void> operation;
+    operation = (_functions ?? FirebaseFunctions.instance)
+        .httpsCallable('authorizePresenceDashboard')
+        .call()
+        .then<void>((_) {
+      if (_authorizationEpoch == epoch &&
+          (_auth ?? FirebaseAuth.instance).currentUser?.uid == uid) {
+        _authorizedUid = uid;
+        _authorizedAt = _elapsed();
+      }
+    }).whenComplete(() {
+      if (identical(_authorization, operation)) {
+        _authorization = null;
+        _authorizingUid = null;
+      }
+    });
+    _authorization = operation;
+    await operation;
+    if (_authorizationEpoch != epoch ||
+        (_auth ?? FirebaseAuth.instance).currentUser?.uid != uid) {
+      throw StateError('Dashboard account changed during authorization');
+    }
+  }
+
   DatabaseReference? _connection;
   final _ownedConnections = <DatabaseReference>[];
   StreamSubscription<DatabaseEvent>? _connectedSubscription;
@@ -156,10 +224,14 @@ class PresenceService {
   Future<DateTime> serverNow() async {
     final snapshot = await _database
         .ref('.info/serverTimeOffset')
-        .get()
-        .timeout(const Duration(seconds: 8));
-    final offset = snapshot.value;
-    if (offset is! num) throw StateError('Server time is unavailable');
+        // .info is SDK-local metadata. Android get() sends it as a server
+        // data path and fails with "Invalid token in path". A one-shot
+        // listener uses the SDK's .info tree; first cancels on data/error.
+        .onValue
+        .where((event) => event.snapshot.value is num)
+        .timeout(const Duration(seconds: 8))
+        .first;
+    final offset = snapshot.snapshot.value as num;
     return DateTime.fromMillisecondsSinceEpoch(
       DateTime.now().millisecondsSinceEpoch + offset.toInt(),
     );
@@ -168,12 +240,13 @@ class PresenceService {
   Stream<int> onlineCount() async* {
     try {
       // Server checks users/UID.isAdmin; clients cannot grant themselves ACLs.
-      await (_functions ?? FirebaseFunctions.instance)
-          .httpsCallable('authorizePresenceDashboard')
-          .call();
+      await _ensureDashboardAuthorization();
       final counter = StreamController<int>();
       int? latest;
       void reportError(Object error, StackTrace stack) {
+        if (error is FirebaseException && error.code == 'permission-denied') {
+          invalidateDashboardAuthorization();
+        }
         _log(error, stack);
         counter.addError(error, stack);
       }
@@ -229,4 +302,8 @@ class PresenceService {
     debugPrint('Presence failed: $error');
     debugPrintStack(stackTrace: stack);
   }
+}
+
+extension on Stopwatch {
+  Duration Function() get elapsedGetter => () => elapsed;
 }

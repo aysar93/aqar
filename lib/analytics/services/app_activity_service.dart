@@ -27,6 +27,52 @@ class AppActivityService with WidgetsBindingObserver {
   bool _signInPending = false;
   bool _signingOut = false;
   Future<void>? _signOutOperation;
+  String? _activityIdentityUid;
+  String? _meaningfulActivityUid;
+  int _activityIdentityRevision = 0;
+
+  void _observeActivityIdentity(String? uid) {
+    if (_activityIdentityUid == uid) return;
+    _activityIdentityUid = uid;
+    _meaningfulActivityUid = null;
+    _activityIdentityRevision++;
+  }
+
+  /// Run a meaningful operation; only its successful completion records activity.
+  /// Capture the actor before awaiting so account switching cannot reattribute it.
+  Future<T> recordSuccessfulAction<T>(Future<T> Function() action,
+      {String? actorUid}) async {
+    final capturedUid = actorUid ?? _auth.currentUser?.uid;
+    final result = await action();
+    unawaited(_recordMeaningfulActivity(capturedUid));
+    return result;
+  }
+
+  Future<void> _recordMeaningfulActivity(String? actorUid) async {
+    final user = _auth.currentUser;
+    if (actorUid == null ||
+        user == null ||
+        user.isAnonymous ||
+        user.uid != actorUid ||
+        _signInPending ||
+        _signingOut) {
+      return;
+    }
+    _observeActivityIdentity(user.uid);
+    final revision = _activityIdentityRevision;
+    try {
+      // One first-action merge per identity activation repairs missing documents
+      // even when a lifecycle throttle entry exists. Subsequent actions throttle.
+      await visits.recordActivity(user,
+          ensureDocument: _meaningfulActivityUid != user.uid);
+      if (revision == _activityIdentityRevision &&
+          _auth.currentUser?.uid == user.uid) {
+        _meaningfulActivityUid = user.uid;
+      }
+    } catch (error, stack) {
+      _log('Meaningful activity', error, stack);
+    }
+  }
 
   Future<void> initialize() async {
     if (_authSubscription != null) return;
@@ -34,10 +80,13 @@ class AppActivityService with WidgetsBindingObserver {
     _foreground = state == null || state == AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
     _authSubscription = _auth.authStateChanges().listen(
-          (_) => unawaited(_enqueue(_reconcile)),
-          onError: (Object error, StackTrace stack) =>
-              _log('Auth observer', error, stack),
-        );
+      (_) {
+        _observeActivityIdentity(_auth.currentUser?.uid);
+        unawaited(_enqueue(_reconcile));
+      },
+      onError: (Object error, StackTrace stack) =>
+          _log('Auth observer', error, stack),
+    );
     await _enqueue(_reconcile);
   }
 
@@ -52,6 +101,7 @@ class AppActivityService with WidgetsBindingObserver {
 
   Future<void> _reconcile() async {
     final user = _auth.currentUser;
+    _observeActivityIdentity(user?.uid);
     final desired = !_signInPending &&
             !_signingOut &&
             _foreground &&
@@ -118,6 +168,7 @@ class AppActivityService with WidgetsBindingObserver {
     _signingOut = true;
     try {
       await _enqueue(_stopCurrent);
+      presence.invalidateDashboardAuthorization();
       await _auth.signOut();
     } finally {
       _signingOut = false;

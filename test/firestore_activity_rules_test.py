@@ -43,11 +43,37 @@ class ActivityRules(unittest.TestCase):
         payload = {'writes': [{'update': {'name': NAME + path, 'fields': fields},
                               'updateTransforms': [{'fieldPath': 'startedAt', 'setToServerValue': 'REQUEST_TIME'}]}]}
         self.assertEqual(call(':commit', 'reporter', payload), 200)
+        spoof = json.loads(json.dumps(payload))
+        spoof['writes'][0]['update']['name'] = NAME + 'app_sessions/spoof'
+        spoof['writes'][0]['update']['fields']['userId'] = value('other')
+        self.assertEqual(call(':commit', 'reporter', spoof), 403)
+        self.assertEqual(call(':commit', 'other', payload), 403)
+        self.assertEqual(call('/app_sessions', 'reporter'), 403)
+        self.assertEqual(call('/app_sessions', 'admin'), 200)
         self.assertEqual(write(path, {'durationSeconds': -1}, update=True, timestamp='endedAt'), 403)
         self.assertEqual(write(path, {'durationSeconds': 30}, uid='other', update=True, timestamp='endedAt'), 403)
         self.assertEqual(write(path, {'durationSeconds': 30}, update=True, timestamp=None), 403)
         self.assertEqual(write(path, {'durationSeconds': 30}, update=True, timestamp='endedAt'), 200)
         self.assertEqual(write(path, {'durationSeconds': 40}, update=True, timestamp='endedAt'), 403)
+
+    def test_admin_authority_cannot_be_created_updated_or_batched_by_user(self):
+        profile = {'isAdmin': True, 'isBlocked': False,
+                   'accountType': 'user', 'accountMode': 'user'}
+        self.assertEqual(write('users/pretend-admin', profile, uid='pretend-admin', timestamp=None), 403)
+        self.assertEqual(write('users/reporter', {'isAdmin': True}, update=True, timestamp=None), 403)
+        self.assertEqual(write('users/admin', {'isAdmin': False}, update=True, timestamp=None), 403)
+        fields = {k: value(v) for k, v in activity().items()}
+        body = {'writes': [
+            {'update': {'name': NAME + 'users/reporter', 'fields': {'isAdmin': value(True)}},
+             'updateMask': {'fieldPaths': ['isAdmin']}},
+            {'update': {'name': NAME + 'user_activity/reporter', 'fields': fields},
+             'updateTransforms': [{'fieldPath': 'lastSeen', 'setToServerValue': 'REQUEST_TIME'}]},
+        ]}
+        self.assertEqual(call(':commit', 'reporter', body), 403)
+        self.assertEqual(write('users/blocked-analytics-admin', {'isAdmin': True, 'isBlocked': True},
+                               uid='SEED', timestamp=None), 200)
+        self.assertEqual(call('/user_activity', 'blocked-analytics-admin'), 403)
+        self.assertEqual(call('/app_sessions', 'blocked-analytics-admin'), 403)
 
     def test_provider_platform_matrix(self):
         for platform in ['android', 'ios']:

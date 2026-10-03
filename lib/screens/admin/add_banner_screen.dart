@@ -26,6 +26,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _subtitleController;
   late final TextEditingController _orderController;
+  late final TextEditingController _externalUrlController;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -57,6 +58,10 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
       text: (banner?.order ?? 1).toString(),
     );
 
+    _externalUrlController = TextEditingController(
+      text: banner?.type == 'external' ? banner!.targetId : '',
+    );
+
     _selectedType = banner?.type ?? 'property';
     _isActive = banner?.isActive ?? true;
 
@@ -78,6 +83,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
     _titleController.dispose();
     _subtitleController.dispose();
     _orderController.dispose();
+    _externalUrlController.dispose();
     super.dispose();
   }
 
@@ -101,6 +107,10 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
 
     if (_selectedType == 'office') {
       return _selectedOfficeId ?? '';
+    }
+
+    if (_selectedType == 'external') {
+      return _externalUrlController.text.trim();
     }
 
     return '';
@@ -131,6 +141,21 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
             : 'اختر المكتب الذي سيفتحه البنر',
       );
       return;
+    }
+
+    if (_selectedType == 'external') {
+      final uri = Uri.tryParse(_targetId);
+      final validWebUrl = uri != null &&
+          ['http', 'https'].contains(uri.scheme) &&
+          uri.host.isNotEmpty;
+      final validWhatsAppUrl = uri != null &&
+          uri.scheme == 'whatsapp' &&
+          uri.host == 'send' &&
+          (uri.queryParameters['phone'] ?? '').isNotEmpty;
+      if (!validWebUrl && !validWhatsAppUrl) {
+        _showMessage('أدخل رابطًا صحيحًا، مثل https://wa.me/9647XXXXXXXXX');
+        return;
+      }
     }
 
     setState(() {
@@ -218,7 +243,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
               30,
             ),
             children: [
-              _SectionTitle(
+              const _SectionTitle(
                 icon: Icons.campaign_outlined,
                 title: 'معلومات البنر',
                 subtitle: 'حدد المحتوى والوجهة التي سيتم فتحها عند الضغط',
@@ -244,7 +269,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                 ),
               ),
               const SizedBox(height: 22),
-              _SectionTitle(
+              const _SectionTitle(
                 icon: Icons.touch_app_outlined,
                 title: 'وجهة البنر',
                 subtitle:
@@ -318,20 +343,19 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                 ),
               if (_selectedType == 'external') ...[
                 TextFormField(
-                  initialValue: widget.banner?.targetId ?? '',
-                  onChanged: (value) {
-                    // الرابط الخارجي لا يحتاج إلى selector.
-                    // يتم حفظه مباشرة في حقل مخفي عبر controller.
-                  },
+                  controller: _externalUrlController,
+                  keyboardType: TextInputType.url,
+                  textDirection: TextDirection.ltr,
+                  enabled: !_isSaving,
                   decoration: const InputDecoration(
                     labelText: 'الرابط الخارجي',
-                    hintText: 'https://example.com',
+                    hintText: 'https://wa.me/9647XXXXXXXXX',
                     prefixIcon: Icon(Icons.link_rounded),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'ملاحظة: إذا كنت تستخدم الروابط الخارجية، أضف الرابط في targetId بالطريقة الموجودة في نظامك الحالي',
+                  'أدخل رابط الموقع أو واتساب كاملًا ليُفتح عند الضغط على البنر.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

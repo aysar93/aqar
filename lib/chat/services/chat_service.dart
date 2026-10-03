@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../analytics/services/app_activity_service.dart';
 import '../../services/notification_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -122,7 +123,8 @@ class ChatService {
           ? FieldValue.increment(1)
           : FieldValue.increment(0),
     });
-    await batch.commit();
+    await AppActivityService.instance
+        .recordSuccessfulAction(batch.commit, actorUid: currentUser?.uid);
     unawaited(_notify(
         chatId: chatId,
         messageId: messageReference.id,
@@ -317,13 +319,19 @@ class ChatService {
   }
 
   /// بث الرسائل
-  Stream<QuerySnapshot> messages(String chatId, {int? limit}) {
+  Stream<QuerySnapshot> messages(String chatId,
+      {int? limit, DocumentSnapshot? from}) {
     final query = _firestore
         .collection('chats')
         .doc(chatId)
         .collection('messages')
         .orderBy('createdAt');
-    return (limit == null ? query : query.limitToLast(limit)).snapshots();
+    return (from != null
+            ? query.startAtDocument(from)
+            : limit == null
+                ? query
+                : query.limitToLast(limit))
+        .snapshots();
   }
 
   Future<void> deleteForEveryone(String chatId, String messageId) async {

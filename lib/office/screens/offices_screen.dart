@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/data/paged_query.dart';
 
 import '../models/office_model.dart';
 import '../services/office_service.dart';
@@ -13,6 +15,48 @@ class OfficesScreen extends StatefulWidget {
 }
 
 class _OfficesScreenState extends State<OfficesScreen> {
+  late Stream<List<OfficeModel>> _offices;
+  final _pageKey = GlobalKey<PagedQueryBuilderState<Map<String, dynamic>>>();
+  Widget _officeBuilder(
+      Widget Function(BuildContext, AsyncSnapshot<List<OfficeModel>>) builder) {
+    if (_searchQuery.value.isNotEmpty) {
+      return StreamBuilder(stream: _offices, builder: builder);
+    }
+    return PagedQueryBuilder<Map<String, dynamic>>(
+        key: _pageKey,
+        pageSize: 20,
+        safe: true,
+        query: FirebaseFirestore.instance
+            .collection('offices')
+            .where('status', isEqualTo: 'active'),
+        builder: (context, snapshot) => builder(
+            context,
+            snapshot.hasError
+                ? AsyncSnapshot.withError(
+                    ConnectionState.active, snapshot.error!)
+                : snapshot.hasData
+                    ? AsyncSnapshot.withData(
+                        ConnectionState.active,
+                        snapshot.data!.docs
+                            .map((d) => OfficeModel.fromMap(d.data(), d.id))
+                            .toList())
+                    : const AsyncSnapshot.waiting()));
+  }
+
+  Future<void> _refreshOffices() async {
+    if (_searchQuery.value.isEmpty) {
+      await _pageKey.currentState?.refresh();
+    } else {
+      setState(() => _offices = OfficeService.approvedOffices());
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _offices = OfficeService.approvedOffices();
+  }
+
   final TextEditingController _searchController = TextEditingController();
 
   final FocusNode _searchFocusNode = FocusNode();
@@ -49,12 +93,12 @@ class _OfficesScreenState extends State<OfficesScreen> {
   }
 
   void _onSearchChanged(String value) {
-    _searchQuery.value = value.trim().toLowerCase();
+    setState(() => _searchQuery.value = value.trim().toLowerCase());
   }
 
   void _clearSearch() {
     _searchController.clear();
-    _searchQuery.value = '';
+    setState(() => _searchQuery.value = '');
 
     // يبقى الكيبورد مفتوحًا بعد مسح البحث.
     if (!_searchFocusNode.hasFocus) {
@@ -95,9 +139,8 @@ class _OfficesScreenState extends State<OfficesScreen> {
           ),
         ),
       ),
-      body: StreamBuilder<List<OfficeModel>>(
-        stream: OfficeService.approvedOffices(),
-        builder: (context, snapshot) {
+      body: _officeBuilder(
+        (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(
@@ -110,7 +153,7 @@ class _OfficesScreenState extends State<OfficesScreen> {
             return _ErrorView(
               message: 'حدث خطأ أثناء تحميل المكاتب',
               onRetry: () {
-                setState(() {});
+                _refreshOffices();
               },
             );
           }
@@ -121,7 +164,7 @@ class _OfficesScreenState extends State<OfficesScreen> {
             color: goldColor,
             backgroundColor: cardColor,
             onRefresh: () async {
-              setState(() {});
+              await _refreshOffices();
             },
             child: CustomScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,

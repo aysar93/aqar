@@ -512,6 +512,7 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _storeUrl;
+  late final TextEditingController _iosStoreUrl;
   late bool _mandatory;
   late bool _active;
   late List<_FeatureDraft> _features;
@@ -528,6 +529,7 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
       text: u?.description ?? 'احصل على أحدث التحسينات والمميزات لتجربة أفضل',
     );
     _storeUrl = TextEditingController(text: u?.storeUrl ?? '');
+    _iosStoreUrl = TextEditingController(text: u?.iosStoreUrl ?? '');
     _mandatory = u?.isMandatory ?? false;
     _active = u?.isActive ?? false;
     _features = u?.features.map(_FeatureDraft.fromModel).toList() ??
@@ -554,6 +556,7 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
     _title.dispose();
     _description.dispose();
     _storeUrl.dispose();
+    _iosStoreUrl.dispose();
     super.dispose();
   }
 
@@ -576,6 +579,7 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
         title: _title.text.trim(),
         description: _description.text.trim(),
         storeUrl: _storeUrl.text.trim(),
+        iosStoreUrl: _iosStoreUrl.text.trim(),
         isMandatory: _mandatory,
         isActive: _active,
         features: _features.map((e) => e.toModel()).toList(),
@@ -615,6 +619,7 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
       storeUrl: _storeUrl.text.trim().isEmpty
           ? 'https://play.google.com/store'
           : _storeUrl.text.trim(),
+      iosStoreUrl: _iosStoreUrl.text.trim(),
       isMandatory: _mandatory,
       isActive: _active,
       features: _features
@@ -715,17 +720,28 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
                       const SizedBox(height: 12),
                       _field(
                         controller: _storeUrl,
-                        label: 'رابط Google Play',
+                        label: 'رابط أندرويد — Google Play',
                         hint:
                             'https://play.google.com/store/apps/details?id=...',
                         icon: Icons.storefront_outlined,
                         keyboard: TextInputType.url,
-                        validator: (v) {
-                          final value = Uri.tryParse(v!.trim());
-                          return value != null && value.hasScheme
-                              ? null
-                              : 'أدخل رابط متجر صحيح';
-                        },
+                        validator: (v) => _validateStoreUrl(
+                            v, 'play.google.com', _iosStoreUrl.text),
+                      ),
+                      const SizedBox(height: 12),
+                      _field(
+                        controller: _iosStoreUrl,
+                        label: 'رابط الآيفون — App Store',
+                        hint: 'https://apps.apple.com/app/id...',
+                        icon: Icons.apple,
+                        keyboard: TextInputType.url,
+                        validator: (v) => _validateStoreUrl(
+                            v, 'apps.apple.com', _storeUrl.text),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'أضف رابط المتجر لكل نظام تريد إظهار التحديث عليه.',
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
                       ),
                       const SizedBox(height: 14),
                       _settingsCard(),
@@ -812,6 +828,24 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
                 fontWeight: FontWeight.w900)),
       ],
     );
+  }
+
+  String? _validateStoreUrl(String? value, String host, String otherUrl) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) {
+      return otherUrl.trim().isEmpty ? 'أدخل رابط متجر واحد على الأقل' : null;
+    }
+    final uri = Uri.tryParse(text);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host != host ||
+        uri.path.isEmpty ||
+        uri.path == '/') {
+      return host == 'apps.apple.com'
+          ? 'أدخل رابط التطبيق الصحيح على App Store'
+          : 'أدخل رابط التطبيق الصحيح على Google Play';
+    }
+    return null;
   }
 
   Widget _field({
@@ -924,8 +958,9 @@ class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
               InkWell(
                 onTap: () async {
                   final key = await _pickIcon(context, feature.iconKey);
-                  if (key != null && mounted)
+                  if (key != null && mounted) {
                     setState(() => feature.iconKey = key);
+                  }
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Container(

@@ -1,0 +1,21 @@
+{
+  "firestore": {
+    "rules": "docs/deploy-audit/deploy.firestore.activity-only.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "database": {
+    "rules": "docs/deploy-audit/rollback.database.admin-bridge.rules.json"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8185
+    },
+    "database": {
+      "port": 9195
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}

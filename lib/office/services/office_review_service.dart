@@ -60,7 +60,9 @@ class OfficeReviewService {
       );
     }
 
-    final reviewReference = _reviews.doc();
+    // Preserve legacy reviews while preventing duplicate first submissions
+    // from creating two distinct documents for one user/office relationship.
+    final reviewReference = _reviews.doc('${officeId}_$userId');
 
     final review = OfficeReviewModel.create(
       id: reviewReference.id,
@@ -247,9 +249,7 @@ class OfficeReviewService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _recalculateOfficeRating(
-      review.officeId,
-    );
+    // Server-maintained rating summary; no child collection recount.
   }
 
   // ═════════════════════════════════════════════
@@ -280,9 +280,7 @@ class OfficeReviewService {
 
     await reference.delete();
 
-    await _recalculateOfficeRating(
-      review.officeId,
-    );
+    // Server-maintained rating summary; no child collection recount.
   }
 
   // ═════════════════════════════════════════════
@@ -412,9 +410,7 @@ class OfficeReviewService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _recalculateOfficeRating(
-      officeId,
-    );
+    // Rating summaries are maintained atomically by server triggers.
   }
 
   // ═════════════════════════════════════════════
@@ -454,9 +450,7 @@ class OfficeReviewService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _recalculateOfficeRating(
-      officeId,
-    );
+    // Rating summaries are maintained atomically by server triggers.
   }
 
   // ═════════════════════════════════════════════
@@ -493,9 +487,7 @@ class OfficeReviewService {
 
     await reference.delete();
 
-    await _recalculateOfficeRating(
-      officeId,
-    );
+    // Rating summaries are maintained atomically by server triggers.
   }
 
   // ═════════════════════════════════════════════
@@ -530,42 +522,6 @@ class OfficeReviewService {
 
   // ═════════════════════════════════════════════
   // إعادة حساب تقييم المكتب بالكامل
-  // ═════════════════════════════════════════════
-
-  Future<void> _recalculateOfficeRating(
-    String officeId,
-  ) async {
-    final snapshot =
-        await _reviews.where('officeId', isEqualTo: officeId).get();
-
-    final publishedReviews = snapshot.docs
-        .map(
-          OfficeReviewModel.fromFirestore,
-        )
-        .where((review) => review.isPublished)
-        .toList();
-
-    double averageRating = 0;
-
-    if (publishedReviews.isNotEmpty) {
-      double total = 0;
-
-      for (final review in publishedReviews) {
-        total += review.rating;
-      }
-
-      averageRating = total / publishedReviews.length;
-    }
-
-    await _offices.doc(officeId).update({
-      'rating': averageRating,
-      'reviewsCount': publishedReviews.length,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  // ═════════════════════════════════════════════
-  // التحقق من صاحب المكتب
   // ═════════════════════════════════════════════
 
   Future<void> _verifyOfficeOwner({

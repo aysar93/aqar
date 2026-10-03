@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'app_update_banner_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,18 +37,31 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       if (mounted) Navigator.of(context).pop();
       return;
     }
-    final uri = Uri.tryParse(widget.update.storeUrl.trim());
+    final uri = Uri.tryParse(widget.update.deviceStoreUrl);
     if (uri == null || !uri.hasScheme) return;
 
     setState(() => _openingStore = true);
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened) {
+        _showStoreError();
+        return;
+      }
       if (!widget.preview && mounted && !widget.update.isMandatory) {
         Navigator.of(context).pop();
       }
+    } catch (_) {
+      _showStoreError();
     } finally {
       if (mounted) setState(() => _openingStore = false);
     }
+  }
+
+  void _showStoreError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تعذر فتح المتجر، حاول مرة أخرى')),
+    );
   }
 
   Future<void> _dismiss() async {
@@ -143,15 +157,17 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                         const SizedBox(height: 12),
                         _actions(),
                         const SizedBox(height: 8),
-                        const Row(
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.lock_outline_rounded,
+                            const Icon(Icons.lock_outline_rounded,
                                 color: Colors.white30, size: 14),
-                            SizedBox(width: 5),
+                            const SizedBox(width: 5),
                             Text(
-                              'سيتم الانتقال إلى متجر Google Play',
-                              style: TextStyle(
+                              defaultTargetPlatform == TargetPlatform.iOS
+                                  ? 'سيتم الانتقال إلى متجر App Store'
+                                  : 'سيتم الانتقال إلى متجر Google Play',
+                              style: const TextStyle(
                                   color: Colors.white38, fontSize: 10.5),
                             ),
                           ],

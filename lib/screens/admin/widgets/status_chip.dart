@@ -75,7 +75,7 @@ class StatusChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 12,
+        horizontal: 8,
         vertical: 6,
       ),
       decoration: BoxDecoration(
@@ -90,16 +90,23 @@ class StatusChip extends StatelessWidget {
         children: [
           Icon(
             icon,
-            size: 16,
+            size: 14,
             color: color,
           ),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+          const SizedBox(width: 4),
+          Flexible(
+            child: Tooltip(
+              message: text,
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
         ],

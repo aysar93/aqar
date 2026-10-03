@@ -12,7 +12,7 @@ const { getDatabase: adminDatabase } = require('firebase-admin/database');
 initializeAdmin({ projectId: 'demo-aqar', databaseURL: 'https://demo-aqar-default-rtdb.firebaseio.com' });
 const firestore = getFirestore();
 const admin = adminDatabase();
-const { authorizePresenceDashboard, syncPresenceAdminRole } = require('./analytics_presence_access');
+const { authorizePresenceDashboard, syncPresenceAdminRole, syncPresenceAdminForTest } = require('./analytics_presence_access');
 const apps = [];
 function client(uid, provider = 'password') {
   // Admin SDK's documented limited-privilege override uses real RTDB rules,
@@ -68,7 +68,10 @@ test('RTDB least privilege and server-only admin bootstrap/revocation', async ()
     error => error.code === 'permission-denied');
   await assert.rejects(authorizePresenceDashboard.run({}), error => error.code === 'unauthenticated');
   await authorizePresenceDashboard.run(request('viewer'));
-  assert.deepEqual((await admin.ref('admins/viewer').get()).val(), { presenceDashboard: true, version: 1 });
+  const acl = (await admin.ref('admins/viewer').get()).val();
+  assert.equal(acl.presenceDashboard, true);
+  assert.equal(acl.version, 1);
+  assert.ok(Number.isSafeInteger(acl.checkedAt));
   const legacy = client('legacy-admin');
   await admin.ref('admins/legacy-admin').set(true);
   await assert.rejects(get(onlineQuery(legacy))); // Unverified old ACL is not authority.
@@ -77,6 +80,12 @@ test('RTDB least privilege and server-only admin bootstrap/revocation', async ()
     before: { data: () => undefined }, after: { data: () => ({ isAdmin: false }) },
   } });
   assert.deepEqual((await admin.ref('admins/ordinary-sentinel').get()).val(), { doNotTouch: true });
+  await admin.ref('admins/admin-profile-sentinel').set({ doNotTouch: true });
+  await syncPresenceAdminRole.run({ params: { uid: 'admin-profile-sentinel' }, data: {
+    before: { data: () => ({ isAdmin: true, name: 'Before' }) },
+    after: { data: () => ({ isAdmin: true, isBlocked: false, name: 'After', lastLogin: 123 }) },
+  } });
+  assert.deepEqual((await admin.ref('admins/admin-profile-sentinel').get()).val(), { doNotTouch: true });
   // Existing clients can still write their legacy node before adopting
   // connections, but cannot replace a node containing newer connections.
   await set(ref(normal, 'presence/normal'), { online: true, lastSeen: serverTimestamp() });
@@ -88,7 +97,14 @@ test('RTDB least privilege and server-only admin bootstrap/revocation', async ()
   await assert.rejects(get(onlineQuery(normal)));
   await assert.rejects(get(onlineQuery(guest)));
   await assert.rejects(set(ref(normal, 'admins/normal'), true));
+  await assert.rejects(set(ref(normal, 'admins/normal'), { presenceDashboard: true, version: 1 }));
+  await assert.rejects(set(ref(normal, 'admins/viewer/presenceDashboard'), false));
+  await assert.rejects(remove(ref(normal, 'admins/viewer')));
+  await assert.rejects(get(ref(normal, 'presence/viewer/connections/device')));
   await assert.rejects(set(ref(normal, 'presence/viewer/connections/spoof'), serverTimestamp()));
+  await assert.rejects(onDisconnect(ref(normal, 'presence/viewer/connections/spoof')).remove());
+  await assert.rejects(set(ref(normal, `presence/normal/connections/${'x'.repeat(65)}`), serverTimestamp()));
+  await assert.rejects(set(ref(normal, 'presence/normal/connections/nested/child'), serverTimestamp()));
   await assert.rejects(set(ref(guest, 'presence/guest/connections/device'), serverTimestamp()));
   await assert.rejects(set(ref(normal, 'presence/normal/connections/bad'), { profile: 'large' }));
   await assert.rejects(set(ref(normal, 'presence/normal'), { online: false }));
@@ -96,17 +112,88 @@ test('RTDB least privilege and server-only admin bootstrap/revocation', async ()
   const online = (await get(onlineQuery(viewer))).val();
   assert.ok(online.normal.connections.device);
   assert.equal(online['legacy-offline'], undefined);
+  await assert.rejects(authorizePresenceDashboard.run({
+    ...request('normal'), data: { uid: 'viewer', isAdmin: true },
+  }), error => error.code === 'permission-denied');
+  await firestore.doc('users/blocked-admin').set({ isAdmin: true, isBlocked: true });
+  await assert.rejects(authorizePresenceDashboard.run(request('blocked-admin')),
+    error => error.code === 'permission-denied');
   await firestore.doc('users/viewer').set({ isAdmin: false });
   await syncPresenceAdminRole.run({ params: { uid: 'viewer' }, data: {
     before: { data: () => ({ isAdmin: true }) }, after: { data: () => ({ isAdmin: false }) },
   } });
-  assert.equal((await admin.ref('admins/viewer').get()).val(), null);
+  assert.equal((await admin.ref('admins/viewer').get()).val().presenceDashboard, false);
   await assert.rejects(get(onlineQuery(viewer)));
   // A delayed promotion event must not restore a role already removed.
   await syncPresenceAdminRole.run({ params: { uid: 'viewer' }, data: {
     before: { data: () => ({ isAdmin: false }) }, after: { data: () => ({ isAdmin: true }) },
   } });
-  assert.equal((await admin.ref('admins/viewer').get()).val(), null);
+  assert.equal((await admin.ref('admins/viewer').get()).val().presenceDashboard, false);
+});
+
+test('rollback bridge grants legacy query only to a verified server ACL',
+  { skip: process.env.ANALYTICS_ADMIN_BRIDGE !== '1' }, async () => {
+  await firestore.doc('users/bridge-admin').set({ isAdmin: true });
+  await authorizePresenceDashboard.run({ auth: { uid: 'bridge-admin',
+    token: { firebase: { sign_in_provider: 'password' } } } });
+  const legacyQuery = db => ref(db, 'presence').orderByChild('online').equalTo(true);
+  await get(legacyQuery(client('bridge-admin')));
+  await assert.rejects(get(legacyQuery(client('ordinary-bridge-user'))));
+  await admin.ref('admins/old-boolean-admin').set(true);
+  await assert.rejects(get(legacyQuery(client('old-boolean-admin'))));
+});
+
+test('a concurrent stale grant cannot overwrite an acknowledged revocation', async () => {
+  await firestore.doc('users/racing-admin').set({ isAdmin: true });
+  let release;
+  let observed;
+  const paused = new Promise(resolve => { release = resolve; });
+  const read = new Promise(resolve => { observed = resolve; });
+  const staleGrant = syncPresenceAdminForTest('racing-admin', async () => {
+    observed();
+    await paused;
+  });
+  await read;
+  await firestore.doc('users/racing-admin').set({ isAdmin: false });
+  await syncPresenceAdminForTest('racing-admin');
+  release();
+  await staleGrant;
+  assert.equal((await admin.ref('admins/racing-admin').get()).val().presenceDashboard, false);
+  await assert.rejects(get(onlineQuery(client('racing-admin'))));
+});
+
+test('duplicate role and deletion events do not rewrite ACL; deletion beats a stale grant', async () => {
+  const doc = firestore.doc('users/replayed-admin');
+  await doc.set({ isAdmin: false });
+  const before = await doc.get();
+  await doc.set({ isAdmin: true });
+  const after = await doc.get();
+  const promotion = { params: { uid: 'replayed-admin' }, data: { before, after } };
+  await syncPresenceAdminRole.run(promotion);
+  const granted = (await admin.ref('admins/replayed-admin').get()).val();
+  await syncPresenceAdminRole.run(promotion);
+  assert.deepEqual((await admin.ref('admins/replayed-admin').get()).val(), granted);
+
+  let release;
+  let observed;
+  const paused = new Promise(resolve => { release = resolve; });
+  const read = new Promise(resolve => { observed = resolve; });
+  const staleGrant = syncPresenceAdminForTest('replayed-admin', async () => {
+    observed(); await paused;
+  });
+  await read;
+  await doc.delete();
+  const deletion = { params: { uid: 'replayed-admin' },
+    data: { before: after, after: await doc.get() } };
+  await syncPresenceAdminRole.run(deletion);
+  const denied = (await admin.ref('admins/replayed-admin').get()).val();
+  assert.equal(denied.presenceDashboard, false);
+  assert.equal(denied.checkedAt, granted.checkedAt); // Denial wins equal revision.
+  await syncPresenceAdminRole.run(deletion);
+  assert.deepEqual((await admin.ref('admins/replayed-admin').get()).val(), denied);
+  release(); await staleGrant;
+  assert.deepEqual((await admin.ref('admins/replayed-admin').get()).val(), denied);
+  await assert.rejects(get(onlineQuery(client('replayed-admin'))));
 });
 
 test('two devices share a UID; onDisconnect removes only its connection', async () => {
@@ -127,7 +214,7 @@ test('two devices share a UID; onDisconnect removes only its connection', async 
   const remaining = (await admin.ref('presence/multi/connections').get()).val();
   assert.deepEqual(Object.keys(remaining), ['ios']);
   // Normal logout removes explicitly before authentication ends.
-  await remove(second);
+  await ref(ios, 'presence/multi/connections').update({ ios: null });
   await onDisconnect(second).cancel();
   assert.equal((await admin.ref('presence/multi/connections').get()).val(), null);
   goOnline(android);

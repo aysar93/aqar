@@ -114,7 +114,9 @@ class OfficeFollowerService {
     // =====================================================
     // إنشاء متابعة جديدة
     // =====================================================
-    final reference = _followers.doc();
+    // Concurrent first follows use one relationship document. Existing legacy
+    // relationships are still found and updated above; no migration is needed.
+    final reference = _followers.doc('${officeId}_$userId');
 
     final follower = OfficeFollowerModel.create(
       id: reference.id,
@@ -345,44 +347,19 @@ class OfficeFollowerService {
   // عدد متابعي المكتب
   // ═════════════════════════════════════════════
 
-  Future<int> getFollowersCount(
-    String officeId,
-  ) async {
-    final snapshot = await _followers
-        .where(
-          'officeId',
-          isEqualTo: officeId,
-        )
-        .where(
-          'isActive',
-          isEqualTo: true,
-        )
-        .get();
-
-    return snapshot.docs.length;
+  Future<int> getFollowersCount(String officeId) async {
+    final snapshot = await _offices.doc(officeId).get();
+    return (snapshot.data()?['followersCount'] as num?)?.toInt() ?? 0;
   }
 
   // ═════════════════════════════════════════════
   // مراقبة عدد المتابعين
   // ═════════════════════════════════════════════
 
-  Stream<int> watchFollowersCount(
-    String officeId,
-  ) {
-    return _followers
-        .where(
-          'officeId',
-          isEqualTo: officeId,
-        )
-        .where(
-          'isActive',
-          isEqualTo: true,
-        )
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.length,
-        );
-  }
+  Stream<int> watchFollowersCount(String officeId) => _offices
+      .doc(officeId)
+      .snapshots()
+      .map((s) => (s.data()?['followersCount'] as num?)?.toInt() ?? 0);
 
   // ═════════════════════════════════════════════
   // جلب المكاتب التي يتابعها مستخدم
@@ -474,20 +451,9 @@ class OfficeFollowerService {
   // الموجود في المكتب والعدد الحقيقي في collection.
   // ═════════════════════════════════════════════
 
-  Future<int> syncFollowersCount(
-    String officeId,
-  ) async {
-    final count = await getFollowersCount(
-      officeId,
-    );
-
-    await _offices.doc(officeId).update({
-      'followersCount': count,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    return count;
-  }
+  // Compatibility API: reconciliation is server-managed, not a client recount.
+  Future<int> syncFollowersCount(String officeId) =>
+      getFollowersCount(officeId);
 
   // ═════════════════════════════════════════════
   // البحث عن علاقة متابعة

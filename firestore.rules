@@ -235,20 +235,35 @@ match /office_events/{eventId} {
 // متابعو المكاتب
 // ==================================================
 match /office_followers/{followerId} {
-  // السماح للجميع بقراءة المتابعين لحساب العدد
-  allow read: if true;
-
-  // إنشاء متابعة للمستخدم المسجل فقط
-  allow create: if isSignedIn()
-    && request.resource.data.userId == request.auth.uid;
-
-  // المستخدم يستطيع فقط تعديل متابعته هو
-  allow update: if isSignedIn()
-    && resource.data.userId == request.auth.uid
-    && request.resource.data.userId == request.auth.uid;
-
-  // منع الحذف المباشر
-  allow delete: if false;
+  // Only self, the office owner and an active server-authorized admin need reads.
+  function followerAdmin() {
+    return isAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false;
+  }
+  function validFollower(d) {
+    return d.keys().hasOnly(['officeId', 'userId', 'userName', 'userImageUrl', 'isActive', 'createdAt', 'updatedAt']) &&
+      d.keys().hasAll(['officeId', 'userId']) &&
+      d.officeId is string && d.officeId.size() > 0 && d.officeId.size() <= 128 &&
+      d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128 &&
+      (!('userName' in d) || (d.userName is string && d.userName.size() <= 300)) &&
+      (!('userImageUrl' in d) || (d.userImageUrl is string && d.userImageUrl.size() <= 2048)) &&
+      (!('isActive' in d) || d.isActive is bool) &&
+      (!('createdAt' in d) || d.createdAt is timestamp) &&
+      (!('updatedAt' in d) || d.updatedAt is timestamp);
+  }
+  allow read: if isSignedIn() && (followerAdmin() ||
+    resource.data.userId == request.auth.uid ||
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid);
+  allow create: if isSignedIn() && validFollower(request.resource.data) &&
+    request.resource.data.userId == request.auth.uid &&
+    request.resource.data.keys().hasAll(['isActive', 'createdAt', 'updatedAt']) &&
+    request.resource.data.isActive == true &&
+    exists(/databases/$(database)/documents/offices/$(request.resource.data.officeId));
+  allow update: if isSignedIn() && validFollower(request.resource.data) &&
+    resource.data.userId == request.auth.uid &&
+    request.resource.data.userId == resource.data.userId &&
+    request.resource.data.officeId == resource.data.officeId &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isActive', 'userName', 'userImageUrl', 'updatedAt']);
+  allow delete: if isSignedIn() && (followerAdmin() || resource.data.userId == request.auth.uid);
 }
     
     // ==================================================
@@ -318,13 +333,7 @@ match /offices/{officeId} {
 }
 // العلاقات التشغيلية للمكاتب: المالك يقرأ بيانات مكتبه، لكن الإدارة فقط
 // تعدل الاشتراك والإحصاءات. المراجعات والمتابعات محمية على مستوى صاحب السجل.
-match /office_followers/{followerId} {
-  allow read: if isSignedIn() && (isAdmin() ||
-    resource.data.userId == request.auth.uid ||
-    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid);
-  allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-  allow update, delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
-}
+
 match /office_reviews/{reviewId} {
   allow read: if true;
   allow create: if activeUser() && request.resource.data.userId == request.auth.uid && cleanContent(request.resource.data) && request.resource.data.status == 'published';
@@ -336,6 +345,12 @@ match /office_reviews/{reviewId} {
        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasOwnerReply', 'ownerReply', 'updatedAt']))));
   allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
 }
+// الباقات المتاحة للمكاتب، وتديرها الإدارة وحدها.
+match /subscription_packages/{packageId} {
+  allow read: if isSignedIn();
+  allow create, update, delete: if isAdmin();
+}
+
 match /office_subscriptions/{subscriptionId} {
 
   // الأدمن يرى جميع الاشتراكات،
@@ -348,12 +363,16 @@ match /office_subscriptions/{subscriptionId} {
 
   // صاحب المكتب يستطيع إنشاء طلب اشتراك فقط
   // لمكتبه وبحالة pending.
-  allow create: if isSignedIn() &&
+  allow create: if isAdmin() || (
+    isSignedIn() &&
     request.resource.data.ownerId == request.auth.uid &&
     request.resource.data.status == 'pending' &&
+    request.resource.data.get('paymentMethod', '') != 'gift' &&
+    !request.resource.data.keys().hasAny(['giftedBy', 'giftedAt']) &&
     get(
       /databases/$(database)/documents/offices/$(request.resource.data.officeId)
-    ).data.ownerId == request.auth.uid;
+    ).data.ownerId == request.auth.uid
+  );
 
   // الإدارة تستطيع تعديل الاشتراك بالكامل.
   //
@@ -937,6 +956,11 @@ match /chats/{chatId} {
 // ==================================================
 // جلسات وزيارات التطبيق
 // ==================================================
+function isAnalyticsAdmin() {
+  return isAdmin() &&
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false;
+}
+
 function validTrackedSession(d) {
   return d.keys().hasOnly(['visitorId', 'userId', 'displayName', 'isGuest',
       'platform', 'startedAt', 'endedAt', 'durationSeconds']) &&
@@ -985,7 +1009,7 @@ match /app_sessions/{sessionId} {
     request.resource.data.durationSeconds >= 0;
 
   // قراءة الإحصائيات والحذف للمدير فقط
-  allow read, delete: if isAdmin();
+  allow read, delete: if isAnalyticsAdmin();
 }
 
 
@@ -1038,7 +1062,7 @@ match /user_activity/{visitorId} {
         ]);
 
   // عرض قائمة النشاط وحذف السجلات للمدير فقط
-  allow read, delete: if isAdmin();
+  allow read, delete: if isAnalyticsAdmin();
 }
   }
 }

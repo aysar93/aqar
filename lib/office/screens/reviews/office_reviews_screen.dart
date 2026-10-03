@@ -26,6 +26,13 @@ class _OfficeReviewsScreenState extends State<OfficeReviewsScreen> {
 
   final ValueNotifier<String> _queryNotifier = ValueNotifier<String>('');
   int? _ratingFilter;
+  late final Stream<List<OfficeReviewModel>> _reviews;
+  @override
+  void initState() {
+    super.initState();
+    _reviews =
+        _service.watchOfficeReviews(widget.officeId, includeHidden: true);
+  }
 
   @override
   void dispose() {
@@ -80,10 +87,7 @@ class _OfficeReviewsScreenState extends State<OfficeReviewsScreen> {
                 message: 'ليس لديك صلاحية لإدارة تقييمات هذا المكتب',
               )
             : StreamBuilder<List<OfficeReviewModel>>(
-                stream: _service.watchOfficeReviews(
-                  widget.officeId,
-                  includeHidden: true,
-                ),
+                stream: _reviews,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(

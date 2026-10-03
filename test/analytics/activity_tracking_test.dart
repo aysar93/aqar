@@ -76,7 +76,7 @@ class TestVisits implements VisitTrackingService {
   }
 
   @override
-  Future<void> recordActivity(User user) async =>
+  Future<void> recordActivity(User user, {bool ensureDocument = false}) async =>
       events.add('activity:${user.uid}');
   @override
   Future<void> endSession() async {
@@ -95,6 +95,8 @@ class TestPresence implements PresenceService {
   final List<String> events;
   final TestAuth auth;
   String? uid;
+  @override
+  void invalidateDashboardAuthorization() {}
   @override
   Future<void> connect(String userId) async {
     if (uid == userId) return;
@@ -242,6 +244,7 @@ void main() {
     final service = AppActivityService(
         auth: auth, visits: visits, presence: TestPresence(events, auth));
     await service.initialize();
+    expect(events, contains('online:A'));
     service.didChangeAppLifecycleState(AppLifecycleState.resumed);
     await drain();
     expect(visits.uid, 'A');
@@ -321,6 +324,176 @@ void main() {
     await expectLater(visits.recordActivity(TestUser('B')), throwsStateError);
     await visits.recordActivity(TestUser('B'));
     expect(store.writes['user_activity/B']!.length, 2);
+  });
+
+  for (final action in [
+    'property publish',
+    'property edit',
+    'chat send',
+    'favorite add/remove'
+  ]) {
+    test('$action records only successful completion and does not block it',
+        () async {
+      final auth = TestAuth(TestUser('A'));
+      final store = WriteStore();
+      final visits =
+          VisitTrackingService(firestore: store, elapsed: () => Duration.zero);
+      final service = AppActivityService(
+          auth: auth, visits: visits, presence: TestPresence([], auth));
+      final completion = Completer<int>();
+      final result = service.recordSuccessfulAction(() => completion.future);
+      expect(store.writes, isEmpty);
+      completion.complete(42);
+      expect(await result, 42);
+      await drain();
+      expect(store.writes['user_activity/A']!.length, 1);
+      await expectLater(
+          service.recordSuccessfulAction<int>(
+              () async => throw StateError('action failed')),
+          throwsStateError);
+      await drain();
+      expect(store.writes['user_activity/A']!.length, 1);
+      expect(store.reads, 0);
+      await auth.changes.close();
+    });
+  }
+
+  test(
+      'first meaningful action repairs missing document despite cached lifecycle throttle',
+      () async {
+    final auth = TestAuth(TestUser('A'));
+    final store = WriteStore();
+    var elapsed = Duration.zero;
+    final visits =
+        VisitTrackingService(firestore: store, elapsed: () => elapsed);
+    final service = AppActivityService(
+        auth: auth, visits: visits, presence: TestPresence([], auth));
+    await visits.recordActivity(auth.currentUser!);
+    store.writes.clear(); // Simulate absence without an extra read.
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(store.writes['user_activity/A']!.length, 1);
+    elapsed = const Duration(minutes: 9);
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(store.writes['user_activity/A']!.length, 1);
+    elapsed = const Duration(minutes: 10);
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(store.writes['user_activity/A']!.length, 2);
+    expect(
+        store.writes['user_activity/A']!.last['lastSeen'], isA<FieldValue>());
+    expect(store.reads, 0);
+    await auth.changes.close();
+  });
+
+  test(
+      'concurrent meaningful actions deduplicate and rejected writes never fail the action',
+      () async {
+    final auth = TestAuth(TestUser('A'));
+    final store = WriteStore()..pending = Completer<void>();
+    final service = AppActivityService(
+        auth: auth,
+        visits: VisitTrackingService(
+            firestore: store, elapsed: () => Duration.zero),
+        presence: TestPresence([], auth));
+    await Future.wait(List.generate(
+        8, (_) => service.recordSuccessfulAction(() async => true)));
+    expect(store.writes['user_activity/A']!.length, 1);
+    store.pending!.complete();
+    await drain();
+    store.pending = null;
+    auth.currentUser = TestUser('B');
+    store.rejectNext = true;
+    expect(
+        await service.recordSuccessfulAction(() async => 'success'), 'success');
+    await drain();
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(store.writes['user_activity/B']!.length, 2);
+    await auth.changes.close();
+  });
+
+  test(
+      'no unauthenticated writes and an in-flight action is not reattributed on UID switch',
+      () async {
+    final auth = TestAuth(null);
+    final store = WriteStore();
+    final service = AppActivityService(
+        auth: auth,
+        visits: VisitTrackingService(
+            firestore: store, elapsed: () => Duration.zero),
+        presence: TestPresence([], auth));
+    await service.recordSuccessfulAction(() async {});
+    auth.currentUser = TestUser('anonymous', isAnonymous: true);
+    await service.recordSuccessfulAction(() async {});
+    auth.currentUser = TestUser('A');
+    final completion = Completer<void>();
+    final action = service.recordSuccessfulAction(() => completion.future);
+    auth.currentUser = TestUser('B');
+    completion.complete();
+    await action;
+    await drain();
+    expect(store.writes, isEmpty);
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(store.writes.keys, ['user_activity/B']);
+    await auth.changes.close();
+  });
+
+  test(
+      'startup without auth, login and identity switches reconcile without extra observers',
+      () async {
+    final auth = TestAuth(null);
+    final events = <String>[];
+    final presence = TestPresence(events, auth);
+    final store = WriteStore();
+    final service = AppActivityService(
+        auth: auth,
+        visits: VisitTrackingService(
+            firestore: store, elapsed: () => Duration.zero),
+        presence: presence);
+    await service.initialize();
+    expect(presence.uid, isNull);
+    auth.emit(TestUser('A'));
+    await drain();
+    expect(presence.uid, 'A');
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(store.writes['user_activity/A']!.length, 2);
+    await service.signOut();
+    auth.emit(TestUser('B'));
+    await drain();
+    await service.recordSuccessfulAction(() async {});
+    await drain();
+    expect(presence.uid, 'B');
+    expect(store.writes['user_activity/B']!.last['lastSessionId'],
+        isNot(store.writes['user_activity/A']!.last['lastSessionId']));
+    expect(auth.observers, 1);
+    await service.dispose();
+    await auth.changes.close();
+  });
+
+  test('restart and two devices can record the same UID with server timestamps',
+      () async {
+    final store = WriteStore();
+    for (var instance = 0; instance < 3; instance++) {
+      final auth = TestAuth(TestUser('A'));
+      final service = AppActivityService(
+          auth: auth,
+          visits: VisitTrackingService(
+              firestore: store, elapsed: () => Duration.zero),
+          presence: TestPresence([], auth));
+      await service.recordSuccessfulAction(() async {});
+      await drain();
+      await auth.changes.close();
+    }
+    expect(store.writes['user_activity/A']!.length, 3);
+    expect(
+        store.writes['user_activity/A']!
+            .every((data) => data['lastSeen'] is FieldValue),
+        isTrue);
+    expect(store.reads, 0);
   });
 
   test(

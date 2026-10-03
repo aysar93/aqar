@@ -261,7 +261,7 @@ class _HorizontalPropertiesSectionState
                               builder: (context, snapshot) {
                                 return PropertyHorizontalHomeCard(
                                   property: property,
-                                  isFavorite: snapshot.data?.exists ?? false,
+                                  isFavorite: snapshot.data ?? false,
                                   onFavorite: () async {
                                     await FavoritesService.toggleFavorite(
                                         property.id);

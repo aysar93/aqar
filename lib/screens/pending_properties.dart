@@ -1,3 +1,4 @@
+import '../core/data/paged_query.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +14,7 @@ class PendingProperties extends StatefulWidget {
 }
 
 class _PendingPropertiesState extends State<PendingProperties> {
+  final Set<String> _processed = {};
   bool isAdmin = false;
   bool loading = true;
 
@@ -70,11 +72,11 @@ class _PendingPropertiesState extends State<PendingProperties> {
         backgroundColor: const Color(0xFF0D47A1),
         centerTitle: true,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
+      body: PagedQueryBuilder<Map<String, dynamic>>(
+        query: FirebaseFirestore.instance
             .collection('properties')
-            .where('status', isEqualTo: 'pending')
-            .snapshots(),
+            .where('status', isEqualTo: 'pending'),
+        pageSize: 20,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -82,6 +84,9 @@ class _PendingPropertiesState extends State<PendingProperties> {
             );
           }
 
+          if (snapshot.hasError) {
+            return const Center(child: Text('تعذر تحميل العقارات'));
+          }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
@@ -90,13 +95,15 @@ class _PendingPropertiesState extends State<PendingProperties> {
             );
           }
 
-          final docs = snapshot.data!.docs;
+          final docs = snapshot.data!.docs
+              .where((d) => !_processed.contains(d.id))
+              .toList();
 
           return ListView.builder(
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final doc = docs[index];
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
 
               return Card(
                 margin: const EdgeInsets.all(10),
@@ -209,6 +216,9 @@ class _PendingPropertiesState extends State<PendingProperties> {
                                       .update({
                                     'status': 'approved',
                                   });
+                                  if (mounted) {
+                                    setState(() => _processed.add(doc.id));
+                                  }
 
                                   // تحديث عداد عقارات المكتب
                                   final officeId = (data['officeId'] ?? '')
@@ -218,13 +228,8 @@ class _PendingPropertiesState extends State<PendingProperties> {
                                   String officeName = '';
 
                                   if (officeId.isNotEmpty) {
-                                    await FirebaseFirestore.instance
-                                        .collection('offices')
-                                        .doc(officeId)
-                                        .update({
-                                      'propertiesCount':
-                                          FieldValue.increment(1),
-                                    });
+                                    // The approved transition is counted once
+                                    // by the server, never again by the client.
 
                                     // جلب اسم المكتب لاستخدامه داخل الإشعار.
                                     final officeSnapshot =

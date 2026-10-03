@@ -253,7 +253,9 @@ class _SubscriptionCard extends StatelessWidget {
             ),
             _SubscriptionRow(
               'حالة الدفع',
-              _paymentStatusLabel(subscription.paymentStatus),
+              subscription.paymentMethod == 'gift'
+                  ? 'هدية من الإدارة'
+                  : _paymentStatusLabel(subscription.paymentStatus),
             ),
             _SubscriptionRow(
               'تاريخ البداية',

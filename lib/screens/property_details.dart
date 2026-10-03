@@ -1,3 +1,4 @@
+import '../core/data/shared_stream.dart';
 import '../moderation/content_policy.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -15,6 +16,8 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:photo_view/photo_view.dart';
 import '../models/property_model.dart';
 import '../services/favorites_service.dart';
+import '../core/data/document_read_cache.dart';
+
 import '../features/property_map/models/property_location.dart';
 import '../features/property_map/screens/property_location_screen.dart';
 import 'publisher_properties_screen.dart';
@@ -136,6 +139,7 @@ class PropertyDetails extends StatefulWidget {
 
 class _PropertyDetailsState extends State<PropertyDetails> {
   late bool favorite;
+  StreamSubscription<bool>? _favoriteSubscription;
 
   // بيانات الناشر
   Map<String, dynamic>? publisherData;
@@ -154,6 +158,20 @@ class _PropertyDetailsState extends State<PropertyDetails> {
   bool expandedDescription = false;
   int currentViews = 0;
 
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _comments;
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _liveProperty;
+  final _replies = <String, Stream<QuerySnapshot<Map<String, dynamic>>>>{};
+  Stream<QuerySnapshot<Map<String, dynamic>>> _repliesFor(String id) =>
+      _replies.putIfAbsent(
+          id,
+          () => FirebaseFirestore.instance
+              .collection('properties')
+              .doc(widget.docId)
+              .collection('comments')
+              .doc(id)
+              .collection('replies')
+              .orderBy('createdAt', descending: true)
+              .safeSnapshots());
   bool showComments = false;
   bool allowComments = true;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
@@ -177,14 +195,31 @@ class _PropertyDetailsState extends State<PropertyDetails> {
   void initState() {
     super.initState();
 
+    _comments = SharedStream(FirebaseFirestore.instance
+            .collection('properties')
+            .doc(widget.docId)
+            .collection('comments')
+            .safeSnapshots())
+        .stream;
+    _liveProperty = (widget.docId?.isNotEmpty ?? false)
+        ? SharedStream(FirebaseFirestore.instance
+                .collection('properties')
+                .doc(widget.docId)
+                .snapshots())
+            .stream
+        : const Stream.empty();
     favorite = false;
     currentViews = widget.views;
 
-    loadFavorite();
+    if (widget.docId?.isNotEmpty ?? false) {
+      _favoriteSubscription =
+          FavoritesService.favoriteStream(widget.docId!).listen((value) {
+        if (mounted) setState(() => favorite = value);
+      }, onError: (Object error) => debugPrint('Favorite state: $error'));
+    }
     increaseViews();
     _loadPublisherData();
     _loadContactData();
-    _loadCommentsSetting();
     _commentsSettingsSubscription = FirebaseFirestore.instance
         .collection("settings")
         .doc("app_settings")
@@ -204,6 +239,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
 
   @override
   void dispose() {
+    _favoriteSubscription?.cancel();
     commentController.dispose();
     replyController.dispose();
     _commentsSettingsSubscription?.cancel();
@@ -812,23 +848,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
     if (widget.docId == null || widget.docId!.isEmpty) return;
 
     try {
-      final ref = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('favorites')
-          .doc(widget.docId);
-
-      if (favorite) {
-        await ref.delete();
-      } else {
-        await ref.set({'createdAt': FieldValue.serverTimestamp()});
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        favorite = !favorite;
-      });
+      await FavoritesService.toggleFavorite(widget.docId!);
     } catch (e) {
       debugPrint("TOGGLE FAVORITE ERROR: $e");
     }
@@ -1186,23 +1206,6 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
         ],
       ),
     );
-  }
-
-  Future<void> _loadCommentsSetting() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection("settings")
-          .doc("app_settings")
-          .get();
-
-      if (!mounted) return;
-
-      setState(() {
-        allowComments = doc.data()?["allowComments"] ?? true;
-      });
-    } catch (e) {
-      debugPrint("LOAD COMMENTS SETTING ERROR: $e");
-    }
   }
 
   Future<void> sendComment() async {
@@ -1625,14 +1628,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     ),
                   ),
                 StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection("properties")
-                      .doc(widget.docId)
-                      .collection("comments")
-                      .doc(commentId)
-                      .collection("replies")
-                      .orderBy("createdAt", descending: true)
-                      .safeSnapshots(),
+                  stream: _repliesFor(commentId),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return const SizedBox();
@@ -1818,10 +1814,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
     if (widget.docId == null || widget.docId!.isEmpty)
       return _buildContent(context);
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('properties')
-          .doc(widget.docId)
-          .snapshots(),
+      stream: _liveProperty,
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return Scaffold(
@@ -2240,12 +2233,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         // حالة التوفر
                         // =========================
                         StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: widget.docId == null || widget.docId!.isEmpty
-                              ? null
-                              : FirebaseFirestore.instance
-                                  .collection('properties')
-                                  .doc(widget.docId)
-                                  .snapshots(),
+                          stream: _liveProperty,
                           builder: (context, snapshot) {
                             final data = snapshot.data?.data();
 
@@ -3249,11 +3237,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   const SizedBox(height: 30),
 
                   StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection("properties")
-                        .doc(widget.docId)
-                        .collection("comments")
-                        .safeSnapshots(),
+                    stream: _comments,
                     builder: (context, snapshot) {
                       int count = 0;
 
@@ -3404,10 +3388,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                               // المستخدم مسجل الدخول
                               return FutureBuilder<DocumentSnapshot>(
-                                future: FirebaseFirestore.instance
-                                    .collection("users")
-                                    .doc(user.uid)
-                                    .get(),
+                                future: DocumentReadCache.instance
+                                    .get('users/${user.uid}'),
                                 builder: (context, snapshot) {
                                   String photo = "";
 
@@ -3556,18 +3538,31 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   const SizedBox(height: 20),
 
                   StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection("properties")
-                        .doc(widget.docId)
-                        .collection("comments")
-                        .orderBy("createdAt", descending: true)
-                        .safeSnapshots(),
+                    stream: _comments,
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
                       }
 
-                      final docs = snapshot.data!.docs;
+                      final docs = snapshot.data!.docs
+                          .where((d) => (d.data() as Map<String, dynamic>)
+                              .containsKey('createdAt'))
+                          .toList();
+                      docs.sort((a, b) {
+                        final x =
+                            (a.data() as Map<String, dynamic>)['createdAt'];
+                        final y =
+                            (b.data() as Map<String, dynamic>)['createdAt'];
+                        if (x is Timestamp && y is Timestamp) {
+                          final c = y.compareTo(x);
+                          if (c != 0) return c;
+                        } else if (x == null && y != null) {
+                          return 1;
+                        } else if (x != null && y == null) {
+                          return -1;
+                        }
+                        return b.id.compareTo(a.id);
+                      });
 
                       if (docs.isEmpty) {
                         return const Center(

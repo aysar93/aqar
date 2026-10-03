@@ -22,6 +22,13 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
   DocumentReference<Map<String, dynamic>> get _officeRef =>
       _firestore.collection('offices').doc(widget.officeId);
 
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _office;
+  @override
+  void initState() {
+    super.initState();
+    _office = _officeRef.snapshots();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,7 +42,7 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
         centerTitle: true,
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: _officeRef.snapshots(),
+        stream: _office,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return _buildError(
@@ -116,9 +123,11 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
 
     final isVerified = data['isVerified'] == true;
 
-    final propertyCount = _readInt(data['propertyCount']);
+    final propertyCount =
+        _readInt(data['propertiesCount'] ?? data['propertyCount']);
 
-    final followerCount = _readInt(data['followerCount']);
+    final followerCount =
+        _readInt(data['followersCount'] ?? data['followerCount']);
 
     final createdAt = _readDate(data['createdAt']);
 

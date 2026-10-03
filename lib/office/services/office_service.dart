@@ -14,7 +14,20 @@ class OfficeService {
 
   /// تحديث بيانات المكتب
   static Future<void> updateOffice(OfficeModel office) async {
-    await _offices.doc(office.id).update(office.toMap());
+    final changes = office.toMap();
+    // Editing presentation must not overwrite a server counter that changed
+    // while the form was open. Canonical summaries are server-managed.
+    for (final key in [
+      'propertiesCount',
+      'followersCount',
+      'reviewsCount',
+      'rating',
+      'ratingSum',
+      'viewsCount'
+    ]) {
+      changes.remove(key);
+    }
+    await _offices.doc(office.id).update(changes);
   }
 
   /// تحديث حقول العرض المسموح بها لصاحب المكتب فقط.

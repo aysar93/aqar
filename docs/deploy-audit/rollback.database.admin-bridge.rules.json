@@ -1,0 +1,50 @@
+{
+  "rules": {
+    "admins": {
+      "$uid": {
+        ".read": false,
+        ".write": false
+      }
+    },
+    "presence": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).child('presenceDashboard').val() == true && root.child('admins').child(auth.uid).child('version').val() == 1 && ((query.orderByChild == 'connections' && query.startAt == true) || (query.orderByChild == 'online' && query.equalTo == true))",
+      ".indexOn": [
+        "connections",
+        "online"
+      ],
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && !data.child('connections').exists() && !newData.child('connections').exists()",
+        "connections": {
+          "$connectionId": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous'",
+            ".validate": "$connectionId.length <= 64 && newData.isNumber() && newData.val() == now"
+          }
+        },
+        "online": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isBoolean()"
+        },
+        "lastSeen": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isNumber() && newData.val() == now"
+        },
+        "sessionId": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isString() && newData.val().length <= 128"
+        },
+        "platform": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isString() && newData.val().length <= 32"
+        },
+        "isGuest": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isBoolean()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

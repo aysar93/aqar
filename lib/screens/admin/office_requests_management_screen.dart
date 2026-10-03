@@ -1,3 +1,4 @@
+import '../../core/data/paged_query.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -30,6 +31,27 @@ class _OfficeRequestsManagementScreenState
 
   final TextEditingController _searchController = TextEditingController();
 
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _pendingStream;
+  final Map<OfficeRequestFilter, Stream<QuerySnapshot<Map<String, dynamic>>>>
+      _searchStreams = {};
+  final _pageKey = GlobalKey<PagedQueryBuilderState<Map<String, dynamic>>>();
+  Widget _requestsBuilder(
+      Widget Function(
+              BuildContext, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>)
+          builder) {
+    if (_searchQuery.isEmpty) {
+      return PagedQueryBuilder(
+          key: _pageKey,
+          query: _buildRequestsQuery(),
+          pageSize: 30,
+          builder: builder);
+    }
+    return StreamBuilder(
+        stream: _searchStreams.putIfAbsent(
+            _filter, () => _buildRequestsQuery().snapshots()),
+        builder: builder);
+  }
+
   String _searchQuery = '';
   OfficeRequestFilter _filter = OfficeRequestFilter.pending;
 
@@ -40,6 +62,8 @@ class _OfficeRequestsManagementScreenState
   void initState() {
     super.initState();
 
+    _pendingStream =
+        _requestsCollection.where('status', isEqualTo: 'pending').snapshots();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -173,12 +197,7 @@ class _OfficeRequestsManagementScreenState
     ColorScheme colorScheme,
   ) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _requestsCollection
-          .where(
-            'status',
-            isEqualTo: 'pending',
-          )
-          .snapshots(),
+      stream: _pendingStream,
       builder: (
         context,
         snapshot,
@@ -305,9 +324,8 @@ class _OfficeRequestsManagementScreenState
   Widget _buildRequestsList(
     BuildContext context,
   ) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _buildRequestsQuery().snapshots(),
-      builder: (
+    return _requestsBuilder(
+      (
         context,
         snapshot,
       ) {
@@ -342,11 +360,7 @@ class _OfficeRequestsManagementScreenState
 
         return RefreshIndicator(
           onRefresh: () async {
-            await _requestsCollection.limit(1).get(
-                  const GetOptions(
-                    source: Source.server,
-                  ),
-                );
+            await _pageKey.currentState?.refresh();
           },
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(

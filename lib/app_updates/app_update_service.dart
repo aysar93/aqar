@@ -35,7 +35,7 @@ class AppUpdateService {
       return null;
     }
 
-    if (latest.storeUrl.trim().isEmpty) {
+    if (latest.deviceStoreUrl.isEmpty) {
       return null;
     }
 

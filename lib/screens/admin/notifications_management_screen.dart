@@ -1,3 +1,4 @@
+import '../../core/data/paged_query.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../send_notification_screen.dart';
@@ -12,11 +13,13 @@ class NotificationsManagementScreen extends StatefulWidget {
 
 class _NotificationsManagementScreenState
     extends State<NotificationsManagementScreen> {
+  final Set<String> _deleted = {};
   Future<void> deleteNotification(String id) async {
     await FirebaseFirestore.instance
         .collection("notifications")
         .doc(id)
         .delete();
+    if (mounted) setState(() => _deleted.add(id));
   }
 
   @override
@@ -55,14 +58,11 @@ class _NotificationsManagementScreenState
           child: Column(
             children: [
               Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection("notifications")
-                      .orderBy(
-                        "createdAt",
-                        descending: true,
-                      )
-                      .snapshots(),
+                child: PagedQueryBuilder<Map<String, dynamic>>(
+                  query: FirebaseFirestore.instance
+                      .collection('notifications')
+                      .orderBy('createdAt', descending: true),
+                  pageSize: 30,
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const Center(
@@ -70,7 +70,9 @@ class _NotificationsManagementScreenState
                       );
                     }
 
-                    final docs = snapshot.data!.docs;
+                    final docs = snapshot.data!.docs
+                        .where((d) => !_deleted.contains(d.id))
+                        .toList();
 
                     if (docs.isEmpty) {
                       return const Center(
@@ -86,7 +88,7 @@ class _NotificationsManagementScreenState
                     return ListView.builder(
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
+                        final data = docs[index].data();
 
                         return Card(
                           color: const Color(0xff1E293B),

@@ -1,3 +1,4 @@
+import '../../core/data/paged_query.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -17,12 +18,96 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
 
   static const int _pageSize = 10;
 
+  late final Query<Map<String, dynamic>> _completeQuery;
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _properties;
+  PagedQueryController<Map<String, dynamic>>? _page;
+  Map<String, int>? _counts;
+  bool _countLoading = false;
+  bool _countAgain = false;
+  String? _membership;
+  @override
+  void initState() {
+    super.initState();
+    _completeQuery = FirebaseFirestore.instance
+        .collection('properties')
+        .orderBy('createdAt', descending: true);
+    _properties = _completeQuery.snapshots();
+    _configurePage();
+    _refreshCounts();
+  }
+
+  Future<void> _refreshCounts() async {
+    if (_countLoading) {
+      _countAgain = true;
+      return;
+    }
+    _countLoading = true;
+    try {
+      final statuses = ['total', 'approved', 'pending', 'rejected'];
+      final counts = await Future.wait(statuses.map((status) =>
+          (status == 'total'
+                  ? _completeQuery
+                  : _completeQuery.where('status', isEqualTo: status))
+              .count()
+              .get()));
+      if (mounted) {
+        setState(() => _counts = {
+              for (var i = 0; i < statuses.length; i++)
+                statuses[i]: counts[i].count ?? 0
+            });
+      }
+    } catch (e) {
+      debugPrint('Admin properties summary: $e');
+    } finally {
+      _countLoading = false;
+      if (_countAgain && mounted) {
+        _countAgain = false;
+        _refreshCounts();
+      }
+    }
+  }
+
+  void _pageChanged() {
+    if (!mounted) return;
+    final signature = _page?.headDocuments
+        .map((d) => '${d.id}:${d.data()['status']}')
+        .join('|');
+    if (_membership != null && _membership != signature) _refreshCounts();
+    _membership = signature;
+    setState(() {});
+  }
+
+  void _configurePage() {
+    if (_search.isNotEmpty) {
+      _page?.dispose();
+      _page = null;
+      return;
+    }
+    var query = _completeQuery;
+    final status = _statusForFilter(_selectedFilter);
+    if (status != null) query = query.where('status', isEqualTo: status);
+    if (_page?.query == query) return;
+    _page?.dispose();
+    _membership = null;
+    _page = PagedQueryController(query, pageSize: _pageSize)
+      ..addListener(_pageChanged)
+      ..start();
+  }
+
+  Widget _propertiesBuilder(
+          Widget Function(BuildContext,
+                  AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>)
+              builder) =>
+      _page == null
+          ? StreamBuilder(stream: _properties, builder: builder)
+          : builder(context, _page!.snapshot);
   String _search = '';
   String _selectedFilter = 'الكل';
   int _visibleCount = _pageSize;
 
   @override
   void dispose() {
+    _page?.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -30,6 +115,7 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
   void _changeSearch(String value) {
     setState(() {
       _search = value.trim();
+      _configurePage();
       _visibleCount = _pageSize;
     });
   }
@@ -37,6 +123,7 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
   void _changeFilter(String value) {
     setState(() {
       _selectedFilter = value;
+      _configurePage();
       _visibleCount = _pageSize;
     });
   }
@@ -44,6 +131,7 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
   void _showMore() {
     setState(() {
       _visibleCount += _pageSize;
+      _page?.loadMore();
     });
   }
 
@@ -158,15 +246,8 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
             ),
           ),
         ),
-        body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('properties')
-              .orderBy(
-                'createdAt',
-                descending: true,
-              )
-              .snapshots(),
-          builder: (context, snapshot) {
+        body: _propertiesBuilder(
+          (context, snapshot) {
             if (snapshot.hasError) {
               return _ErrorState(
                 message: 'تعذر تحميل العقارات حاليًا',
@@ -185,7 +266,8 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
             final docs = _filterDocs(allDocs);
 
             final visibleDocs = docs.take(_visibleCount).toList();
-            final hasMore = visibleDocs.length < docs.length;
+            final hasMore =
+                (_page?.hasMore ?? false) || visibleDocs.length < docs.length;
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -201,9 +283,14 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
                     child: Column(
                       children: [
                         _HeaderSummary(
-                          total: allDocs.length,
-                          shown: docs.length,
+                          total: _counts?['total'],
+                          shown: _page == null
+                              ? docs.length
+                              : (_counts?[_statusForFilter(_selectedFilter) ??
+                                      'total'] ??
+                                  docs.length),
                           documents: allDocs,
+                          counters: _counts,
                         ),
                         const SizedBox(height: 12),
                         SearchBarWidget(
@@ -256,7 +343,11 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
                   SliverToBoxAdapter(
                     child: _LoadMoreSection(
                       shown: visibleDocs.length,
-                      total: docs.length,
+                      total: _page == null
+                          ? docs.length
+                          : (_counts?[_statusForFilter(_selectedFilter) ??
+                                  'total'] ??
+                              docs.length),
                       hasMore: hasMore,
                       onPressed: _showMore,
                     ),
@@ -371,13 +462,17 @@ class _HeaderSummary extends StatelessWidget {
     required this.total,
     required this.shown,
     required this.documents,
+    this.counters,
   });
 
-  final int total;
+  final int? total;
   final int shown;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> documents;
 
-  int _count(String status) {
+  final Map<String, int>? counters;
+  int? _count(String status) {
+    if (total == null) return null;
+    if (counters != null) return counters![status];
     return documents.where((doc) {
       return doc.data()['status']?.toString().toLowerCase() == status;
     }).length;
@@ -420,7 +515,11 @@ class _HeaderSummary extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                shown == total ? '$total عقار' : '$shown من $total',
+                total == null
+                    ? '—'
+                    : shown == total
+                        ? '$total عقار'
+                        : '$shown من $total',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: .55),
                   fontSize: 10.5,
@@ -479,7 +578,7 @@ class _MiniStat extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final int value;
+  final int? value;
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +610,7 @@ class _MiniStat extends StatelessWidget {
             ),
           ),
           Text(
-            '$value',
+            value?.toString() ?? '—',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 13,
@@ -533,7 +632,7 @@ class _LoadMoreSection extends StatelessWidget {
   });
 
   final int shown;
-  final int total;
+  final int? total;
   final bool hasMore;
   final VoidCallback onPressed;
 
@@ -556,7 +655,7 @@ class _LoadMoreSection extends StatelessWidget {
       );
     }
 
-    final remaining = total - shown;
+    final remaining = (total ?? shown) - shown;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(

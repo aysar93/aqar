@@ -43,12 +43,20 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
 
   Future<(AnalyticsSummary, List<ChartPoint>)> _load() async {
     final period = _period;
-    final now = await (widget.serverNow?.call() ??
-        AppActivityService.instance.presence.serverNow());
-    _service.setServerNow(now);
-    final values =
-        await Future.wait([_service.summary(period), _service.chart(period)]);
-    return (values[0] as AnalyticsSummary, values[1] as List<ChartPoint>);
+    var stage = 'server-time (.info/serverTimeOffset)';
+    try {
+      final now = await (widget.serverNow?.call() ??
+          AppActivityService.instance.presence.serverNow());
+      _service.setServerNow(now);
+      stage = 'app_sessions (startedAt range), summary/chart';
+      final values =
+          await Future.wait([_service.summary(period), _service.chart(period)]);
+      return (values[0] as AnalyticsSummary, values[1] as List<ChartPoint>);
+    } catch (error, stack) {
+      debugPrint('Period analytics failed at $stage: $error');
+      debugPrintStack(stackTrace: stack);
+      rethrow;
+    }
   }
 
   Future<void> _refresh() async {
@@ -167,7 +175,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                   crossAxisSpacing: 12,
                                   mainAxisExtent: 158,
                                   children: [
-                                    _onlineCard(),
                                     AnalyticsStatCard(
                                       title: 'الجلسات',
                                       value: summary == null
@@ -177,7 +184,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                       subtitle: 'بدأت خلال الفترة',
                                     ),
                                     AnalyticsStatCard(
-                                      title: 'مستخدمون مسجلون',
+                                      title: 'الحسابات الفريدة',
                                       value: summary == null
                                           ? '—'
                                           : '${summary.registeredUniqueUsers}',
@@ -185,7 +192,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                       subtitle: 'حسابات فريدة ذات جلسات',
                                     ),
                                     AnalyticsStatCard(
-                                      title: 'متوسط الجلسة',
+                                      title: 'متوسط مدة الجلسة',
                                       value: summary == null ||
                                               summary.completedSessions == 0
                                           ? '—'
@@ -194,6 +201,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                       icon: Icons.timer_outlined,
                                       subtitle: 'الجلسات المكتملة فقط',
                                     ),
+                                    _onlineCard(),
                                   ],
                                 )),
                         if (snapshot.hasError) ...[
@@ -208,27 +216,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                           const SizedBox(height: 16),
                           const LinearProgressIndicator(minHeight: 2),
                         ] else ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                                color: AppTheme.cardColor,
-                                borderRadius: BorderRadius.circular(16)),
-                            child: Row(children: [
-                              const Icon(Icons.account_circle_outlined,
-                                  color: AppTheme.primaryColor, size: 22),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                  child: Text('جلسات المسجلين',
-                                      style:
-                                          TextStyle(color: AppTheme.textGrey))),
-                              Text('${summary.registeredUsers}',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w700)),
-                            ]),
-                          ),
                           const SizedBox(height: 16),
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -267,12 +254,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                             trailing: const Icon(Icons.chevron_left_rounded,
                                 color: AppTheme.primaryColor),
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        const Text(
-                          'بيانات الزوار غير المسجلين غير مكتملة حاليًا؛ لا تشمل هذه المؤشرات جميع زوار التطبيق.',
-                          style: TextStyle(
-                              color: Colors.white54, fontSize: 11, height: 1.7),
                         ),
                       ],
                     );

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'office_details_admin_screen.dart';
 import 'office_requests_management_screen.dart';
 import 'office_subscriptions_management_screen.dart';
+import 'office_gift_subscription_dialog.dart';
 
 /// لوحة الإدارة الرئيسية للمكاتب.
 ///
@@ -37,12 +39,36 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   String _searchQuery = '';
+  final Map<String, int> _pendingSubscriptions = {};
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _pendingListener;
 
   OfficeFilter _filter = OfficeFilter.all;
 
   @override
   void initState() {
     super.initState();
+    _pendingListener = _firestore
+        .collection('office_subscriptions')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      setState(() {
+        _pendingSubscriptions.clear();
+        for (final doc in snapshot.docs) {
+          final officeId = (doc.data()['officeId'] ?? '').toString();
+          if (officeId.isNotEmpty) {
+            _pendingSubscriptions.update(officeId, (total) => total + 1,
+                ifAbsent: () => 1);
+          }
+        }
+      });
+    }, onError: (Object error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('تعذر تحميل تنبيهات طلبات الاشتراك'),
+      ));
+    });
 
     _searchController.addListener(
       _onSearchChanged,
@@ -51,6 +77,7 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
 
   @override
   void dispose() {
+    _pendingListener?.cancel();
     _searchController
       ..removeListener(
         _onSearchChanged,
@@ -706,6 +733,19 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if ((_pendingSubscriptions[doc.id] ?? 0) > 0) ...[
+                          ActionChip(
+                            avatar: const Icon(Icons.notifications_active,
+                                color: Colors.red, size: 16),
+                            label: Text(
+                              'طلب اشتراك (${_pendingSubscriptions[doc.id]})',
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                            onPressed: () =>
+                                _openOfficeSubscription(context, doc.id),
+                          ),
+                          const SizedBox(height: 5),
+                        ],
                         Row(
                           children: [
                             Expanded(
@@ -779,7 +819,7 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
                       );
                     },
                     itemBuilder: (context) {
-                      final isFeatured = doc.data()?['isFeatured'] == true;
+                      final isFeatured = doc.data()['isFeatured'] == true;
                       return [
                         const PopupMenuItem(
                           value: OfficeAction.details,
@@ -803,6 +843,14 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
                             title: Text(
                               'إدارة الاشتراك',
                             ),
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: OfficeAction.giftSubscription,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.card_giftcard),
+                            title: Text('إهداء باقة اشتراك'),
                           ),
                         ),
                         const PopupMenuItem(
@@ -1206,6 +1254,14 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
         );
         break;
 
+      case OfficeAction.giftSubscription:
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => OfficeGiftSubscriptionDialog(officeId: doc.id),
+        );
+        break;
+
       case OfficeAction.toggleStatus:
         await _toggleOfficeStatus(
           context,
@@ -1256,7 +1312,7 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     _showMessage(
       context,
@@ -1363,7 +1419,7 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
 
     await _firestore.collection('offices').doc(doc.id).delete();
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     _showMessage(
       context,
@@ -1660,6 +1716,7 @@ enum OfficeFilter {
 enum OfficeAction {
   details,
   subscription,
+  giftSubscription,
   toggleStatus,
   toggleFeatured,
   delete,

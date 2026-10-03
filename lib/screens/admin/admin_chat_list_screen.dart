@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -20,7 +21,10 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
 
   String _search = '';
   int _tab = 0;
-  late Future<Map<String, Map<String, dynamic>>> _usersFuture;
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _chatsStream;
+  String? _profilesKey;
+  DateTime? _profilesAt;
+  Future<Map<String, Map<String, dynamic>>>? _profiles;
 
   Query<Map<String, dynamic>> get _chatsQuery => FirebaseFirestore.instance
       .collection('chats')
@@ -29,14 +33,43 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   @override
   void initState() {
     super.initState();
-    _usersFuture = _loadUsers();
+    _chatsStream = _chatsQuery.snapshots();
   }
 
-  Future<Map<String, Map<String, dynamic>>> _loadUsers() async {
-    final snapshot = await FirebaseFirestore.instance.collection('users').get();
-    return {
-      for (final doc in snapshot.docs) doc.id: doc.data(),
-    };
+  Future<Map<String, Map<String, dynamic>>> _loadUsers(
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    final ids = docs
+        .map((d) => (d.data()['userId'] ?? d.id).toString())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final actor = FirebaseAuth.instance.currentUser?.uid;
+    final key = '$actor|${ids.join('|')}';
+    if (_profilesKey == key &&
+        _profilesAt != null &&
+        DateTime.now().difference(_profilesAt!) < const Duration(minutes: 5)) {
+      return _profiles!;
+    }
+    _profilesKey = key;
+    _profilesAt = DateTime.now();
+    return _profiles = () async {
+      final users = <String, Map<String, dynamic>>{};
+      for (var i = 0; i < ids.length; i += 30) {
+        final result = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId,
+                whereIn: ids.sublist(i, (i + 30).clamp(0, ids.length)))
+            .get();
+        if (FirebaseAuth.instance.currentUser?.uid != actor) {
+          return <String, Map<String, dynamic>>{};
+        }
+        for (final doc in result.docs) {
+          users[doc.id] = doc.data();
+        }
+      }
+      return users;
+    }();
   }
 
   String _firstNonEmpty(Iterable<dynamic> values, [String fallback = '']) {
@@ -239,15 +272,16 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
             _buildSearch(),
             _buildFilters(),
             Expanded(
-              child: FutureBuilder<Map<String, Map<String, dynamic>>>(
-                future: _usersFuture,
-                builder: (context, usersSnapshot) {
-                  final users =
-                      usersSnapshot.data ?? <String, Map<String, dynamic>>{};
-
-                  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: _chatsQuery.snapshots(),
-                    builder: (context, snapshot) {
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _chatsStream,
+                builder: (context, snapshot) {
+                  return FutureBuilder<Map<String, Map<String, dynamic>>>(
+                    future: snapshot.hasData
+                        ? _loadUsers(snapshot.data!.docs)
+                        : null,
+                    builder: (context, usersSnapshot) {
+                      final users = usersSnapshot.data ??
+                          <String, Map<String, dynamic>>{};
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
                           child: CircularProgressIndicator(color: _gold),

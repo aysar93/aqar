@@ -15,6 +15,9 @@ import '../widgets/home/categories_section.dart';
 import 'property_details.dart';
 import 'edit_property/edit_property_screen.dart';
 import '../services/favorites_service.dart';
+import '../core/data/paged_query.dart';
+import '../core/data/property_catalog_query.dart';
+import '../core/data/property_text_search.dart';
 import '../office/screens/offices_screen.dart';
 
 const String adminEmail = "aysar.aliraqe@gmail.com";
@@ -48,118 +51,66 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
   String selectedAdType = "الكل";
   bool showFilters = false;
   bool featuredOnly = false;
-  int _visibleCount = 10;
+  int _visibleCount = 20;
+  PagedQueryController<Map<String, dynamic>>? _catalog;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _completeSearchStream;
+  late Query<Map<String, dynamic>> _completeQuery;
 
-  /// يوحّد النص العربي حتى لا تمنع اختلافات الكتابة ظهور النتيجة.
-  /// مثال: "للإيجار" و"للايجار"، والأرقام العربية والإنجليزية.
-  String _normalizeSearchText(Object? value) {
-    var text = (value ?? '').toString().toLowerCase().trim();
-
-    const replacements = <String, String>{
-      'أ': 'ا',
-      'إ': 'ا',
-      'آ': 'ا',
-      'ٱ': 'ا',
-      'ى': 'ي',
-      'ؤ': 'و',
-      'ئ': 'ي',
-      'ة': 'ه',
-      '٠': '0',
-      '١': '1',
-      '٢': '2',
-      '٣': '3',
-      '٤': '4',
-      '٥': '5',
-      '٦': '6',
-      '٧': '7',
-      '٨': '8',
-      '٩': '9',
-      '۰': '0',
-      '۱': '1',
-      '۲': '2',
-      '۳': '3',
-      '۴': '4',
-      '۵': '5',
-      '۶': '6',
-      '۷': '7',
-      '۸': '8',
-      '۹': '9',
-    };
-
-    replacements.forEach((from, to) {
-      text = text.replaceAll(from, to);
-    });
-
-    // حذف التشكيل والتطويل، وتحويل الرموز والفواصل إلى مسافات.
-    text = text
-        .replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]'), '')
-        .replaceAll(RegExp(r'[^\u0600-\u06FFa-z0-9]+'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-
-    return text;
+  void _catalogChanged() {
+    if (mounted) setState(() {});
   }
 
-  String _searchablePropertyText(
-    String documentId,
-    Map<String, dynamic> data,
-  ) {
-    const searchableFields = <String>[
-      'title',
-      'location',
-      'city',
-      'governorate',
-      'district',
-      'areaName',
-      'neighborhood',
-      'landmark',
-      'propertyType',
-      'adType',
-      'description',
-      'adNumber',
-      'propertyNumber',
-      'propertyNo',
-      'price',
-      'area',
-      'rooms',
-      'bathrooms',
-      'frontage',
-      'depth',
-      'buildYear',
-      'documentType',
-      'furnitureStatus',
-      'publisherName',
-      'officeName',
-      'features',
-    ];
-
-    final values = <Object?>[documentId];
-    for (final field in searchableFields) {
-      final value = data[field];
-      if (value is Iterable) {
-        values.addAll(value);
-      } else {
-        values.add(value);
-      }
+  void _configureCatalog() {
+    final plan = PropertyCatalogQuery(
+        officeId: widget.officeId,
+        category: selectedCategory,
+        adType: selectedAdType,
+        featured: featuredOnly,
+        search: search,
+        sort: sortBy,
+        mode: widget.mode);
+    final complete = plan.candidates(FirebaseFirestore.instance);
+    // Retain a stable complete candidate stream while text is typed.
+    // Structured predicates never restrict search to the loaded cursor pages.
+    if (_completeQuery != complete) {
+      _completeQuery = complete;
+      _completeSearchStream = complete.safeSnapshots();
     }
-
-    return _normalizeSearchText(values.join(' '));
+    if (!plan.bounded) {
+      _catalog?.dispose();
+      _catalog = null;
+      return;
+    }
+    final query = plan.pageQuery(FirebaseFirestore.instance);
+    if (_catalog?.query == query) return;
+    _catalog?.dispose();
+    _visibleCount = 20;
+    _catalog = PagedQueryController(query,
+        pageSize: 20,
+        safe: true,
+        matches: (data) => data['status'] == 'approved');
+    _catalog!.addListener(_catalogChanged);
+    _catalog!.start();
   }
 
-  bool _matchesPropertySearch(
-    String documentId,
-    Map<String, dynamic> data,
-  ) {
-    final normalizedQuery = _normalizeSearchText(search.replaceAll('#', ' '));
-    if (normalizedQuery.isEmpty) return true;
-
-    final searchableText = _searchablePropertyText(documentId, data);
-    final words =
-        normalizedQuery.split(' ').where((word) => word.isNotEmpty).toList();
-
-    // كل كلمة يمكن أن توجد في حقل مختلف؛ مثل "بيت للبيع الحوز 200".
-    return words.every(searchableText.contains);
+  Widget _catalogBuilder(
+      Widget Function(
+              BuildContext, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>)
+          builder) {
+    final catalog = _catalog;
+    if (catalog != null) return builder(context, catalog.snapshot);
+    return StreamBuilder(stream: _completeSearchStream, builder: builder);
   }
+
+  @override
+  void dispose() {
+    _catalog?.dispose();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  bool _matchesPropertySearch(String id, Map<String, dynamic> data) =>
+      PropertyTextSearch.matches(search, id, data);
 
   @override
   void initState() {
@@ -181,6 +132,15 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
         sortBy = "الأكثر مشاهدة";
         break;
     }
+    Query<Map<String, dynamic>> complete = FirebaseFirestore.instance
+        .collection('properties')
+        .where('status', isEqualTo: 'approved');
+    if (widget.officeId?.trim().isNotEmpty ?? false) {
+      complete = complete.where('officeId', isEqualTo: widget.officeId!.trim());
+    }
+    _completeSearchStream = complete.safeSnapshots();
+    _completeQuery = complete;
+    _configureCatalog();
   }
 
   @override
@@ -207,31 +167,15 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
       ),
       body: AqarRefreshIndicator(
         onRefresh: () async {
-          await Future.delayed(
-            const Duration(milliseconds: 500),
-          );
+          if (_catalog != null) {
+            await _catalog!.refresh();
+          } else {
+            setState(
+                () => _completeSearchStream = _completeQuery.safeSnapshots());
+          }
         },
-        child: StreamBuilder<QuerySnapshot>(
-          stream: widget.officeId != null && widget.officeId!.trim().isNotEmpty
-              ? FirebaseFirestore.instance
-                  .collection("properties")
-                  .where(
-                    "status",
-                    isEqualTo: "approved",
-                  )
-                  .where(
-                    "officeId",
-                    isEqualTo: widget.officeId!.trim(),
-                  )
-                  .safeSnapshots()
-              : FirebaseFirestore.instance
-                  .collection("properties")
-                  .where(
-                    "status",
-                    isEqualTo: "approved",
-                  )
-                  .safeSnapshots(),
-          builder: (context, snapshot) {
+        child: _catalogBuilder(
+          (context, snapshot) {
             if (snapshot.hasError) {
               return const Center(
                 child: Text(
@@ -254,7 +198,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
             final docs = snapshot.data!.docs;
 
             final filteredDocs = docs.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
 
               final propertyType = (data["propertyType"] ?? "").toString();
 
@@ -278,58 +222,68 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                   matchesFeatured;
             }).toList();
 
-            filteredDocs.sort((a, b) {
-              final dataA = a.data() as Map<String, dynamic>;
-              final dataB = b.data() as Map<String, dynamic>;
+            // Cursor pages already have the complete server order, including
+            // document-name ties. Local sorting is only for substring search.
+            if (_catalog == null) {
+              filteredDocs.sort((a, b) {
+                final dataA = a.data();
+                final dataB = b.data();
 
-              // إجبار الترتيب حسب الصفحة المفتوحة
-              if (widget.mode == "views") {
-                return ((dataB["views"] ?? 0) as num)
-                    .compareTo((dataA["views"] ?? 0) as num);
-              }
-
-              if (widget.mode == "latest") {
-                final aTime = dataA["createdAt"] as Timestamp?;
-                final bTime = dataB["createdAt"] as Timestamp?;
-
-                if (aTime == null || bTime == null) return 0;
-
-                return bTime.compareTo(aTime);
-              }
-
-              // الترتيب العادي داخل صفحة جميع العقارات
-              switch (sortBy) {
-                case "الأعلى سعراً":
-                  return ((dataB["price"] ?? 0) as num)
-                      .compareTo((dataA["price"] ?? 0) as num);
-
-                case "الأقل سعراً":
-                  return ((dataA["price"] ?? 0) as num)
-                      .compareTo((dataB["price"] ?? 0) as num);
-
-                case "الأكثر مشاهدة":
+                // إجبار الترتيب حسب الصفحة المفتوحة
+                if (widget.mode == "views") {
                   return ((dataB["views"] ?? 0) as num)
                       .compareTo((dataA["views"] ?? 0) as num);
+                }
 
-                default:
+                if (widget.mode == "latest") {
                   final aTime = dataA["createdAt"] as Timestamp?;
                   final bTime = dataB["createdAt"] as Timestamp?;
 
                   if (aTime == null || bTime == null) return 0;
 
                   return bTime.compareTo(aTime);
-              }
-            });
+                }
+
+                // الترتيب العادي داخل صفحة جميع العقارات
+                switch (sortBy) {
+                  case "الأعلى سعراً":
+                    return ((dataB["price"] ?? 0) as num)
+                        .compareTo((dataA["price"] ?? 0) as num);
+
+                  case "الأقل سعراً":
+                    return ((dataA["price"] ?? 0) as num)
+                        .compareTo((dataB["price"] ?? 0) as num);
+
+                  case "الأكثر مشاهدة":
+                    return ((dataB["views"] ?? 0) as num)
+                        .compareTo((dataA["views"] ?? 0) as num);
+
+                  default:
+                    final aTime = dataA["createdAt"] as Timestamp?;
+                    final bTime = dataB["createdAt"] as Timestamp?;
+
+                    if (aTime == null || bTime == null) return 0;
+
+                    return bTime.compareTo(aTime);
+                }
+              });
+            }
 
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.viewPaddingOf(context).bottom,
+              ),
               children: [
                 SearchSection(
                   controller: searchController,
                   onChanged: (value) {
                     setState(() {
                       search = value.toLowerCase();
-                      _visibleCount = 10;
+                      _configureCatalog();
+                      _visibleCount = 20;
                     });
                   },
                   onFilterTap: () {
@@ -356,6 +310,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       }
 
                       selectedCategory = category;
+                      _configureCatalog();
                     });
                   },
                 ),
@@ -477,6 +432,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                     onSelected: (_) {
                                       setState(() {
                                         sortBy = item;
+                                        _configureCatalog();
                                       });
                                     },
                                   ));
@@ -540,6 +496,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                 onSelected: (_) {
                                   setState(() {
                                     selectedAdType = item;
+                                    _configureCatalog();
                                   });
                                 },
                               ),
@@ -580,7 +537,9 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          "تم العثور على ${filteredDocs.length} عقار",
+                          _catalog == null
+                              ? "تم العثور على ${filteredDocs.length} عقار"
+                              : "تم تحميل ${filteredDocs.length} عقار",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 17,
@@ -604,6 +563,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                       onPressed: () {
+                        if (_catalog?.loadingMore ?? false) return;
                         searchController.clear();
 
                         setState(() {
@@ -611,6 +571,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                           selectedCategory = "الكل";
                           selectedAdType = "الكل";
                           sortBy = "الأحدث";
+                          _configureCatalog();
                         });
                       },
                       icon: const Icon(
@@ -682,7 +643,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
 
                       final doc = filteredDocs[index];
 
-                      final data = doc.data() as Map<String, dynamic>;
+                      final data = doc.data();
 
                       final PropertyModel property = propertyFromMap(
                         data,
@@ -694,7 +655,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                         child: RepaintBoundary(
                           child: Stack(
                             children: [
-                              StreamBuilder<DocumentSnapshot>(
+                              StreamBuilder<bool>(
                                 stream: FavoritesService.favoriteStream(doc.id),
                                 builder: (context, favSnapshot) {
                                   return PropertyCard(
@@ -722,8 +683,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                     docId: doc.id,
                                     availabilityStatus:
                                         property.availabilityStatus,
-                                    isFavorite:
-                                        favSnapshot.data?.exists ?? false,
+                                    isFavorite: favSnapshot.data ?? false,
                                     onTap: () {
                                       Navigator.push(
                                         context,
@@ -738,8 +698,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                                         ?.toInt() ??
                                                     0,
                                             isFavorite:
-                                                favSnapshot.data?.exists ??
-                                                    false,
+                                                favSnapshot.data ?? false,
                                             imageUrl: data["imageUrl"] ?? "",
                                             title: data["title"] ?? "",
                                             location: data["location"] ?? "",
@@ -786,7 +745,9 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                             publisherWhatsapp:
                                                 data["publisherWhatsapp"] ?? "",
                                             publisherUid:
-                                                (data["publisherUid"] ?? data["userId"] ?? "")
+                                                (data["publisherUid"] ??
+                                                        data["userId"] ??
+                                                        "")
                                                     .toString(),
                                             publisherName:
                                                 (data["publisherName"] ?? "")
@@ -1025,21 +986,24 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       );
                     },
                   ),
-                if (filteredDocs.length > _visibleCount) ...[
+                if ((_catalog?.hasMore ?? false) ||
+                    filteredDocs.length > _visibleCount) ...[
                   const SizedBox(height: 6),
                   Center(
                     child: OutlinedButton.icon(
                       onPressed: () {
                         setState(() {
-                          _visibleCount += 10;
+                          if (_catalog?.loadingMore ?? false) return;
+                          _visibleCount += 20;
+                          _catalog?.loadMore();
                         });
                       },
                       icon: const Icon(
                         Icons.expand_more_rounded,
                         size: 18,
                       ),
-                      label: Text(
-                        'عرض المزيد (${filteredDocs.length - _visibleCount})',
+                      label: const Text(
+                        'عرض المزيد',
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xffD4AF37),

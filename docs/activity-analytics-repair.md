@@ -1,6 +1,8 @@
 # تقرير إصلاح إحصائيات النشاط — عقارات الانبار
 
-التاريخ: 2026-10-02. الحالة: تنفيذ محلي واختبارات؛ دون نشر قواعد أو Functions أو فهارس، ودون تعديل بيانات الإنتاج أو Commit أو Push.
+> تحديث المراجعة النهائية: [FINAL DEPLOY AUDIT](activity-final-deploy-audit.md) يثبت Production baseline ويحدّث Call counts إلى Cache نجاح 10 دقائق، ونتائج Flutter إلى 28 اختبارًا. هذه النسخة تحتوي تفاصيل المرحلة السابقة؛ التقرير النهائي هو المرجع للنشر والرجوع.
+
+التاريخ: 2026-10-03، بعد مراجعة ما قبل النشر. الحالة: تنفيذ محلي واختبارات؛ دون نشر قواعد أو Functions أو فهارس أو تعديل بيانات الإنتاج من هذه المهمة.
 
 ## النتيجة
 
@@ -72,7 +74,7 @@ pause/hidden/detached تنهي الجلسة والاتصال؛ resumed تبدأ 
 presence/UID/connections/PUSH_ID = Server Timestamp
 ```
 
-لا يُخزن ملف المستخدم داخل Presence. كل foreground connection يملك Push ID مستقلًا. تسجيل onDisconnect.remove يسبق كتابة timestamp. إنهاء جهاز يحذف مساره فقط؛ يبقى UID Online إن بقي اتصال آخر.
+لا يُخزن ملف المستخدم داخل Presence. كل اتصال فعلي يملك Push ID مستقلًا يتغير عند إعادة الاتصال بالشبكة، حتى لا يحذف تنظيف اتصال قديم الاتصال الجديد. تسجيل onDisconnect.remove يسبق كتابة timestamp. إنهاء جهاز يحذف معرّفات اتصالات هذه النسخة فقط بتحديث واحد؛ يبقى UID Online إن بقي اتصال جهاز آخر.
 
 .info/connected يعيد النشر عند عودة الاتصال. يوجد كذلك Listener صغير لمسار الاتصال الخاص بهذه النسخة، للمحافظة على الاتصال دون heartbeat writes، وفق توصية Firebase الخاصة بحضور Android. ليس Listener لكل مستخدم في لوحة الإدارة.
 
@@ -94,9 +96,9 @@ RTDB يرتب maps بعد القيم البدائية، بينما connections �
 
 لا تستطيع قواعد RTDB قراءة Firestore مباشرةً. بقي المصدر الموثوق users/UID.isAdmin، مع رفض المشرف المحظور.
 
-authorizePresenceDashboard يقرأ وثيقة الحساب الحالية من الخادم، ويكتب داخل admins/UID تأكيدًا خادميًا {presenceDashboard: true, version: 1} فقط إذا كان الحساب مشرفًا مسموحًا. قيم true القديمة وحدها لا تمنح القراءة، فلا نفترض أن ACL القديم مصان. خلاف ذلك يزيل ACL ويعيد permission-denied. العميل لا يستطيع كتابة admins.
+authorizePresenceDashboard يقرأ وثيقة الحساب الحالية من الخادم، ويكتب داخل admins/UID تأكيدًا خادميًا {presenceDashboard: true, version: 1, checkedAt: SERVER_READ_TIME_MICROS} فقط إذا كان الحساب مشرفًا مسموحًا. قيم true القديمة وحدها لا تمنح القراءة، فلا نفترض أن ACL القديم مصان. خلاف ذلك يُبقي سجل منع presenceDashboard:false مع checkedAt ويعيد permission-denied. العميل لا يستطيع كتابة admins. معاملة RTDB تمنع قراءة خادمية أقدم من تجاوز قرار أحدث؛ وفي تعادل الوقت تكون الأولوية للمنع. سجل المنع الصغير ضروري حتى لا يعيد منح متأخر إنشاء صلاحية مسحوبة.
 
-syncPresenceAdminRole تعمل عند تغيير isAdmin/isBlocked أو حذف الحساب. تقرأ الوثيقة الحالية بدل الاعتماد على حدث قديم، وتحدّث ACL أو تزيلها. إنشاء الحسابات العادية وتعديل بياناتها أو حظرها لا ينفذ I/O إضافيًا داخل الوظيفة. وأحداث تعديل الاسم/Token/lastLogin لا تنفّذ I/O إضافيًا أيضًا؛ لكنها تظل استدعاءات trigger.
+syncPresenceAdminRole تعمل عند تغيير isAdmin/isBlocked أو حذف حساب مشرف. تقرأ الوثيقة الحالية بدل الاعتماد على حدث قديم، وتحدّث ACL أو تسجل المنع. إنشاء الحسابات العادية وتعديل بياناتها أو حظرها لا ينفذ I/O إضافيًا داخل الوظيفة. وأحداث تعديل الاسم/Token/lastLogin لا تنفّذ I/O إضافيًا أيضًا؛ لكنها تظل استدعاءات trigger. يوجد حد maxInstances=3 وtimeoutSeconds=30 لكل وظيفة؛ ليس حدًا ماليًا أو Rate Limit. App Check غير مفعّل؛ خطر الاستدعاءات المسيئة مصنف MEDIUM في المراجعة.
 
 سحب الصلاحية عبر trigger غير متزامن وله تأخر نشر/تنفيذ محتمل. يجب نشر الوظيفة مع القواعد؛ نشر القواعد وحدها لا يصلح صيانة ACL.
 
@@ -153,7 +155,7 @@ user_activity
 | Foreground بعد background | 0 | 1 Session + 0/1 Activity | اتصال جديد + تسجيل onDisconnect |
 | Background | 0 | 1 إنهاء Session | حذف الاتصال + إلغاء onDisconnect والاشتراكات |
 | 30 minutes foreground دون أحداث أو reconnect | 0 | 0 إضافية دورية | لا data writes من التطبيق؛ تبقى مراقبة الاتصال والـSDK transport |
-| Open analytics dashboard | S، أو 0 من Cache؛ +1 قراءة خادمية للتحقق من المشرف لكل اشتراك عداد جديد | 0 Firestore | 1 ACL write من الوظيفة، 1 Listener بيانات لحسابات connections فقط، وقراءة offset صغيرة |
+| Open analytics dashboard | S، أو 0 من Cache؛ +1 قراءة خادمية للتحقق من المشرف لكل اشتراك عداد جديد | 0 Firestore | معاملة ACL: قراءة صغيرة + كتابة، وقد تتكرر المحاولة عند التداخل؛ 1 Listener بيانات لحسابات connections فقط، وقراءة offset صغيرة |
 | Open active users | حتى 30 Activity + P Profiles، P<=30 | 0 | قراءة offset صغيرة؛ عداد اللوحة موقوف أثناء تغطيتها |
 | Load next 30 users | حتى 30 Activity + P Profiles، P<=30 | 0 | 0 إضافية |
 
@@ -188,8 +190,8 @@ Presence reconnect لا يُنشئ جلسة Firestore جديدة ولا يحدث
 - flutter analyze على المشروع: 170 diagnostics في تلك الجولة؛ أُصلحت الملاحظة المتعلقة بالتعديل الجديد. بقيت ملاحظات المشروع خارج النطاق دون تغييرات.
 - flutter analyze --no-pub lib/analytics test/analytics: No issues found.
 - flutter test test/analytics --concurrency=1 --no-pub: 26 اختبارًا ناجحًا، تشمل مقارنات صور الواجهة.
-- اختبارات Firestore emulator: 10 اختبارات ناجحة، منها 4 اختبارات Activity/Session/Provider و6 Regression لقواعد التقارير السابقة.
-- اختبارات RTDB/Functions emulator: 3 اختبارات تكامل ناجحة، تضم صلاحيات/سحب دور/تعدد أجهزة/onDisconnect/مصفوفة Providers.
+- اختبارات Firestore emulator بعد مراجعة ما قبل النشر: 11 اختبارًا ناجحًا، منها 5 اختبارات Activity/Session/Provider/Authority و6 Regression لقواعد التقارير السابقة.
+- اختبارات RTDB/Functions emulator بعد المراجعة: 4 اختبارات تكامل ناجحة، تضم صلاحيات/سحب دور/تداخل منح وسحب/تعدد أجهزة/onDisconnect/مصفوفة Providers.
 - git diff --check على نطاق التعديل: ناجح.
 - لم أشغّل APK/IPA Build: التغيير لا يضيف native dependencies؛ اختبارات Flutter جمعت الكود والشاشات، والتحليل راجع الربط. لا يمكنني التحقق من OAuth الحقيقي أو أجهزة iOS على هذا الجهاز Windows.
 

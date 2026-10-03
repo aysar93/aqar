@@ -1,11 +1,42 @@
+import 'dart:async';
+import '../core/data/paged_query.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/aqar_refresh_indicator.dart';
 import '../services/notification_navigation_service.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final _pageKey = GlobalKey<PagedQueryBuilderState<Map<String, dynamic>>>();
+  final Set<String> _locallyRead = {}, _locallyDeleted = {};
+  StreamSubscription<User?>? _auth;
+  String? _uid;
+  @override
+  void initState() {
+    super.initState();
+    _uid = FirebaseAuth.instance.currentUser?.uid;
+    _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user?.uid == _uid || !mounted) return;
+      setState(() {
+        _uid = user?.uid;
+        _locallyRead.clear();
+        _locallyDeleted.clear();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _auth?.cancel();
+    super.dispose();
+  }
 
   IconData getNotificationIcon(String type) {
     switch (type) {
@@ -128,12 +159,11 @@ class NotificationsScreen extends StatelessWidget {
       ),
       body: AqarRefreshIndicator(
         onRefresh: () async {
-          await Future.delayed(
-            const Duration(milliseconds: 500),
-          );
+          await _pageKey.currentState?.refresh();
         },
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
+        child: PagedQueryBuilder<Map<String, dynamic>>(
+          key: _pageKey,
+          query: FirebaseFirestore.instance
               .collection('notifications')
               .where(
                 'userId',
@@ -142,8 +172,7 @@ class NotificationsScreen extends StatelessWidget {
               .orderBy(
                 'createdAt',
                 descending: true,
-              )
-              .snapshots(),
+              ),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return Center(
@@ -166,7 +195,9 @@ class NotificationsScreen extends StatelessWidget {
               );
             }
 
-            final docs = snapshot.data!.docs;
+            final docs = snapshot.data!.docs
+                .where((d) => !_locallyDeleted.contains(d.id))
+                .toList();
 
             if (docs.isEmpty) {
               return ListView(
@@ -216,11 +247,12 @@ class NotificationsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               itemCount: docs.length,
               itemBuilder: (context, index) {
-                final data = docs[index].data() as Map<String, dynamic>;
+                final data = docs[index].data();
 
                 final List readBy = data['readBy'] ?? [];
 
-                final isRead = readBy.contains(uid);
+                final isRead = _locallyRead.contains(docs[index].id) ||
+                    readBy.contains(uid);
 
                 final createdAt = data['createdAt'] as Timestamp?;
 
@@ -246,6 +278,7 @@ class NotificationsScreen extends StatelessWidget {
                     ),
                   ),
                   onDismissed: (_) async {
+                    setState(() => _locallyDeleted.add(docs[index].id));
                     await FirebaseFirestore.instance
                         .collection('notifications')
                         .doc(docs[index].id)
@@ -268,6 +301,9 @@ class NotificationsScreen extends StatelessWidget {
                             .update({
                           'readBy': FieldValue.arrayUnion([uid]),
                         });
+                        if (mounted) {
+                          setState(() => _locallyRead.add(docs[index].id));
+                        }
                       }
 
                       if (!context.mounted) return;

@@ -319,76 +319,8 @@ if (!token) {
   }
 );
 
-// تُدار عدادات المكتب في الخادم حصراً. هذا يمنع فشل المتابعة أو التقييم
-// بسبب قواعد العميل، ويجعلها صحيحة حتى عند تعديل/حذف سجل قديم.
-async function refreshOfficeMetrics(officeId, { followers = false, reviews = false, properties = false }) {
-  if (!officeId) return null;
-
-  const officeRef = db.collection("offices").doc(officeId);
-  const office = await officeRef.get();
-  if (!office.exists) return null;
-
-  const updates = { updatedAt: new Date() };
-
-  if (followers) {
-    const snapshot = await db.collection("office_followers")
-      .where("officeId", "==", officeId)
-      .where("isActive", "==", true)
-      .get();
-    updates.followersCount = snapshot.size;
-  }
-
-  if (reviews) {
-    const snapshot = await db.collection("office_reviews")
-      .where("officeId", "==", officeId)
-      .where("status", "==", "published")
-      .get();
-    const ratings = snapshot.docs.map((doc) => Number(doc.data().rating) || 0);
-    updates.reviewsCount = ratings.length;
-    updates.rating = ratings.length
-      ? ratings.reduce((total, rating) => total + rating, 0) / ratings.length
-      : 0;
-  }
-
-  if (properties) {
-    const snapshot = await db.collection("properties")
-      .where("officeId", "==", officeId)
-      .where("status", "==", "approved")
-      .get();
-    updates.propertiesCount = snapshot.size;
-  }
-
-  await officeRef.update(updates);
-  return null;
-}
-
-exports.refreshOfficeFollowerMetrics = onDocumentWritten(
-  "office_followers/{followerId}",
-  async (event) => refreshOfficeMetrics(
-    event.data.after.exists ? event.data.after.data().officeId : event.data.before.data().officeId,
-    { followers: true },
-  ),
-);
-
-exports.refreshOfficeReviewMetrics = onDocumentWritten(
-  "office_reviews/{reviewId}",
-  async (event) => refreshOfficeMetrics(
-    event.data.after.exists ? event.data.after.data().officeId : event.data.before.data().officeId,
-    { reviews: true },
-  ),
-);
-
-exports.refreshOfficePropertyMetrics = onDocumentWritten(
-  "properties/{propertyId}",
-  async (event) => {
-    const beforeOfficeId = event.data.before.exists ? event.data.before.data().officeId : "";
-    const afterOfficeId = event.data.after.exists ? event.data.after.data().officeId : "";
-    await Promise.all([
-      refreshOfficeMetrics(beforeOfficeId, { properties: true }),
-      beforeOfficeId === afterOfficeId
-        ? Promise.resolve()
-        : refreshOfficeMetrics(afterOfficeId, { properties: true }),
-    ]);
-    return null;
-  },
-);
+// Server-only office counters; source transitions are atomic and deduplicated.
+const officeCounters = require('./office_counters');
+exports.refreshOfficeFollowerMetrics = officeCounters.refreshOfficeFollowerMetrics;
+exports.refreshOfficeReviewMetrics = officeCounters.refreshOfficeReviewMetrics;
+exports.refreshOfficePropertyMetrics = officeCounters.refreshOfficePropertyMetrics;

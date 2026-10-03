@@ -1,3 +1,5 @@
+import 'package:provider/provider.dart';
+import '../../providers/user_provider.dart';
 import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +15,8 @@ import '../models/office_review_model.dart';
 import '../services/office_follower_service.dart';
 import '../services/office_review_service.dart';
 import '../services/office_service.dart';
+import '../services/office_detail_queries.dart';
+import '../../core/data/paged_query.dart';
 import '../services/office_statistics_service.dart';
 import '../../models/property_model.dart';
 import '../../screens/all_properties_screen.dart';
@@ -66,6 +70,7 @@ class OfficeProfileScreen extends StatefulWidget {
 class _OfficeProfileScreenState extends State<OfficeProfileScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late final Stream<OfficeModel?> _officeStream;
 
   final List<String> _tabs = const [
     'نظرة عامة',
@@ -78,6 +83,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
   @override
   void initState() {
     super.initState();
+    _officeStream = OfficeService.officeStream(widget.officeId);
     _recordOfficeView(widget.officeId);
     _tabController = TabController(
       length: _tabs.length,
@@ -98,7 +104,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
       child: Scaffold(
         backgroundColor: OfficeProfileScreen.background,
         body: StreamBuilder<OfficeModel?>(
-          stream: OfficeService.officeStream(widget.officeId),
+          stream: _officeStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -123,7 +129,8 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
               );
             }
 
-            if (hiddenForViewer(context, {'ownerId': office.ownerId})) return blockedContentPage();
+            if (hiddenForViewer(context, {'ownerId': office.ownerId}))
+              return blockedContentPage();
             return NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
@@ -172,34 +179,16 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
     return Container(
       color: OfficeProfileScreen.background,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-      child: StreamBuilder<List<OfficeReviewModel>>(
-        stream: OfficeReviewService().watchOfficeReviews(office.id),
-        builder: (context, snapshot) {
-          final reviews = snapshot.data ?? const <OfficeReviewModel>[];
-          final published =
-              reviews.where((review) => review.isPublished).toList();
-          final liveRating = published.isEmpty
-              ? office.rating
-              : published
-                      .map((review) => review.rating)
-                      .reduce((a, b) => a + b) /
-                  published.length;
-          final liveReviews =
-              published.isEmpty ? office.reviewsCount : published.length;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _IdentityBlock(
-                office: office,
-                ratingOverride: liveRating,
-                reviewsCountOverride: liveReviews,
-              ),
-              const SizedBox(height: 10),
-              _ContactActions(office: office),
-            ],
-          );
-        },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _IdentityBlock(
+              office: office,
+              ratingOverride: office.rating,
+              reviewsCountOverride: office.reviewsCount),
+          const SizedBox(height: 10),
+          _ContactActions(office: office),
+        ],
       ),
     );
   }
@@ -1511,7 +1500,9 @@ class _WorkingHoursPreview extends StatelessWidget {
       if (normalized == 'الثلاثاء' || normalized == 'tuesday') return 3;
       if (normalized == 'الأربعاء' ||
           normalized == 'الاربعاء' ||
-          normalized == 'wednesday') return 4;
+          normalized == 'wednesday') {
+        return 4;
+      }
       if (normalized == 'الخميس' || normalized == 'thursday') return 5;
       if (normalized == 'الجمعة' || normalized == 'friday') return 6;
       return 99;
@@ -1622,139 +1613,104 @@ class _StatisticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // العقارات
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('properties')
-          .where('officeId', isEqualTo: officeId)
-          .safeSnapshots(),
-      builder: (context, propertySnapshot) {
-        final propertyDocs = propertySnapshot.data?.docs ?? const [];
-
-        final activeProperties = propertyDocs.where((doc) {
-          final data = doc.data();
-          final status = (data['status'] ?? '').toString().toLowerCase();
-
-          return status == 'approved' || status == 'active';
-        }).length;
-
-        // إذا لم نستطع قراءة العقارات أو لم توجد نتائج،
-        // لا نصفر الرقم المخزن في المكتب.
-        final propertyCount =
-            activeProperties > 0 ? activeProperties : office.propertiesCount;
-
-        // التقييمات
-        return StreamBuilder<List<OfficeReviewModel>>(
-          stream: OfficeReviewService().watchOfficeReviews(officeId),
-          builder: (context, reviewSnapshot) {
-            final reviews = reviewSnapshot.data ?? const <OfficeReviewModel>[];
-
-            final published = reviews.where((r) => r.isPublished).toList();
-
-            final rating = published.isNotEmpty
-                ? published.map((r) => r.rating).reduce((a, b) => a + b) /
-                    published.length
-                : office.rating;
-
-            final reviewCount =
-                published.isNotEmpty ? published.length : office.reviewsCount;
-
-            // المتابعون
-            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('office_followers')
-                  .where('officeId', isEqualTo: officeId)
-                  .safeSnapshots(),
-              builder: (context, followerSnapshot) {
-                final followerDocs = followerSnapshot.data?.docs ?? const [];
-
-                final activeFollowers = followerDocs.where((doc) {
-                  final data = doc.data();
-
-                  // إذا كان isActive غير موجود نعتبر المتابعة فعالة
-                  // حتى لا يتم تصفير العدد بسبب مستندات قديمة.
-                  return data['isActive'] == null || data['isActive'] == true;
-                }).length;
-
-                final followersCount = activeFollowers > 0
-                    ? activeFollowers
-                    : office.followersCount;
-
-                // المشاهدات
-                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('office_events')
-                      .where('officeId', isEqualTo: officeId)
-                      .safeSnapshots(),
-                  builder: (context, viewsSnapshot) {
-                    final viewDocs = viewsSnapshot.data?.docs ?? const [];
-
-                    // نرشح type=view داخل Dart لتجنب الحاجة إلى
-                    // Composite Index في Firestore.
-                    final viewsCount = viewDocs.where((doc) {
-                      final data = doc.data();
-                      return (data['type'] ?? '').toString() == 'view';
-                    }).length;
-
-                    final totalViews =
-                        viewsCount > 0 ? viewsCount : office.viewsCount;
-
-                    return _Card(
-                      title: 'إحصائيات المكتب',
-                      icon: Icons.bar_chart_rounded,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _Metric(
-                              icon: Icons.star_rounded,
-                              value: rating.toStringAsFixed(1),
-                              label: 'التقييم',
-                            ),
-                          ),
-                          _MetricDivider(),
-                          Expanded(
-                            child: _Metric(
-                              icon: Icons.star_outline_rounded,
-                              value: '$reviewCount',
-                              label: 'تقييم',
-                            ),
-                          ),
-                          _MetricDivider(),
-                          Expanded(
-                            child: _Metric(
-                              icon: Icons.home_work_outlined,
-                              value: '$propertyCount',
-                              label: 'عقار',
-                            ),
-                          ),
-                          _MetricDivider(),
-                          Expanded(
-                            child: _Metric(
-                              icon: Icons.people_outline_rounded,
-                              value: '$followersCount',
-                              label: 'متابع',
-                            ),
-                          ),
-                          _MetricDivider(),
-                          Expanded(
-                            child: _Metric(
-                              icon: Icons.visibility_outlined,
-                              value: '$totalViews',
-                              label: 'مشاهدة',
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
-    );
+    final allowed = FirebaseAuth.instance.currentUser?.uid == office.ownerId ||
+        context.watch<UserProvider>().isAdmin;
+    return _OfficeViewCount(
+        office: office,
+        allowed: allowed,
+        builder: (totalViews) {
+          return _Card(
+            title: 'إحصائيات المكتب',
+            icon: Icons.bar_chart_rounded,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _Metric(
+                    icon: Icons.star_rounded,
+                    value: office.rating.toStringAsFixed(1),
+                    label: 'التقييم',
+                  ),
+                ),
+                _MetricDivider(),
+                Expanded(
+                  child: _Metric(
+                    icon: Icons.star_outline_rounded,
+                    value: '${office.reviewsCount}',
+                    label: 'تقييم',
+                  ),
+                ),
+                _MetricDivider(),
+                Expanded(
+                  child: _Metric(
+                    icon: Icons.home_work_outlined,
+                    value: '${office.propertiesCount}',
+                    label: 'عقار',
+                  ),
+                ),
+                _MetricDivider(),
+                Expanded(
+                  child: _Metric(
+                    icon: Icons.people_outline_rounded,
+                    value: '${office.followersCount}',
+                    label: 'متابع',
+                  ),
+                ),
+                _MetricDivider(),
+                Expanded(
+                  child: _Metric(
+                    icon: Icons.visibility_outlined,
+                    value: '$totalViews',
+                    label: 'مشاهدة',
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
   }
+}
+
+class _OfficeViewCount extends StatefulWidget {
+  const _OfficeViewCount(
+      {required this.office, required this.allowed, required this.builder});
+  final OfficeModel office;
+  final bool allowed;
+  final Widget Function(int) builder;
+  @override
+  State<_OfficeViewCount> createState() => _OfficeViewCountState();
+}
+
+class _OfficeViewCountState extends State<_OfficeViewCount> {
+  late Future<int> _views;
+  Future<int> _load() => widget.allowed
+      ? FirebaseFirestore.instance
+          .collection('office_events')
+          .where('officeId', isEqualTo: widget.office.id)
+          .where('type', isEqualTo: 'view')
+          .count()
+          .get()
+          .then((s) => s.count ?? widget.office.viewsCount)
+          .catchError((Object e) => widget.office.viewsCount)
+      : Future.value(widget.office.viewsCount);
+  @override
+  void initState() {
+    super.initState();
+    _views = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OfficeViewCount oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.office.id != widget.office.id ||
+        oldWidget.allowed != widget.allowed) {
+      _views = _load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<int>(
+      future: _views,
+      builder: (_, s) => widget.builder(s.data ?? widget.office.viewsCount));
 }
 
 class _Metric extends StatelessWidget {
@@ -1932,6 +1888,16 @@ class _LatestProperties extends StatefulWidget {
 }
 
 class _LatestPropertiesState extends State<_LatestProperties> {
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _properties;
+  @override
+  void initState() {
+    super.initState();
+    _properties = OfficeDetailQueries.properties(
+            FirebaseFirestore.instance, widget.officeId)
+        .limit(8)
+        .safeSnapshots();
+  }
+
   final PageController _controller = PageController(
     viewportFraction: .84,
   );
@@ -1947,11 +1913,7 @@ class _LatestPropertiesState extends State<_LatestProperties> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('properties')
-          .where('officeId', isEqualTo: widget.officeId)
-          .limit(30)
-          .safeSnapshots(),
+      stream: _properties,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return _Card(
@@ -2411,7 +2373,7 @@ class _PageIndicator extends StatelessWidget {
   }
 }
 
-class _ReviewsTab extends StatelessWidget {
+class _ReviewsTab extends StatefulWidget {
   final OfficeModel office;
   final String officeId;
 
@@ -2421,60 +2383,90 @@ class _ReviewsTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<OfficeReviewModel>>(
-      stream: OfficeReviewService().watchOfficeReviews(officeId),
-      builder: (context, snapshot) {
-        final reviews = snapshot.data ?? [];
-        final published =
-            reviews.where((review) => review.isPublished).toList();
-        final liveAverage = published.isEmpty
-            ? 0.0
-            : published.map((review) => review.rating).reduce((a, b) => a + b) /
-                published.length;
+  State<_ReviewsTab> createState() => _ReviewsTabState();
+}
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 28),
-          children: [
-            _ReviewSummaryCard(
-              rating: liveAverage,
-              count: published.length,
-            ),
-            const SizedBox(height: 12),
-            _AddReviewButton(
-              office: office,
-              officeId: officeId,
-            ),
-            const SizedBox(height: 14),
-            if (snapshot.connectionState == ConnectionState.waiting)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(30),
-                  child: CircularProgressIndicator(
-                    color: OfficeProfileScreen.gold,
-                  ),
-                ),
-              )
-            else if (reviews.isEmpty)
-              const _Card(
-                title: 'التقييمات',
-                icon: Icons.rate_review_outlined,
-                child: _EmptyMessage(
-                  text: 'لا توجد تقييمات منشورة حتى الآن',
-                ),
-              )
-            else
-              ...reviews.map(
-                (review) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ReviewCard(
-                    review: review,
-                  ),
-                ),
+class _ReviewsTabState extends State<_ReviewsTab> {
+  late final PagedQueryController<Map<String, dynamic>> _reviews;
+  OfficeModel get office => widget.office;
+  String get officeId => widget.officeId;
+  @override
+  void initState() {
+    super.initState();
+    _reviews = PagedQueryController(
+        OfficeDetailQueries.reviews(FirebaseFirestore.instance, officeId),
+        pageSize: 20,
+        safe: true);
+    _reviews.addListener(_changed);
+    _reviews.start();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _reviews.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final snapshot = _reviews.snapshot;
+    final reviews = (snapshot.data?.docs ?? [])
+        .map(OfficeReviewModel.fromFirestore)
+        .where((r) => r.isPublished)
+        .toList();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 28),
+      children: [
+        _ReviewSummaryCard(
+          rating: office.rating,
+          count: office.reviewsCount,
+        ),
+        const SizedBox(height: 12),
+        _AddReviewButton(
+          office: office,
+          officeId: officeId,
+        ),
+        const SizedBox(height: 14),
+        if (snapshot.hasError)
+          TextButton(
+              onPressed: _reviews.refresh,
+              child: const Text('تعذر تحميل التقييمات — إعادة المحاولة'))
+        else if (snapshot.connectionState == ConnectionState.waiting)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(30),
+              child: CircularProgressIndicator(
+                color: OfficeProfileScreen.gold,
               ),
-          ],
-        );
-      },
+            ),
+          )
+        else if (reviews.isEmpty)
+          const _Card(
+            title: 'التقييمات',
+            icon: Icons.rate_review_outlined,
+            child: _EmptyMessage(
+              text: 'لا توجد تقييمات منشورة في النتائج المحمّلة',
+            ),
+          )
+        else
+          ...reviews.map(
+            (review) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ReviewCard(
+                review: review,
+              ),
+            ),
+          ),
+        if (_reviews.hasMore)
+          TextButton(
+              onPressed: _reviews.loadingMore ? null : _reviews.loadMore,
+              child: Text(
+                  _reviews.loadingMore ? 'جارٍ التحميل...' : 'تحميل المزيد')),
+      ],
     );
   }
 }
@@ -2943,7 +2935,9 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (hiddenForViewer(context, {'userId': review.userId})) return const SizedBox.shrink();
+    if (hiddenForViewer(context, {'userId': review.userId})) {
+      return const SizedBox.shrink();
+    }
     final userName =
         review.userName.trim().isEmpty || review.userName.trim().contains('@')
             ? 'مستخدم عقار'
@@ -2991,7 +2985,12 @@ class _ReviewCard extends StatelessWidget {
               ),
             ],
           ),
-          TextButton.icon(onPressed: () => showUserContentReportDialog(context, review.userId, targetPath: 'office_reviews/${review.id}'), icon: const Icon(Icons.flag_outlined), label: const Text('الإبلاغ عن التقييم')),
+          TextButton.icon(
+              onPressed: () => showUserContentReportDialog(
+                  context, review.userId,
+                  targetPath: 'office_reviews/${review.id}'),
+              icon: const Icon(Icons.flag_outlined),
+              label: const Text('الإبلاغ عن التقييم')),
           if (review.comment.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(

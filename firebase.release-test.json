@@ -1,0 +1,10 @@
+{
+  "firestore": {"rules": "firestore.rules", "indexes": "firestore.indexes.json"},
+  "database": {"rules": "database.rules.json"},
+  "emulators": {
+    "firestore": {"port": 8185},
+    "database": {"port": 9195},
+    "ui": {"enabled": false},
+    "singleProjectMode": true
+  }
+}

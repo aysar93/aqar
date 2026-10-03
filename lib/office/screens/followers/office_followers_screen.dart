@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../screens/publisher_properties_screen.dart';
+import '../../../core/data/paged_query.dart';
+import '../../../core/data/document_read_cache.dart';
+import '../../services/office_service.dart';
+import '../../models/office_model.dart';
 
 import '../../models/office_follower_model.dart';
 import '../../services/office_follower_service.dart';
@@ -28,8 +32,65 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
   final FocusNode _searchFocusNode = FocusNode();
   final ValueNotifier<String> _queryNotifier = ValueNotifier<String>('');
 
+  late Stream<List<OfficeFollowerModel>> _followers;
+  late final Stream<OfficeModel?> _office;
+  PagedQueryController<Map<String, dynamic>>? _pages;
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  void _configurePages() {
+    if (_queryNotifier.value.trim().isNotEmpty) {
+      _pages?.dispose();
+      _pages = null;
+      return;
+    }
+    if (_pages != null) return;
+    _pages = PagedQueryController(
+        FirebaseFirestore.instance
+            .collection('office_followers')
+            .where('officeId', isEqualTo: widget.officeId)
+            .orderBy('createdAt', descending: true),
+        pageSize: 20);
+    _pages!.addListener(_changed);
+    _pages!.start();
+  }
+
+  Widget _followersBuilder(
+      Widget Function(BuildContext, AsyncSnapshot<List<OfficeFollowerModel>>)
+          builder) {
+    final pages = _pages;
+    if (pages == null) {
+      return StreamBuilder(stream: _followers, builder: builder);
+    }
+    final s = pages.snapshot;
+    final snapshot = s.hasError
+        ? AsyncSnapshot<List<OfficeFollowerModel>>.withError(
+            s.connectionState, s.error!)
+        : s.hasData
+            ? AsyncSnapshot<List<OfficeFollowerModel>>.withData(
+                s.connectionState,
+                s.data!.docs
+                    .map(OfficeFollowerModel.fromFirestore)
+                    .where((f) => f.isActive)
+                    .toList())
+            : const AsyncSnapshot<List<OfficeFollowerModel>>.waiting();
+    return builder(context, snapshot);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _followers = _service.watchOfficeFollowers(widget.officeId);
+    _office = OfficeService.officeStream(widget.officeId);
+    if (FirebaseAuth.instance.currentUser?.uid == widget.ownerUid) {
+      _configurePages();
+    }
+  }
+
   @override
   void dispose() {
+    _pages?.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _queryNotifier.dispose();
@@ -79,9 +140,8 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                 title: 'الوصول غير متاح',
                 message: 'ليس لديك صلاحية لعرض المتابعين',
               )
-            : StreamBuilder<List<OfficeFollowerModel>>(
-                stream: _service.watchOfficeFollowers(widget.officeId),
-                builder: (context, snapshot) {
+            : _followersBuilder(
+                (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const _FollowersLoading();
                   }
@@ -91,7 +151,14 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                       icon: Icons.error_outline_rounded,
                       title: 'تعذر تحميل المتابعين',
                       message: 'حدث خطأ أثناء تحميل قائمة متابعي المكتب',
-                      onRetry: () => setState(() {}),
+                      onRetry: () {
+                        if (_pages != null) {
+                          _pages!.refresh();
+                        } else {
+                          setState(() => _followers =
+                              _service.watchOfficeFollowers(widget.officeId));
+                        }
+                      },
                     );
                   }
 
@@ -111,9 +178,19 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
 
                       return Column(
                         children: [
-                          _FollowersHeader(
-                            totalCount: allFollowers.length,
-                          ),
+                          StreamBuilder<OfficeModel?>(
+                              stream: _office,
+                              builder: (context, office) {
+                                if (office.hasError) {
+                                  return const Text(
+                                      'تعذر تحميل العدد الإجمالي');
+                                }
+                                if (!office.hasData) {
+                                  return const LinearProgressIndicator();
+                                }
+                                return _FollowersHeader(
+                                    totalCount: office.data!.followersCount);
+                              }),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(
                               16,
@@ -126,6 +203,7 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                               focusNode: _searchFocusNode,
                               onChanged: (value) {
                                 _queryNotifier.value = value;
+                                setState(_configurePages);
                               },
                               textInputAction: TextInputAction.search,
                               decoration: InputDecoration(
@@ -140,6 +218,7 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                                         onPressed: () {
                                           _searchController.clear();
                                           _queryNotifier.value = '';
+                                          setState(_configurePages);
                                           _searchFocusNode.requestFocus();
                                         },
                                         icon: const Icon(
@@ -150,7 +229,7 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                                 hintText: 'ابحث باسم المتابع',
                                 helperText: allFollowers.isEmpty
                                     ? 'لا يوجد متابعون حتى الآن'
-                                    : 'عرض ${followers.length} من ${allFollowers.length} متابع',
+                                    : 'المتابعون المحملون: ${followers.length}',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -176,9 +255,18 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                           ),
                           Expanded(
                             child: followers.isEmpty
-                                ? _EmptyFollowers(
-                                    hasSearch: queryValue.trim().isNotEmpty,
-                                  )
+                                ? Column(children: [
+                                    Expanded(
+                                        child: _EmptyFollowers(
+                                      hasSearch: queryValue.trim().isNotEmpty,
+                                    )),
+                                    if (_pages?.hasMore ?? false)
+                                      TextButton(
+                                          onPressed: _pages!.loadingMore
+                                              ? null
+                                              : _pages!.loadMore,
+                                          child: const Text('تحميل المزيد'))
+                                  ])
                                 : ListView.separated(
                                     padding: const EdgeInsets.fromLTRB(
                                       16,
@@ -189,10 +277,18 @@ class _OfficeFollowersScreenState extends State<OfficeFollowersScreen> {
                                     keyboardDismissBehavior:
                                         ScrollViewKeyboardDismissBehavior
                                             .onDrag,
-                                    itemCount: followers.length,
+                                    itemCount: followers.length +
+                                        ((_pages?.hasMore ?? false) ? 1 : 0),
                                     separatorBuilder: (_, __) =>
                                         const SizedBox(height: 10),
                                     itemBuilder: (_, index) {
+                                      if (index == followers.length) {
+                                        return TextButton(
+                                            onPressed: _pages!.loadingMore
+                                                ? null
+                                                : _pages!.loadMore,
+                                            child: const Text('تحميل المزيد'));
+                                      }
                                       final follower = followers[index];
 
                                       return _FollowerCard(
@@ -457,11 +553,7 @@ Future<String> _resolveUserImageUrl({
   }
 
   try {
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId.trim())
-        .get();
-
+    final doc = await DocumentReadCache.instance.get('users/${userId.trim()}');
     final data = doc.data();
     if (data != null) {
       final photoUrl = (data['photoUrl'] ?? '').toString().trim();

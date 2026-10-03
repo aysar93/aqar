@@ -57,7 +57,7 @@ class VisitTrackingService {
     return id;
   }
 
-  Future<void> recordActivity(User user) async {
+  Future<void> recordActivity(User user, {bool ensureDocument = false}) async {
     if (user.isAnonymous) return;
     final pending = _activityWrites[user.uid];
     if (pending != null) {
@@ -65,14 +65,16 @@ class VisitTrackingService {
       return;
     }
     final last = _lastActivity[user.uid];
-    if (last != null && _elapsed() - last < activityThrottle) return;
+    if (!ensureDocument && last != null && _elapsed() - last < activityThrottle) {
+      return;
+    }
     final write = _firestore.collection('user_activity').doc(user.uid).set({
       'userId': user.uid,
       'displayName': user.displayName,
       'isGuest': false,
       'platform': _platform,
       'lastSeen': FieldValue.serverTimestamp(),
-      'lastSessionId': sessionId,
+      'lastSessionId': _sessionUid == user.uid ? sessionId : '',
     }, SetOptions(merge: true));
     final tracked = write.then((_) {
       // Monotonic local time is only for throttling, never for lastSeen.

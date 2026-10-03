@@ -19,6 +19,7 @@ import 'widgets/property_chat_card.dart';
 import 'widgets/voice_recorder_sheet.dart';
 import 'widgets/hold_voice_button.dart';
 import 'utils/chat_search.dart';
+import 'utils/message_windows.dart';
 import '../screens/admin/chat_settings_screen.dart';
 
 class ConversationScreen extends StatefulWidget {
@@ -76,6 +77,90 @@ class _ConversationScreenState extends State<ConversationScreen>
   bool _loadingMore = false;
   bool _foreground = true;
   int _limit = 50;
+  DocumentSnapshot? _historyAnchor;
+  final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+      _olderSubscriptions = [];
+  final Map<int, List<QueryDocumentSnapshot>> _olderWindows = {};
+  List<QueryDocumentSnapshot> _headMessages = [];
+  DocumentSnapshot? _olderCursor;
+  bool _hasOlder = true;
+  int _messageGeneration = 0;
+  int _headRevision = 0;
+
+  void _clearOlder() {
+    for (final subscription in _olderSubscriptions) {
+      subscription.cancel();
+    }
+    _olderSubscriptions.clear();
+    _olderWindows.clear();
+    _historyAnchor = null;
+    _olderCursor = null;
+    _hasOlder = true;
+  }
+
+  List<QueryDocumentSnapshot> _mergeMessages() =>
+      mergeMessageWindows(_headMessages, _olderWindows.values);
+
+  void _loadOlderPage() {
+    if (_loadingMore || !_hasOlder || _documents.isEmpty || _accountChanged) {
+      return;
+    }
+    final cursor = _olderCursor ?? _documents.first;
+    if (_historyAnchor == null) {
+      // Freeze the lower edge once history is requested. Future messages remain
+      // live without redownloading a growing limit of the entire history.
+      _historyAnchor = _headMessages.first;
+      _listenMessages();
+    }
+    setState(() => _loadingMore = true);
+    final page = _olderSubscriptions.length;
+    final generation = _messageGeneration;
+    final oldExtent =
+        _scroll.hasClients ? _scroll.position.maxScrollExtent : 0.0;
+    final oldOffset = _scroll.hasClients ? _scroll.offset : 0.0;
+    bool first = true;
+    _olderSubscriptions.add(FirebaseFirestore.instance
+        .collection('chats')
+        .doc(_chatId!)
+        .collection('messages')
+        .orderBy('createdAt')
+        .endBeforeDocument(cursor)
+        .limitToLast(50)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted || _accountChanged || generation != _messageGeneration) {
+        return;
+      }
+      _olderWindows[page] = snapshot.docs;
+      if (first) {
+        _hasOlder = snapshot.docs.length == 50;
+        if (snapshot.docs.isNotEmpty) _olderCursor = snapshot.docs.first;
+      }
+      setState(() {
+        _documents = _mergeMessages();
+        _loadingMore = false;
+      });
+      unawaited(_markRead(snapshot.docs));
+      if (first) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scroll.hasClients) {
+            _scroll.jumpTo(
+                (oldOffset + _scroll.position.maxScrollExtent - oldExtent)
+                    .clamp(0.0, _scroll.position.maxScrollExtent));
+          }
+        });
+      }
+      first = false;
+    }, onError: (Object error) {
+      if (mounted && !_accountChanged) {
+        setState(() {
+          _loadingMore = false;
+          _error = 'تعذر تحميل الرسائل الأقدم. أعد المحاولة';
+        });
+      }
+    }));
+  }
+
   Timer? _draftTimer;
   Timer? _typingTimer;
   Timer? _clockTimer;
@@ -110,6 +195,8 @@ class _ConversationScreenState extends State<ConversationScreen>
       _draftTimer?.cancel();
       _typingTimer?.cancel();
       _messagesSubscription?.cancel();
+      _messageGeneration++;
+      _clearOlder();
       _chatSubscription?.cancel();
       _settingsSubscription?.cancel();
       _text.removeListener(_textChanged);
@@ -209,9 +296,15 @@ class _ConversationScreenState extends State<ConversationScreen>
 
   void _listenMessages() {
     _messagesSubscription?.cancel();
-    _messagesSubscription =
-        _service.messages(_chatId!, limit: _limit).listen((snapshot) {
-      if (!mounted || _accountChanged) return;
+    final revision = ++_headRevision;
+    if (_limit != 50 || _searching || _jumpTarget != null) {
+      _messageGeneration++;
+      _clearOlder();
+    }
+    _messagesSubscription = _service
+        .messages(_chatId!, limit: _limit, from: _historyAnchor)
+        .listen((snapshot) {
+      if (!mounted || _accountChanged || revision != _headRevision) return;
       final newLastId = snapshot.docs.isEmpty ? null : snapshot.docs.last.id;
       final oldLastId = _documents.isEmpty ? null : _documents.last.id;
       final atBottom =
@@ -222,9 +315,10 @@ class _ConversationScreenState extends State<ConversationScreen>
           _scroll.hasClients ? _scroll.position.maxScrollExtent : 0.0;
       final oldOffset = _scroll.hasClients ? _scroll.offset : 0.0;
       setState(() {
-        _documents = snapshot.docs;
+        _headMessages = snapshot.docs;
+        _documents = _mergeMessages();
         _loadingMessages = false;
-        _loadingMore = false;
+        if (_olderSubscriptions.isEmpty) _loadingMore = false;
       });
       if (initial || (newLastId != oldLastId && atBottom && !_searching)) {
         _scrollToBottom();
@@ -814,6 +908,8 @@ class _ConversationScreenState extends State<ConversationScreen>
     _settingsSubscription?.cancel();
     _authSubscription?.cancel();
     _messagesSubscription?.cancel();
+    _messageGeneration++;
+    _clearOlder();
     _chatSubscription?.cancel();
     _text.dispose();
     _search.dispose();
@@ -975,17 +1071,11 @@ class _ConversationScreenState extends State<ConversationScreen>
                                 padding:
                                     const EdgeInsets.fromLTRB(16, 12, 16, 16),
                                 child: Column(children: [
-                                  if (_documents.length >= _limit)
+                                  if (_hasOlder && _documents.length >= 50)
                                     TextButton(
                                         onPressed: _loadingMore
                                             ? null
-                                            : () {
-                                                setState(() {
-                                                  _limit += 50;
-                                                  _loadingMore = true;
-                                                });
-                                                _listenMessages();
-                                              },
+                                            : _loadOlderPage,
                                         child: Text(_loadingMore
                                             ? 'جارٍ التحميل…'
                                             : 'تحميل الرسائل الأقدم')),

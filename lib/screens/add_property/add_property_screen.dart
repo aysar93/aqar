@@ -2,6 +2,7 @@ import '../../moderation/content_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../analytics/services/app_activity_service.dart';
 
 import '../../models/add_property_data.dart';
 import '../../services/cloudinary_service.dart';
@@ -597,56 +598,62 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
           activeOffice != null && activeOffice.isVerified == true;
       final propertyStatus = isVerifiedOffice ? 'approved' : 'pending';
 
-      await propertyReference.set({
-        "adType": property.adType,
-        "propertyType": property.propertyType,
-        "title": property.title.trim(),
-        "price": property.price,
-        "negotiable": property.negotiable,
-        "images": property.imageUrls,
-        "imageUrl":
-            property.imageUrls.isNotEmpty ? property.imageUrls.first : "",
-        "city": property.city.trim(),
-        "district": property.district.trim(),
-        "landmark": property.landmark.trim(),
-        "latitude": property.latitude,
-        "longitude": property.longitude,
-        "hasMapLocation": property.hasMapLocation,
-        "rooms": property.rooms,
-        "bathrooms": property.bathrooms,
-        "livingRooms": property.livingRooms,
-        "parking": property.parking,
-        "area": property.area,
-        "frontage": property.frontage,
-        "depth": property.depth,
-        "floors": property.floors,
-        "apartmentFloor": property.apartmentFloor,
-        "unitsCount": property.unitsCount,
-        "buildYear": property.buildYear,
-        "documentType": property.documentType,
-        "furnitureStatus": property.furnitureStatus,
-        "description": property.description.trim(),
-        "features": property.features,
-        "ownerPhone": _normalizePhone(property.phone),
-        "ownerWhatsapp": property.whatsapp.trim().isEmpty
-            ? ""
-            : _normalizePhone(property.whatsapp),
-        "adNumber": nextNumber,
-        "userId": user.uid,
-        "publisherUid": user.uid,
-        "officeId": officeId,
-        "officeName": activeOffice?.name ?? "",
-        "officeLogoUrl": officeLogoUrl,
-        "isOfficeProperty": activeOffice != null,
-        "publisherEmail": user.email ?? "",
-        "publisherName": publisherName,
-        "publisherPhotoUrl": publisherPhoto,
-        "publisherPhoto": publisherPhoto,
-        "publisherAccountType": accountType,
-        "publisherVerified": isVerified,
-        "status": propertyStatus,
-        "createdAt": FieldValue.serverTimestamp(),
-      });
+      await AppActivityService.instance.recordSuccessfulAction(
+          () => propertyReference.set({
+                "adType": property.adType,
+                "propertyType": property.propertyType,
+                "title": property.title.trim(),
+                "price": property.price,
+                // Ordered catalog queries require an explicit initial value.
+                // This is part of the existing creation write, not a recount.
+                "views": 0,
+                "negotiable": property.negotiable,
+                "images": property.imageUrls,
+                "imageUrl": property.imageUrls.isNotEmpty
+                    ? property.imageUrls.first
+                    : "",
+                "city": property.city.trim(),
+                "district": property.district.trim(),
+                "landmark": property.landmark.trim(),
+                "latitude": property.latitude,
+                "longitude": property.longitude,
+                "hasMapLocation": property.hasMapLocation,
+                "rooms": property.rooms,
+                "bathrooms": property.bathrooms,
+                "livingRooms": property.livingRooms,
+                "parking": property.parking,
+                "area": property.area,
+                "frontage": property.frontage,
+                "depth": property.depth,
+                "floors": property.floors,
+                "apartmentFloor": property.apartmentFloor,
+                "unitsCount": property.unitsCount,
+                "buildYear": property.buildYear,
+                "documentType": property.documentType,
+                "furnitureStatus": property.furnitureStatus,
+                "description": property.description.trim(),
+                "features": property.features,
+                "ownerPhone": _normalizePhone(property.phone),
+                "ownerWhatsapp": property.whatsapp.trim().isEmpty
+                    ? ""
+                    : _normalizePhone(property.whatsapp),
+                "adNumber": nextNumber,
+                "userId": user.uid,
+                "publisherUid": user.uid,
+                "officeId": officeId,
+                "officeName": activeOffice?.name ?? "",
+                "officeLogoUrl": officeLogoUrl,
+                "isOfficeProperty": activeOffice != null,
+                "publisherEmail": user.email ?? "",
+                "publisherName": publisherName,
+                "publisherPhotoUrl": publisherPhoto,
+                "publisherPhoto": publisherPhoto,
+                "publisherAccountType": accountType,
+                "publisherVerified": isVerified,
+                "status": propertyStatus,
+                "createdAt": FieldValue.serverTimestamp(),
+              }),
+          actorUid: user.uid);
 
       // المكتب الموثق ينشر مباشرة دون انتظار الإدارة.
       // بعد النشر المباشر نرسل إشعارًا داخليًا فقط لمتابعي المكتب.

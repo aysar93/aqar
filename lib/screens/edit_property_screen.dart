@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../analytics/services/app_activity_service.dart';
 import '../utils/currency.dart';
 
 class EditPropertyScreen extends StatefulWidget {
@@ -50,21 +51,22 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
       loading = true;
     });
 
-    await FirebaseFirestore.instance
-        .collection('properties')
-        .doc(widget.docId)
-        .update({
-      'title': titleController.text,
+    await AppActivityService.instance.recordSuccessfulAction(() =>
+        FirebaseFirestore.instance
+            .collection('properties')
+            .doc(widget.docId)
+            .update({
+          'title': titleController.text,
 
-      'location': locationController.text,
+          'location': locationController.text,
 
-      'price': double.tryParse(priceController.text) ?? 0,
+          'price': double.tryParse(priceController.text) ?? 0,
 
-      'description': descriptionController.text,
+          'description': descriptionController.text,
 
-      // يرجع للمراجعة بعد التعديل
-      'status': 'pending',
-    });
+          // يرجع للمراجعة بعد التعديل
+          'status': 'pending',
+        }));
 
     if (mounted) {
       Navigator.pop(context);

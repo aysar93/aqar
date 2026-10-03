@@ -1,0 +1,29 @@
+{
+  "score": 4,
+  "summary": "Scoped review of office package gifts: admin-only creation and package writes, preserved owner pending-request permissions, atomic office/subscription/notification commit. Six emulator authorization tests passed. This is not an audit of the entire rules file.",
+  "findings": [
+    {
+      "check": "Business Logic vs. Rules",
+      "severity": "minor",
+      "issue": "Existing owner-created pending requests still contain client-provided package prices and limits; the existing approval flow should independently validate these against subscription_packages.",
+      "recommendation": "In a separate hardening change, re-read authoritative package data during ordinary subscription approval."
+    },
+    {
+      "check": "Authority Source",
+      "severity": "minor",
+      "issue": "Existing notifications create permission permits any signed-in user to write notification text. Gift creation itself is guarded by admin authorization and subscription/office rules.",
+      "recommendation": "Review notification creation permissions separately without disrupting current chat and office notification flows."
+    }
+  ],
+  "validated": [
+    "Admin status is read from users/{uid}, not request payload.",
+    "Non-admin owners cannot create active subscriptions or pending gifts carrying giftedBy/giftedAt.",
+    "Owners can still create ordinary pending requests for their own office only.",
+    "Owners cannot update pending requests into active subscriptions.",
+    "Subscription packages are readable by signed-in users and writable only by admins.",
+    "Office entitlements, gift subscription, and owner notification commit atomically.",
+    "Foreign users cannot read the owner gift notification.",
+    "Office subscription pointer prevents concurrent or repeated gift grants from the same preview.",
+    "No live gift, notification, or rules deployment performed."
+  ]
+}

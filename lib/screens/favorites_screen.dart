@@ -31,6 +31,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   final ScrollController _scrollController = ScrollController();
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favoritesSub;
+  StreamSubscription<User?>? _auth;
+  String? _actor;
+  int _generation = 0;
+  late Stream<List<ReelModel>> _savedReels;
 
   final List<String> _favoriteIds = [];
   final Map<String, Map<String, dynamic>> _properties = {};
@@ -44,11 +48,27 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   void initState() {
     super.initState();
+    _actor = _user?.uid;
+    _savedReels = ReelService.instance.savedReels();
+    _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (!mounted || user?.uid == _actor) return;
+      _actor = user?.uid;
+      _generation++;
+      _favoritesSub?.cancel();
+      _favoriteIds.clear();
+      _properties.clear();
+      _visibleCount = _pageSize;
+      _savedReels = ReelService.instance.savedReels();
+      setState(() => _loading = true);
+      _listenToFavorites();
+    });
     _listenToFavorites();
   }
 
   @override
   void dispose() {
+    _generation++;
+    _auth?.cancel();
     _favoritesSub?.cancel();
     _scrollController.dispose();
     super.dispose();
@@ -56,6 +76,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   void _listenToFavorites() {
     final user = _user;
+    final generation = ++_generation;
 
     if (user == null) {
       setState(() => _loading = false);
@@ -71,6 +92,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         .snapshots()
         .listen(
       (snapshot) async {
+        if (!mounted || generation != _generation || _user?.uid != user.uid) {
+          return;
+        }
         final ids = snapshot.docs.map((doc) => doc.id).toList();
 
         // نحذف فقط العقارات التي لم تعد في المفضلة.
@@ -91,7 +115,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         await _loadVisibleProperties();
 
-        if (!mounted) return;
+        if (!mounted || generation != _generation || _user?.uid != user.uid) {
+          return;
+        }
 
         setState(() {
           _loading = false;
@@ -110,6 +136,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> _loadVisibleProperties() async {
+    final generation = _generation;
     if (_favoriteIds.isEmpty) return;
 
     final targetCount = _visibleCount.clamp(0, _favoriteIds.length);
@@ -129,6 +156,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
 
     for (final doc in results) {
+      if (!mounted || generation != _generation) return;
       if (doc.exists && doc.data() != null) {
         _properties[doc.id] = doc.data()!;
       }
@@ -282,7 +310,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildSavedReels() => StreamBuilder<List<ReelModel>>(
-        stream: ReelService.instance.savedReels(),
+        key: ValueKey(_actor),
+        stream: _savedReels,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(child: Text('تعذر تحميل الريلز المحفوظة'));
@@ -583,7 +612,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     publisherPhone: (data['publisherPhone'] ?? '').toString(),
                     publisherWhatsapp:
                         (data['publisherWhatsapp'] ?? '').toString(),
-                    publisherUid: (data['publisherUid'] ?? data['userId'] ?? '').toString(),
+                    publisherUid: (data['publisherUid'] ?? data['userId'] ?? '')
+                        .toString(),
                     publisherName: (data['publisherName'] ?? '').toString(),
                     publisherEmail: (data['publisherEmail'] ?? '').toString(),
                     propertyType: (data['propertyType'] ?? '').toString(),

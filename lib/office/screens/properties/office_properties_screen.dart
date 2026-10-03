@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/property_model.dart';
 import '../../../services/property_service.dart';
+import '../../../core/data/paged_query.dart';
 import '../../models/office_subscription_model.dart';
 import '../../services/office_subscription_service.dart';
 import '../../../screens/property_details.dart';
@@ -33,6 +34,90 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
   String? _processingPropertyId;
 
   late final Stream<List<PropertyModel>> _propertiesStream;
+  PagedQueryController<Map<String, dynamic>>? _pages;
+  late Future<List<int>> _counts;
+
+  Query<Map<String, dynamic>> get _base => FirebaseFirestore.instance
+      .collection('properties')
+      .where('officeId', isEqualTo: widget.officeId);
+
+  Future<List<int>> _readCounts() async {
+    final results = await Future.wait([
+      _base.count().get(),
+      _base.where('status', whereIn: ['approved', 'active']).count().get(),
+      _base.where('status', isEqualTo: 'pending').count().get(),
+      _base.where('isFeatured', isEqualTo: true).count().get(),
+    ]);
+    return results.map((s) => s.count ?? 0).toList();
+  }
+
+  void _configurePages() {
+    if (_query.trim().isNotEmpty) {
+      _pages?.dispose();
+      _pages = null;
+      return;
+    }
+    var query = _base;
+    if (_filter == 'منشور') {
+      query = query.where('status', whereIn: ['approved', 'active']);
+    } else if (_filter == 'قيد المراجعة' || _filter == 'مرفوض') {
+      query = query.where('status',
+          isEqualTo: _filter == 'مرفوض' ? 'rejected' : 'pending');
+    }
+    query = query.orderBy('createdAt', descending: true);
+    if (_pages?.query == query) return;
+    _pages?.dispose();
+    _summarySignature = null;
+    _pages = PagedQueryController(query, pageSize: 20, safe: true);
+    _pages!.addListener(_changed);
+    _pages!.start();
+  }
+
+  String? _summarySignature;
+  void _changed() {
+    if (!mounted) return;
+    if (!(_pages?.snapshot.hasData ?? false)) {
+      setState(() {});
+      return;
+    }
+    final head = _pages?.documents
+        .take(20)
+        .map((d) => '${d.id}:${d.data()['status']}:${d.data()['isFeatured']}')
+        .join('|');
+    if (_summarySignature != null && head != _summarySignature) {
+      _counts = _readCounts();
+    }
+    _summarySignature = head;
+    setState(() {});
+  }
+
+  Widget _propertiesBuilder(
+      Widget Function(BuildContext, AsyncSnapshot<List<PropertyModel>>)
+          builder) {
+    final pages = _pages;
+    if (pages == null) {
+      return StreamBuilder(stream: _propertiesStream, builder: builder);
+    }
+    final s = pages.snapshot;
+    final snapshot = s.hasError
+        ? AsyncSnapshot<List<PropertyModel>>.withError(
+            s.connectionState, s.error!)
+        : s.hasData
+            ? AsyncSnapshot<List<PropertyModel>>.withData(
+                s.connectionState,
+                s.data!.docs
+                    .map((d) => PropertyModel.fromMap(d.data(), d.id))
+                    .toList())
+            : const AsyncSnapshot<List<PropertyModel>>.nothing()
+                .inState(s.connectionState);
+    return builder(context, snapshot);
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _counts = _readCounts());
+    await _pages?.refresh();
+  }
+
   late final Stream<OfficeSubscriptionModel?> _subscriptionStream;
 
   final FocusNode _searchFocusNode = FocusNode();
@@ -51,6 +136,10 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
       widget.officeId,
     );
 
+    final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.ownerUid;
+    _counts = isOwner ? _readCounts() : Future.value([0, 0, 0, 0]);
+    if (isOwner) _configurePages();
+
     _subscriptionStream = _subscriptionService.watchOfficeSubscription(
       widget.officeId,
     );
@@ -58,6 +147,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
 
   @override
   void dispose() {
+    _pages?.dispose();
     _searchFocusNode.dispose();
     _searchController.dispose();
     _queryNotifier.dispose();
@@ -75,6 +165,12 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
+          actions: [
+            IconButton(
+                onPressed: _refresh,
+                tooltip: 'تحديث',
+                icon: const Icon(Icons.refresh))
+          ],
           elevation: 0,
           centerTitle: true,
           title: const Text(
@@ -87,9 +183,8 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
         ),
         body: !isOwner
             ? const _Message('ليس لديك صلاحية لإدارة عقارات هذا المكتب.')
-            : StreamBuilder<List<PropertyModel>>(
-                stream: _propertiesStream,
-                builder: (context, snapshot) {
+            : _propertiesBuilder(
+                (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(),
@@ -125,29 +220,29 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
                         builder: (context, query, _) {
                           final properties = _filtered(allProperties);
 
-                          final publishedCount = allProperties
-                              .where(
-                                (item) =>
-                                    item.status == 'approved' ||
-                                    item.status == 'active',
-                              )
-                              .length;
-                          final pendingCount = allProperties
-                              .where((item) => item.status == 'pending')
-                              .length;
-                          final featuredCount = allProperties
-                              .where((item) => item.isFeatured)
-                              .length;
-
                           return Column(
                             children: [
-                              _OfficePropertiesSummary(
-                                total: allProperties.length,
-                                published: publishedCount,
-                                pending: pendingCount,
-                                featured: featuredCount,
-                                used: featuredUsed,
-                                max: maxFeatured,
+                              FutureBuilder<List<int>>(
+                                future: _counts,
+                                builder: (context, counts) {
+                                  if (counts.hasError) {
+                                    return TextButton(
+                                        onPressed: _refresh,
+                                        child: const Text(
+                                            'تعذر تحميل الأعداد — إعادة المحاولة'));
+                                  }
+                                  if (!counts.hasData) {
+                                    return const LinearProgressIndicator();
+                                  }
+                                  final values = counts.data!;
+                                  return _OfficePropertiesSummary(
+                                      total: values[0],
+                                      published: values[1],
+                                      pending: values[2],
+                                      featured: values[3],
+                                      used: featuredUsed,
+                                      max: maxFeatured);
+                                },
                               ),
                               Padding(
                                 padding:
@@ -160,11 +255,13 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
                                   onChanged: (value) {
                                     _query = value.trim().toLowerCase();
                                     _queryNotifier.value = value;
+                                    setState(_configurePages);
                                   },
                                   onClear: () {
                                     _searchController.clear();
                                     _query = '';
                                     _queryNotifier.value = '';
+                                    setState(_configurePages);
                                     _searchFocusNode.requestFocus();
                                   },
                                 ),
@@ -206,6 +303,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
                                                 'قيد المراجعة',
                                                 'مرفوض',
                                               ][i];
+                                              _configurePages();
                                             });
                                           },
                                         ),
@@ -217,12 +315,21 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
                               const SizedBox(height: 4),
                               Expanded(
                                 child: properties.isEmpty
-                                    ? _Message(
-                                        query.trim().isEmpty &&
-                                                allProperties.isEmpty
-                                            ? 'لا توجد عقارات في المكتب بعد.'
-                                            : 'لا توجد عقارات مطابقة للبحث أو الفلتر الحالي',
-                                      )
+                                    ? Column(children: [
+                                        Expanded(
+                                            child: _Message(
+                                          query.trim().isEmpty &&
+                                                  allProperties.isEmpty
+                                              ? 'لا توجد عقارات في المكتب بعد.'
+                                              : 'لا توجد عقارات مطابقة للبحث أو الفلتر الحالي',
+                                        )),
+                                        if (_pages?.hasMore ?? false)
+                                          TextButton(
+                                              onPressed: _pages!.loadingMore
+                                                  ? null
+                                                  : _pages!.loadMore,
+                                              child: const Text('تحميل المزيد'))
+                                      ])
                                     : ListView.separated(
                                         keyboardDismissBehavior:
                                             ScrollViewKeyboardDismissBehavior
@@ -233,10 +340,21 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
                                           16,
                                           32,
                                         ),
-                                        itemCount: properties.length,
+                                        itemCount: properties.length +
+                                            ((_pages?.hasMore ?? false)
+                                                ? 1
+                                                : 0),
                                         separatorBuilder: (_, __) =>
                                             const SizedBox(height: 14),
                                         itemBuilder: (_, index) {
+                                          if (index == properties.length) {
+                                            return TextButton(
+                                                onPressed: _pages!.loadingMore
+                                                    ? null
+                                                    : _pages!.loadMore,
+                                                child:
+                                                    const Text('تحميل المزيد'));
+                                          }
                                           final property = properties[index];
 
                                           return _PropertyTile(
@@ -342,6 +460,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
           ),
         ),
       );
+      if (mounted) await _refresh();
     } catch (error) {
       if (mounted) {
         _showError('تعذر فتح العقار: $error');
@@ -479,6 +598,8 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
         isFeatured: value,
       );
 
+      if (mounted) setState(() => _counts = _readCounts());
+
       // حدّث الرصيد محليًا فور نجاح العملية، دون انتظار إعادة فتح الصفحة.
       final freshSubscription =
           await _subscriptionService.getOfficeSubscription(widget.officeId);
@@ -573,6 +694,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
           ),
         ),
       );
+      if (mounted) await _refresh();
     } catch (error) {
       if (mounted) {
         _showError('تعذر فتح تعديل العقار: $error');
@@ -617,6 +739,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
           .doc(propertyId)
           .delete();
 
+      if (mounted) setState(() => _counts = _readCounts());
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()

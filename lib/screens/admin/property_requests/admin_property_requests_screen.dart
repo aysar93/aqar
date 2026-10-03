@@ -1,3 +1,4 @@
+import '../../../core/data/shared_stream.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,17 @@ class _AdminPropertyRequestsScreenState
   static const Color _gold = Color(0xffD4AF37);
   static const Color _background = Color(0xff0F172A);
 
+  final Map<String, SharedStream<QuerySnapshot<Map<String, dynamic>>>>
+      _statusStreams = {};
+  Stream<QuerySnapshot<Map<String, dynamic>>> _requests(String status) =>
+      _statusStreams
+          .putIfAbsent(
+              status,
+              () => SharedStream(FirebaseFirestore.instance
+                  .collection('property_requests')
+                  .where('status', isEqualTo: status)
+                  .snapshots()))
+          .stream;
   bool _loadingAdmin = true;
   bool _isAdmin = false;
   String _selectedStatus = 'pending';
@@ -141,13 +153,7 @@ class _AdminPropertyRequestsScreenState
             _buildStatusTabs(),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('property_requests')
-                    .where(
-                      'status',
-                      isEqualTo: _selectedStatus,
-                    )
-                    .snapshots(),
+                stream: _requests(_selectedStatus),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
@@ -306,13 +312,7 @@ class _AdminPropertyRequestsScreenState
     final bool selected = _selectedStatus == status;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('property_requests')
-          .where(
-            'status',
-            isEqualTo: status,
-          )
-          .snapshots(),
+      stream: _requests(status),
       builder: (context, snapshot) {
         final int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
 
