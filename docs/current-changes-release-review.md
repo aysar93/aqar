@@ -51,7 +51,9 @@ not exported user data. No secret values or user records are reproduced here.
 
 ## Verification
 
-- Flutter: all 204 tests passed.
+- Flutter: all 204 existing tests passed again, plus eight new push-token tests
+  passed sequentially. A concurrent test-cache collision was reproduced and
+  resolved by sequential execution; no source failure or cache deletion.
 - Local Firebase demo emulators: 138 passed; one previously skipped test retained.
 - Flutter analyze (all lib/test sources): 162 existing notices, zero errors and
   zero new issues compared with the previous saved analysis. Exit code 1 reflects
@@ -61,6 +63,11 @@ not exported user data. No secret values or user records are reproduced here.
 A new concurrent iOS notification review was also discovered from Git and retained.
 Its metadata contains field names/booleans only, no credentials. It documents a
 separate APNs provisioning limitation; no notification settings were changed.
+Further current-tree changes added independent OneSignal/FCM token persistence,
+bounded APNs readiness checks and isolated token-refresh errors. They were reviewed,
+analyzed and tested before a follow-up commit. The one-off APNs configuration
+script remains local and is excluded, as are any private keys or configuration
+verification exports. No script was executed in this task.
 
 ## Complete selected-file classification
 
@@ -69,16 +76,20 @@ No unexplained or unrelated file is included. Raw evidence classification is loc
 
 | Category | Files |
 |---|---:|
-| A Flutter/Dart application | 60 |
+| A Flutter/Dart application | 62 |
 | D Firebase Rules | 3 |
 | E Firebase Functions | 5 |
 | F Firebase indexes/config | 5 |
-| I Tests (including reference golden images) | 17 |
-| J Documentation | 21 |
+| I Tests (including reference golden images) | 18 |
+| J Documentation | 22 |
 | K Version/config | 2 |
 
 | File | Classification | Change |
 |---|---|---|
+| `lib/services/fcm_service.dart` | A Flutter/Dart application | Modified |
+| `lib/services/push_token_sync.dart` | A Flutter/Dart application | Added |
+| `test/push_token_sync_test.dart` | I Tests | Added |
+| `docs/ios-push-review-2026-10-04/repair-status.md` | J Documentation | Added |
 | `.gitignore` | K Version/config | Modified |
 | `docs/activity-analytics-repair.md` | J Documentation | Modified |
 | `docs/activity-final-deploy-audit.md` | J Documentation | Added |

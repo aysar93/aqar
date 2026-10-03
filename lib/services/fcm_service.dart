@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'notification_navigation_service.dart';
+import 'push_token_sync.dart';
 
 class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -23,36 +24,12 @@ class FCMService {
     // Firebase Messaging
     // =========================================================
 
-    // نحاول الحصول على Token إذا كان متاحاً بالفعل.
-    // لا نطلب صلاحية الإشعارات هنا.
-    try {
-      final token = await _messaging.getToken();
-
-      debugPrint("FCM Token: $token");
-
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user != null && token != null) {
-        await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-          "fcmToken": token,
-        }, SetOptions(merge: true));
-      }
-    } catch (e) {
-      debugPrint("FCM Token Error: $e");
-    }
-
     // =========================================================
     // تحديث FCM Token
     // =========================================================
 
     _messaging.onTokenRefresh.listen((newToken) async {
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user != null) {
-        await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-          "fcmToken": newToken,
-        }, SetOptions(merge: true));
-      }
+      await _saveRefreshedToken('fcmToken', newToken);
     });
 
     // =========================================================
@@ -131,36 +108,24 @@ class FCMService {
     // OneSignal Subscription
     // =========================================================
 
-    final user = FirebaseAuth.instance.currentUser;
+    OneSignal.User.pushSubscription.addObserver((state) async {
+      final id = state.current.id;
+      if (id != null) await _saveRefreshedToken('oneSignalId', id);
+    });
 
-    final subscriptionId = OneSignal.User.pushSubscription.id;
+    await saveTokens();
 
-    debugPrint("OneSignal ID: $subscriptionId");
-
-    if (user != null && subscriptionId != null) {
-      await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-        "oneSignalId": subscriptionId,
-      }, SetOptions(merge: true));
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        await _messaging.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      } catch (error) {
+        debugPrint('FCM foreground presentation setup failed: $error');
+      }
     }
-
-    OneSignal.User.pushSubscription.addObserver(
-      (state) async {
-        final id = state.current.id;
-
-        debugPrint("New OneSignal ID: $id");
-
-        final currentUser = FirebaseAuth.instance.currentUser;
-
-        if (currentUser != null && id != null) {
-          await FirebaseFirestore.instance
-              .collection("users")
-              .doc(currentUser.uid)
-              .set({
-            "oneSignalId": id,
-          }, SetOptions(merge: true));
-        }
-      },
-    );
 
     // =========================================================
     // فتح التطبيق من FCM وهو مغلق
@@ -193,40 +158,30 @@ class FCMService {
   // =========================================================
 
   static Future<bool> requestNotificationPermission() async {
+    var allowed = false;
     try {
-      // Firebase / Android / iOS
-      final NotificationSettings settings = await _messaging.requestPermission(
+      final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
-
-      debugPrint(
-        "Notification Permission: "
-        "${settings.authorizationStatus}",
-      );
-
-      final bool firebaseAllowed =
+      allowed =
           settings.authorizationStatus == AuthorizationStatus.authorized ||
               settings.authorizationStatus == AuthorizationStatus.provisional;
-
-      // OneSignal
-      // إذا كان النظام يحتاج إظهار Permission فسيتم ذلك هنا،
-      // وليس أثناء تشغيل التطبيق.
-      await OneSignal.Notifications.requestPermission(true);
-
-      if (firebaseAllowed) {
-        await saveTokens();
-      }
-
-      return firebaseAllowed;
-    } catch (e) {
-      debugPrint(
-        "Notification Permission Error: $e",
-      );
-
-      return false;
+    } catch (error) {
+      debugPrint('FCM permission check failed: $error');
     }
+
+    try {
+      final oneSignalAllowed =
+          await OneSignal.Notifications.requestPermission(true);
+      allowed = allowed || oneSignalAllowed;
+    } catch (error) {
+      debugPrint('OneSignal permission check failed: $error');
+    }
+
+    if (allowed) await saveTokens();
+    return allowed;
   }
 
   // =========================================================
@@ -381,24 +336,34 @@ class FCMService {
   // حفظ FCM + OneSignal Tokens
   // =========================================================
 
-  static Future<void> saveTokens() async {
+  static Future<void> _saveRefreshedToken(String field, String token) async {
     final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) return;
-
+    if (user == null || token.isEmpty) return;
     try {
-      final fcmToken = await FirebaseMessaging.instance.getToken();
-
-      final oneSignalId = OneSignal.User.pushSubscription.id;
-
-      await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-        if (fcmToken != null) "fcmToken": fcmToken,
-        if (oneSignalId != null) "oneSignalId": oneSignalId,
-      }, SetOptions(merge: true));
-
-      debugPrint("Tokens Saved Successfully");
-    } catch (e) {
-      debugPrint("Save Tokens Error: $e");
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {field: token},
+        SetOptions(merge: true),
+      );
+    } catch (error) {
+      debugPrint('Refreshed push token save failed for $field: $error');
     }
+  }
+
+  static Future<void> saveTokens() async {
+    await synchronizePushTokens(
+      currentUserId: () => FirebaseAuth.instance.currentUser?.uid,
+      readOneSignalId: () async => OneSignal.User.pushSubscription.id,
+      readFcmToken: () => readFcmTokenWhenReady(
+        requiresApns: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS,
+        readApnsToken: _messaging.getAPNSToken,
+        readFcmToken: _messaging.getToken,
+      ),
+      write: (userId, fields) => FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .set(fields, SetOptions(merge: true)),
+      onError: (provider, error) =>
+          debugPrint('Push token sync failed for $provider: $error'),
+    );
   }
 }

@@ -87,3 +87,5 @@ app.*.map.json
 /docs/*-sites.txt
 /docs/office-counter-backfill.cjs
 /docs/firebase-optimization-security-run.cjs
+/docs/ios-push-review-*/*.cjs
+/docs/ios-push-review-*/apns-configuration-verification.json
