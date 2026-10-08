@@ -29,7 +29,8 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   await call('actOnBooking',uid,{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',transactionNumber:'t1'});
   await assert.rejects(call('actOnBooking','owner',{bookingId:chosen.id,action:'confirmPayment'}));
   await assert.rejects(call('actOnBooking','admin',{bookingId:chosen.id,action:'confirmPayment'}));
-  await call('actOnBooking','reviewer',{bookingId:chosen.id,action:'confirmPayment'});
+  const concurrentReviews=await Promise.allSettled([1,2].map(()=>call('actOnBooking','reviewer',{bookingId:chosen.id,action:'confirmPayment'})));
+  assert.equal(concurrentReviews.filter(r=>r.status==='fulfilled').length,1);
   const paid=(await db.doc(`bookings/${chosen.id}`).get()).data();assert.equal(paid.paid,25000);assert.equal(paid.remaining,75000);
 
   await assert.rejects(call('reportBooking','stranger',{bookingId:chosen.id,reason:'spam'}));
@@ -43,7 +44,8 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   const cancelled=(await db.doc(`bookings/${chosen.id}`).get()).data();
   assert.equal(cancelled.refundDue,5000);
   await assert.rejects(call('actOnBooking','admin',{bookingId:chosen.id,action:'settleRefund',refundReference:'r1'}));
-  await call('actOnBooking','reviewer',{bookingId:chosen.id,action:'settleRefund',refundReference:'r1'});
+  const concurrentRefunds=await Promise.allSettled([1,2].map(()=>call('actOnBooking','reviewer',{bookingId:chosen.id,action:'settleRefund',refundReference:'r1'})));
+  assert.equal(concurrentRefunds.filter(r=>r.status==='fulfilled').length,1);
   await assert.rejects(call('actOnBooking','reviewer',{bookingId:chosen.id,action:'settleRefund',refundReference:'r1'}));
   assert.equal((await db.doc(`bookings/${chosen.id}`).get()).data().refunded,5000);
   const next={...data,requestId:'adjacent',start:data.end,end:data.end+3600000};
