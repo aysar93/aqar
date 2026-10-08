@@ -36,4 +36,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.reports-test.json "python test/firestore_safety_rules_test.py"
+      - run: npm ci --prefix test/firestore
+      - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.reports-test.json "node --test test/firestore/featured_properties.test.cjs && python test/firestore_safety_rules_test.py"
