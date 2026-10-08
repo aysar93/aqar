@@ -122,15 +122,37 @@ class _SplashScreenState extends State<SplashScreen>
 }
 
 // بوابة الدخول الحالية
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final Stream<User?> _authStream = FirebaseAuth.instance
+      .authStateChanges()
+      .where((user) => user == null || !LoginScreen.completingSocialSignIn)
+      .distinct((previous, next) => previous?.uid == next?.uid);
+  String? _profileUid;
+  Future<Map<String, dynamic>?>? _profileFuture;
+
+  Future<Map<String, dynamic>?> _profileFor(String uid) {
+    if (_profileUid != uid || _profileFuture == null) {
+      _profileUid = uid;
+      _profileFuture = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get()
+          .then((document) => document.data());
+    }
+    return _profileFuture!;
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges().where(
-            (user) => user == null || !LoginScreen.completingSocialSignIn,
-          ),
+      stream: _authStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -142,11 +164,7 @@ class AuthGate extends StatelessWidget {
 
         if (snapshot.hasData) {
           return FutureBuilder<Map<String, dynamic>?>(
-            future: FirebaseFirestore.instance
-                .collection('users')
-                .doc(snapshot.data!.uid)
-                .get()
-                .then((document) => document.data()),
+            future: _profileFor(snapshot.data!.uid),
             builder: (context, userSnapshot) {
               if (userSnapshot.connectionState != ConnectionState.done) {
                 return const Scaffold(
@@ -162,6 +180,8 @@ class AuthGate extends StatelessWidget {
           );
         }
 
+        _profileUid = null;
+        _profileFuture = null;
         return const LoginScreen();
       },
     );

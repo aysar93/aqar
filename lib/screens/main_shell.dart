@@ -19,6 +19,8 @@ import '../widgets/navigation/custom_bottom_bar.dart';
 import '../widgets/navigation/advertise_options_sheet.dart';
 
 import '../services/fcm_service.dart';
+import '../services/notification_navigation_service.dart';
+import '../widgets/navigation/home_preserving_tab_body.dart';
 import '../widgets/notification_permission_sheet.dart';
 
 class MainShell extends StatefulWidget {
@@ -35,7 +37,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   late int currentIndex;
-  String _accountMode = 'user';
+  Route<dynamic>? _mainRoute;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
       _accountModeSubscription;
 
@@ -47,6 +49,11 @@ class _MainShellState extends State<MainShell> {
     _listenToAccountMode();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _mainRoute = ModalRoute.of(context);
+      if (_mainRoute != null) {
+        NotificationNavigationService.routes.attach(_mainRoute!, _backToHome);
+      }
       _checkNotificationPermission();
     });
   }
@@ -59,7 +66,6 @@ class _MainShellState extends State<MainShell> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      _accountMode = 'user';
       return;
     }
 
@@ -78,20 +84,15 @@ class _MainShellState extends State<MainShell> {
               (_) => false);
         return;
       }
-      final newMode = (data['accountMode'] ?? 'user').toString();
-      final normalizedMode = newMode == 'office' ? 'office' : 'user';
-
-      if (!mounted || normalizedMode == _accountMode) return;
-
-      setState(() {
-        _accountMode = normalizedMode;
-      });
     });
   }
 
   @override
   void dispose() {
     _accountModeSubscription?.cancel();
+    if (_mainRoute != null) {
+      NotificationNavigationService.routes.detach(_mainRoute!);
+    }
     super.dispose();
   }
 
@@ -191,7 +192,7 @@ class _MainShellState extends State<MainShell> {
   // ==================================================
 
   List<Widget> get pages => [
-        HomeScreen(key: ValueKey('home-$_accountMode')),
+        const HomeScreen(),
         FavoritesScreen(
           onExplore: () {
             if (!mounted) return;
@@ -434,7 +435,10 @@ class _MainShellState extends State<MainShell> {
     final bool hideBottomBar = currentIndex == 4;
 
     return Scaffold(
-      body: pages[currentIndex],
+      body: HomePreservingTabBody(
+        currentIndex: currentIndex,
+        pages: pages,
+      ),
       bottomNavigationBar: hideBottomBar
           ? null
           : CustomBottomBar(
