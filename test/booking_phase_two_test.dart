@@ -1,9 +1,29 @@
+import 'package:aqar/bookings/booking_notification.dart';
 import 'package:aqar/bookings/booking_screen.dart';
 import 'package:aqar/subscription/payment_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+      'push and internal payloads resolve the same private booking destination',
+      () {
+    expect(
+        bookingNotificationId({'type': 'booking', 'bookingId': 'customer_123'}),
+        'customer_123');
+    expect(
+        bookingNotificationId({
+          'data': {'type': 'booking', 'bookingId': 'customer_123'}
+        }),
+        'customer_123');
+    expect(
+        bookingNotificationId({'type': 'booking', 'bookingId': 'a/b'}), isNull);
+    expect(bookingNotificationId({'type': 'booking', 'bookingId': ''}), isNull);
+    expect(
+        bookingNotificationId(
+            {'type': 'property', 'bookingId': 'customer_123'}),
+        isNull);
+  });
   test(
       'overnight and full-day shifts use Baghdad irrespective of device timezone',
       () {

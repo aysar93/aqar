@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'notification_route_coordinator.dart';
 import '../bookings/booking_screen.dart';
+import '../bookings/booking_notification.dart';
 
 import '../chat/chat_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -90,12 +91,11 @@ class NotificationNavigationService {
     }
     _lastHandledKey = notificationKey;
     _lastHandledAt = now;
-    if (normalized['type'] == 'booking' &&
-        (normalized['bookingId'] ?? '').toString().isNotEmpty) {
+    final bookingId = bookingNotificationId(normalized);
+    if (bookingId != null) {
       await routes.open((context) async {
         await Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => BookingDetailsScreen(
-                bookingId: normalized['bookingId'].toString())));
+            builder: (_) => BookingDetailsScreen(bookingId: bookingId)));
       });
       return;
     }
@@ -133,8 +133,8 @@ class NotificationNavigationService {
 
       switch (type) {
         case 'booking':
-          final bookingId = (data['bookingId'] ?? '').toString();
-          if (bookingId.isNotEmpty && context.mounted) {
+          final bookingId = bookingNotificationId(data);
+          if (bookingId != null && context.mounted) {
             await Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => BookingDetailsScreen(bookingId: bookingId)));
           }

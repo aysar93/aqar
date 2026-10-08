@@ -113,7 +113,7 @@ exports.actOnBooking = onCall(async r => {
       if (!['requested','held','confirmed','payment_review'].includes(b.status) || (u.uid!==b.customerId && u.uid!==b.ownerId && !u.isAdmin) || b.start <= now) fail('لا يمكن إلغاء هذا الحجز');
       if (b.status === 'payment_review' && !b.cancellationPolicy) fail('الحجز القديم يحتاج سياسة تسوية معتمدة');
       const refundDue = b.status === 'confirmed' ? policy(()=>refund(b,now,u.uid===b.ownerId || u.isAdmin)) : 0;
-      Object.assign(patch,{status:b.status==='payment_review'?'cancel_requested':'cancelled',remaining:b.status==='payment_review'?b.remaining:0,contractRemaining:b.remaining,cancellationByVenue:u.uid===b.ownerId || u.isAdmin,reason:text(d.reason),cancelledBy:u.uid,cancelledAt:now,refundDue,refundStatus:refundDue>0?'pending':'none',refunded:0});
+      Object.assign(patch,{status:b.status==='payment_review'?'cancel_requested':'cancelled',remaining:b.status==='payment_review'?b.remaining:0,contractRemaining:b.remaining,cancellationByVenue:u.uid===b.ownerId || u.isAdmin,reason:text(d.reason),cancellationReason:text(d.reason),cancelledBy:u.uid,cancelledAt:now,refundDue,refundStatus:refundDue>0?'pending':'none',refunded:0});
     } else if (d.action === 'settleRefund') {
       if (!finance(u) || [b.ownerId,b.customerId].includes(u.uid) || b.status !== 'cancelled' || b.refundStatus !== 'pending') fail('تسوية مالية مستقلة مطلوبة');
       Object.assign(patch,{refundStatus:'settled',refunded:b.refundDue,refundReference:text(d.refundReference,200),refundSettledBy:u.uid,refundSettledAt:now});

@@ -50,3 +50,9 @@ test('shared accounts preserve verified subscription account and disable absent 
   assert.equal(accounts.zaincash.enabled,false);
   assert.equal(accounts.zaincash.account,'');
 });
+
+test('FCM booking payload retains identifiers needed to open details',()=>{
+  const {notificationPushData}=require('./notification_push_data');
+  assert.deepEqual(notificationPushData({type:'booking',bookingId:'customer_123'},'notice_1'),{type:'booking',bookingId:'customer_123',notificationId:'notice_1'});
+  assert.deepEqual(notificationPushData({type:'property'},'notice_2'),{});
+});

@@ -341,7 +341,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
           CheckboxListTile(
               value: accepted,
               onChanged: (v) => setState(() => accepted = v ?? false),
-              title: const Text('أوافق على السعر والشروط')),
+              title: const Text('أوافق على السعر والشروط وسياسة الإلغاء')),
           FilledButton(
               onPressed: busy || !accepted || start == null || end == null
                   ? null
@@ -459,6 +459,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               if (b['refundDue'] != null)
                 Text(
                     'الاسترداد المستحق: ${b['refundDue']} د.ع — المعاد: ${b['refunded'] ?? 0} — الحالة: ${b['refundStatus'] == 'settled' ? 'تمت التسوية' : b['refundStatus'] == 'pending' ? 'بانتظار التسوية المالية' : 'لا يوجد مبلغ مستحق'}'),
+              if (b['reviewedBy'] != null)
+                Text('مراجع العربون: ${b['reviewedBy']}'),
+              if (b['cancelledBy'] != null)
+                Text(
+                    'ألغاه: ${b['cancelledBy']} — السبب: ${b['cancellationReason'] ?? b['reason']}'),
+              if (b['refundReference'] != null)
+                Text(
+                    'مرجع الاسترداد: ${b['refundReference']}\nالمراجع: ${b['refundSettledBy']}\nوقت التسوية: ${DateTime.fromMillisecondsSinceEpoch(b['refundSettledAt'])}'),
               if (finance &&
                   !owner &&
                   !customer &&
@@ -843,6 +851,7 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
       final d = s.data() ?? {};
       hold.text = '${d['holdMinutes'] ?? 120}';
       final accounts = await bookingCall('getBookingPaymentAccounts', {});
+      if (!mounted) return;
       qi.text = accounts['qicard']['account'] ?? '';
       zain.text = accounts['zaincash']['enabled'] == true
           ? accounts['zaincash']['account']

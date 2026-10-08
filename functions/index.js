@@ -301,7 +301,7 @@ if (!token) {
     await getMessaging().send({
 
       token: token,
-      data: data.type === 'booking' ? { type: 'booking', bookingId: String(data.bookingId), notificationId: event.params.notificationId } : {},
+      data: require('./notification_push_data').notificationPushData(data, event.params.notificationId),
 
       notification: {
         title: title,
