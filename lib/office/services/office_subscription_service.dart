@@ -1116,6 +1116,11 @@ class OfficeSubscriptionService {
     final subscriptionRef = _subscriptions.doc(subscription.id);
 
     await _firestore.runTransaction((transaction) async {
+      final officeSnapshot = await transaction.get(_offices.doc(officeId));
+      if (officeSnapshot.data()?['ownerId'] != ownerUid ||
+          officeSnapshot.data()?['status'] != 'active') {
+        throw StateError('ليس لديك صلاحية لإدارة عقارات هذا المكتب.');
+      }
       final propertySnapshot = await transaction.get(propertyRef);
 
       final subscriptionSnapshot = await transaction.get(subscriptionRef);
@@ -1139,6 +1144,18 @@ class OfficeSubscriptionService {
       if (propertyOfficeId != officeId ||
           (propertyOwnerUid.isNotEmpty && propertyOwnerUid != ownerUid)) {
         throw StateError('هذا العقار لا يتبع لهذا المكتب.');
+      }
+
+      final freshSubscription =
+          OfficeSubscriptionModel.fromFirestore(subscriptionSnapshot);
+      if (freshSubscription.officeId != officeId ||
+          freshSubscription.ownerId != ownerUid ||
+          !freshSubscription.isActive ||
+          !freshSubscription.canFeatureProperties) {
+        throw StateError('لا يوجد اشتراك فعّال يسمح بتمييز العقارات.');
+      }
+      if (isFeatured && propertyData['status'] != 'approved') {
+        throw StateError('يمكن تمييز العقارات المنشورة فقط.');
       }
 
       final currentFeatured = propertyData['isFeatured'] as bool? ?? false;
@@ -1199,12 +1216,14 @@ class OfficeSubscriptionService {
       // تمييز العقار.
       transaction.update(propertyRef, {
         'isFeatured': true,
+        'featuredSubscriptionId': subscription.id,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // استهلاك محاولة واحدة فقط عند التمييز.
       transaction.update(subscriptionRef, {
         'featuredPropertiesUsed': used + 1,
+        'lastFeaturedPropertyId': propertyId,
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
