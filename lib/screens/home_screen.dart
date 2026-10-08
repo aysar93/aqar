@@ -58,10 +58,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _auth?.cancel();
     searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   final searchController = TextEditingController();
+  final _scrollController = ScrollController();
   String search = '';
 
   String selectedCategory = "الكل";
@@ -108,6 +110,9 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: _refreshHome,
         child: SafeArea(
           child: ListView(
+            key: const PageStorageKey<String>('home-scroll'),
+            controller: _scrollController,
+            primary: false,
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
@@ -168,7 +173,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 builder: (_) => const NotificationsScreen(),
                               ),
                             );
-                            if (mounted) setState(() {});
                           },
                         );
                       },
