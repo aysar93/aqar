@@ -55,6 +55,7 @@ class NotificationNavigationService {
 
     return [
       (data['type'] ?? 'general').toString(),
+      (data['bookingId'] ?? '').toString(),
       (data['propertyId'] ?? '').toString(),
       (data['officeId'] ?? '').toString(),
       (data['chatId'] ?? '').toString(),

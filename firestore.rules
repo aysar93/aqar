@@ -9,12 +9,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function bookingFinance() { return activeUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
     match /booking_venues/{venueId} {
       allow read: if isAdmin() || resource.data.active == true;
       allow write: if false;
     }
     match /bookings/{bookingId} {
-      allow read: if activeUser() && (isAdmin() || resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow read: if activeUser() && (isAdmin() || bookingFinance() || resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
       allow write: if false;
     }
     match /booking_reports/{reportId} {
@@ -593,6 +594,7 @@ match /users/{userId} {
   allow create: if isSignedIn() &&
     request.auth.uid == userId &&
     request.resource.data.isAdmin == false &&
+    request.resource.data.get('canReviewBookingPayments', false) == false &&
     request.resource.data.isBlocked == false &&
     request.resource.data.accountType == 'user' &&
     request.resource.data.accountMode == 'user';

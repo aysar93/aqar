@@ -4,12 +4,37 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+
+List<DateTime> bookingShiftDates(DateTime date, Map<String, dynamic> shift) {
+  final minute = shift['checkInMinute'] as int;
+  final duration = ((shift['checkOutMinute'] as int) - minute + 1440) % 1440;
+  final start = DateTime.utc(date.year, date.month, date.day)
+      .add(Duration(minutes: minute - 180));
+  return [start, start.add(Duration(minutes: duration == 0 ? 1440 : duration))];
+}
+
+String bookingTime(dynamic minute) =>
+    '${((minute as int) ~/ 60).toString().padLeft(2, '0')}:${(minute % 60).toString().padLeft(2, '0')}';
+int? bookingMinute(String value) {
+  final parts = value.split(':');
+  if (parts.length != 2) return null;
+  final h = int.tryParse(parts[0]), m = int.tryParse(parts[1]);
+  return h != null && m != null && h >= 0 && h < 24 && m >= 0 && m < 60
+      ? h * 60 + m
+      : null;
+}
+
+String bookingCancellationText(dynamic p) => p == null
+    ? 'سياسة الاسترداد غير محددة لهذا الحجز القديم؛ يلزم اعتمادها قبل الإلغاء المالي.'
+    : 'استرداد كامل العربون عند إلغاء الزبون قبل الدخول بـ ${p['freeCancellationHours']} ساعة أو أكثر، وبعدها استرداد ${p['lateRefundPercent']}٪. إلغاء المالك أو الإدارة قبل الدخول يعيد كامل العربون. لا يتاح الإلغاء بعد الدخول. الاسترداد بتحويل يدوي يراجعه موظف مالي.';
 
 const bookingStatuses = {
   'requested': 'بانتظار المالك',
   'held': 'حجز مؤقت — بانتظار العربون',
   'payment_review': 'الإيصال قيد مراجعة الإدارة',
   'confirmed': 'حجز مؤكد',
+  'cancel_requested': 'إلغاء بانتظار مراجعة الإيصال',
   'rejected': 'مرفوض',
   'cancelled': 'ملغي',
   'expired': 'انتهت المهلة',
@@ -45,6 +70,21 @@ class BookingScreen extends StatefulWidget {
 
 class _BookingScreenState extends State<BookingScreen> {
   int tab = 0;
+  bool finance = false;
+  @override
+  void initState() {
+    super.initState();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      FirebaseFirestore.instance.doc('users/$uid').get().then((s) {
+        if (mounted) {
+          setState(
+              () => finance = s.data()?['canReviewBookingPayments'] == true);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -60,7 +100,10 @@ class _BookingScreenState extends State<BookingScreen> {
       query = FirebaseFirestore.instance.collection('booking_reports');
     } else {
       query = FirebaseFirestore.instance.collection('bookings');
-      if (!widget.admin) {
+      if (tab == 4) {
+        query = query.where('status',
+            whereIn: ['payment_review', 'cancel_requested', 'cancelled']);
+      } else if (!widget.admin) {
         query =
             query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid);
       }
@@ -96,7 +139,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   0: 'الأماكن',
                   1: widget.admin ? 'جميع الحجوزات' : 'حجوزاتي',
                   if (!widget.admin) 2: 'لوحة المالك',
-                  if (widget.admin) 3: 'البلاغات'
+                  if (widget.admin) 3: 'البلاغات',
+                  if (finance) 4: 'المراجعة المالية'
                 }.entries)
                   ChoiceChip(
                       label: Text(entry.value),
@@ -171,6 +215,30 @@ class BookingRequestScreen extends StatefulWidget {
 class _BookingRequestScreenState extends State<BookingRequestScreen> {
   DateTime? start, end;
   bool accepted = false, busy = false;
+  String? shiftId;
+  int get total {
+    final v = widget.venue;
+    if (v['pricingMode'] == 'hourly' && start != null && end != null) {
+      return ((end!.difference(start!).inMinutes / 60) *
+              (v['hourlyPrice'] as num))
+          .round();
+    }
+    if (v['pricingMode'] == 'shifts' && shiftId != null) {
+      return (v['shifts'] as List)
+          .firstWhere((s) => s['id'] == shiftId)['price'] as int;
+    }
+    return v['price'] as int;
+  }
+
+  void setShiftDate(DateTime date) {
+    final shift =
+        (widget.venue['shifts'] as List).firstWhere((s) => s['id'] == shiftId);
+    final dates =
+        bookingShiftDates(date, Map<String, dynamic>.from(shift as Map));
+    start = dates[0];
+    end = dates[1];
+  }
+
   final notes = TextEditingController();
   late final requestId = '${DateTime.now().microsecondsSinceEpoch}';
   @override
@@ -199,19 +267,74 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
         appBar: AppBar(title: Text('${v['name']}')),
         body: ListView(padding: const EdgeInsets.all(20), children: [
           Text(
-              'المالك: ${v['ownerName']}\nالموقع: ${v['location']}\nالسعر لكل حجز: ${v['price']} د.ع\nالعربون: ${v['deposit']} د.ع\nالمتبقي بعد اعتماد العربون: ${(v['price'] as num) - (v['deposit'] as num)} د.ع\n\nالشروط: ${v['terms']}'),
-          TextButton(
-              onPressed: () async {
-                final d = await pick();
-                if (mounted && d != null) setState(() => start = d);
-              },
-              child: Text('البداية: ${start ?? "اختر"}')),
-          TextButton(
-              onPressed: () async {
-                final d = await pick();
-                if (mounted && d != null) setState(() => end = d);
-              },
-              child: Text('النهاية: ${end ?? "اختر"}')),
+              'المالك: ${v['ownerName']}\nالموقع: ${v['location']}\nالسعر المحدد: $total د.ع\nالعربون: ${v['deposit']} د.ع\nالمتبقي بعد اعتماد العربون: ${total - (v['deposit'] as num)} د.ع\n\nالشروط: ${v['terms']}'),
+          if (v['pricingMode'] == 'hourly')
+            Text('سعر الساعة: ${v['hourlyPrice']} د.ع — اختر ساعات كاملة'),
+          if (v['pricingMode'] == 'shifts') ...[
+            DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: shiftId,
+                decoration:
+                    const InputDecoration(labelText: 'الشفت (توقيت بغداد)'),
+                items: [
+                  for (final shift in v['shifts'] as List)
+                    DropdownMenuItem(
+                        value: shift['id'] as String,
+                        child: Text(
+                            '${shift['name']} — ${bookingTime(shift['checkInMinute'])} إلى ${bookingTime(shift['checkOutMinute'])} — ${shift['price']} د.ع',
+                            overflow: TextOverflow.ellipsis))
+                ],
+                onChanged: (value) => setState(() {
+                      shiftId = value;
+                      start = null;
+                      end = null;
+                      accepted = false;
+                    })),
+            TextButton(
+                onPressed: shiftId == null
+                    ? null
+                    : () async {
+                        final date = await showDatePicker(
+                            context: context,
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)));
+                        if (mounted && date != null) {
+                          setState(() {
+                            setShiftDate(date);
+                            accepted = false;
+                          });
+                        }
+                      },
+                child: const Text('اختر تاريخ دخول الشفت')),
+            if (start != null)
+              Text(
+                  'الدخول: ${start!.add(const Duration(hours: 3)).toString().replaceAll("Z", "")}\nالخروج: ${end!.add(const Duration(hours: 3)).toString().replaceAll("Z", "")} — توقيت بغداد'),
+          ] else ...[
+            TextButton(
+                onPressed: () async {
+                  final d = await pick();
+                  if (mounted && d != null) {
+                    setState(() {
+                      start = d;
+                      accepted = false;
+                    });
+                  }
+                },
+                child: Text('البداية: ${start ?? "اختر"}')),
+            TextButton(
+                onPressed: () async {
+                  final d = await pick();
+                  if (mounted && d != null) {
+                    setState(() {
+                      end = d;
+                      accepted = false;
+                    });
+                  }
+                },
+                child: Text('النهاية: ${end ?? "اختر"}')),
+          ],
+          Text(bookingCancellationText(v['cancellationPolicy'])),
           TextField(
               controller: notes,
               decoration: const InputDecoration(labelText: 'ملاحظات')),
@@ -231,7 +354,9 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                           'start': start!.millisecondsSinceEpoch,
                           'end': end!.millisecondsSinceEpoch,
                           'acceptedTerms': v['terms'],
-                          'price': v['price'],
+                          'price': total,
+                          'shiftId': shiftId,
+                          'cancellationPolicy': v['cancellationPolicy'],
                           'deposit': v['deposit'],
                           'notes': notes.text
                         });
@@ -258,22 +383,30 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
-  bool busy = false, admin = false;
+  bool busy = false, admin = false, finance = false;
   String method = 'qicard';
-  final transaction = TextEditingController(), reason = TextEditingController();
+  final transaction = TextEditingController(),
+      reason = TextEditingController(),
+      refundReference = TextEditingController();
   @override
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       FirebaseFirestore.instance.doc('users/$uid').get().then((s) {
-        if (mounted) setState(() => admin = s.data()?['isAdmin'] == true);
+        if (mounted) {
+          setState(() {
+            admin = s.data()?['isAdmin'] == true;
+            finance = s.data()?['canReviewBookingPayments'] == true;
+          });
+        }
       });
     }
   }
 
   @override
   void dispose() {
+    refundReference.dispose();
     transaction.dispose();
     reason.dispose();
     super.dispose();
@@ -319,6 +452,29 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             return ListView(padding: const EdgeInsets.all(20), children: [
               Text(
                   '${b['venueName']}\nالنوع: ${b['category']}\nالموقع: ${b['location']}\nالزبون: ${b['customerName']} — ${b['customerPhone']}\nالمالك: ${b['ownerName']} — ${b['ownerPhone']}\nالبداية: ${DateTime.fromMillisecondsSinceEpoch(b['start'])}\nالنهاية: ${DateTime.fromMillisecondsSinceEpoch(b['end'])}\nالإجمالي: ${b['total']} د.ع\nالعربون: ${b['deposit']} د.ع\nالمدفوع المعتمد: ${b['paid']} د.ع\nالمتبقي: ${b['remaining']} د.ع\nالحالة: ${bookingStatuses[b['status']]}\nالشروط: ${b['terms']}\nملاحظات: ${b['notes']}\n${b['reason'] ?? ""}\n${b['holdUntil'] == null ? "" : "مهلة الدفع: ${DateTime.fromMillisecondsSinceEpoch(b['holdUntil'])}"}\nطريقة الدفع: ${b['paymentMethod'] ?? "—"}\nرقم التحويل: ${b['transactionNumber'] ?? "—"}\nحساب التحويل: ${b['paymentAccount'] ?? "—"}'),
+              Text(bookingCancellationText(b['cancellationPolicy'])),
+              if (b['pricing'] != null)
+                Text(
+                    'التسعير: ${b['pricing']['name'] ?? b['pricing']['mode']}'),
+              if (b['refundDue'] != null)
+                Text(
+                    'الاسترداد المستحق: ${b['refundDue']} د.ع — المعاد: ${b['refunded'] ?? 0} — الحالة: ${b['refundStatus'] == 'settled' ? 'تمت التسوية' : b['refundStatus'] == 'pending' ? 'بانتظار التسوية المالية' : 'لا يوجد مبلغ مستحق'}'),
+              if (finance &&
+                  !owner &&
+                  !customer &&
+                  b['refundStatus'] == 'pending') ...[
+                TextField(
+                    controller: refundReference,
+                    decoration: const InputDecoration(
+                        labelText:
+                            'مرجع تحويل الاسترداد بعد إعادة المبلغ فعلياً')),
+                FilledButton(
+                    onPressed: busy
+                        ? null
+                        : () => act('settleRefund',
+                            {'refundReference': refundReference.text}),
+                    child: const Text('تسجيل إعادة المبلغ يدوياً')),
+              ],
               if (b['receiptPath'] != null)
                 TextButton(
                     onPressed: () => bookingRun(context, () async {
@@ -351,15 +507,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           value: 'zaincash', child: Text('زين كاش'))
                     ],
                     onChanged: (v) => setState(() => method = v!)),
-                StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance
-                        .doc('settings/bookings')
-                        .snapshots(),
-                    builder: (context, s) {
-                      final c = s.data?.data()?[method] as Map?;
+                FutureBuilder<Map<String, dynamic>>(
+                    future: bookingCall('getBookingPaymentAccounts', {}),
+                    builder: (context, snapshot) {
+                      final c = snapshot.data?[method] as Map?;
                       return Text(c?['enabled'] == true
-                          ? 'حوّل العربون يدوياً إلى: ${c?['account']}\n${c?['instructions'] ?? ""}'
-                          : 'طريقة الدفع غير مهيأة لدى الإدارة');
+                          ? 'حوّل العربون يدوياً إلى: ${c?['account']}'
+                          : 'لا يتوفر حساب تحويل موثّق لهذه الطريقة');
                     }),
                 TextField(
                     controller: transaction,
@@ -379,7 +533,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               final path =
                                   'booking_receipts/${widget.bookingId}/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg';
                               await FirebaseStorage.instance.ref(path).putData(
-                                  await image.readAsBytes(),
+                                  await FlutterImageCompress.compressWithList(
+                                      await image.readAsBytes(),
+                                      format: CompressFormat.jpeg,
+                                      quality: 85),
                                   SettableMetadata(contentType: 'image/jpeg'));
                               await bookingCall('actOnBooking', {
                                 'bookingId': widget.bookingId,
@@ -393,12 +550,21 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           },
                     child: const Text('رفع إيصال وإرسال للمراجعة'))
               ],
-              if (admin && b['status'] == 'payment_review') ...[
-                button('اعتماد العربون وتأكيد الحجز', 'confirmPayment'),
+              if (finance &&
+                  !owner &&
+                  !customer &&
+                  ['payment_review', 'cancel_requested']
+                      .contains(b['status'])) ...[
+                button(
+                    b['status'] == 'cancel_requested'
+                        ? 'اعتماد المبلغ وفتح تسوية الاسترداد'
+                        : 'اعتماد العربون وتأكيد الحجز',
+                    'confirmPayment'),
                 button('رفض الإيصال', 'rejectPayment')
               ],
               if ((owner || customer || admin) &&
-                  ['requested', 'held'].contains(b['status']))
+                  ['requested', 'held', 'confirmed', 'payment_review']
+                      .contains(b['status']))
                 button('إلغاء الحجز', 'cancel'),
               if (owner || customer)
                 OutlinedButton(
@@ -436,15 +602,45 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       'location',
       'price',
       'deposit',
-      'terms'
+      'terms',
+      'hourlyPrice',
+      'freeCancellationHours',
+      'lateRefundPercent'
     ])
-      k: TextEditingController(text: widget.data[k]?.toString() ?? '')
+      k: TextEditingController(
+          text: (['freeCancellationHours', 'lateRefundPercent'].contains(k)
+                      ? (widget.data['cancellationPolicy'] as Map? ?? {})[k]
+                      : widget.data[k])
+                  ?.toString() ??
+              '')
   };
+  late String pricingMode = widget.data['pricingMode'] ?? 'fixed';
+  late final List<Map<String, TextEditingController>> shifts = [
+    for (final shift in (widget.data['shifts'] as List? ?? []))
+      {
+        for (final key in [
+          'id',
+          'name',
+          'checkInMinute',
+          'checkOutMinute',
+          'price'
+        ])
+          key: TextEditingController(
+              text: ['checkInMinute', 'checkOutMinute'].contains(key)
+                  ? bookingTime(shift[key])
+                  : '${shift[key]}')
+      }
+  ];
   late String category = widget.data['category'] ?? 'chalet';
   late bool active = widget.data['active'] ?? false;
   bool busy = false;
   @override
   void dispose() {
+    for (final shift in shifts) {
+      for (final c in shift.values) {
+        c.dispose();
+      }
+    }
     for (final c in fields.values) {
       c.dispose();
     }
@@ -484,7 +680,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
             );
           },
         ),
-        for (final e in fields.entries.where((e) => e.key != 'ownerId'))
+        for (final e in fields.entries.where((e) =>
+            e.key != 'ownerId' &&
+            (e.key != 'price' || pricingMode == 'fixed') &&
+            (e.key != 'hourlyPrice' || pricingMode == 'hourly')))
           TextField(
               controller: e.value,
               decoration: InputDecoration(
@@ -492,11 +691,76 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 'name': 'اسم المكان',
                 'ownerId': 'معرف حساب المالك للتحقق من الحساب',
                 'location': 'الموقع',
-                'price': 'السعر لكل حجز بالدينار',
+                'price': 'السعر الثابت لكل حجز بالدينار',
                 'deposit': 'العربون بالدينار',
-                'terms': 'الشروط وسياسة الإلغاء'
+                'terms': 'شروط المكان',
+                'hourlyPrice':
+                    'سعر الساعة بالدينار (عند اختيار التسعير بالساعة)',
+                'freeCancellationHours':
+                    'عدد ساعات الإلغاء قبل الدخول لاسترداد كامل العربون',
+                'lateRefundPercent':
+                    'نسبة استرداد العربون بعد الموعد أعلاه (0–100)'
               }[e.key]),
               maxLines: e.key == 'terms' ? 4 : 1),
+        DropdownButtonFormField<String>(
+            initialValue: pricingMode,
+            decoration: const InputDecoration(labelText: 'نوع التسعير'),
+            items: const [
+              DropdownMenuItem(value: 'fixed', child: Text('سعر ثابت')),
+              DropdownMenuItem(value: 'shifts', child: Text('شفتات')),
+              DropdownMenuItem(value: 'hourly', child: Text('بالساعة'))
+            ],
+            onChanged: (v) => setState(() => pricingMode = v!)),
+        if (pricingMode == 'shifts') ...[
+          const Text(
+              'أوقات الشفتات بتوقيت بغداد. الخروج قبل الدخول أو مساوياً له يعني اليوم التالي.'),
+          for (final shift in shifts)
+            Card(
+                child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(children: [
+                      for (final key in [
+                        'name',
+                        'checkInMinute',
+                        'checkOutMinute',
+                        'price'
+                      ])
+                        TextField(
+                            controller: shift[key],
+                            decoration: InputDecoration(
+                                labelText: {
+                              'name': 'اسم الشفت',
+                              'checkInMinute': 'الدخول HH:mm',
+                              'checkOutMinute': 'الخروج HH:mm',
+                              'price': 'السعر بالدينار'
+                            }[key])),
+                      TextButton(
+                          onPressed: () => setState(() {
+                                shifts.remove(shift);
+                                for (final c in shift.values) {
+                                  c.dispose();
+                                }
+                              }),
+                          child: const Text('حذف الشفت')),
+                    ]))),
+          TextButton(
+              onPressed: shifts.length >= 12
+                  ? null
+                  : () => setState(() => shifts.add({
+                        for (final key in [
+                          'id',
+                          'name',
+                          'checkInMinute',
+                          'checkOutMinute',
+                          'price'
+                        ])
+                          key: TextEditingController(
+                              text: key == 'id'
+                                  ? 'shift_${DateTime.now().microsecondsSinceEpoch}'
+                                  : '')
+                      })),
+              child: const Text('إضافة شفت')),
+        ],
         DropdownButton<String>(
             value: category,
             items: [
@@ -522,9 +786,34 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                       await bookingCall('saveBookingVenue', {
                         'id': widget.venueId,
                         for (final e in fields.entries)
-                          e.key: ['price', 'deposit'].contains(e.key)
+                          e.key: [
+                            'price',
+                            'deposit',
+                            'hourlyPrice',
+                            'freeCancellationHours',
+                            'lateRefundPercent'
+                          ].contains(e.key)
                               ? int.tryParse(e.value.text)
                               : e.value.text,
+                        'pricingMode': pricingMode,
+                        'shifts': [
+                          for (final shift in shifts)
+                            {
+                              for (final entry in shift.entries)
+                                entry.key: ['checkInMinute', 'checkOutMinute']
+                                        .contains(entry.key)
+                                    ? bookingMinute(entry.value.text)
+                                    : entry.key == 'price'
+                                        ? int.tryParse(entry.value.text)
+                                        : entry.value.text
+                            }
+                        ],
+                        'cancellationPolicy': {
+                          'freeCancellationHours': int.tryParse(
+                              fields['freeCancellationHours']!.text),
+                          'lateRefundPercent':
+                              int.tryParse(fields['lateRefundPercent']!.text)
+                        },
                         'category': category,
                         'active': active
                       });
@@ -550,11 +839,14 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    FirebaseFirestore.instance.doc('settings/bookings').get().then((s) {
+    FirebaseFirestore.instance.doc('settings/bookings').get().then((s) async {
       final d = s.data() ?? {};
       hold.text = '${d['holdMinutes'] ?? 120}';
-      qi.text = d['qicard']?['account'] ?? '';
-      zain.text = d['zaincash']?['account'] ?? '';
+      final accounts = await bookingCall('getBookingPaymentAccounts', {});
+      qi.text = accounts['qicard']['account'] ?? '';
+      zain.text = accounts['zaincash']['enabled'] == true
+          ? accounts['zaincash']['account']
+          : 'لا يوجد رقم موثّق في الاشتراكات';
       if (mounted) setState(() => loaded = true);
     });
   }
@@ -577,13 +869,33 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
                 labelText: 'مدة الحجز المؤقت بالدقائق (5–10080)')),
         TextField(
             controller: qi,
+            readOnly: true,
             decoration: const InputDecoration(labelText: 'اسم ورقم حساب كي')),
         TextField(
             controller: zain,
+            readOnly: true,
             decoration:
                 const InputDecoration(labelText: 'اسم ورقم حساب زين كاش')),
         const Text(
-            'ترك حساب التحويل فارغاً يعطل طريقة الدفع. الإيصال مطلوب لكلا الطريقتين.'),
+            'حسابات التحويل مشتركة مع اشتراكات المكاتب. لا يُفعّل زين كاش دون حساب موثّق. الإلغاء بواسطة المالك أو الإدارة يعيد كامل العربون. التسوية اليدوية تحتاج مرجع تحويل.'),
+        FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            future: FirebaseFirestore.instance.collection('users').get(),
+            builder: (context, snapshot) => Column(children: [
+                  const Text(
+                      'صلاحية مراجعة مدفوعات الحجوزات (مستقلة عن الإدارة)'),
+                  for (final user in snapshot.data?.docs ??
+                      <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                    SwitchListTile(
+                        title: Text('${user.data()['name'] ?? user.id}'),
+                        value: user.data()['canReviewBookingPayments'] == true,
+                        onChanged: busy
+                            ? null
+                            : (enabled) => bookingRun(context, () async {
+                                  await bookingCall('setBookingPaymentReviewer',
+                                      {'userId': user.id, 'enabled': enabled});
+                                  if (mounted) setState(() {});
+                                })),
+                ])),
         FilledButton(
             onPressed: !loaded || busy
                 ? null
@@ -596,18 +908,8 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
                     await bookingRun(
                         context,
                         () => FirebaseFirestore.instance
-                                .doc('settings/bookings')
-                                .set({
-                              'holdMinutes': minutes,
-                              'qicard': {
-                                'enabled': qi.text.trim().isNotEmpty,
-                                'account': qi.text.trim()
-                              },
-                              'zaincash': {
-                                'enabled': zain.text.trim().isNotEmpty,
-                                'account': zain.text.trim()
-                              }
-                            }));
+                            .doc('settings/bookings')
+                            .set({'holdMinutes': minutes}));
                     if (mounted) setState(() => busy = false);
                   },
             child: const Text('حفظ'))

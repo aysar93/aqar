@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../payment_accounts.dart';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -42,9 +43,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _processing = false;
   bool _uploadingReceipt = false;
 
-  static const String _qiCardName = 'AYSAR ABDULKAREEM SALEH';
+  String _qiCardName = '';
 
-  static const String _qiCardNumber = '7066135323';
+  @override
+  void initState() {
+    super.initState();
+    SubscriptionPaymentAccounts.load().then((accounts) {
+      if (mounted) {
+        setState(() {
+          _qiCardName = accounts['qicard']['name'];
+          _qiCardNumber = accounts['qicard']['number'];
+        });
+      }
+    });
+  }
+
+  String _qiCardNumber = '';
 
   @override
   void dispose() {
@@ -128,7 +142,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _copyQiCardNumber() async {
     await Clipboard.setData(
-      const ClipboardData(
+      ClipboardData(
         text: _qiCardNumber,
       ),
     );

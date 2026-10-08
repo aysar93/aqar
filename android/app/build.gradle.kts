@@ -9,7 +9,15 @@ plugins {
 import java.util.Properties
 
 val keystoreProperties = Properties().apply {
-    load(rootProject.file("key.properties").inputStream())
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+// Debug builds do not require production signing secrets. Release builds must be signed.
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name.contains("Release") } && keystoreProperties.getProperty("storeFile") == null) {
+        throw GradleException("Release signing requires android/key.properties")
+    }
 }
 
 android {
@@ -44,7 +52,7 @@ android {
 
 
     signingConfigs {
-    create("release") {
+    if (keystoreProperties.getProperty("storeFile") != null) create("release") {
         storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
         storePassword = keystoreProperties["storePassword"] as String
         keyAlias = keystoreProperties["keyAlias"] as String
@@ -54,7 +62,7 @@ android {
 
     buildTypes {
     release {
-        signingConfig = signingConfigs.getByName("release")
+        signingConfig = signingConfigs.findByName("release")
 
         isMinifyEnabled = true
         isShrinkResources = true
