@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_screen.dart';
+import '../bookings/booking_screen.dart';
 import 'favorites_screen.dart';
 import 'login_screen.dart';
 import 'add_property/add_property_screen.dart';
@@ -207,6 +208,7 @@ class _MainShellState extends State<MainShell> {
         ChatScreen(
           onBack: _backToHome,
         ),
+        const BookingScreen(),
       ];
 
   // ==================================================

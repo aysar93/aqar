@@ -7,6 +7,7 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 
 initializeApp();
+Object.assign(exports, require('./booking_functions'));
 
 const db = getFirestore();
 Object.assign(exports, require('./chat_functions'));
@@ -300,6 +301,7 @@ if (!token) {
     await getMessaging().send({
 
       token: token,
+      data: data.type === 'booking' ? { type: 'booking', bookingId: String(data.bookingId), notificationId: event.params.notificationId } : {},
 
       notification: {
         title: title,

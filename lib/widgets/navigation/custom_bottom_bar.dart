@@ -44,6 +44,14 @@ class CustomBottomBar extends StatelessWidget {
         children: [
           Expanded(
             child: BottomNavItem(
+              icon: Icons.event_available,
+              label: 'الحجوزات',
+              selected: currentIndex == 5,
+              onTap: () => onTap(5),
+            ),
+          ),
+          Expanded(
+            child: BottomNavItem(
               icon: Icons.home_rounded,
               label: "الرئيسية",
               selected: currentIndex == 0,

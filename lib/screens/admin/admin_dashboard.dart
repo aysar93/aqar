@@ -14,6 +14,7 @@ import '../../app_updates/app_updates_management_screen.dart';
 import '../../analytics/screens/analytics_dashboard_screen.dart';
 import '../../reels/admin/reels_admin_screen.dart';
 import 'content_reports_screen.dart';
+import '../../bookings/booking_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -48,6 +49,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
         body: ListView(
           padding: const EdgeInsets.all(18),
           children: [
+            adminButton(context,
+                icon: Icons.event_available,
+                title: 'إدارة الحجوزات',
+                subtitle: 'الأماكن والحجوزات والعربون والبلاغات',
+                color: Colors.teal,
+                page: const BookingScreen(admin: true)),
             const Text(
               "مرحباً بك",
               style: TextStyle(

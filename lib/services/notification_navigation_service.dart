@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'notification_route_coordinator.dart';
+import '../bookings/booking_screen.dart';
 
 import '../chat/chat_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -88,6 +89,15 @@ class NotificationNavigationService {
     }
     _lastHandledKey = notificationKey;
     _lastHandledAt = now;
+    if (normalized['type'] == 'booking' &&
+        (normalized['bookingId'] ?? '').toString().isNotEmpty) {
+      await routes.open((context) async {
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => BookingDetailsScreen(
+                bookingId: normalized['bookingId'].toString())));
+      });
+      return;
+    }
     // External taps open the existing notifications inbox. Its items retain
     // their normal property/office/chat destinations.
     await routes.open(_openNotifications);
@@ -121,6 +131,13 @@ class NotificationNavigationService {
       );
 
       switch (type) {
+        case 'booking':
+          final bookingId = (data['bookingId'] ?? '').toString();
+          if (bookingId.isNotEmpty && context.mounted) {
+            await Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => BookingDetailsScreen(bookingId: bookingId)));
+          }
+          break;
         // ============================
         // عقار تمت الموافقة عليه
         // ============================

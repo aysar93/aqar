@@ -9,6 +9,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    match /booking_venues/{venueId} {
+      allow read: if isAdmin() || resource.data.active == true;
+      allow write: if false;
+    }
+    match /bookings/{bookingId} {
+      allow read: if activeUser() && (isAdmin() || resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_reports/{reportId} {
+      allow read: if isAdmin();
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'resolved';
+      allow create, delete: if false;
+    }
+
     function isAdmin() {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
