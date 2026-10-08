@@ -94,12 +94,8 @@ class FCMService {
 
         debugPrint("Data: $additionalData");
 
-        if (additionalData == null) {
-          return;
-        }
-
         await _handleNotificationClick(
-          Map<String, dynamic>.from(additionalData),
+          Map<String, dynamic>.from(additionalData ?? <String, dynamic>{}),
         );
       },
     );
@@ -260,14 +256,6 @@ class FCMService {
   static Future<void> _handleNotificationClick(
     Map<String, dynamic> data,
   ) async {
-    if (data.isEmpty) {
-      debugPrint(
-        "Notification click ignored: data is empty.",
-      );
-
-      return;
-    }
-
     // بعض الخوادم قد ترسل بيانات الوجهة داخل data
     // وبعضها قد يرسلها مباشرة.
     final nestedData = data["data"];
@@ -311,25 +299,8 @@ class FCMService {
     _lastHandledNotificationKey = notificationKey;
     _lastHandledNotificationAt = now;
 
-    // نعطي MaterialApp فرصة ليصبح Navigator جاهزاً.
-    for (int attempt = 0; attempt < 10; attempt++) {
-      if (NotificationNavigationService.navigatorKey.currentContext != null) {
-        await NotificationNavigationService.handlePushNotification(
-          navigationData,
-        );
-
-        return;
-      }
-
-      await Future.delayed(
-        const Duration(milliseconds: 300),
-      );
-    }
-
-    debugPrint(
-      "Notification navigation failed: "
-      "Navigator is not ready.",
-    );
+    // Queue until MainShell is ready, including cold starts and onboarding.
+    await NotificationNavigationService.handlePushNotification(navigationData);
   }
 
   // =========================================================

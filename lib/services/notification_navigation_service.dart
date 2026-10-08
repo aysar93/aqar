@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'notification_route_coordinator.dart';
 
 import '../chat/chat_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -16,38 +16,14 @@ class NotificationNavigationService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  static final routes = NotificationRouteCoordinator(navigatorKey);
+
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // يمنع تراكم الصفحات عند الضغط المتكرر على نفس الإشعار.
   static bool _navigationInProgress = false;
   static String _lastHandledKey = '';
   static DateTime? _lastHandledAt;
-  static bool _storageReady = false;
-  static Set<String> _handledNotificationIds = <String>{};
-
-  static Future<void> _loadHandledNotifications() async {
-    if (_storageReady) return;
-    final prefs = await SharedPreferences.getInstance();
-    _handledNotificationIds =
-        (prefs.getStringList('handled_notification_ids') ?? <String>[]).toSet();
-    _storageReady = true;
-  }
-
-  static Future<void> _markHandled(String key) async {
-    if (key.isEmpty) return;
-    await _loadHandledNotifications();
-    _handledNotificationIds.add(key);
-    final values = _handledNotificationIds.toList();
-    if (values.length > 100) {
-      values.removeRange(0, values.length - 100);
-      _handledNotificationIds = values.toSet();
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      'handled_notification_ids',
-      _handledNotificationIds.toList(),
-    );
-  }
 
   static Map<String, dynamic> _normalizePayload(
     Map<String, dynamic> raw,
@@ -102,19 +78,19 @@ class NotificationNavigationService {
   static Future<void> handlePushNotification(
     Map<String, dynamic> data,
   ) async {
-    final context = navigatorKey.currentContext;
-
-    if (context == null) {
-      debugPrint(
-        'NotificationNavigationService: Navigator is not ready.',
-      );
+    final normalized = _normalizePayload(data);
+    final notificationKey = _notificationKey(normalized);
+    final now = DateTime.now();
+    if (_lastHandledKey == notificationKey &&
+        _lastHandledAt != null &&
+        now.difference(_lastHandledAt!) < const Duration(milliseconds: 1500)) {
       return;
     }
-
-    await _navigate(
-      context: context,
-      data: _normalizePayload(data),
-    );
+    _lastHandledKey = notificationKey;
+    _lastHandledAt = now;
+    // External taps open the existing notifications inbox. Its items retain
+    // their normal property/office/chat destinations.
+    await routes.open(_openNotifications);
   }
 
   static Future<void> _navigate({
@@ -125,26 +101,7 @@ class NotificationNavigationService {
       return;
     }
 
-    await _loadHandledNotifications();
-
-    final notificationKey = _notificationKey(data);
-    final now = DateTime.now();
-
-    if (_handledNotificationIds.contains(notificationKey)) {
-      debugPrint('Notification already handled: $notificationKey');
-      return;
-    }
-
-    if (_lastHandledKey == notificationKey &&
-        _lastHandledAt != null &&
-        now.difference(_lastHandledAt!) < const Duration(milliseconds: 1500)) {
-      return;
-    }
-
     _navigationInProgress = true;
-    _lastHandledKey = notificationKey;
-    _lastHandledAt = now;
-    await _markHandled(notificationKey);
 
     try {
       final type = (data['type'] ?? 'general').toString().trim();
@@ -288,7 +245,7 @@ class NotificationNavigationService {
         // ============================
         case 'general':
         default:
-          await _openNotifications(context);
+          // General items are already displayed in NotificationsScreen.
           break;
       }
     } finally {
@@ -344,7 +301,7 @@ class NotificationNavigationService {
               ? images.first.toString()
               : '';
 
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => PropertyDetails(
             docId: snapshot.id,
@@ -463,7 +420,7 @@ class NotificationNavigationService {
 
       if (!context.mounted) return;
 
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => OfficeProfileScreen(
             officeId: snapshot.id,
@@ -528,7 +485,7 @@ class NotificationNavigationService {
 
       // المستخدم العادي
       if (!isAdmin) {
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => const ChatScreen(),
           ),
@@ -567,7 +524,7 @@ class NotificationNavigationService {
         return;
       }
 
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => AdminChatScreen(
             userId: chatId,
@@ -604,7 +561,7 @@ class NotificationNavigationService {
       return;
     }
 
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const NotificationsScreen(),
       ),
