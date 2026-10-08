@@ -48,6 +48,40 @@ service cloud.firestore {
         request.resource.data.get('isPinned', false) == resource.data.get('isPinned', false));
     }
 
+    function validFeatureSubscription(s, officeId) {
+      return s.officeId == officeId && s.ownerId == request.auth.uid &&
+        s.status == 'active' && s.canFeatureProperties == true &&
+        s.startDate is timestamp && s.endDate is timestamp &&
+        s.startDate <= request.time && request.time < s.endDate;
+    }
+    function validOfficeFeature(propertyId) {
+      let officeId = resource.data.get('officeId', '');
+      let office = get(/databases/$(database)/documents/offices/$(officeId)).data;
+      return activeUser() && office.ownerId == request.auth.uid &&
+        office.status == 'active' &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isFeatured', 'featuredSubscriptionId', 'updatedAt']) &&
+        request.resource.data.isFeatured is bool &&
+        ((request.resource.data.isFeatured == false &&
+          request.resource.data.get('featuredSubscriptionId', '') == resource.data.get('featuredSubscriptionId', '')) ||
+          (resource.data.get('isFeatured', false) == false &&
+            request.resource.data.isFeatured == true && resource.data.status == 'approved' &&
+            validFeatureConsumption(propertyId, officeId)));
+    }
+    function validFeatureConsumption(propertyId, officeId) {
+      let subscriptionId = request.resource.data.featuredSubscriptionId;
+      let path = /databases/$(database)/documents/office_subscriptions/$(subscriptionId);
+      let before = get(path).data;
+      let after = getAfter(path).data;
+      return subscriptionId is string && validFeatureSubscription(before, officeId) &&
+        before.get('featuredPropertiesUsed', 0) is int &&
+        before.get('featuredPropertiesUsed', 0) >= 0 &&
+        before.maxFeaturedProperties is int &&
+        after.featuredPropertiesUsed == before.get('featuredPropertiesUsed', 0) + 1 &&
+        after.lastFeaturedPropertyId == propertyId &&
+        (before.maxFeaturedProperties <= 0 || after.featuredPropertiesUsed <= before.maxFeaturedProperties);
+    }
+
     // ==================================================
     // العقارات
     // ==================================================
@@ -59,27 +93,22 @@ service cloud.firestore {
 
       // أي مستخدم مسجل يستطيع إضافة عقار
       allow create: if activeUser() && request.resource.data.userId == request.auth.uid &&
-        request.resource.data.publisherUid == request.auth.uid && allowedPropertyStatus(request.resource.data) && cleanContent(request.resource.data);
+        request.resource.data.publisherUid == request.auth.uid && allowedPropertyStatus(request.resource.data) && cleanContent(request.resource.data) &&
+        (isAdmin() || (request.resource.data.get('isFeatured', false) == false &&
+          !request.resource.data.keys().hasAny(['featuredSubscriptionId'])));
 
       // صاحب العقار أو الأدمن.
       // صاحب المكتب يستطيع تمييز/إلغاء تمييز عقار مكتبه فقط.
       allow update: if isSignedIn() &&
         (
           (activeUser() && resource.data.userId == request.auth.uid &&
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isFeatured', 'featuredSubscriptionId', 'officeId']) &&
             request.resource.data.userId == resource.data.userId &&
             request.resource.data.publisherUid == resource.data.publisherUid && cleanContent(request.resource.data) &&
             (allowedPropertyStatus(request.resource.data) ||
               (request.resource.data.status == resource.data.status && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availabilityStatus', 'updatedAt'])))) ||
           isAdmin() ||
-          (
-            activeUser() && resource.data.officeId != null &&
-            get(/databases/$(database)/documents/offices/$(resource.data.officeId))
-              .data.ownerId == request.auth.uid &&
-            request.resource.data.officeId == resource.data.officeId &&
-            request.resource.data.diff(resource.data)
-              .affectedKeys()
-              .hasOnly(['isFeatured', 'updatedAt'])
-          ) ||
+          validOfficeFeature(propertyId) ||
           (
             request.resource.data.diff(resource.data)
                 .affectedKeys()
@@ -374,41 +403,28 @@ match /office_subscriptions/{subscriptionId} {
     ).data.ownerId == request.auth.uid
   );
 
-  // الإدارة تستطيع تعديل الاشتراك بالكامل.
-  //
-  // صاحب المكتب يستطيع فقط استهلاك محاولة تمييز واحدة
-  // من اشتراكه الفعال. لا يستطيع تعديل أي حقل آخر،
-  // ولا يستطيع تجاوز الحد الأقصى لمحاولات التمييز.
-  allow update: if isAdmin() ||
-    (
-      isSignedIn() &&
-      resource.data.ownerId == request.auth.uid &&
-      resource.data.officeId == request.resource.data.officeId &&
-      resource.data.ownerId == request.resource.data.ownerId &&
-      resource.data.status == 'active' &&
-      request.resource.data.status == 'active' &&
-      request.resource.data.diff(resource.data)
-        .affectedKeys()
-        .hasOnly([
-          'featuredPropertiesUsed',
-          'updatedAt'
-        ]) &&
+  // Consumption must be paired with one false -> true property transition.
+  allow update: if isAdmin() || validConsumption();
+
+  function validConsumption() {
+    let propertyId = request.resource.data.lastFeaturedPropertyId;
+    let path = /databases/$(database)/documents/properties/$(propertyId);
+    let before = get(path).data;
+    let after = getAfter(path).data;
+    return activeUser() && validFeatureSubscription(resource.data, resource.data.officeId) &&
+      get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId == request.auth.uid &&
+      request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['featuredPropertiesUsed', 'lastFeaturedPropertyId', 'updatedAt']) &&
+      resource.data.get('featuredPropertiesUsed', 0) is int &&
+      resource.data.get('featuredPropertiesUsed', 0) >= 0 &&
       request.resource.data.featuredPropertiesUsed is int &&
-      request.resource.data.featuredPropertiesUsed ==
-        (
-          resource.data.keys().hasAll(['featuredPropertiesUsed']) &&
-          resource.data.featuredPropertiesUsed is int
-            ? resource.data.featuredPropertiesUsed + 1
-            : 1
-        ) &&
-      (
-        !resource.data.keys().hasAll(['maxFeaturedProperties']) ||
-        !(resource.data.maxFeaturedProperties is int) ||
-        resource.data.maxFeaturedProperties <= 0 ||
-        request.resource.data.featuredPropertiesUsed <=
-          resource.data.maxFeaturedProperties
-      )
-    );
+      request.resource.data.featuredPropertiesUsed == resource.data.get('featuredPropertiesUsed', 0) + 1 &&
+      resource.data.maxFeaturedProperties is int &&
+      (resource.data.maxFeaturedProperties <= 0 || request.resource.data.featuredPropertiesUsed <= resource.data.maxFeaturedProperties) &&
+      before.officeId == resource.data.officeId && before.status == 'approved' &&
+      before.get('isFeatured', false) == false && after.isFeatured == true &&
+      after.featuredSubscriptionId == subscriptionId;
+  }
 
   // الحذف للإدارة فقط.
   allow delete: if isAdmin();

@@ -359,6 +359,9 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
 
                                           return _PropertyTile(
                                             property: property,
+                                            showFeature:
+                                                _isSubscriptionUsable(subscription) &&
+                                                subscription!.canFeatureProperties,
                                             isProcessing:
                                                 _processingPropertyId ==
                                                     property.id,
@@ -493,7 +496,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
       final confirmed = await _confirm(
         title: 'إلغاء تمييز العقار',
         message:
-            'سيتم إلغاء تمييز العقار واستهلاك محاولة وفق نظام باقتك الحالية. هل تريد المتابعة؟',
+            'سيتم إلغاء تمييز العقار دون استهلاك محاولة جديدة أو إعادة المحاولة السابقة. هل تريد المتابعة؟',
         confirmText: 'إلغاء التمييز',
       );
 
@@ -568,17 +571,7 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
   }
 
   bool _isSubscriptionUsable(OfficeSubscriptionModel? subscription) {
-    if (subscription == null || subscription.status != 'active') {
-      return false;
-    }
-
-    final endDate = subscription.endDate;
-
-    if (endDate == null || !endDate.isAfter(DateTime.now())) {
-      return false;
-    }
-
-    return true;
+    return subscription?.isActive ?? false;
   }
 
   Future<void> _setFeatured({
@@ -631,33 +624,20 @@ class _OfficePropertiesScreenState extends State<OfficePropertiesScreen> {
         return;
       }
 
-      final raw = (error.message ?? '').toLowerCase();
-      final exhausted = raw.contains('استنفذت') ||
-          raw.contains('محاولات') ||
-          raw.contains('featured') && raw.contains('limit');
-
-      if (exhausted) {
-        await _showUpgradeDialog(
-          title: 'انتهت محاولات التمييز',
-          message:
-              'لا يمكن تمييز هذا العقار لأن جميع محاولات التمييز في باقتك الحالية قد استُنفدت. '
-              'قم بترقية الباقة للحصول على محاولات إضافية',
-        );
-      } else {
-        _showError(
-          error.message?.isNotEmpty == true
-              ? error.message!
-              : 'تعذر تحديث حالة تمييز العقار. حاول مرة أخرى',
-        );
-      }
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      _showError(
-        'خطأ أثناء تحديث العقار:\n$error',
-      );
+      final message = switch (error.code) {
+        'permission-denied' =>
+          'تعذر التمييز. تحقق من صلاحية اشتراك المكتب ورصيد التمييز ثم أعد المحاولة.',
+        'unavailable' =>
+          'الخدمة غير متاحة مؤقتًا. تحقق من اتصال الإنترنت وحاول مرة أخرى.',
+        'deadline-exceeded' => 'انتهت مهلة الاتصال. حاول مرة أخرى.',
+        'unauthenticated' => 'يرجى تسجيل الدخول مجددًا.',
+        _ => 'تعذر تحديث حالة تمييز العقار. حاول مرة أخرى.',
+      };
+      _showError(message);
+    } on StateError catch (error) {
+      if (mounted) _showError(error.message);
+    } catch (_) {
+      if (mounted) _showError('تعذر تحديث حالة تمييز العقار. حاول مرة أخرى.');
     } finally {
       if (mounted) {
         setState(() {
@@ -831,6 +811,7 @@ class _PropertyTile extends StatelessWidget {
   const _PropertyTile({
     required this.property,
     required this.onFeature,
+    required this.showFeature,
     required this.onOpen,
     required this.onEdit,
     required this.onDelete,
@@ -841,6 +822,7 @@ class _PropertyTile extends StatelessWidget {
 
   final PropertyModel property;
   final VoidCallback onFeature;
+  final bool showFeature;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -1097,7 +1079,7 @@ class _PropertyTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isPublished) ...[
+                    if (isPublished && showFeature) ...[
                       const SizedBox(width: 7),
                       Expanded(
                         child: FilledButton(
