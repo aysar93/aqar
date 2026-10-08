@@ -41,6 +41,6 @@ function refund(b, now, cancelledByOwner) {
   const p = b.cancellationPolicy;
   if (!p) throw Error('الحجز القديم يحتاج سياسة تسوية معتمدة');
   const percent = cancelledByOwner || now <= b.start-p.freeCancellationHours*3600000 ? 100 : p.lateRefundPercent;
-  return Math.floor(b.paid*percent/100);
+  return Number(BigInt(b.paid)*BigInt(percent)/100n);
 }
 module.exports = { overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund };

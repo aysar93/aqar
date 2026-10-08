@@ -40,6 +40,7 @@ test('refund policy preserves integer dinars, cutoff and owner responsibility',(
   assert.equal(refund(b,24*3600000,false),1001);
   assert.equal(refund(b,24*3600000+1,false),150);
   assert.equal(refund(b,47*3600000,true),1001);
+  assert.equal(refund({...b,paid:Number.MAX_SAFE_INTEGER,cancellationPolicy:{...p,lateRefundPercent:33}},24*3600000+1,false),2972375754064527);
   assert.throws(()=>refund({...b,cancellationPolicy:null},0,false));
   assert.throws(()=>cancellationPolicy({freeCancellationHours:-1,lateRefundPercent:100}));
 });
