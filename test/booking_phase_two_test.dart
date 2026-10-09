@@ -41,11 +41,8 @@ void main() {
     expect(bookingMinute('24:00'), isNull);
     expect(bookingMinute('20:00'), 1200);
   });
-  testWidgets('shared account asset is available to office subscriptions',
-      (tester) async {
-    final accounts = await SubscriptionPaymentAccounts.load();
-    expect(accounts['qicard']['number'], '7066135323');
-    expect(accounts['zaincash']['enabled'], false);
+  test('missing shared configuration leaves payments unavailable', () {
+    expect(SubscriptionPaymentAccounts.parse(null), isEmpty);
   });
   testWidgets(
       'request shows explicit policy and priced shifts on a narrow screen',

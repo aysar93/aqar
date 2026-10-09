@@ -5,10 +5,10 @@ const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getStorage} = require('firebase-admin/storage');
 const {overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund} = require('./booking_policy');
 const db = getFirestore();
-const paymentAccounts = require('./subscription_payment_accounts.json');
+const {CONFIG, available, recipient} = require('./payment_accounts');
 function policy(fn) { try { return fn(); } catch(e) { fail(e.message); } }
 function finance(u) { return u.canReviewBookingPayments === true; }
-exports.getBookingPaymentAccounts = onCall(async r => { await actor(r); return paymentAccounts; });
+exports.getBookingPaymentAccounts = onCall(async r => { await actor(r); return available((await db.doc(CONFIG).get()).data()); });
 exports.setBookingPaymentReviewer = onCall(async r => {
   const u = await actor(r);
   if (!u.isAdmin) throw new HttpsError('permission-denied','للإدارة فقط');
@@ -87,6 +87,7 @@ exports.actOnBooking = onCall(async r => {
     const venueRef = db.doc(`booking_venues/${b.venueId}`);
     const venue = (await tx.get(venueRef)).data(); // Serializes inventory mutations.
     const config = (await tx.get(db.doc('settings/bookings'))).data() || {};
+    const paymentConfig = d.action === 'submitPayment' ? (await tx.get(db.doc(CONFIG))).data() : null;
     const now = Date.now(), patch = {};
     if (d.action === 'approve') {
       if (u.uid !== b.ownerId || b.status !== 'requested' || b.start <= now || !venue?.active) fail('لا يمكن قبول الحجز');
@@ -99,8 +100,8 @@ exports.actOnBooking = onCall(async r => {
       Object.assign(patch,{status:'rejected',reason:text(d.reason)});
     } else if (d.action === 'submitPayment') {
       if (u.uid !== b.customerId || b.status !== 'held' || b.holdUntil<=now || !['qicard','zaincash'].includes(d.method)) fail('انتهت المهلة أو طريقة الدفع غير صالحة');
-      if (!paymentAccounts[d.method]?.enabled || !paymentAccounts[d.method]?.account) fail('طريقة الدفع غير مهيأة');
-      Object.assign(patch,{status:'payment_review',receiptPath:receipt,paymentMethod:d.method,transactionNumber:text(d.transactionNumber,200),paymentAccount:paymentAccounts[d.method].account,submittedAt:FieldValue.serverTimestamp()});
+      const snapshot = recipient(paymentConfig, d.method, d.expectedNumber);
+      Object.assign(patch,{status:'payment_review',receiptPath:receipt,paymentMethod:d.method,transactionNumber:text(d.transactionNumber,200),paymentAccount:snapshot.number,paymentAccountSnapshot:snapshot,submittedAt:FieldValue.serverTimestamp()});
     } else if (d.action === 'confirmPayment' || d.action === 'rejectPayment') {
       if (!finance(u) || [b.ownerId,b.customerId].includes(u.uid) || !['payment_review','cancel_requested'].includes(b.status)) fail('مراجع مالي مستقل مطلوب');
       Object.assign(patch,d.action==='confirmPayment' ? {status:'confirmed',paid:b.deposit,remaining:b.total-b.deposit} : {status:'payment_rejected',reason:text(d.reason)});

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import '../payment_accounts.dart';
 
@@ -43,16 +44,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _processing = false;
   bool _uploadingReceipt = false;
 
-  String _qiCardName = '';
+  Map<String, dynamic> _accounts = {};
+  StreamSubscription<Map<String, dynamic>>? _accountsListener;
 
   @override
   void initState() {
     super.initState();
-    SubscriptionPaymentAccounts.load().then((accounts) {
+    _accountsListener = SubscriptionPaymentAccounts.watch().listen((accounts) {
+      if (!mounted) return;
+      setState(() {
+        _accounts = accounts;
+        if (!accounts.containsKey(_paymentMethod)) {
+          _paymentMethod = accounts.keys.firstOrNull ?? '';
+        }
+        _qiCardNumber = accounts[_paymentMethod]?['number'] ?? '';
+      });
+    }, onError: (_) {
       if (mounted) {
         setState(() {
-          _qiCardName = accounts['qicard']['name'];
-          _qiCardNumber = accounts['qicard']['number'];
+          _accounts = {};
+          _paymentMethod = '';
+          _qiCardNumber = '';
         });
       }
     });
@@ -62,6 +74,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   void dispose() {
+    _accountsListener?.cancel();
     _transactionController.dispose();
     _notesController.dispose();
     _contactPhoneController.dispose();
@@ -69,7 +82,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   bool get _requiresReceipt {
-    return _paymentMethod == 'qicard';
+    return _accounts.containsKey(_paymentMethod);
   }
 
   Future<void> _pickReceipt({
@@ -157,6 +170,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _submitPayment() async {
+    if (!_accounts.containsKey(_paymentMethod)) {
+      _showMessage("لا تتوفر وسيلة دفع حاليًا", isError: true);
+      return;
+    }
     if (_processing) {
       return;
     }
@@ -169,7 +186,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    if (_paymentMethod == 'qicard' &&
+    if (_accounts.containsKey(_paymentMethod) &&
         _transactionController.text.trim().isEmpty) {
       _showMessage(
         'يرجى إدخال رقم العملية إن وجد',
@@ -187,6 +204,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    final expectedNumber = _accounts[_paymentMethod]['number'] as String;
+    final selectedMethod = _paymentMethod;
     setState(() {
       _processing = true;
     });
@@ -234,7 +253,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ownerUid: widget.ownerUid,
         subscriptionId: subscriptionId,
         package: widget.package,
-        paymentMethod: _paymentMethod,
+        paymentMethod: selectedMethod,
+        expectedNumber: expectedNumber,
         transactionId: _transactionController.text.trim().isEmpty
             ? null
             : _transactionController.text.trim(),
@@ -350,7 +370,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             const SizedBox(height: 16),
             _buildPaymentInstructions(),
             const SizedBox(height: 16),
-            if (_paymentMethod == 'qicard') ...[
+            if (_requiresReceipt) ...[
               _buildTransactionField(),
               const SizedBox(height: 16),
               _buildReceiptSection(),
@@ -441,69 +461,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
             ),
             const SizedBox(height: 10),
-            RadioListTile<String>(
-              value: 'qicard',
-              groupValue: _paymentMethod,
-              onChanged: _processing
-                  ? null
-                  : (value) {
-                      if (value == null) return;
-
-                      setState(() {
-                        _paymentMethod = value;
-                      });
-                    },
-              title: const Text(
-                'QiCard / خدمات كي',
-              ),
-              subtitle: const Text(
-                'تحويل إلى الحساب ثم رفع صورة الإيصال',
-              ),
-              secondary: const Icon(
-                Icons.account_balance_wallet_outlined,
-              ),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const Divider(),
-            RadioListTile<String>(
-              value: 'zaincash',
-              groupValue: _paymentMethod,
-              onChanged: null,
-              title: const Text(
-                'ZainCash',
-              ),
-              subtitle: const Text(
-                'قريبًا',
-              ),
-              secondary: const Icon(
-                Icons.phone_android_outlined,
-              ),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const Divider(),
-            RadioListTile<String>(
-              value: 'manual',
-              groupValue: _paymentMethod,
-              onChanged: _processing
-                  ? null
-                  : (value) {
-                      if (value == null) return;
-
-                      setState(() {
-                        _paymentMethod = value;
-                      });
-                    },
-              title: const Text(
-                'تسليم يدوي',
-              ),
-              subtitle: const Text(
-                'التواصل مع الإدارة لإتمام الدفع يدويًا',
-              ),
-              secondary: const Icon(
-                Icons.handshake_outlined,
-              ),
-              contentPadding: EdgeInsets.zero,
-            ),
+            if (_accounts.isEmpty) const Text('لا تتوفر وسيلة دفع حاليًا'),
+            for (final method in _accounts.keys)
+              RadioListTile<String>(
+                  value: method,
+                  groupValue: _paymentMethod,
+                  onChanged: _processing
+                      ? null
+                      : (v) => setState(() {
+                            _paymentMethod = v!;
+                            _qiCardNumber = _accounts[v]['number'];
+                          }),
+                  title: Text(method == 'qicard' ? 'كي' : 'زين كاش')),
           ],
         ),
       ),
@@ -548,9 +517,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     }
 
-    if (_paymentMethod == 'zaincash') {
-      return const SizedBox.shrink();
-    }
+    if (!_accounts.containsKey(_paymentMethod)) return const SizedBox.shrink();
 
     return Card(
       elevation: 0,
@@ -575,12 +542,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildCopyRow(
-              title: 'اسم صاحب الحساب',
-              value: _qiCardName,
-              copyValue: _qiCardName,
-            ),
-            const SizedBox(height: 12),
             _buildCopyRow(
               title: 'رقم الحساب / التحويل',
               value: _qiCardNumber,
@@ -768,7 +729,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       width: double.infinity,
       height: 54,
       child: FilledButton.icon(
-        onPressed: _processing ? null : _submitPayment,
+        onPressed: _processing || _accounts.isEmpty ? null : _submitPayment,
         icon: _processing
             ? const SizedBox(
                 width: 20,

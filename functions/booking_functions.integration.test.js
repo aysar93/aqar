@@ -9,6 +9,7 @@ const db=getFirestore(), f=require('./booking_functions');
 const call=(name,uid,data)=>f[name].run({auth:{uid},data});
 test('booking lifecycle serializes overlapping approvals, enforces identities and manual receipts',async()=>{
   for(const uid of ['owner','customer1','customer2','admin','reviewer','stranger'])await db.doc(`users/${uid}`).set({name:uid,phone:'07701234567',isAdmin:uid==='admin',isBlocked:false,canReviewBookingPayments:uid==='reviewer'});
+  await db.doc('payment_configuration/shared').set({revision:1,methods:{qicard:{enabled:true,number:'7066135323'},zaincash:{enabled:false,number:''}}});
   await db.doc('settings/bookings').set({holdMinutes:30,qicard:{enabled:true,account:'test account'}});
   const venue=await call('saveBookingVenue','admin',{ownerId:'owner',name:'test venue',location:'Anbar',category:'farm',price:100000,deposit:25000,terms:'test terms',cancellationPolicy:{freeCancellationHours:24,lateRefundPercent:20},active:true});
   await assert.rejects(call('saveBookingVenue','owner',{ownerId:'owner'}));
@@ -25,8 +26,14 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   await assert.rejects(call('actOnBooking','admin',{bookingId:chosen.id,action:'confirmPayment'}));
   const path=`booking_receipts/${chosen.id}/${uid}/123.jpg`;
   await getStorage().bucket().file(path).save(Buffer.from('test receipt'),{resumable:false,metadata:{contentType:'image/jpeg'}});
-  await assert.rejects(call('actOnBooking','stranger',{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',transactionNumber:'t1'}));
-  await call('actOnBooking',uid,{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',transactionNumber:'t1'});
+  await assert.rejects(call('actOnBooking','stranger',{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'t1'}));
+  await db.doc('payment_configuration/shared').update({'methods.qicard.enabled':false});
+  await assert.rejects(call('actOnBooking',uid,{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'t1'}));
+  await db.doc('payment_configuration/shared').update({'methods.qicard.enabled':true});
+  await call('actOnBooking',uid,{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'t1'});
+  assert.equal((await db.doc(`bookings/${chosen.id}`).get()).data().paymentAccountSnapshot.number,'7066135323');
+  await db.doc('payment_configuration/shared').update({'methods.qicard.enabled':false});
+
   await assert.rejects(call('actOnBooking','owner',{bookingId:chosen.id,action:'confirmPayment'}));
   await assert.rejects(call('actOnBooking','admin',{bookingId:chosen.id,action:'confirmPayment'}));
   const concurrentReviews=await Promise.allSettled([1,2].map(()=>call('actOnBooking','reviewer',{bookingId:chosen.id,action:'confirmPayment'})));
@@ -57,12 +64,13 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   await f.expireBookingHolds.run({});
   assert.equal((await db.doc(`bookings/${adjacent.id}`).get()).data().status,'expired');
   assert.equal((await db.doc(`bookings/${replacement.id}`).get()).data().status,'held');
-  await assert.rejects(call('actOnBooking','customer1',{bookingId:adjacent.id,action:'submitPayment',receiptPath:path,method:'qicard',transactionNumber:'late'}));
+  await assert.rejects(call('actOnBooking','customer1',{bookingId:adjacent.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'late'}));
   await db.doc('users/customer2').update({isBlocked:true});
   await assert.rejects(call('requestBooking','customer2',{...next,requestId:'blocked'}));
 });
 
 test('phase two pricing, independent review, cancellation during receipt review and refund audit',async()=>{
+  await db.doc('payment_configuration/shared').update({'methods.qicard.enabled':true});
   for(const uid of ['p2owner','p2customer','p2reviewer','p2admin']) await db.doc(`users/${uid}`).set({name:uid,phone:'07700000000',isAdmin:uid==='p2admin',canReviewBookingPayments:uid==='p2reviewer',isBlocked:false});
   const cp={freeCancellationHours:48,lateRefundPercent:25};
   const shifts=[{id:'night',name:'night',checkInMinute:1200,checkOutMinute:480,price:200000}];
@@ -80,7 +88,7 @@ test('phase two pricing, independent review, cancellation during receipt review 
   const path=`booking_receipts/${booking.id}/p2customer/222.jpg`;
   await getStorage().bucket().file(path).save(Buffer.from('receipt'),{resumable:false,metadata:{contentType:'image/jpeg'}});
   await assert.rejects(call('actOnBooking','p2customer',{bookingId:booking.id,action:'submitPayment',receiptPath:path,method:'zaincash',transactionNumber:'z'}));
-  await call('actOnBooking','p2customer',{bookingId:booking.id,action:'submitPayment',receiptPath:path,method:'qicard',transactionNumber:'q'});
+  await call('actOnBooking','p2customer',{bookingId:booking.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'q'});
   assert.match((await db.doc(`bookings/${booking.id}`).get()).data().paymentAccount,/7066135323/);
   await call('actOnBooking','p2owner',{bookingId:booking.id,action:'cancel',reason:'owner cancellation'});
   assert.equal((await db.doc(`bookings/${booking.id}`).get()).data().status,'cancel_requested');

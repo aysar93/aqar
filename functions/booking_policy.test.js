@@ -44,14 +44,6 @@ test('refund policy preserves integer dinars, cutoff and owner responsibility',(
   assert.throws(()=>refund({...b,cancellationPolicy:null},0,false));
   assert.throws(()=>cancellationPolicy({freeCancellationHours:-1,lateRefundPercent:100}));
 });
-test('shared accounts preserve verified subscription account and disable absent ZainCash',()=>{
-  const accounts=require('./subscription_payment_accounts.json');
-  assert.equal(accounts.qicard.number,'7066135323');
-  assert.equal(accounts.qicard.name,'AYSAR ABDULKAREEM SALEH');
-  assert.equal(accounts.zaincash.enabled,false);
-  assert.equal(accounts.zaincash.account,'');
-});
-
 test('FCM booking payload retains identifiers needed to open details',()=>{
   const {notificationPushData}=require('./notification_push_data');
   assert.deepEqual(notificationPushData({type:'booking',bookingId:'customer_123'},'notice_1'),{type:'booking',bookingId:'customer_123',notificationId:'notice_1'});

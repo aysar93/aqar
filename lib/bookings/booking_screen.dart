@@ -1,3 +1,6 @@
+import 'dart:async';
+import '../subscription/payment_accounts.dart';
+import '../screens/admin/payment_account_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -385,12 +388,33 @@ class BookingDetailsScreen extends StatefulWidget {
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   bool busy = false, admin = false, finance = false;
   String method = 'qicard';
+  String? displayedNumber;
+  Map<String, dynamic> accounts = {};
+  StreamSubscription<Map<String, dynamic>>? accountListener;
   final transaction = TextEditingController(),
       reason = TextEditingController(),
       refundReference = TextEditingController();
   @override
   void initState() {
     super.initState();
+    accountListener = SubscriptionPaymentAccounts.watch().listen((value) {
+      if (!mounted) return;
+      setState(() {
+        accounts = value;
+        if (!accounts.containsKey(method)) {
+          method = accounts.keys.firstOrNull ?? '';
+        }
+        displayedNumber = accounts[method]?['number'];
+      });
+    }, onError: (_) {
+      if (mounted) {
+        setState(() {
+          accounts = {};
+          displayedNumber = null;
+        });
+      }
+    });
+
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       FirebaseFirestore.instance.doc('users/$uid').get().then((s) {
@@ -406,6 +430,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   @override
   void dispose() {
+    accountListener?.cancel();
     refundReference.dispose();
     transaction.dispose();
     reason.dispose();
@@ -507,30 +532,29 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 button('رفض الطلب', 'reject')
               ],
               if (customer && held) ...[
-                DropdownButton<String>(
-                    value: method,
-                    items: const [
-                      DropdownMenuItem(value: 'qicard', child: Text('كي')),
-                      DropdownMenuItem(
-                          value: 'zaincash', child: Text('زين كاش'))
-                    ],
-                    onChanged: (v) => setState(() => method = v!)),
-                FutureBuilder<Map<String, dynamic>>(
-                    future: bookingCall('getBookingPaymentAccounts', {}),
-                    builder: (context, snapshot) {
-                      final c = snapshot.data?[method] as Map?;
-                      return Text(c?['enabled'] == true
-                          ? 'حوّل العربون يدوياً إلى: ${c?['account']}'
-                          : 'لا يتوفر حساب تحويل موثّق لهذه الطريقة');
-                    }),
+                if (accounts.isEmpty) const Text('لا تتوفر وسيلة دفع حاليًا'),
+                for (final entry in accounts.entries)
+                  RadioListTile<String>(
+                      value: entry.key,
+                      groupValue: method,
+                      title: Text(
+                          '${entry.key == 'qicard' ? 'كي' : 'زين كاش'}: ${entry.value['number']}'),
+                      onChanged: busy
+                          ? null
+                          : (v) => setState(() {
+                                method = v!;
+                                displayedNumber = accounts[method]['number'];
+                              })),
                 TextField(
                     controller: transaction,
                     decoration:
                         const InputDecoration(labelText: 'رقم التحويل')),
                 FilledButton(
-                    onPressed: busy
+                    onPressed: busy || displayedNumber == null
                         ? null
                         : () async {
+                            final expectedNumber = displayedNumber;
+                            final selectedMethod = method;
                             setState(() => busy = true);
                             await bookingRun(context, () async {
                               final image = await ImagePicker().pickImage(
@@ -546,10 +570,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                       format: CompressFormat.jpeg,
                                       quality: 85),
                                   SettableMetadata(contentType: 'image/jpeg'));
+
                               await bookingCall('actOnBooking', {
                                 'bookingId': widget.bookingId,
                                 'action': 'submitPayment',
-                                'method': method,
+                                'method': selectedMethod,
+                                'expectedNumber': expectedNumber,
                                 'transactionNumber': transaction.text,
                                 'receiptPath': path
                               });
@@ -840,9 +866,7 @@ class BookingSettingsScreen extends StatefulWidget {
 }
 
 class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
-  final hold = TextEditingController(text: '120'),
-      qi = TextEditingController(),
-      zain = TextEditingController();
+  final hold = TextEditingController(text: '120');
   bool loaded = false, busy = false;
   @override
   void initState() {
@@ -850,12 +874,6 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
     FirebaseFirestore.instance.doc('settings/bookings').get().then((s) async {
       final d = s.data() ?? {};
       hold.text = '${d['holdMinutes'] ?? 120}';
-      final accounts = await bookingCall('getBookingPaymentAccounts', {});
-      if (!mounted) return;
-      qi.text = accounts['qicard']['account'] ?? '';
-      zain.text = accounts['zaincash']['enabled'] == true
-          ? accounts['zaincash']['account']
-          : 'لا يوجد رقم موثّق في الاشتراكات';
       if (mounted) setState(() => loaded = true);
     });
   }
@@ -863,8 +881,6 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
   @override
   void dispose() {
     hold.dispose();
-    qi.dispose();
-    zain.dispose();
     super.dispose();
   }
 
@@ -876,15 +892,12 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
             controller: hold,
             decoration: const InputDecoration(
                 labelText: 'مدة الحجز المؤقت بالدقائق (5–10080)')),
-        TextField(
-            controller: qi,
-            readOnly: true,
-            decoration: const InputDecoration(labelText: 'اسم ورقم حساب كي')),
-        TextField(
-            controller: zain,
-            readOnly: true,
-            decoration:
-                const InputDecoration(labelText: 'اسم ورقم حساب زين كاش')),
+        ListTile(
+            title: const Text('حسابات الدفع المشتركة'),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const PaymentAccountSettingsScreen()))),
         const Text(
             'حسابات التحويل مشتركة مع اشتراكات المكاتب. لا يُفعّل زين كاش دون حساب موثّق. الإلغاء بواسطة المالك أو الإدارة يعيد كامل العربون. التسوية اليدوية تحتاج مرجع تحويل.'),
         FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(

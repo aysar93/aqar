@@ -326,3 +326,6 @@ const officeCounters = require('./office_counters');
 exports.refreshOfficeFollowerMetrics = officeCounters.refreshOfficeFollowerMetrics;
 exports.refreshOfficeReviewMetrics = officeCounters.refreshOfficeReviewMetrics;
 exports.refreshOfficePropertyMetrics = officeCounters.refreshOfficePropertyMetrics;
+
+const paymentSettings = require("./payment_accounts");
+for (const name of ["getPaymentAccountSettings", "savePaymentAccountSettings", "createSubscriptionPayment"]) exports[name] = paymentSettings[name];

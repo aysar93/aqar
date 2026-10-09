@@ -465,13 +465,10 @@ match /subscription_payments/{paymentId} {
     );
 
   // صاحب المكتب يستطيع إنشاء عملية دفع خاصة باشتراكه فقط.
-  allow create: if isSignedIn() &&
-    request.resource.data.ownerUid == request.auth.uid &&
-    request.resource.data.officeId != null &&
-    request.resource.data.subscriptionId != null;
+  allow create: if false; // Created only by the validated callable.
 
   // الإدارة فقط تستطيع اعتماد أو رفض عملية الدفع.
-  allow update: if isAdmin();
+  allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','approvedAt','approvedBy','updatedAt']);
 
   // الإدارة فقط تستطيع حذف عملية الدفع.
   allow delete: if isAdmin();
@@ -595,6 +592,7 @@ match /users/{userId} {
     request.auth.uid == userId &&
     request.resource.data.isAdmin == false &&
     request.resource.data.get('canReviewBookingPayments', false) == false &&
+    request.resource.data.get('canManagePaymentAccounts', false) == false &&
     request.resource.data.isBlocked == false &&
     request.resource.data.accountType == 'user' &&
     request.resource.data.accountMode == 'user';
@@ -779,6 +777,15 @@ match /banners/{bannerId} {
     // ==================================================
 // إعدادات التطبيق
 // ==================================================
+match /payment_accounts/{scope} {
+  allow get: if activeUser() && scope == 'shared';
+  allow list, write: if false;
+}
+match /payment_configuration/{scope} { allow read, write: if false; }
+match /payment_account_audit/{entry} {
+  allow read: if activeUser() && isAdmin() && request.auth.token.get('canManagePaymentAccounts', false) == true;
+  allow write: if false;
+}
 match /settings/{document} {
 
   // الجميع يستطيع قراءة الإعدادات

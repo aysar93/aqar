@@ -1,3 +1,5 @@
+import 'package:cloud_functions/cloud_functions.dart';
+import '../../subscription/payment_accounts.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/office_subscription_model.dart';
 import '../../subscription/models/subscription_package_model.dart';
-import '../../subscription/models/subscription_payment_model.dart';
 
 /// خدمة اشتراكات المكاتب.
 ///
@@ -1006,70 +1007,21 @@ class OfficeSubscriptionService {
     String? notes,
     String? receiptUrl,
     String? contactPhone,
+    String? expectedNumber,
   }) async {
-    if (officeId.trim().isEmpty) {
-      throw ArgumentError('معرّف المكتب غير صالح');
-    }
-
-    if (ownerUid.trim().isEmpty) {
-      throw ArgumentError('معرّف صاحب المكتب غير صالح');
-    }
-
-    if (subscriptionId.trim().isEmpty) {
-      throw ArgumentError('معرّف الاشتراك غير صالح');
-    }
-
-    final subscription = await getSubscriptionById(subscriptionId);
-
-    if (subscription == null) {
-      throw StateError('طلب الاشتراك غير موجود');
-    }
-
-    if (subscription.officeId != officeId || subscription.ownerId != ownerUid) {
-      throw StateError('لا تملك صلاحية إنشاء طلب دفع لهذا الاشتراك');
-    }
-
-    if (subscription.status != 'pending') {
-      throw StateError('لا يمكن إنشاء طلب دفع لهذا الاشتراك حاليًا');
-    }
-
-    final reference = _firestore.collection('subscription_payments').doc();
-    final now = DateTime.now();
-
-    final payment = SubscriptionPaymentModel(
-      id: reference.id,
-      officeId: officeId,
-      ownerUid: ownerUid,
-      subscriptionId: subscriptionId,
-      packageId: package.id,
-      packageName: package.name,
-      amount: package.price,
-      currency: package.currency,
-      status: 'pending',
-      paymentMethod: paymentMethod,
-      transactionId: transactionId,
-      notes: notes,
-      receiptUrl: receiptUrl,
-      createdAt: now,
-      updatedAt: now,
-      approvedAt: null,
-      approvedBy: null,
-    );
-
-    final paymentData = payment.toMap();
-    if (contactPhone != null && contactPhone.trim().isNotEmpty) {
-      paymentData['contactPhone'] = contactPhone.trim();
-    }
-    await reference.set(paymentData);
-
-    await _subscriptions.doc(subscriptionId).update({
-      'paymentStatus': 'pending',
+    final accounts = await SubscriptionPaymentAccounts.load();
+    final result = await FirebaseFunctions.instance
+        .httpsCallable('createSubscriptionPayment')
+        .call({
+      'subscriptionId': subscriptionId,
+      'legacy': false,
       'paymentMethod': paymentMethod,
-      'paymentReference': transactionId ?? '',
-      'updatedAt': FieldValue.serverTimestamp(),
+      'expectedNumber': expectedNumber ?? accounts[paymentMethod]?['number'],
+      'transactionId': transactionId,
+      'notes': notes,
+      'receiptUrl': receiptUrl,
     });
-
-    return reference.id;
+    return result.data['id'] as String;
   }
 
   // ═════════════════════════════════════════════

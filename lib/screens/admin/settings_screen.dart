@@ -1,3 +1,4 @@
+import 'payment_account_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
@@ -183,6 +184,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.all(18),
           child: Column(
             children: [
+              ListTile(
+                  title: const Text('حسابات الدفع (كي وزين كاش)'),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const PaymentAccountSettingsScreen()))),
               _settingsCard(
                 title: "بيانات المكتب",
                 icon: Icons.business,
