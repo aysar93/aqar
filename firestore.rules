@@ -10,8 +10,51 @@ service cloud.firestore {
     }
 
     function bookingFinance() { return activeUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
+    match /booking_venue_staff/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.userId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_closures/{entry} {
+      allow read: if activeUser() && (isAdmin() ||
+        get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.ownerId == request.auth.uid ||
+        (get(/databases/$(database)/documents/booking_venue_staff/$(resource.data.venueId + '_' + request.auth.uid)).data.ownerId == get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.ownerId &&
+         get(/databases/$(database)/documents/booking_venue_staff/$(resource.data.venueId + '_' + request.auth.uid)).data.scopes.hasAny(['calendar'])));
+      allow write: if false;
+    }
+    match /booking_payment_references/{entry} { allow read, write: if false; }
+    match /booking_checkin_codes/{entry} { allow read, write: if false; }
+    match /booking_message_limits/{entry} { allow read, write: if false; }
+    match /booking_messages/{bookingId}/messages/{messageId} {
+      allow read: if activeUser() && (
+        get(/databases/$(database)/documents/bookings/$(bookingId)).data.customerId == request.auth.uid ||
+        get(/databases/$(database)/documents/bookings/$(bookingId)).data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_ownership_proofs/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_media_reviews/{entry} {
+      allow read: if resource.data.status == 'approved' || (activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid));
+      allow write: if false;
+    }
+    match /booking_ledger/{entry} {
+      allow read: if activeUser() && (isAdmin() || bookingFinance() || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_ownership_transfers/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid || resource.data.newOwnerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_reviews/{entry} {
+      allow read: if resource.data.status == 'approved' || (activeUser() && (isAdmin() || resource.data.customerId == request.auth.uid));
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status in ['approved','rejected'];
+      allow create, delete: if false;
+    }
     match /booking_action_audit/{entry} {
-      allow read: if activeUser() && (isAdmin() || bookingFinance());
+      allow read: if activeUser() && (isAdmin() || bookingFinance() ||
+        get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.customerId == request.auth.uid ||
+        get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.ownerId == request.auth.uid);
       allow write: if false;
     }
     match /booking_finance_audit/{entry} {
@@ -23,7 +66,7 @@ service cloud.firestore {
       allow write: if false;
     }
     match /booking_venues/{venueId} {
-      allow read: if isAdmin() || resource.data.active == true;
+      allow read: if isAdmin() || resource.data.active == true || (activeUser() && resource.data.ownerId == request.auth.uid);
       allow write: if false;
     }
     match /bookings/{bookingId} {
@@ -37,7 +80,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() &&
+      return activeUser() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
@@ -787,7 +830,13 @@ allow delete: if isSignedIn() &&
 // ==================================================
 match /booking_banners/{bannerId} {
   allow read: if true;
-  allow create, update, delete: if isAdmin() && activeUser();
+  allow delete: if isAdmin();
+  allow create, update: if isAdmin() &&
+    request.resource.data.type in ['chalet', 'hall', 'external'] &&
+    request.resource.data.targetId is string && request.resource.data.targetId.size() > 0 &&
+    ((request.resource.data.type == 'external' && request.resource.data.targetId.matches('https://[^ ]+')) ||
+      (request.resource.data.type in ['chalet','hall'] &&
+        get(/databases/$(database)/documents/booking_venues/$(request.resource.data.targetId)).data.category == request.resource.data.type));
 }
 
 match /banners/{bannerId} {

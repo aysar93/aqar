@@ -19,6 +19,13 @@ test('amounts are integer dinars and deposit never exceeds total',()=>{
 });
 
 const {pricingConfig,quote,cancellationPolicy,refund}=require('./booking_policy');
+test('offers are integer discounts, expire, and cannot undercut the deposit',()=>{
+  const v={price:100000,deposit:20000,offer:{percent:25,until:Date.now()+60000}};
+  const q=quote(v,{start:Date.now()+86400000,end:Date.now()+90000000});
+  assert.equal(q.total,75000);assert.equal(q.pricing.discountPercent,25);
+  assert.equal(quote({...v,offer:{percent:25,until:1}},{}).total,100000);
+  assert.throws(()=>quote({...v,deposit:90000},{}));
+});
 test('shift prices use Baghdad check-in and next-day checkout',()=>{
   const v={price:100,deposit:50,...pricingConfig({pricingMode:'shifts',deposit:50,shifts:[{id:'night',name:'night',checkInMinute:1200,checkOutMinute:480,price:300}]})};
   const start=Date.UTC(2026,10,1,17);

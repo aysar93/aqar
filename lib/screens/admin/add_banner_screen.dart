@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../banners/banner_model.dart';
 import '../../banners/banner_service.dart';
@@ -40,6 +43,8 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
 
   String? _selectedPropertyId;
   String? _selectedOfficeId;
+  String? _selectedVenueId;
+  bool get bookings => widget.placement == BannerPlacement.bookings;
 
   String _searchProperty = '';
   String _searchOffice = '';
@@ -64,7 +69,12 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
       text: banner?.type == 'external' ? banner!.targetId : '',
     );
 
-    _selectedType = banner?.type ?? 'property';
+    _selectedType = banner?.type ?? (bookings ? 'chalet' : 'property');
+    if (bookings && !['chalet', 'hall', 'external'].contains(_selectedType)) {
+      _selectedType = 'chalet';
+    }
+    _selectedVenueId =
+        ['chalet', 'hall'].contains(banner?.type) ? banner?.targetId : null;
     _isActive = banner?.isActive ?? true;
 
     if (_selectedType == 'property') {
@@ -103,6 +113,8 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
   }
 
   String get _targetId {
+    if (['chalet', 'hall'].contains(_selectedType))
+      return _selectedVenueId ?? '';
     if (_selectedType == 'property') {
       return _selectedPropertyId ?? '';
     }
@@ -119,7 +131,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
   }
 
   bool get _targetRequired {
-    return _selectedType == 'property' || _selectedType == 'office';
+    return _selectedType != 'external';
   }
 
   Future<void> _saveBanner() async {
@@ -147,6 +159,11 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
 
     if (_selectedType == 'external') {
       final uri = Uri.tryParse(_targetId);
+      if (bookings &&
+          (uri == null || uri.scheme != 'https' || uri.host.isEmpty)) {
+        _showMessage('أدخل رابط HTTPS آمنًا');
+        return;
+      }
       final validWebUrl = uri != null &&
           ['http', 'https'].contains(uri.scheme) &&
           uri.host.isNotEmpty;
@@ -168,7 +185,20 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
       String? imageUrl = existingImage;
 
       if (_selectedImage != null) {
-        imageUrl = await uploadToCloudinary(_selectedImage!);
+        if (bookings) {
+          final bytes = await FlutterImageCompress.compressWithList(
+              await _selectedImage!.readAsBytes(),
+              format: CompressFormat.jpeg,
+              quality: 90);
+          if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024)
+            throw StateError('حجم الصورة غير صالح');
+          final ref = FirebaseStorage.instance.ref(
+              'booking_banner_media/${FirebaseAuth.instance.currentUser!.uid}/${DateTime.now().microsecondsSinceEpoch}.jpg');
+          await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+          imageUrl = await ref.getDownloadURL();
+        } else {
+          imageUrl = await uploadToCloudinary(_selectedImage!);
+        }
       }
 
       if (imageUrl == null || imageUrl.isEmpty) {
@@ -287,15 +317,21 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                     Icons.category_outlined,
                   ),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'property',
-                    child: Text('عقار'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'office',
-                    child: Text('مكتب'),
-                  ),
+                items: [
+                  if (bookings) ...const [
+                    DropdownMenuItem(value: 'chalet', child: Text('شاليه')),
+                    DropdownMenuItem(value: 'hall', child: Text('قاعة')),
+                  ],
+                  if (!bookings)
+                    DropdownMenuItem(
+                      value: 'property',
+                      child: Text('عقار'),
+                    ),
+                  if (!bookings)
+                    DropdownMenuItem(
+                      value: 'office',
+                      child: Text('مكتب'),
+                    ),
                   DropdownMenuItem(
                     value: 'external',
                     child: Text('رابط خارجي'),
@@ -310,10 +346,43 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                           _selectedType = value;
                           _selectedPropertyId = null;
                           _selectedOfficeId = null;
+                          _selectedVenueId = null;
                         });
                       },
               ),
               const SizedBox(height: 12),
+              if (['chalet', 'hall'].contains(_selectedType))
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('booking_venues')
+                        .where('category', isEqualTo: _selectedType)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError)
+                        return const Text('تعذر تحميل الأماكن');
+                      if (!snapshot.hasData)
+                        return const LinearProgressIndicator();
+                      final docs = snapshot.data!.docs;
+                      return DropdownButtonFormField<String>(
+                        key: ValueKey(_selectedType),
+                        initialValue: docs.any((d) => d.id == _selectedVenueId)
+                            ? _selectedVenueId
+                            : null,
+                        isExpanded: true,
+                        decoration:
+                            const InputDecoration(labelText: 'وجهة البنر'),
+                        items: [
+                          for (final d in docs)
+                            DropdownMenuItem(
+                                value: d.id,
+                                child: Text('${d.data()['name']}',
+                                    overflow: TextOverflow.ellipsis))
+                        ],
+                        onChanged: _isSaving
+                            ? null
+                            : (id) => setState(() => _selectedVenueId = id),
+                      );
+                    }),
               if (_selectedType == 'property')
                 _PropertySelector(
                   selectedId: _selectedPropertyId,

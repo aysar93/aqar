@@ -2,9 +2,34 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
-    function admin() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true; }
+    function admin() { return active() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true; }
     function bookingFinance() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
     function active() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false; }
+    match /booking_banner_media/{authorUid}/{fileName} {
+      allow read: if true;
+      allow create: if resource == null && admin() && request.auth.uid == authorUid && fileName.matches('[0-9]+[.]jpg') && request.resource.contentType == 'image/jpeg' && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024;
+      allow update, delete: if false;
+    }
+    match /booking_media/{venueId}/{authorUid}/{fileName} {
+      function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
+      allow read: if (active() && (admin() || venue().ownerId == request.auth.uid)) ||
+        (venue().active == true && firestore.get(/databases/(default)/documents/booking_media_reviews/$(venueId + '_' + fileName)).data.status == 'approved');
+      allow create: if resource == null && active() && request.auth.uid == authorUid && venue().ownerId == authorUid && request.resource.size > 0 &&
+        ((fileName.matches('[A-Za-z0-9_-]+[.]jpg') && request.resource.contentType == 'image/jpeg' && request.resource.size <= 10 * 1024 * 1024) ||
+         (fileName.matches('[A-Za-z0-9_-]+[.]png') && request.resource.contentType == 'image/png' && request.resource.size <= 10 * 1024 * 1024) ||
+         (fileName.matches('[A-Za-z0-9_-]+[.]mp4') && request.resource.contentType == 'video/mp4' && request.resource.size <= 50 * 1024 * 1024));
+      allow update, delete: if false;
+    }
+    match /booking_ownership_documents/{venueId}/{authorUid}/{fileName} {
+      function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
+      allow read: if active() && (admin() || venue().ownerId == request.auth.uid);
+      allow create: if resource == null && active() && request.auth.uid == authorUid && venue().ownerId == authorUid && venue().verificationStatus in ['pending', 'rejected'] &&
+        request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024 &&
+        ((fileName.matches('[A-Za-z0-9_-]+[.]jpg') && request.resource.contentType == 'image/jpeg') ||
+         (fileName.matches('[A-Za-z0-9_-]+[.]png') && request.resource.contentType == 'image/png') ||
+         (fileName.matches('[A-Za-z0-9_-]+[.]pdf') && request.resource.contentType == 'application/pdf'));
+      allow update, delete: if false;
+    }
     match /subscription_receipts/{subscriptionId}/{authorUid}/{fileName} {
       function subscription() { return firestore.get(/databases/(default)/documents/office_subscriptions/$(subscriptionId)).data; }
       allow read: if active() && (admin() || subscription().ownerId == request.auth.uid);

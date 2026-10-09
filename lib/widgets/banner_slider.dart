@@ -9,7 +9,9 @@ import '../services/property_service.dart';
 import '../screens/property_details.dart';
 
 class BannerSlider extends StatefulWidget {
-  const BannerSlider({super.key, this.stream});
+  const BannerSlider({super.key, this.stream, this.onBookingVenue});
+
+  final Future<void> Function(String id, String category)? onBookingVenue;
 
   final Stream<List<BannerModel>>? stream;
 
@@ -56,6 +58,15 @@ class _BannerSliderState extends State<BannerSlider>
 
   Future<void> _openBanner(BannerModel banner) async {
     final target = banner.targetId.trim();
+    if (widget.onBookingVenue != null) {
+      if (['chalet', 'hall'].contains(banner.type)) {
+        await widget.onBookingVenue!(target, banner.type);
+        return;
+      }
+      if (banner.type != 'external') return;
+      final uri = Uri.tryParse(target);
+      if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return;
+    }
 
     switch (banner.type) {
       case 'external':

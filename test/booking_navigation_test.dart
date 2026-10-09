@@ -17,8 +17,8 @@ void main() {
                 currentIndex: 5,
                 onTap: (i) => destination = i,
                 onAddTap: () {}))));
-    expect(find.text('الحجوزات'), findsOneWidget);
-    await tester.tap(find.text('الحجوزات'));
+    expect(find.text('الشاليهات'), findsOneWidget);
+    await tester.tap(find.text('الشاليهات'));
     expect(destination, 5);
     await tester.tap(find.text('الدردشة'));
     expect(destination, 4);

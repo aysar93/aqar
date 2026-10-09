@@ -63,4 +63,20 @@ class BookingRules(unittest.TestCase):
         self.assertEqual(upload('subscription_receipts/receipt_sub/customer/125.jpg','customer','image/jpeg'),403)
         self.assertEqual(download(path,'customer'),200)
 
+    def test_ownership_proof_and_media_are_private_until_review(self):
+        self.assertEqual(write('booking_venues/proof', {'ownerId':'owner','verificationStatus':'pending','active':True}, 'SEED', timestamp=None),200)
+        proof='booking_ownership_documents/proof/owner/proof.jpg'
+        self.assertEqual(upload(proof,'owner','image/jpeg'),200)
+        for uid in ['owner','admin']: self.assertEqual(download(proof,uid),200)
+        for uid in [None,'customer','reviewer','blocked']: self.assertEqual(download(proof,uid),403)
+        self.assertEqual(upload(proof,'owner','image/jpeg'),403)
+        self.assertEqual(upload('booking_ownership_documents/proof/customer/proof.jpg','customer','image/jpeg'),403)
+        media='booking_media/proof/owner/photo.jpg'
+        self.assertEqual(upload(media,'owner','image/jpeg'),200)
+        self.assertEqual(download(media,None),403)
+        self.assertEqual(write('booking_media_reviews/proof_photo.jpg', {'status':'approved'}, 'SEED', timestamp=None),200)
+        self.assertEqual(download(media,None),200)
+        self.assertEqual(upload('booking_media/proof/owner/bad.mp4','owner','image/jpeg'),403)
+        self.assertEqual(upload('booking_media/proof/owner/big.jpg','owner','image/jpeg',11*1024*1024),403)
+
 if __name__=='__main__': unittest.main()

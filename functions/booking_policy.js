@@ -1,4 +1,4 @@
-const BLOCKING = new Set(['held', 'payment_review', 'cancel_requested', 'confirmed']);
+const BLOCKING = new Set(['held', 'payment_review', 'cancel_requested', 'confirmed', 'arrived', 'completed']);
 function overlaps(a, b) { return a.start < b.end && b.start < a.end; }
 function blocks(b, now) { return BLOCKING.has(b.status) && (b.status !== 'held' || b.holdUntil > now); }
 function money(total, deposit) { return Number.isSafeInteger(total) && total > 0 && Number.isSafeInteger(deposit) && deposit > 0 && deposit <= total; }
@@ -33,6 +33,10 @@ function quote(v, d) {
     const duration = ((s.checkOutMinute-s.checkInMinute+1440)%1440 || 1440)*60000;
     if (local.getUTCHours()*60+local.getUTCMinutes() !== s.checkInMinute || local.getUTCSeconds() || local.getUTCMilliseconds() || d.end-d.start !== duration) throw Error('وقت الشفت غير صالح');
     total = s.price; pricing = {...pricing,...s,timeZone:'Asia/Baghdad'};
+  }
+  if(v.offer && Number.isInteger(v.offer.percent) && v.offer.percent>=0 && v.offer.percent<=50 && v.offer.until>=Date.now()) {
+    pricing={...pricing,priceBeforeDiscount:total,discountPercent:v.offer.percent};
+    total=Number(BigInt(total)*BigInt(100-v.offer.percent)/100n);
   }
   if (!money(total,v.deposit)) throw Error('مبلغ غير صالح');
   return {total,pricing};

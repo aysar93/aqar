@@ -50,6 +50,16 @@ android {
         multiDexEnabled = true
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("production") { dimension = "environment" }
+        create("bookingsTest") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.test"
+            versionNameSuffix = "-bookings-test"
+        }
+    }
+
 
     signingConfigs {
     if (keystoreProperties.getProperty("storeFile") != null) create("release") {

@@ -1,7 +1,14 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import '../banners/banner_service.dart';
 import '../widgets/banner_slider.dart';
 import '../screens/admin/banner_management_screen.dart';
 import 'dart:async';
+import 'booking_widgets.dart';
+import 'booking_map.dart';
+import 'booking_management.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../subscription/payment_accounts.dart';
 import '../screens/admin/payment_account_settings_screen.dart';
 import 'package:flutter/material.dart';
@@ -35,11 +42,30 @@ String bookingCancellationText(dynamic p) => p == null
     ? 'سياسة الاسترداد غير محددة لهذا الحجز القديم؛ يلزم اعتمادها قبل الإلغاء المالي.'
     : 'استرداد كامل العربون عند إلغاء الزبون قبل الدخول بـ ${p['freeCancellationHours']} ساعة أو أكثر، وبعدها استرداد ${p['lateRefundPercent']}٪. إلغاء المالك أو الإدارة قبل الدخول يعيد كامل العربون. لا يتاح الإلغاء بعد الدخول. الاسترداد بتحويل يدوي يراجعه موظف مالي.';
 
+String bookingActionLabel(dynamic action) =>
+    const {
+      'request': 'إرسال الطلب',
+      'approve': 'موافقة المالك',
+      'reject': 'رفض الطلب',
+      'submitPayment': 'إرسال إيصال العربون',
+      'confirmPayment': 'اعتماد العربون',
+      'rejectPayment': 'رفض الإيصال',
+      'cancel': 'إلغاء الحجز',
+      'expire': 'انتهاء المهلة',
+      'checkIn': 'تسجيل الوصول',
+      'qrCheckIn': 'التحقق من رمز الوصول',
+      'complete': 'انتهاء الزيارة',
+      'settleRefund': 'تسجيل الاسترداد',
+      'settleOwner': 'تسجيل تسوية المالك',
+    }[action] ??
+    'تحديث الحجز';
 const bookingStatuses = {
   'requested': 'بانتظار المالك',
   'held': 'حجز مؤقت — بانتظار العربون',
   'payment_review': 'الإيصال قيد مراجعة الإدارة',
   'confirmed': 'حجز مؤكد',
+  'arrived': 'تم الوصول',
+  'completed': 'مكتمل',
   'cancel_requested': 'إلغاء بانتظار مراجعة الإيصال',
   'rejected': 'مرفوض',
   'cancelled': 'ملغي',
@@ -48,6 +74,28 @@ const bookingStatuses = {
 };
 Future<Map<String, dynamic>> bookingCall(
     String name, Map<String, dynamic> data) async {
+  if (appFlavor == 'bookingsTest') {
+    const host = String.fromEnvironment('BOOKINGS_EMULATOR_HOST',
+        defaultValue: '127.0.0.1');
+    final token = await FirebaseAuth.instance.currentUser!.getIdToken();
+    final response = await http
+        .post(
+          Uri.parse('http://$host:5001/demo-aqar/us-central1/$name'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token'
+          },
+          body: jsonEncode({'data': data}),
+        )
+        .timeout(const Duration(seconds: 30));
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    if (payload['error'] != null) {
+      final error = payload['error'] as Map;
+      throw FirebaseFunctionsException(
+          code: '${error['status']}', message: '${error['message']}');
+    }
+    return Map<String, dynamic>.from(payload['result'] as Map);
+  }
   final result =
       await FirebaseFunctions.instance.httpsCallable(name).call(data);
   return Map<String, dynamic>.from(result.data as Map);
@@ -76,6 +124,7 @@ class BookingScreen extends StatefulWidget {
 
 class _BookingScreenState extends State<BookingScreen> {
   int tab = 0;
+  String search = '';
   bool finance = false;
   late final bookingBanners =
       BannerService.activeBanners(placement: BannerPlacement.bookings);
@@ -97,11 +146,19 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      return const Scaffold(
+      return const BookingScaffold(
           body: Center(child: Text('سجل الدخول للوصول إلى الحجوزات')));
     }
     Query<Map<String, dynamic>> query;
-    if (tab == 0) {
+    if (tab == 6) {
+      query = FirebaseFirestore.instance
+          .collection('booking_venue_staff')
+          .where('userId', isEqualTo: uid);
+    } else if (tab == 5) {
+      query = FirebaseFirestore.instance
+          .collection('booking_venues')
+          .where('ownerId', isEqualTo: uid);
+    } else if (tab == 0) {
       query = FirebaseFirestore.instance.collection('booking_venues');
       if (!widget.admin) query = query.where('active', isEqualTo: true);
     } else if (tab == 3) {
@@ -118,9 +175,12 @@ class _BookingScreenState extends State<BookingScreen> {
     }
     return Directionality(
         textDirection: TextDirection.rtl,
-        child: Scaffold(
+        child: BookingScaffold(
             appBar: AppBar(
-                title: Text(widget.admin ? 'إدارة الحجوزات' : 'الحجوزات'),
+                backgroundColor: bookingNavy,
+                foregroundColor: Colors.white,
+                title: Text(
+                    widget.admin ? 'إدارة الحجوزات' : 'الشاليهات والقاعات'),
                 actions: widget.admin
                     ? [
                         IconButton(
@@ -152,11 +212,64 @@ class _BookingScreenState extends State<BookingScreen> {
                       ]
                     : null),
             body: Column(children: [
+              Wrap(children: [
+                if (widget.admin)
+                  TextButton(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const BookingReviewInbox())),
+                      child: const Text('مراجعة التقييمات')),
+                if (widget.admin)
+                  TextButton(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const BookingMediaInbox())),
+                      child: const Text('مراجعة الوسائط')),
+                TextButton(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                BookingTransferInbox(admin: widget.admin))),
+                    child: const Text('نقل الملكية')),
+                if (widget.admin || finance)
+                  TextButton(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const BookingLedgerScreen())),
+                      child: const Text('التقرير المالي')),
+                TextButton(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => BookingVenueEditor(
+                                ownerMode: true, data: {'ownerId': uid}))),
+                    child: const Text('إضافة مكان للتوثيق')),
+                if (widget.admin)
+                  TextButton(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const BookingProofInbox())),
+                      child: const Text('توثيق الملكية')),
+              ]),
+              TextButton.icon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BookingMapScreen())),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('خريطة الحجوزات')),
               Wrap(spacing: 8, children: [
                 for (final entry in {
                   0: 'الأماكن',
                   1: widget.admin ? 'جميع الحجوزات' : 'حجوزاتي',
                   if (!widget.admin) 2: 'لوحة المالك',
+                  if (!widget.admin) 5: 'أماكني وأسعاري',
+                  if (!widget.admin) 6: 'مهام الموظف',
                   if (widget.admin) 3: 'البلاغات',
                   if (finance) 4: 'المراجعة المالية'
                 }.entries)
@@ -165,9 +278,40 @@ class _BookingScreenState extends State<BookingScreen> {
                       selected: tab == entry.key,
                       onSelected: (_) => setState(() => tab = entry.key))
               ]),
+              if (tab == 0)
+                Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: TextField(
+                      onChanged: (value) =>
+                          setState(() => search = value.trim()),
+                      decoration: const InputDecoration(
+                          hintText: 'ابحث عن شاليه أو قاعة أو مدينة',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder()),
+                    )),
               Expanded(
                   child: ListView(children: [
-                if (tab == 0) BannerSlider(stream: bookingBanners),
+                if (tab == 0)
+                  BannerSlider(
+                      stream: bookingBanners,
+                      onBookingVenue: (id, category) async {
+                        await bookingRun(context, () async {
+                          final doc = await FirebaseFirestore.instance
+                              .doc('booking_venues/$id')
+                              .get();
+                          final venue = doc.data();
+                          if (venue == null ||
+                              venue['active'] != true ||
+                              venue['category'] != category)
+                            throw StateError('المكان غير متاح');
+                          if (context.mounted)
+                            await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => BookingRequestScreen(
+                                        venueId: id, venue: venue)));
+                        });
+                      }),
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: query.snapshots(),
                     builder: (context, s) {
@@ -183,6 +327,35 @@ class _BookingScreenState extends State<BookingScreen> {
                       return Column(
                           children: s.data!.docs.map((doc) {
                         final d = doc.data();
+                        if (tab == 6)
+                          return ListTile(
+                              title: Text('مكان ${d['venueId']}'),
+                              subtitle: const Text('صلاحيات موظف مفوض'),
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => BookingStaffScreen(
+                                          venueId: d['venueId'],
+                                          scopes: List<String>.from(
+                                              d['scopes'] ?? [])))));
+                        if (tab == 0 || tab == 5) {
+                          if (search.isNotEmpty &&
+                              tab == 0 &&
+                              !'${d['name']} ${d['location']}'.contains(search))
+                            return const SizedBox.shrink();
+                          return BookingVenueCard(
+                              venue: d,
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => widget.admin || tab == 5
+                                          ? BookingVenueEditor(
+                                              venueId: doc.id,
+                                              data: d,
+                                              ownerMode: tab == 5)
+                                          : BookingRequestScreen(
+                                              venueId: doc.id, venue: d))));
+                        }
                         return Card(
                             child: ListTile(
                                 title: Text('${d['name'] ?? d['venueName']}'),
@@ -233,7 +406,33 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   DateTime? start, end;
   bool accepted = false, busy = false;
   String? shiftId;
+  DateTime calendarMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  late Future<Map<String, dynamic>> availability = loadAvailability();
+  Future<Map<String, dynamic>> loadAvailability() {
+    final first = DateTime.utc(calendarMonth.year, calendarMonth.month, 1, -3)
+        .millisecondsSinceEpoch;
+    final now = DateTime.now().millisecondsSinceEpoch + 1000;
+    return bookingCall('getBookingAvailability', {
+      'venueId': widget.venueId,
+      'start': first > now ? first : now,
+      'end': DateTime.utc(calendarMonth.year, calendarMonth.month + 1, 1, -3)
+          .millisecondsSinceEpoch
+    });
+  }
+
   int get total {
+    final offer = widget.venue['offer'] as Map?;
+    final percent = offer?['percent'];
+    if (percent is int &&
+        percent >= 0 &&
+        percent <= 50 &&
+        offer?['until'] is num &&
+        (offer!['until'] as num) >= DateTime.now().millisecondsSinceEpoch)
+      return baseTotal * (100 - percent) ~/ 100;
+    return baseTotal;
+  }
+
+  int get baseTotal {
     final v = widget.venue;
     if (v['pricingMode'] == 'hourly' && start != null && end != null) {
       return ((end!.difference(start!).inMinutes / 60) *
@@ -280,9 +479,58 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final v = widget.venue;
-    return Scaffold(
+    return BookingScaffold(
         appBar: AppBar(title: Text('${v['name']}')),
         body: ListView(padding: const EdgeInsets.all(20), children: [
+          BookingMediaGallery(paths: List<String>.from(v['mediaPaths'] ?? [])),
+          if (v['pricingMode'] == 'shifts' && shiftId != null)
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              IconButton(
+                  tooltip: 'الشهر السابق',
+                  onPressed: calendarMonth.isAfter(
+                          DateTime(DateTime.now().year, DateTime.now().month))
+                      ? () => setState(() {
+                            calendarMonth = DateTime(
+                                calendarMonth.year, calendarMonth.month - 1);
+                            availability = loadAvailability();
+                          })
+                      : null,
+                  icon: const Icon(Icons.chevron_right)),
+              const Text('تقويم التوافر'),
+              IconButton(
+                  tooltip: 'الشهر التالي',
+                  onPressed: () => setState(() {
+                        calendarMonth = DateTime(
+                            calendarMonth.year, calendarMonth.month + 1);
+                        availability = loadAvailability();
+                      }),
+                  icon: const Icon(Icons.chevron_left)),
+            ]),
+          if (v['pricingMode'] == 'shifts' && shiftId != null)
+            FutureBuilder<Map<String, dynamic>>(
+                future: availability,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError)
+                    return TextButton(
+                        onPressed: () =>
+                            setState(() => availability = loadAvailability()),
+                        child:
+                            const Text('تعذر تحميل التوافر — إعادة المحاولة'));
+                  if (!snapshot.hasData) return const LinearProgressIndicator();
+                  return BookingCalendar(
+                      month: calendarMonth,
+                      slots: (snapshot.data!['slots'] as List)
+                          .map((e) => Map<String, dynamic>.from(e))
+                          .toList(),
+                      intervalForDay: (day) => bookingShiftDates(
+                          day,
+                          Map<String, dynamic>.from((v['shifts'] as List)
+                              .firstWhere((s) => s['id'] == shiftId))),
+                      onSelect: (day) => setState(() {
+                            setShiftDate(day);
+                            accepted = false;
+                          }));
+                }),
           Text(
               'المالك: ${v['ownerName']}\nالموقع: ${v['location']}\nالسعر المحدد: $total د.ع\nالعربون: ${v['deposit']} د.ع\nالمتبقي بعد اعتماد العربون: ${total - (v['deposit'] as num)} د.ع\n\nالشروط: ${v['terms']}'),
           if (v['pricingMode'] == 'hourly')
@@ -400,6 +648,7 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+  int rating = 5;
   bool busy = false, admin = false, finance = false;
   String method = 'qicard';
   String? displayedNumber;
@@ -466,7 +715,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('تفاصيل الحجز')),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
@@ -489,8 +738,125 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             Widget button(String label, String action) => FilledButton(
                 onPressed: busy ? null : () => act(action), child: Text(label));
             return ListView(padding: const EdgeInsets.all(20), children: [
-              Text(
-                  '${b['venueName']}\nالنوع: ${b['category']}\nالموقع: ${b['location']}\nالزبون: ${b['customerName']} — ${b['customerPhone']}\nالمالك: ${b['ownerName']} — ${b['ownerPhone']}\nالبداية: ${DateTime.fromMillisecondsSinceEpoch(b['start'])}\nالنهاية: ${DateTime.fromMillisecondsSinceEpoch(b['end'])}\nالإجمالي: ${b['total']} د.ع\nالعربون: ${b['deposit']} د.ع\nالمدفوع المعتمد: ${b['paid']} د.ع\nالمتبقي: ${b['remaining']} د.ع\nالحالة: ${bookingStatuses[b['status']]}\nالشروط: ${b['terms']}\nملاحظات: ${b['notes']}\n${b['reason'] ?? ""}\n${b['holdUntil'] == null ? "" : "مهلة الدفع: ${DateTime.fromMillisecondsSinceEpoch(b['holdUntil'])}"}\nطريقة الدفع: ${b['paymentMethod'] ?? "—"}\nرقم التحويل: ${b['transactionNumber'] ?? "—"}\nحساب التحويل: ${b['paymentAccount'] ?? "—"}'),
+              BookingProgress(status: b['status']),
+              if (customer && b['status'] == 'completed') ...[
+                DropdownButtonFormField<int>(
+                    initialValue: rating,
+                    decoration:
+                        const InputDecoration(labelText: 'تقييم تجربة الحجز'),
+                    items: [
+                      for (var i = 1; i <= 5; i++)
+                        DropdownMenuItem(value: i, child: Text('$i / 5'))
+                    ],
+                    onChanged:
+                        busy ? null : (v) => setState(() => rating = v ?? 5)),
+                TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => bookingRun(context, () async {
+                              await bookingCall('reviewCompletedBooking', {
+                                'bookingId': widget.bookingId,
+                                'rating': rating,
+                                'comment': reason.text
+                              });
+                            }),
+                    child: const Text(
+                        'إرسال التقييم — اكتب تعليقك في حقل الملاحظات')),
+              ],
+              if (owner || customer)
+                TextButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => BookingChatScreen(
+                                bookingId: widget.bookingId))),
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('محادثة الحجز')),
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('booking_action_audit')
+                      .where('bookingId', isEqualTo: widget.bookingId)
+                      .snapshots(),
+                  builder: (context, events) {
+                    if (!events.hasData) return const SizedBox.shrink();
+                    final docs = events.data!.docs.toList()
+                      ..sort((a, b) => ((a.data()['version'] as num?) ?? 0)
+                          .compareTo((b.data()['version'] as num?) ?? 0));
+                    return Column(children: [
+                      for (final event in docs)
+                        ListTile(
+                            dense: true,
+                            title: Text(bookingActionLabel(event.data()['action'])),
+                            subtitle: Text(
+                                '${event.data()['createdAt'] is Timestamp ? (event.data()['createdAt'] as Timestamp).toDate().toUtc().add(const Duration(hours: 3)).toString().replaceAll('Z', '') : ""} — بغداد'))
+                    ]);
+                  }),
+              if (finance &&
+                  !owner &&
+                  !customer &&
+                  b['status'] == 'completed' &&
+                  b['ownerSettlementStatus'] != 'settled')
+                TextField(
+                    controller: refundReference,
+                    decoration: const InputDecoration(
+                        labelText:
+                            'مرجع تحويل مستحقات المالك بعد التحويل الفعلي')),
+              if (finance &&
+                  !owner &&
+                  !customer &&
+                  b['status'] == 'completed' &&
+                  b['ownerSettlementStatus'] != 'settled')
+                FilledButton(
+                    onPressed: busy
+                        ? null
+                        : () => act('settleOwner',
+                            {'settlementReference': refundReference.text}),
+                    child: const Text('تسجيل تسوية مستحقات المالك يدويًا')),
+              if (customer && b['status'] == 'confirmed')
+                FilledButton.icon(
+                    icon: const Icon(Icons.qr_code),
+                    label: const Text('رمز الوصول — صالح 10 دقائق'),
+                    onPressed: busy
+                        ? null
+                        : () => bookingRun(context, () async {
+                              final result = await bookingCall(
+                                  'issueBookingCheckInCode',
+                                  {'bookingId': widget.bookingId});
+                              if (context.mounted)
+                                await showDialog(
+                                    context: context,
+                                    builder: (_) => Dialog(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(24),
+                                            child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Text(
+                                                      'اعرض الرمز للمالك عند الوصول'),
+                                                  QrImageView(
+                                                      data: result['code'],
+                                                      size: 240),
+                                                  SelectableText(
+                                                      result['code']),
+                                                ]))));
+                            })),
+              if (owner && b['status'] == 'confirmed')
+                button('تسجيل الوصول', 'arrive'),
+              if (owner && b['status'] == 'confirmed')
+                TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => bookingRun(context, () async {
+                              await bookingCall('verifyBookingCheckInCode',
+                                  {'code': reason.text.trim()});
+                            }),
+                    child: const Text(
+                        'تحقق من رمز الوصول الملصق في حقل الملاحظات')),
+              if (owner && ['confirmed', 'arrived'].contains(b['status']))
+                button('إنهاء الحجز بعد موعد الخروج', 'complete'),
+              BookingSummary(
+                  booking: b,
+                  status: bookingStatuses[b['status']] ?? b['status']),
               Text(bookingCancellationText(b['cancellationPolicy'])),
               if (b['pricing'] != null)
                 Text(
@@ -635,9 +1001,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 }
 
 class BookingVenueEditor extends StatefulWidget {
+  final bool ownerMode;
   final String? venueId;
   final Map<String, dynamic> data;
-  const BookingVenueEditor({super.key, this.venueId, this.data = const {}});
+  const BookingVenueEditor(
+      {super.key, this.venueId, this.data = const {}, this.ownerMode = false});
   @override
   State<BookingVenueEditor> createState() => _BookingVenueEditorState();
 }
@@ -648,6 +1016,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       'name',
       'ownerId',
       'location',
+      'latitude',
+      'longitude',
+      'commissionPercent',
       'price',
       'deposit',
       'terms',
@@ -656,9 +1027,13 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       'lateRefundPercent'
     ])
       k: TextEditingController(
-          text: (['freeCancellationHours', 'lateRefundPercent'].contains(k)
-                      ? (widget.data['cancellationPolicy'] as Map? ?? {})[k]
-                      : widget.data[k])
+          text: (k == 'commissionPercent'
+                      ? ((widget.data['commissionBps'] as num? ?? 0) / 100)
+                          .toString()
+                      : ['freeCancellationHours', 'lateRefundPercent']
+                              .contains(k)
+                          ? (widget.data['cancellationPolicy'] as Map? ?? {})[k]
+                          : widget.data[k])
                   ?.toString() ??
               '')
   };
@@ -696,38 +1071,125 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('إعداد مكان للحجز')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
-        FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          future: FirebaseFirestore.instance.collection('users').get(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const Text('تعذر تحميل حسابات الملاك');
-            }
-            if (!snapshot.hasData) return const LinearProgressIndicator();
-            final users = snapshot.data!.docs
-                .where((u) => u.data()['isBlocked'] != true)
-                .toList();
-            return DropdownButtonFormField<String>(
-              initialValue: users.any((u) => u.id == fields['ownerId']!.text)
-                  ? fields['ownerId']!.text
-                  : null,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'حساب المالك'),
-              items: users
-                  .map((u) => DropdownMenuItem(
-                      value: u.id,
-                      child: Text(
-                          '${u.data()['name'] ?? u.data()['displayName'] ?? "حساب بلا اسم"} — ${u.data()['phone'] ?? ""}',
-                          overflow: TextOverflow.ellipsis)))
-                  .toList(),
-              onChanged: widget.venueId != null
+        if (widget.venueId != null)
+          TextButton.icon(
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          BookingOwnerTools(venueId: widget.venueId!))),
+              icon: const Icon(Icons.calendar_month),
+              label: const Text('التقويم والحجوزات الخارجية ونقل الملكية')),
+        if (widget.ownerMode && widget.venueId != null)
+          Wrap(children: [
+            for (final video in [false, true])
+              TextButton.icon(
+                  icon: Icon(video ? Icons.videocam : Icons.photo),
+                  label: Text(video
+                      ? 'رفع فيديو للمراجعة (50 MB)'
+                      : 'رفع صورة للمراجعة (10 MB)'),
+                  onPressed: busy
+                      ? null
+                      : () => bookingRun(context, () async {
+                            final file = video
+                                ? await ImagePicker()
+                                    .pickVideo(source: ImageSource.gallery)
+                                : await ImagePicker().pickImage(
+                                    source: ImageSource.gallery,
+                                    maxWidth: 2000,
+                                    imageQuality: 90);
+                            if (file == null) return;
+                            if (await file.length() >
+                                (video ? 50 : 10) * 1024 * 1024)
+                              throw StateError('حجم الملف كبير');
+                            final bytes = video
+                                ? await file.readAsBytes()
+                                : await FlutterImageCompress.compressWithList(
+                                    await file.readAsBytes(),
+                                    format: CompressFormat.jpeg,
+                                    quality: 90);
+                            final path =
+                                'booking_media/${widget.venueId}/${FirebaseAuth.instance.currentUser!.uid}/${DateTime.now().microsecondsSinceEpoch}.${video ? 'mp4' : 'jpg'}';
+                            await FirebaseStorage.instance.ref(path).putData(
+                                bytes,
+                                SettableMetadata(
+                                    contentType:
+                                        video ? 'video/mp4' : 'image/jpeg'));
+                            await bookingCall('submitBookingMedia',
+                                {'venueId': widget.venueId, 'path': path});
+                            if (context.mounted)
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'الملف بانتظار مراجعة الإدارة')));
+                          }))
+          ]),
+        if (widget.ownerMode &&
+            widget.venueId != null &&
+            ['pending', 'rejected'].contains(widget.data['verificationStatus']))
+          FilledButton(
+              onPressed: busy
                   ? null
-                  : (v) => fields['ownerId']!.text = v ?? '',
-            );
-          },
-        ),
+                  : () => bookingRun(context, () async {
+                        final image = await ImagePicker().pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 2000,
+                            imageQuality: 90);
+                        if (image == null) return;
+                        final uid = FirebaseAuth.instance.currentUser!.uid,
+                            path =
+                                'booking_ownership_documents/${widget.venueId}/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg';
+                        final bytes =
+                            await FlutterImageCompress.compressWithList(
+                                await image.readAsBytes(),
+                                format: CompressFormat.jpeg,
+                                quality: 90);
+                        if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024)
+                          throw StateError('حجم الصورة غير صالح');
+                        await FirebaseStorage.instance.ref(path).putData(
+                            bytes, SettableMetadata(contentType: 'image/jpeg'));
+                        await bookingCall('submitBookingOwnershipProof',
+                            {'venueId': widget.venueId, 'path': path});
+                        if (context.mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'أرسلت وثيقة الملكية للمراجعة الإدارية')));
+                      }),
+              child: const Text('رفع صورة إثبات الملكية — خاصة بالإدارة')),
+        if (!widget.ownerMode)
+          FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            future: FirebaseFirestore.instance.collection('users').get(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Text('تعذر تحميل حسابات الملاك');
+              }
+              if (!snapshot.hasData) return const LinearProgressIndicator();
+              final users = snapshot.data!.docs
+                  .where((u) => u.data()['isBlocked'] != true)
+                  .toList();
+              return DropdownButtonFormField<String>(
+                initialValue: users.any((u) => u.id == fields['ownerId']!.text)
+                    ? fields['ownerId']!.text
+                    : null,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'حساب المالك'),
+                items: users
+                    .map((u) => DropdownMenuItem(
+                        value: u.id,
+                        child: Text(
+                            '${u.data()['name'] ?? u.data()['displayName'] ?? "حساب بلا اسم"} — ${u.data()['phone'] ?? ""}',
+                            overflow: TextOverflow.ellipsis)))
+                    .toList(),
+                onChanged: widget.venueId != null
+                    ? null
+                    : (v) => fields['ownerId']!.text = v ?? '',
+              );
+            },
+          ),
         for (final e in fields.entries.where((e) =>
             e.key != 'ownerId' &&
             (e.key != 'price' || pricingMode == 'fixed') &&
@@ -739,6 +1201,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 'name': 'اسم المكان',
                 'ownerId': 'معرف حساب المالك للتحقق من الحساب',
                 'location': 'الموقع',
+                'latitude': 'خط العرض',
+                'longitude': 'خط الطول',
+                'commissionPercent':
+                    'عمولة المنصة من العربون المحصّل فقط (٪) — الافتراضي صفر',
                 'price': 'السعر الثابت لكل حجز بالدينار',
                 'deposit': 'العربون بالدينار',
                 'terms': 'شروط المكان',
@@ -749,6 +1215,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 'lateRefundPercent':
                     'نسبة استرداد العربون بعد الموعد أعلاه (0–100)'
               }[e.key]),
+              enabled: !(widget.ownerMode && e.key == 'commissionPercent'),
               maxLines: e.key == 'terms' ? 4 : 1),
         DropdownButtonFormField<String>(
             initialValue: pricingMode,
@@ -824,7 +1291,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
         SwitchListTile(
             title: const Text('متاح للحجز'),
             value: active,
-            onChanged: (v) => setState(() => active = v)),
+            onChanged:
+                widget.ownerMode ? null : (v) => setState(() => active = v)),
         FilledButton(
             onPressed: busy
                 ? null
@@ -863,7 +1331,14 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               int.tryParse(fields['lateRefundPercent']!.text)
                         },
                         'category': category,
-                        'active': active
+                        'active': active,
+                        'commissionBps': ((double.tryParse(
+                                        fields['commissionPercent']!.text) ??
+                                    0) *
+                                100)
+                            .round(),
+                        'latitude': double.tryParse(fields['latitude']!.text),
+                        'longitude': double.tryParse(fields['longitude']!.text),
                       });
                       if (context.mounted) Navigator.pop(context);
                     });
@@ -899,7 +1374,7 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('إعدادات الحجوزات')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         TextField(
