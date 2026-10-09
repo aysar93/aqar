@@ -19,8 +19,10 @@ class NotificationBadge extends StatelessWidget {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance.collection('notifications').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: uid)
+          .snapshots(),
       builder: (context, snapshot) {
         int count = 0;
 

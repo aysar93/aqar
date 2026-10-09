@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../office/models/office_subscription_model.dart';
@@ -419,28 +421,7 @@ class _OfficeSubscriptionsManagementScreenState
             label: const Text('استئناف')));
         break;
     }
-    actions.add(IconButton.filledTonal(
-      tooltip: 'حذف فعلي',
-      onPressed: () => _confirmDelete(subscription),
-      icon: const Icon(Icons.delete_forever_outlined),
-    ));
     return Wrap(spacing: 8, runSpacing: 8, children: actions);
-  }
-
-  Future<void> _confirmDelete(OfficeSubscriptionModel subscription) async {
-    final confirmed = await _confirm(
-      title: 'حذف الاشتراك نهائيًا',
-      message: 'سيُحذف سجل الاشتراك وطلبات الدفع المرتبطة به نهائيًا. '
-          'لن يتأثر أي اشتراك أحدث للمكتب. هل تريد المتابعة؟',
-      confirmText: 'حذف نهائي',
-      isDestructive: true,
-    );
-    if (confirmed != true) return;
-    await _runAction(
-      action: () =>
-          _service.deleteSubscription(subscriptionId: subscription.id),
-      successMessage: 'تم حذف الاشتراك وبيانات الدفع المرتبطة به',
-    );
   }
 
   Future<void> _confirmActivate(
@@ -636,6 +617,8 @@ class _OfficeSubscriptionsManagementScreenState
     }
 
     final data = snapshot.docs.first.data();
+    final path = data['receiptPath']?.toString().trim();
+    if (path != null && path.isNotEmpty) return path;
     final value = data['receiptUrl']?.toString().trim();
 
     return value == null || value.isEmpty ? null : value;
@@ -869,6 +852,23 @@ class _OfficeSubscriptionsManagementScreenState
       _showError('لا توجد صورة إيصال متاحة.');
       return;
     }
+    Uint8List? privateBytes;
+    if (receiptUrl.startsWith('subscription_receipts/')) {
+      try {
+        privateBytes = await FirebaseStorage.instance
+            .ref(receiptUrl)
+            .getData(10 * 1024 * 1024);
+        if (privateBytes == null || privateBytes.isEmpty) {
+          throw StateError('إيصال غير متاح');
+        }
+      } catch (_) {
+        if (mounted) {
+          _showError('تعذر تحميل الإيصال؛ تحقق من الصلاحيات والاتصال.');
+        }
+        return;
+      }
+      if (!mounted) return;
+    }
 
     await showDialog<void>(
       context: context,
@@ -905,44 +905,46 @@ class _OfficeSubscriptionsManagementScreenState
                   child: InteractiveViewer(
                     minScale: 0.8,
                     maxScale: 4,
-                    child: Image.network(
-                      receiptUrl,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (
-                        context,
-                        child,
-                        loadingProgress,
-                      ) {
-                        if (loadingProgress == null) {
-                          return child;
-                        }
+                    child: privateBytes != null
+                        ? Image.memory(privateBytes, fit: BoxFit.contain)
+                        : Image.network(
+                            receiptUrl,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (
+                              context,
+                              child,
+                              loadingProgress,
+                            ) {
+                              if (loadingProgress == null) {
+                                return child;
+                              }
 
-                        return const SizedBox(
-                          height: 400,
-                          child: Center(
-                            child: CircularProgressIndicator(),
+                              return const SizedBox(
+                                height: 400,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            },
+                            errorBuilder: (
+                              context,
+                              error,
+                              stackTrace,
+                            ) {
+                              return const SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(20),
+                                    child: Text(
+                                      'تعذر تحميل صورة الإيصال',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                      errorBuilder: (
-                        context,
-                        error,
-                        stackTrace,
-                      ) {
-                        return const SizedBox(
-                          height: 300,
-                          child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(20),
-                              child: Text(
-                                'تعذر تحميل صورة الإيصال',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                   ),
                 ),
               ],

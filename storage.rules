@@ -5,6 +5,14 @@ service firebase.storage {
     function admin() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true; }
     function bookingFinance() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
     function active() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false; }
+    match /subscription_receipts/{subscriptionId}/{authorUid}/{fileName} {
+      function subscription() { return firestore.get(/databases/(default)/documents/office_subscriptions/$(subscriptionId)).data; }
+      allow read: if active() && (admin() || subscription().ownerId == request.auth.uid);
+      allow create: if resource == null && active() && request.auth.uid == authorUid && subscription().ownerId == request.auth.uid &&
+        subscription().status == 'pending' && fileName.matches('[0-9]+[.]jpg') &&
+        request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024 && request.resource.contentType == 'image/jpeg';
+      allow update, delete: if false;
+    }
     match /booking_receipts/{bookingId}/{authorUid}/{fileName} {
       function booking() { return firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data; }
       allow read: if active() && (admin() || bookingFinance() || booking().customerId == request.auth.uid || booking().ownerId == request.auth.uid);

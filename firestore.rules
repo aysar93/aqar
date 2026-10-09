@@ -10,6 +10,18 @@ service cloud.firestore {
     }
 
     function bookingFinance() { return activeUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
+    match /booking_action_audit/{entry} {
+      allow read: if activeUser() && (isAdmin() || bookingFinance());
+      allow write: if false;
+    }
+    match /booking_finance_audit/{entry} {
+      allow read: if activeUser() && isAdmin();
+      allow write: if false;
+    }
+    match /booking_venue_audit/{entry} {
+      allow read: if activeUser() && isAdmin();
+      allow write: if false;
+    }
     match /booking_venues/{venueId} {
       allow read: if isAdmin() || resource.data.active == true;
       allow write: if false;
@@ -441,8 +453,8 @@ match /office_subscriptions/{subscriptionId} {
       after.featuredSubscriptionId == subscriptionId;
   }
 
-  // الحذف للإدارة فقط.
-  allow delete: if isAdmin();
+  // Keep subscription contracts and their financial links for historical review.
+  allow delete: if false;
 }
 match /office_events/{eventId} {
   allow create: if isSignedIn();
@@ -468,10 +480,16 @@ match /subscription_payments/{paymentId} {
   allow create: if false; // Created only by the validated callable.
 
   // الإدارة فقط تستطيع اعتماد أو رفض عملية الدفع.
-  allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','approvedAt','approvedBy','updatedAt']);
+  allow update: if activeUser() && isAdmin() &&
+    resource.data.ownerUid != request.auth.uid &&
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId != request.auth.uid &&
+    resource.data.status == 'pending' && request.resource.data.status in ['approved', 'rejected'] &&
+    request.resource.data.approvedBy == request.auth.uid && request.resource.data.updatedAt == request.time &&
+    (request.resource.data.status != 'approved' || request.resource.data.approvedAt == request.time) &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','approvedAt','approvedBy','updatedAt']);
 
   // الإدارة فقط تستطيع حذف عملية الدفع.
-  allow delete: if isAdmin();
+  allow delete: if false; // Financial records must survive account/configuration changes.
 }
 
 // ==================================================
@@ -738,7 +756,7 @@ match /auth_rate_limits/{document=**} {
     match /notifications/{notificationId} {
 
       // الإنشاء للمستخدمين المسجلين والأدمن
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.get('type', '') != 'booking' && !request.resource.data.keys().hasAny(['bookingId']) && !notificationId.matches('booking_.*');
 
       // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
 allow read: if isSignedIn() &&
@@ -749,6 +767,8 @@ allow read: if isSignedIn() &&
 
       // التحديث لصاحب الإشعار أو الأدمن
       allow update: if isSignedIn() &&
+        ((resource.data.get('type', '') != 'booking' && request.resource.data.get('type', '') != 'booking' && !request.resource.data.keys().hasAny(['bookingId'])) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])) &&
         (
           resource.data.userId == request.auth.uid ||
           isAdmin()
@@ -782,6 +802,14 @@ match /payment_accounts/{scope} {
   allow list, write: if false;
 }
 match /payment_configuration/{scope} { allow read, write: if false; }
+match /subscription_payment_audit/{entry} {
+  allow read: if activeUser() && isAdmin();
+  allow write: if false;
+}
+match /subscription_review_audit/{entry} {
+  allow read: if activeUser() && isAdmin();
+  allow write: if false;
+}
 match /payment_account_audit/{entry} {
   allow read: if activeUser() && isAdmin() && request.auth.token.get('canManagePaymentAccounts', false) == true;
   allow write: if false;

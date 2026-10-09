@@ -50,4 +50,17 @@ class BookingRules(unittest.TestCase):
         self.assertEqual(write('bookings/receipt',{'holdUntil':1},'SEED',True,timestamp=None),200)
         self.assertEqual(upload('booking_receipts/receipt/customer/126.jpg','customer','image/jpeg'),403)
 
+    def test_subscription_receipts_are_private_and_immutable(self):
+        self.assertEqual(write('office_subscriptions/receipt_sub', {'ownerId':'customer','status':'pending'}, 'SEED', timestamp=None),200)
+        path='subscription_receipts/receipt_sub/customer/123.jpg'
+        self.assertEqual(upload(path,'customer','image/jpeg'),200)
+        for uid in ['customer','admin']: self.assertEqual(download(path,uid),200)
+        for uid in [None,'other','owner','reviewer','blocked']: self.assertEqual(download(path,uid),403)
+        self.assertEqual(upload(path,'customer','image/jpeg'),403)
+        self.assertEqual(upload('subscription_receipts/receipt_sub/other/124.jpg','other','image/jpeg'),403)
+        self.assertEqual(upload('subscription_receipts/receipt_sub/customer/124.jpg','customer','text/plain'),403)
+        self.assertEqual(write('office_subscriptions/receipt_sub', {'status':'active'}, 'SEED', True, timestamp=None),200)
+        self.assertEqual(upload('subscription_receipts/receipt_sub/customer/125.jpg','customer','image/jpeg'),403)
+        self.assertEqual(download(path,'customer'),200)
+
 if __name__=='__main__': unittest.main()

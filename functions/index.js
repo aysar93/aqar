@@ -287,7 +287,7 @@ exports.sendNotificationToUser = onDocumentCreated(
 // إذا أوقف المستخدم الإشعارات من داخل التطبيق
 // لا نرسل Push، لكن وثيقة الإشعار تبقى موجودة
 // ويمكنه رؤيتها داخل صفحة الإشعارات.
-if (userData.notificationsEnabled === false) {
+if (userData.notificationsEnabled === false || userData.isBlocked === true) {
   return null;
 }
 
@@ -328,4 +328,4 @@ exports.refreshOfficeReviewMetrics = officeCounters.refreshOfficeReviewMetrics;
 exports.refreshOfficePropertyMetrics = officeCounters.refreshOfficePropertyMetrics;
 
 const paymentSettings = require("./payment_accounts");
-for (const name of ["getPaymentAccountSettings", "savePaymentAccountSettings", "createSubscriptionPayment"]) exports[name] = paymentSettings[name];
+for (const name of ["getPaymentAccountSettings", "savePaymentAccountSettings", "createSubscriptionPayment", "reviewOfficeSubscription", "auditSubscriptionPayment"]) exports[name] = paymentSettings[name];

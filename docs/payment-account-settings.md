@@ -51,15 +51,24 @@ Disabling every method blocks new payment submissions. Already submitted payment
 remain readable and can be approved/rejected; booking refunds and cancellations
 continue to use the historical booking record. No historical records are migrated.
 The former manual subscription option no longer creates a payment outside the two
-configured methods. The existing Cloudinary receipt upload flow is retained.
+configured methods. New subscription receipts use private immutable Firebase
+Storage paths and authenticated reads. Historical Cloudinary URLs remain readable;
+they are not migrated or erased. A provisioned application Storage bucket is required.
+
+`reviewOfficeSubscription` approves/rejects the active office service path in a
+server transaction and writes a synchronous review audit. Renewal preserves remaining
+days and featured attempts; rejecting renewal preserves the current office subscription.
+Legacy pending contracts whose package terms changed require explicit reconciliation.
+Financial payment and subscription documents cannot be deleted by clients.
 
 ## Release boundary
 
 No Firebase rules, functions, claims, configuration or app have been deployed.
-After separate release approval, deploy the callable functions and rules together
-with the updated client; older clients create subscription payments directly and
-will be rejected by the new rules. Before enabling new payments, an authorized
-administrator must configure and verify the receiving numbers in the editor.
+Do not replace production rules immediately: older clients create subscription
+payments directly and will be rejected. Follow the compatibility acceptance gates,
+Storage preparation, staged release, and rollback requirements in
+[the final readiness review](production-readiness-bookings.md). Before enabling
+new payments, an authorized administrator must configure and verify the receiving numbers.
 Missing configuration intentionally leaves all methods unavailable.
 
 ## Validation

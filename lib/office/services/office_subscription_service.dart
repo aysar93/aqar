@@ -140,59 +140,6 @@ class OfficeSubscriptionService {
     return controller.stream;
   }
 
-  /// حذف فعلي لسجل الاشتراك وطلبات الدفع التابعة له.
-  /// إذا كان المكتب يشير إلى هذا الاشتراك تحديدًا، تُمسح بيانات مزامنته فقط؛
-  /// ولا يتأثر أي اشتراك أحدث للمكتب.
-  Future<void> deleteSubscription({
-    required String subscriptionId,
-  }) async {
-    final normalizedId = subscriptionId.trim();
-    if (normalizedId.isEmpty) {
-      throw ArgumentError('معرّف الاشتراك غير صالح');
-    }
-
-    final subscriptionRef = _subscriptions.doc(normalizedId);
-    final paymentSnapshot = await _firestore
-        .collection('subscription_payments')
-        .where('subscriptionId', isEqualTo: normalizedId)
-        .get();
-
-    await _firestore.runTransaction((transaction) async {
-      final subscriptionSnapshot = await transaction.get(subscriptionRef);
-      if (!subscriptionSnapshot.exists) {
-        throw StateError('الاشتراك غير موجود أو حُذف مسبقًا');
-      }
-
-      final subscription =
-          OfficeSubscriptionModel.fromFirestore(subscriptionSnapshot);
-      final officeRef = _offices.doc(subscription.officeId);
-      final officeSnapshot = await transaction.get(officeRef);
-
-      for (final payment in paymentSnapshot.docs) {
-        transaction.delete(payment.reference);
-      }
-      transaction.delete(subscriptionRef);
-
-      if (officeSnapshot.exists) {
-        final officeData = officeSnapshot.data() ?? const <String, dynamic>{};
-        if (officeData['subscriptionId']?.toString() == normalizedId) {
-          transaction.update(officeRef, {
-            'subscriptionId': FieldValue.delete(),
-            'subscriptionStatus': 'none',
-            'subscriptionStartDate': null,
-            'subscriptionEndDate': null,
-            'maxProperties': FieldValue.delete(),
-            'maxFeaturedProperties': FieldValue.delete(),
-            'canFeatureProperties': FieldValue.delete(),
-            'canAppearInFeaturedOffices': FieldValue.delete(),
-            'canUseAdvancedStatistics': FieldValue.delete(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-        }
-      }
-    });
-  }
-
   static String _firstText(
     Map<String, dynamic>? data,
     List<String> keys,
@@ -724,104 +671,12 @@ class OfficeSubscriptionService {
   Future<void> activateSubscription({
     required String subscriptionId,
   }) async {
-    final subscription = await getSubscriptionById(subscriptionId);
-
-    if (subscription == null) {
-      throw StateError('لا يوجد اشتراك بهذا المعرّف');
-    }
-
-    if (subscription.status != 'pending') {
-      throw StateError(
-        'لا يمكن تفعيل هذا الاشتراك لأنه ليس قيد المراجعة',
-      );
-    }
-
-    final now = DateTime.now();
-
-    // عند التجديد لا نستبدل الأيام المتبقية من الاشتراك الحالي.
-    // تُضاف مدة الباقة الجديدة إلى تاريخ انتهاء الاشتراك الفعّال الحالي.
-    final currentSubscription = await getOfficeSubscription(
-      subscription.officeId,
-    );
-
-    final currentEndDate = currentSubscription?.status == 'active'
-        ? currentSubscription?.endDate
-        : null;
-
-    final hasRemainingTime =
-        currentEndDate != null && currentEndDate.isAfter(now);
-
-    final startDate = hasRemainingTime ? currentEndDate : now;
-    final endDate = startDate.add(
-      Duration(
-        days: subscription.durationDays,
-      ),
-    );
-
-    // عند تجديد الاشتراك، لا نضيّع محاولات التمييز المتبقية من
-    // الاشتراك القديم. تُضاف إلى رصيد الباقة الجديدة.
-    // مثال: 4 محاولات متبقية + 7 محاولات في الباقة الجديدة = 11.
-    final newFeaturedMax = currentSubscription == null
-        ? subscription.maxFeaturedProperties
-        : currentSubscription.mergedFeaturedLimit(
-            subscription.maxFeaturedProperties,
-          );
-
-    final batch = _firestore.batch();
-
-    final subscriptionRef = _subscriptions.doc(
-      subscription.id,
-    );
-
-    batch.update(
-      subscriptionRef,
-      {
-        'status': 'active',
-        'paymentStatus': 'paid',
-        'startDate': Timestamp.fromDate(startDate),
-        'endDate': Timestamp.fromDate(endDate),
-        'maxFeaturedProperties': newFeaturedMax,
-        'featuredPropertiesUsed': 0,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-    );
-
-    // البحث عن طلب الدفع المرتبط بهذا الاشتراك.
-    final paymentSnapshot = await _firestore
-        .collection('subscription_payments')
-        .where(
-          'subscriptionId',
-          isEqualTo: subscription.id,
-        )
-        .limit(1)
-        .get();
-
-    if (paymentSnapshot.docs.isNotEmpty) {
-      final paymentRef = paymentSnapshot.docs.first.reference;
-
-      batch.update(
-        paymentRef,
-        {
-          'status': 'approved',
-          'approvedAt': FieldValue.serverTimestamp(),
-          'approvedBy': FirebaseAuth.instance.currentUser?.uid,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      );
-    }
-
-    await batch.commit();
-
-    await _syncOfficeSubscriptionData(
-      officeId: subscription.officeId,
-      status: 'active',
-      endDate: endDate,
-      subscriptionId: subscription.id,
-      packageId: subscription.packageId,
-      packageName: subscription.packageName,
-      subscriptionStartDate:
-          hasRemainingTime ? currentSubscription?.startDate : startDate,
-    );
+    await FirebaseFunctions.instance
+        .httpsCallable('reviewOfficeSubscription')
+        .call({
+      'subscriptionId': subscriptionId,
+      'action': 'approve',
+    });
   }
 
 // ═════════════════════════════════════════════
@@ -831,71 +686,12 @@ class OfficeSubscriptionService {
   Future<void> rejectSubscription({
     required String subscriptionId,
   }) async {
-    final subscription = await getSubscriptionById(
-      subscriptionId,
-    );
-
-    if (subscription == null) {
-      throw StateError(
-        'لا يوجد اشتراك بهذا المعرّف',
-      );
-    }
-
-    if (subscription.status != 'pending') {
-      throw StateError(
-        'لا يمكن رفض هذا الطلب لأنه ليس قيد المراجعة',
-      );
-    }
-
-    final batch = _firestore.batch();
-
-    final subscriptionRef = _subscriptions.doc(
-      subscription.id,
-    );
-
-    batch.update(
-      subscriptionRef,
-      {
-        'status': 'cancelled',
-        'paymentStatus': 'rejected',
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-    );
-
-    final paymentSnapshot = await _firestore
-        .collection('subscription_payments')
-        .where(
-          'subscriptionId',
-          isEqualTo: subscription.id,
-        )
-        .limit(1)
-        .get();
-
-    if (paymentSnapshot.docs.isNotEmpty) {
-      final paymentRef = paymentSnapshot.docs.first.reference;
-
-      batch.update(
-        paymentRef,
-        {
-          'status': 'rejected',
-          'approvedBy': FirebaseAuth.instance.currentUser?.uid,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      );
-    }
-
-    await batch.commit();
-
-    // الطلب مرفوض، لذلك لا يوجد اشتراك فعال في المكتب.
-    await _syncOfficeSubscriptionData(
-      officeId: subscription.officeId,
-      status: 'cancelled',
-      endDate: null,
-      subscriptionId: subscription.id,
-      packageId: subscription.packageId,
-      packageName: subscription.packageName,
-      subscriptionStartDate: null,
-    );
+    await FirebaseFunctions.instance
+        .httpsCallable('reviewOfficeSubscription')
+        .call({
+      'subscriptionId': subscriptionId,
+      'action': 'reject',
+    });
   }
 
   // ═════════════════════════════════════════════
@@ -1006,6 +802,7 @@ class OfficeSubscriptionService {
     String? transactionId,
     String? notes,
     String? receiptUrl,
+    String? receiptPath,
     String? contactPhone,
     String? expectedNumber,
   }) async {
@@ -1020,6 +817,7 @@ class OfficeSubscriptionService {
       'transactionId': transactionId,
       'notes': notes,
       'receiptUrl': receiptUrl,
+      'receiptPath': receiptPath,
     });
     return result.data['id'] as String;
   }

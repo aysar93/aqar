@@ -84,6 +84,8 @@ test('phase two pricing, independent review, cancellation during receipt review 
   assert.equal((await db.doc(`bookings/${booking.id}`).get()).data().pricing.name,'night');
   await assert.rejects(call('setBookingPaymentReviewer','p2customer',{userId:'p2customer',enabled:true}));
   await call('setBookingPaymentReviewer','p2admin',{userId:'p2owner',enabled:true});
+  await assert.rejects(call('setBookingPaymentReviewer','p2admin',{userId:'p2admin',enabled:true}));
+  assert.equal((await db.collection('booking_finance_audit').where('targetUid','==','p2owner').get()).size,1);
   await call('actOnBooking','p2owner',{bookingId:booking.id,action:'approve'});
   const path=`booking_receipts/${booking.id}/p2customer/222.jpg`;
   await getStorage().bucket().file(path).save(Buffer.from('receipt'),{resumable:false,metadata:{contentType:'image/jpeg'}});
@@ -101,6 +103,9 @@ test('phase two pricing, independent review, cancellation during receipt review 
   await call('actOnBooking','p2reviewer',{bookingId:booking.id,action:'settleRefund',refundReference:'refund-222'});
   const after=await db.doc(`bookings/${booking.id}`).get();
   assert.equal(after.data().refundReference,'refund-222');assert.equal(after.data().refundSettledBy,'p2reviewer');
+  const audit = await db.collection('booking_action_audit').where('bookingId','==',booking.id).get();
+  assert.equal(audit.size,6);
+  assert.equal(audit.docs.filter(s=>s.data().action==='settleRefund')[0].data().actorUid,'p2reviewer');
   await Promise.all([1,2].map(()=>f.bookingNotifications.run({data:{after,before:{data:()=>cancelled}},params:{bookingId:booking.id}})));
   const notices=await db.collection('notifications').where('bookingId','==',booking.id).get();
   assert.equal(notices.docs.filter(n=>n.data().userId==='p2owner').length,1);

@@ -5,7 +5,8 @@ import '../payment_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-import '../../services/cloudinary_service.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../models/subscription_package_model.dart';
 import '../../office/models/office_subscription_model.dart';
 import '../../office/services/office_subscription_service.dart';
@@ -43,6 +44,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   bool _processing = false;
   bool _uploadingReceipt = false;
+  String? _pendingSubscriptionId;
+  String? _uploadedReceiptPath;
 
   Map<String, dynamic> _accounts = {};
   StreamSubscription<Map<String, dynamic>>? _accountsListener;
@@ -101,6 +104,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       setState(() {
         _receiptFile = File(picked.path);
+        _uploadedReceiptPath = null;
       });
     } catch (e) {
       _showMessage(
@@ -211,29 +215,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
 
     try {
-      String? receiptUrl;
-
-      if (_receiptFile != null) {
-        setState(() {
-          _uploadingReceipt = true;
-        });
-
-        receiptUrl = await uploadToCloudinary(
-          _receiptFile!,
-        );
-
-        setState(() {
-          _uploadingReceipt = false;
-        });
-
-        if (receiptUrl == null || receiptUrl.trim().isEmpty) {
-          throw Exception(
-            'تعذر رفع صورة الإيصال',
-          );
-        }
-      }
-
-      final subscriptionId = await _service.createSubscriptionRequest(
+      final subscriptionId =
+          _pendingSubscriptionId ??= await _service.createSubscriptionRequest(
         officeId: widget.officeId,
         ownerId: widget.ownerUid,
         packageId: widget.package.id,
@@ -248,6 +231,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
         canUseAdvancedStatistics: widget.package.statisticsEnabled,
       );
 
+      if (_receiptFile != null && _uploadedReceiptPath == null) {
+        setState(() {
+          _uploadingReceipt = true;
+        });
+
+        final bytes = await FlutterImageCompress.compressWithList(
+          await _receiptFile!.readAsBytes(),
+          format: CompressFormat.jpeg,
+          quality: 85,
+        );
+        if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+          throw StateError('حجم الإيصال غير صالح');
+        }
+        final path =
+            'subscription_receipts/$subscriptionId/${widget.ownerUid}/${DateTime.now().microsecondsSinceEpoch}.jpg';
+        await FirebaseStorage.instance.ref(path).putData(
+              bytes,
+              SettableMetadata(contentType: 'image/jpeg'),
+            );
+        _uploadedReceiptPath = path;
+
+        if (mounted) {
+          setState(() {
+            _uploadingReceipt = false;
+          });
+        }
+      }
+
       final paymentId = await _service.createPaymentRequest(
         officeId: widget.officeId,
         ownerUid: widget.ownerUid,
@@ -261,7 +272,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
-        receiptUrl: receiptUrl,
+        receiptPath: _uploadedReceiptPath,
         contactPhone: _paymentMethod == 'manual'
             ? _contactPhoneController.text.trim()
             : null,
@@ -280,7 +291,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       _showMessage(
-        'تعذر إرسال طلب الدفع. حاول مرة أخرى',
+        'تعذر إرسال طلب الدفع. احتفظ بالإيصال ولا تحوّل المبلغ مرة أخرى؛ راجع الإدارة إذا استمر الخطأ.',
         isError: true,
       );
     } finally {
