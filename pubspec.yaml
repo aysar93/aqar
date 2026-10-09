@@ -57,6 +57,7 @@ dependencies:
   pdf: ^3.11.3
   printing: ^5.13.4
   qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.2
   gal: ^2.3.0
 
   custom_refresh_indicator: ^4.0.1

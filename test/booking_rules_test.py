@@ -36,6 +36,14 @@ class BookingRules(unittest.TestCase):
         self.assertEqual(write('booking_reports/report',{'status':'resolved'},'admin',True,timestamp=None),200)
         self.assertEqual(write('booking_reports/report',{'userId':'admin'},'admin',True,timestamp=None),403)
 
+    def test_support_and_review_privacy(self):
+        self.assertEqual(write('booking_support/ticket', {'userId':'customer','status':'open'}, 'SEED', timestamp=None),200)
+        self.assertEqual(write('booking_reviews/verified', {'customerId':'customer','status':'approved','rating':5}, 'SEED', timestamp=None),200)
+        for collection in ['booking_support/ticket','booking_reviews/verified']:
+            for uid in ['customer','admin']: self.assertEqual(call('/'+collection,uid),200)
+            for uid in [None,'owner','other','blocked']: self.assertEqual(call('/'+collection,uid),403)
+            for uid in ['customer','admin']: self.assertEqual(write(collection,{'status':'resolved'},uid,True,timestamp=None),403)
+
     def test_receipts_are_private_immutable_and_only_before_expiry(self):
         self.assertEqual(write('bookings/receipt', {'customerId':'customer','ownerId':'owner','status':'held','holdUntil':int(time.time()*1000)+60000}, 'SEED', timestamp=None),200)
         path='booking_receipts/receipt/customer/123.jpg'

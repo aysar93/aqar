@@ -53,6 +53,11 @@ android {
     flavorDimensions += "environment"
     productFlavors {
         create("production") { dimension = "environment" }
+        create("bookingsStaging") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookingstest"
+            versionNameSuffix = "-bookings-staging"
+        }
         create("bookingsTest") {
             dimension = "environment"
             applicationIdSuffix = ".bookings.test"

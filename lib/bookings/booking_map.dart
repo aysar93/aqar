@@ -1,3 +1,4 @@
+import 'booking_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -14,7 +15,7 @@ class BookingMapScreen extends StatefulWidget {
 }
 
 class _BookingMapScreenState extends State<BookingMapScreen> {
-  String search = '';
+  final filters = BookingFilters();
   @override
   Widget build(BuildContext context) => Directionality(
       textDirection: TextDirection.rtl,
@@ -23,11 +24,8 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
         body: Column(children: [
           Padding(
               padding: const EdgeInsets.all(16),
-              child: TextField(
-                  decoration: const InputDecoration(
-                      hintText: 'اسم المكان أو المدينة',
-                      prefixIcon: Icon(Icons.search)),
-                  onChanged: (s) => setState(() => search = s.trim()))),
+              child: BookingFilterBar(
+                  filters: filters, onChanged: () => setState(() {}))),
           Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
@@ -44,8 +42,7 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                         .where((d) =>
                             d.data()['latitude'] is num &&
                             d.data()['longitude'] is num &&
-                            '${d.data()['name']} ${d.data()['location']}'
-                                .contains(search))
+                            filters.matches(d.data()))
                         .toList();
                     return FlutterMap(
                         options: const MapOptions(
@@ -64,7 +61,7 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                                   height: 70,
                                   child: Semantics(
                                       label:
-                                          '${d.data()['name']} ${d.data()['price']} دينار',
+                                          '${d.data()['name']} ${bookingStartingPrice(d.data())} دينار',
                                       child: TextButton(
                                           style: TextButton.styleFrom(
                                               backgroundColor: bookingNavy,
@@ -77,7 +74,7 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                                                           venueId: d.id,
                                                           venue: d.data()))),
                                           child: Text(
-                                              '${d.data()['name']}\n${d.data()['price']} د.ع',
+                                              '${d.data()['name']}\n${bookingStartingPrice(d.data())} د.ع',
                                               maxLines: 2,
                                               overflow:
                                                   TextOverflow.ellipsis))))

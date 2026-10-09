@@ -1,3 +1,4 @@
+import 'booking_extras.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -29,11 +30,10 @@ class BookingReviewInbox extends StatelessWidget {
                       subtitle: Text('${d.data()['comment']}')),
                   for (final approved in [true, false])
                     TextButton(
-                        onPressed: () => bookingRun(
-                            context,
-                            () => d.reference.update({
-                                  'status': approved ? 'approved' : 'rejected'
-                                })),
+                        onPressed: () => bookingRun(context, () async {
+                              await bookingCall('moderateBookingReview',
+                                  {'reviewId': d.id, 'approved': approved});
+                            }),
                         child: Text(approved ? 'نشر التقييم' : 'رفض التقييم')),
                 ]))
             ]);
@@ -452,6 +452,16 @@ class _BookingStaffScreenState extends State<BookingStaffScreen> {
                           onPressed: busy ? null : () => act(b['id'], 'reject'),
                           child: const Text('رفض الطلب'))
                     ]),
+                  if (widget.scopes.contains('checkin') &&
+                      b['status'] == 'confirmed')
+                    TextButton.icon(
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('مسح رمز الوصول'),
+                        onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    BookingScannerScreen(bookingId: b['id'])))),
                   if (widget.scopes.contains('checkin') &&
                       b['status'] == 'confirmed')
                     TextButton(

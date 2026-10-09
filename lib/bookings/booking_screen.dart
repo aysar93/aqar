@@ -1,3 +1,5 @@
+import 'booking_filters.dart';
+import 'booking_extras.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -53,6 +55,7 @@ String bookingActionLabel(dynamic action) =>
       'cancel': 'إلغاء الحجز',
       'expire': 'انتهاء المهلة',
       'checkIn': 'تسجيل الوصول',
+      'arrive': 'تسجيل الوصول',
       'qrCheckIn': 'التحقق من رمز الوصول',
       'complete': 'انتهاء الزيارة',
       'settleRefund': 'تسجيل الاسترداد',
@@ -87,7 +90,8 @@ Future<Map<String, dynamic>> bookingCall(
           },
           body: jsonEncode({'data': data}),
         )
-        .timeout(const Duration(seconds: 30));
+        // Local workers can start slowly on development machines with limited RAM.
+        .timeout(const Duration(seconds: 90));
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (payload['error'] != null) {
       final error = payload['error'] as Map;
@@ -124,7 +128,7 @@ class BookingScreen extends StatefulWidget {
 
 class _BookingScreenState extends State<BookingScreen> {
   int tab = 0;
-  String search = '';
+  final filters = BookingFilters();
   bool finance = false;
   late final bookingBanners =
       BannerService.activeBanners(placement: BannerPlacement.bookings);
@@ -211,7 +215,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                         const BookingSettingsScreen())))
                       ]
                     : null),
-            body: Column(children: [
+            body: ListView(children: [
               Wrap(children: [
                 if (widget.admin)
                   TextButton(
@@ -280,17 +284,27 @@ class _BookingScreenState extends State<BookingScreen> {
               ]),
               if (tab == 0)
                 Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextField(
-                      onChanged: (value) =>
-                          setState(() => search = value.trim()),
-                      decoration: const InputDecoration(
-                          hintText: 'ابحث عن شاليه أو قاعة أو مدينة',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder()),
-                    )),
-              Expanded(
-                  child: ListView(children: [
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: BookingFilterBar(
+                        filters: filters, onChanged: () => setState(() {}))),
+              if (tab == 0)
+                TextButton.icon(
+                    icon: const Icon(Icons.event_available),
+                    label: const Text('البحث عن موعد متاح'),
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const BookingAvailabilitySearchScreen()))),
+              TextButton.icon(
+                  icon: const Icon(Icons.support_agent),
+                  label: const Text('دعم الحجوزات'),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              BookingSupportScreen(admin: widget.admin)))),
+              ...[
                 if (tab == 0)
                   BannerSlider(
                       stream: bookingBanners,
@@ -324,8 +338,19 @@ class _BookingScreenState extends State<BookingScreen> {
                       if (s.data!.docs.isEmpty) {
                         return const Center(child: Text('لا توجد بيانات بعد'));
                       }
+                      final docs = s.data!.docs
+                          .where((d) => tab != 0 || filters.matches(d.data()))
+                          .toList();
+                      if (tab == 0)
+                        docs.sort(
+                            (a, b) => filters.compare(a.data(), b.data()));
+                      if (docs.isEmpty)
+                        return const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text(
+                                'لا توجد أماكن تطابق الفلاتر؛ جرّب تخفيفها'));
                       return Column(
-                          children: s.data!.docs.map((doc) {
+                          children: docs.map((doc) {
                         final d = doc.data();
                         if (tab == 6)
                           return ListTile(
@@ -339,10 +364,6 @@ class _BookingScreenState extends State<BookingScreen> {
                                           scopes: List<String>.from(
                                               d['scopes'] ?? [])))));
                         if (tab == 0 || tab == 5) {
-                          if (search.isNotEmpty &&
-                              tab == 0 &&
-                              !'${d['name']} ${d['location']}'.contains(search))
-                            return const SizedBox.shrink();
                           return BookingVenueCard(
                               venue: d,
                               onTap: () => Navigator.push(
@@ -388,7 +409,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     : null));
                       }).toList());
                     })
-              ]))
+              ]
             ])));
   }
 }
@@ -482,6 +503,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
     return BookingScaffold(
         appBar: AppBar(title: Text('${v['name']}')),
         body: ListView(padding: const EdgeInsets.all(20), children: [
+          BookingPublishedReviews(venueId: widget.venueId),
           BookingMediaGallery(paths: List<String>.from(v['mediaPaths'] ?? [])),
           if (v['pricingMode'] == 'shifts' && shiftId != null)
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -738,6 +760,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             Widget button(String label, String action) => FilledButton(
                 onPressed: busy ? null : () => act(action), child: Text(label));
             return ListView(padding: const EdgeInsets.all(20), children: [
+              Semantics(
+                  liveRegion: true,
+                  child: Text(bookingStatuses[b['status']] ?? b['status'],
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w700))),
               BookingProgress(status: b['status']),
               if (customer && b['status'] == 'completed') ...[
                 DropdownButtonFormField<int>(
@@ -786,7 +813,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       for (final event in docs)
                         ListTile(
                             dense: true,
-                            title: Text(bookingActionLabel(event.data()['action'])),
+                            title: Text(
+                                bookingActionLabel(event.data()['action'])),
                             subtitle: Text(
                                 '${event.data()['createdAt'] is Timestamp ? (event.data()['createdAt'] as Timestamp).toDate().toUtc().add(const Duration(hours: 3)).toString().replaceAll('Z', '') : ""} — بغداد'))
                     ]);
@@ -840,6 +868,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                                       result['code']),
                                                 ]))));
                             })),
+              TextButton.icon(
+                  icon: const Icon(Icons.support_agent),
+                  label: const Text('طلب دعم لهذا الحجز'),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => BookingSupportScreen(
+                              bookingId: widget.bookingId)))),
+              if (owner && b['status'] == 'confirmed')
+                TextButton.icon(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('مسح رمز الوصول بالكاميرا'),
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => BookingScannerScreen(
+                                bookingId: widget.bookingId)))),
               if (owner && b['status'] == 'confirmed')
                 button('تسجيل الوصول', 'arrive'),
               if (owner && b['status'] == 'confirmed')
@@ -1016,6 +1061,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       'name',
       'ownerId',
       'location',
+      'capacity',
+      'bedrooms',
+      'complexName',
+      'unitName',
       'latitude',
       'longitude',
       'commissionPercent',
@@ -1054,6 +1103,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   : '${shift[key]}')
       }
   ];
+  late final amenities = Set<String>.from(widget.data['amenities'] ?? []);
   late String category = widget.data['category'] ?? 'chalet';
   late bool active = widget.data['active'] ?? false;
   bool busy = false;
@@ -1074,6 +1124,21 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('إعداد مكان للحجز')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
+        if (widget.ownerMode && widget.venueId != null)
+          TextButton.icon(
+              icon: const Icon(Icons.add_home_outlined),
+              label: const Text('إضافة وحدة مستقلة في هذا المجمع'),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => BookingVenueEditor(
+                              ownerMode: true,
+                              data: {
+                                ...widget.data,
+                                'name': '',
+                                'unitName': '',
+                                'active': false
+                              })))),
         if (widget.venueId != null)
           TextButton.icon(
               onPressed: () => Navigator.push(
@@ -1083,6 +1148,28 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                           BookingOwnerTools(venueId: widget.venueId!))),
               icon: const Icon(Icons.calendar_month),
               label: const Text('التقويم والحجوزات الخارجية ونقل الملكية')),
+        if (widget.venueId != null)
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .doc('booking_venues/${widget.venueId}')
+                  .snapshots(),
+              builder: (context, s) => Column(children: [
+                    for (final path in List<String>.from(
+                        s.data?.data()?['mediaPaths'] ?? []))
+                      ListTile(
+                          title: Text(path.endsWith('.mp4')
+                              ? 'فيديو منشور'
+                              : 'صورة منشورة'),
+                          trailing: IconButton(
+                              tooltip: 'إزالة الوسيط المنشور',
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => bookingRun(context, () async {
+                                    await bookingCall('removeBookingMedia', {
+                                      'venueId': widget.venueId,
+                                      'path': path
+                                    });
+                                  })))
+                  ])),
         if (widget.ownerMode && widget.venueId != null)
           Wrap(children: [
             for (final video in [false, true])
@@ -1198,6 +1285,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
               controller: e.value,
               decoration: InputDecoration(
                   labelText: const {
+                'capacity': 'السعة القصوى للضيوف (0 = غير محددة)',
+                'bedrooms': 'عدد الغرف',
+                'complexName': 'اسم المنتجع أو المجمع (اختياري)',
+                'unitName': 'اسم الوحدة المستقلة (اختياري)',
                 'name': 'اسم المكان',
                 'ownerId': 'معرف حساب المالك للتحقق من الحساب',
                 'location': 'الموقع',
@@ -1217,6 +1308,19 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
               }[e.key]),
               enabled: !(widget.ownerMode && e.key == 'commissionPercent'),
               maxLines: e.key == 'terms' ? 4 : 1),
+        Wrap(children: [
+          for (final e in bookingAmenities.entries)
+            FilterChip(
+                label: Text(e.value),
+                selected: amenities.contains(e.key),
+                onSelected: (yes) => setState(() {
+                      if (yes) {
+                        amenities.add(e.key);
+                      } else {
+                        amenities.remove(e.key);
+                      }
+                    }))
+        ]),
         DropdownButtonFormField<String>(
             initialValue: pricingMode,
             decoration: const InputDecoration(labelText: 'نوع التسعير'),
@@ -1299,6 +1403,12 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 : () async {
                     setState(() => busy = true);
                     await bookingRun(context, () async {
+                      for (final key in ['capacity', 'bedrooms']) {
+                        if (fields[key]!.text.isNotEmpty &&
+                            (int.tryParse(fields[key]!.text) == null ||
+                                int.parse(fields[key]!.text) < 0))
+                          throw StateError('سعة أو عدد غرف غير صالح');
+                      }
                       await bookingCall('saveBookingVenue', {
                         'id': widget.venueId,
                         for (final e in fields.entries)
@@ -1311,6 +1421,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                           ].contains(e.key)
                               ? int.tryParse(e.value.text)
                               : e.value.text,
+                        'capacity': int.tryParse(fields['capacity']!.text) ?? 0,
+                        'bedrooms': int.tryParse(fields['bedrooms']!.text) ?? 0,
+                        'amenities': amenities.toList(),
                         'pricingMode': pricingMode,
                         'shifts': [
                           for (final shift in shifts)

@@ -1,3 +1,4 @@
+import 'booking_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:video_player/video_player.dart';
@@ -224,9 +225,15 @@ class BookingVenueCard extends StatelessWidget {
                             const SizedBox(height: 8),
                             Text('${venue['location'] ?? ''}',
                                 style: const TextStyle(height: 1.6)),
+                            if ((venue['capacity'] as num? ?? 0) > 0)
+                              Text(
+                                  'السعة ${venue['capacity']} ضيف — الغرف ${venue['bedrooms'] ?? 0}'),
+                            if ((venue['unitName'] ?? '').toString().isNotEmpty)
+                              Text(
+                                  '${venue['complexName'] ?? ''} — ${venue['unitName']}'),
                             const Divider(height: 28),
                             Text(
-                                '${venue['price']} د.ع ${venue['pricingMode'] == 'shifts' ? 'للشفت' : venue['pricingMode'] == 'hourly' ? 'سعر أساسي' : 'للحجز'}',
+                                '${venue['pricingMode'] == 'shifts' ? 'يبدأ من ' : ''}${bookingStartingPrice(venue)} د.ع ${venue['pricingMode'] == 'shifts' ? 'للشفت' : venue['pricingMode'] == 'hourly' ? 'للساعة' : 'للحجز'}',
                                 style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,

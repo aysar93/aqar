@@ -49,7 +49,8 @@ Future<void> main() async {
                     child: Padding(
                         padding: EdgeInsets.all(8),
                         child: Text(
-                            'اختبار محلي — بيانات ودفعات وهمية — يلزم تشغيل المحاكيات')))),
+                            'اختبار محلي — بيانات ودفعات وهمية — يلزم تشغيل المحاكيات',
+                            style: TextStyle(color: Colors.black))))),
             Expanded(child: child!)
           ])),
       home: const _TestLogin()));

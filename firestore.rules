@@ -47,9 +47,12 @@ service cloud.firestore {
       allow write: if false;
     }
     match /booking_reviews/{entry} {
-      allow read: if resource.data.status == 'approved' || (activeUser() && (isAdmin() || resource.data.customerId == request.auth.uid));
-      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status in ['approved','rejected'];
-      allow create, delete: if false;
+      allow read: if activeUser() && (isAdmin() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_support/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow write: if false;
     }
     match /booking_action_audit/{entry} {
       allow read: if activeUser() && (isAdmin() || bookingFinance() ||

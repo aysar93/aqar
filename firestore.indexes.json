@@ -1,6 +1,19 @@
 {
   "indexes": [
-    {"collectionGroup":"bookings","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"holdUntil","order":"ASCENDING"}]},
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "holdUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
     {
       "collectionGroup": "user_activity",
       "queryScope": "COLLECTION",
@@ -489,6 +502,20 @@
         },
         {
           "fieldPath": "order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "start",
           "order": "ASCENDING"
         }
       ]

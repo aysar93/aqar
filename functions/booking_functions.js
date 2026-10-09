@@ -6,6 +6,7 @@ const {getStorage} = require('firebase-admin/storage');
 const {createHash, randomBytes} = require('node:crypto');
 const {overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund} = require('./booking_policy');
 const db = getFirestore();
+const discovery = require('./booking_discovery');
 const {CONFIG, available, recipient} = require('./payment_accounts');
 function policy(fn) { try { return fn(); } catch(e) { fail(e.message); } }
 function finance(u) { return u.canReviewBookingPayments === true; }
@@ -239,9 +240,15 @@ exports.verifyBookingCheckInCode = onCall(async r=>{
   const parts=text(r.data.code,400).split(':');
   if(parts.length!==3 || parts[0]!=='aqar-booking' || !/^[a-f0-9]{64}$/.test(parts[2])) fail('رمز غير صالح');
   const ref=db.doc(`bookings/${id(parts[1])}`), codeRef=db.doc(`booking_checkin_codes/${ref.id}`);
+  if(r.data.bookingId != null && id(r.data.bookingId)!==ref.id) fail('الرمز لحجز آخر');
   await db.runTransaction(async tx=>{
     const u=await actor(r,tx), b=(await tx.get(ref)).data(), code=(await tx.get(codeRef)).data();
-    if(!b || b.ownerId!==u.uid || b.status!=='confirmed' || !code || code.version!==b.version || code.expiresAt<Date.now() || code.hash!==createHash('sha256').update(parts[2]).digest('hex') || Date.now()<b.start || Date.now()>=b.end) fail('الرمز منتهي أو غير مخول');
+    if(!b) fail('الحجز غير موجود');
+    const venue=(await tx.get(db.doc(`booking_venues/${b.venueId}`))).data();
+    const owner=(await tx.get(db.doc(`users/${b.ownerId}`))).data();
+    const staff=(await tx.get(db.doc(`booking_venue_staff/${b.venueId}_${u.uid}`))).data();
+    const allowed=b.ownerId===u.uid || (venue?.ownerId===b.ownerId && staff?.ownerId===b.ownerId && staff.scopes?.includes('checkin'));
+    if(!owner || owner.isBlocked || !allowed || b.status!=='confirmed' || !code || code.version!==b.version || code.expiresAt<=Date.now() || code.hash!==createHash('sha256').update(parts[2]).digest('hex') || Date.now()<b.start || Date.now()>=b.end) fail('الرمز منتهي أو غير مخول');
     tx.update(ref,{status:'arrived',arrivedAt:Date.now(),version:nextVersion(b),updatedAt:FieldValue.serverTimestamp()});
     tx.delete(codeRef);
     tx.create(db.collection('booking_action_audit').doc(),{bookingId:ref.id,actorUid:u.uid,action:'qrCheckIn',version:nextVersion(b),before:{status:'confirmed'},after:{status:'arrived'},createdAt:FieldValue.serverTimestamp()});
@@ -274,7 +281,7 @@ exports.saveBookingVenue = onCall(async r => {
     if (!currentOwner || currentOwner.isBlocked) fail('حساب المالك غير متاح');
     if (previous && previous.ownerId !== ownerId) fail('استخدم طلب نقل الملكية المعتمد');
     tx.set(ref, {ownerId, ownerName: ownerDetails.name, name: text(d.name,200), location: text(d.location,500), category:d.category,
-      ...pricing, ...geo, ...(!previous && currentActor.isAdmin!==true?{verificationStatus:'pending'}:{}), commissionBps, cancellationPolicy:cancellation, price:basePrice, deposit:d.deposit, terms:text(d.terms,5000), active:d.active === true, updatedAt:FieldValue.serverTimestamp()}, {merge:true});
+      ...pricing, ...geo, ...policy(()=>discovery.metadata(d, previous)), ...(!previous && currentActor.isAdmin!==true?{verificationStatus:'pending'}:{}), commissionBps, cancellationPolicy:cancellation, price:basePrice, deposit:d.deposit, terms:text(d.terms,5000), active:d.active === true, updatedAt:FieldValue.serverTimestamp()}, {merge:true});
     tx.create(db.collection('booking_venue_audit').doc(),{venueId:ref.id,actorUid:u.uid,before:previous || null,after:{...pricing,cancellationPolicy:cancellation,price:basePrice,deposit:d.deposit,terms:d.terms,active:d.active === true},createdAt:FieldValue.serverTimestamp()});
   });
   return {id:ref.id};
@@ -415,7 +422,7 @@ exports.bookingNotifications = onDocumentWritten({document:'bookings/{bookingId}
     if(!recipientUser || recipientUser.isBlocked) continue;
     const ref=db.doc(`notifications/booking_${event.params.bookingId}_${b.version}_${userId}`);
     try { await ref.create({notificationId:ref.id,type:'booking',bookingId:event.params.bookingId,target:'user',userId,
-      title:'تحديث الحجز',message:`${b.customerName} — ${b.venueName}: ${b.refundStatus==='settled' ? 'تمت تسوية الاسترداد' : ({requested:'طلب جديد',held:'حجز مؤقت',cancel_requested:'إلغاء بانتظار مراجعة الإيصال',payment_review:'مراجعة العربون',confirmed:'حجز مؤكد',rejected:'طلب مرفوض',cancelled:'حجز ملغي',expired:'انتهت مهلة الدفع',payment_rejected:'إيصال مرفوض'}[b.status] || b.status)}`,deliveryType:'external',readBy:[],createdAt:FieldValue.serverTimestamp()}); }
+      title:'تحديث الحجز',message:`${b.customerName} — ${b.venueName}: ${b.refundStatus==='settled' ? 'تمت تسوية الاسترداد' : ({requested:'طلب جديد',held:'حجز مؤقت',cancel_requested:'إلغاء بانتظار مراجعة الإيصال',payment_review:'مراجعة العربون',confirmed:'حجز مؤكد',rejected:'طلب مرفوض',cancelled:'حجز ملغي',expired:'انتهت مهلة الدفع',payment_rejected:'إيصال مرفوض',arrived:'تم تسجيل الوصول',completed:'اكتملت الزيارة'}[b.status] || b.status)}`,deliveryType:'external',readBy:[],createdAt:FieldValue.serverTimestamp()}); }
     catch(e) { if(e.code!==6) throw e; }
   }
 });
@@ -428,4 +435,104 @@ exports.expireBookingHolds = onSchedule('every 5 minutes', async () => {
       tx.create(db.collection('booking_action_audit').doc(),{bookingId:s.id,actorUid:'system',action:'expire',version:nextVersion(b),before:{status:b.status},after:{status:'expired'},createdAt:FieldValue.serverTimestamp()});
     }
   });
+});
+
+// Public projection deliberately excludes customer/booking identifiers.
+exports.getPublishedBookingReviews = onCall(async r => {
+  await actor(r);
+  const venueId = id(r.data.venueId);
+  const venue = (await db.doc(`booking_venues/${venueId}`).get()).data();
+  if (!venue?.active) fail('المكان غير متاح');
+  const records = await db.collection('booking_reviews').where('venueId', '==', venueId).get();
+  const approved = records.docs.filter(d => d.data().status === 'approved');
+  approved.sort((a,b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0));
+  return {count:approved.length, average:approved.length ? approved.reduce((sum,d)=>sum+d.data().rating,0)/approved.length : 0,
+    reviews:approved.slice(0,50).map(d=>({rating:d.data().rating,comment:d.data().comment,verified:true}))};
+});
+exports.moderateBookingReview = onCall(async r => {
+  const ref = db.doc(`booking_reviews/${id(r.data.reviewId)}`);
+  if (typeof r.data.approved !== 'boolean') fail('قرار غير صالح');
+  await db.runTransaction(async tx => {
+    const u=await actor(r,tx), review=(await tx.get(ref)).data();
+    if (!review || !u.isAdmin) fail('للإدارة فقط');
+    const b=(await tx.get(db.doc(`bookings/${review.bookingId}`))).data();
+    const v=(await tx.get(db.doc(`booking_venues/${review.venueId}`))).data();
+    if (!b || b.status!=='completed' || b.customerId!==review.customerId || [b.customerId,b.ownerId,v?.ownerId].includes(u.uid)) fail('مراجعة مستقلة لحجز مكتمل مطلوبة');
+    const status=r.data.approved?'approved':'rejected';
+    tx.update(ref,{status,reviewedBy:u.uid,reviewedAt:FieldValue.serverTimestamp()});
+    tx.create(db.collection('booking_venue_audit').doc(),{venueId:review.venueId,actorUid:u.uid,action:'moderateReview',after:{reviewId:ref.id,status},createdAt:FieldValue.serverTimestamp()});
+  }); return {ok:true};
+});
+exports.openBookingSupportTicket = onCall(async r => {
+  const bookingId=id(r.data.bookingId), ref=db.doc(`booking_support/${id(r.auth?.uid)}_${id(r.data.requestId)}`);
+  const subject=text(r.data.subject,200), message=text(r.data.message,2000);
+  await db.runTransaction(async tx=>{
+    const u=await actor(r,tx), b=(await tx.get(db.doc(`bookings/${bookingId}`))).data();
+    if(!b || ![b.customerId,b.ownerId].includes(u.uid)) fail('الدعم لأطراف الحجز فقط');
+    const existing=await tx.get(ref);
+    if(existing.exists) return;
+    const open=await tx.get(db.collection('booking_support').where('userId','==',u.uid));
+    if(open.docs.filter(d=>d.data().status!=='resolved').length>=5) fail('تابع التذاكر المفتوحة أولًا');
+    tx.create(ref,{bookingId,userId:u.uid,subject,message,status:'open',createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+  }); return {id:ref.id};
+});
+exports.updateBookingSupportTicket = onCall(async r=>{
+  const ref=db.doc(`booking_support/${id(r.data.ticketId)}`), response=text(r.data.response,2000);
+  if(!['in_progress','resolved'].includes(r.data.status)) fail('حالة غير صالحة');
+  await db.runTransaction(async tx=>{
+    const u=await actor(r,tx), t=(await tx.get(ref)).data();
+    if(!t || !u.isAdmin || t.userId===u.uid) fail('للإدارة المستقلة فقط');
+    tx.update(ref,{status:r.data.status,response,assignedTo:u.uid,updatedAt:FieldValue.serverTimestamp()});
+    const note=db.collection('notifications').doc();
+    tx.create(note,{notificationId:note.id,type:'booking',bookingId:t.bookingId,target:'user',userId:t.userId,title:'دعم الحجوزات',message:'تم تحديث تذكرة الدعم',deliveryType:'external',readBy:[],createdAt:FieldValue.serverTimestamp()});
+  }); return {ok:true};
+});
+
+// Batched discovery checks expose only IDs and availability, never guest details.
+exports.findAvailableBookingVenues = onCall(async r=>{
+  await actor(r);
+  const range=interval(r.data), ids=r.data.venueIds;
+  if(!Array.isArray(ids) || ids.length>50 || new Set(ids).size!==ids.length) fail('اختر حتى 50 مكانًا');
+  const available=[];
+  for(const venueId of ids.map(id)) {
+    const v=(await db.doc(`booking_venues/${venueId}`).get()).data();
+    if(!v?.active) continue;
+    const owner=(await db.doc(`users/${v.ownerId}`).get()).data();
+    if(!owner || owner.isBlocked) continue;
+    const [bookings,closures]=await Promise.all([db.collection('bookings').where('venueId','==',venueId).get(),db.collection('booking_closures').where('venueId','==',venueId).get()]);
+    if(!bookings.docs.some(d=>blocks(d.data(),Date.now()) && overlaps(range,d.data())) && !closures.docs.some(d=>d.data().active && overlaps(range,d.data()))) available.push(venueId);
+  }
+  return {venueIds:available,checkedAt:Date.now()};
+});
+exports.remindBookingCustomers = onSchedule('every 15 minutes',async()=>{
+  const now=Date.now();
+  for(const status of ['confirmed','held']) {
+    const field=status==='held'?'holdUntil':'start';
+    const docs=await db.collection('bookings').where('status','==',status).where(field,'>',now).where(field,'<=',now+(status==='held'?30*60000:24*3600000)).get();
+    for(const doc of docs.docs) await db.runTransaction(async tx=>{
+      const b=(await tx.get(doc.ref)).data();
+      if(!b || b.status!==status || b[field]<=Date.now()) return;
+      const user=(await tx.get(db.doc(`users/${b.customerId}`))).data();
+      const note=db.doc(`notifications/booking_reminder_${doc.id}_${status}_${b[field]}`);
+      const previous=await tx.get(note);
+      if(!user || user.isBlocked || previous.exists) return;
+      tx.create(note,{notificationId:note.id,type:'booking',bookingId:doc.id,target:'user',userId:b.customerId,title:'تذكير بالحجز',message:status==='held'?'اقترب انتهاء مهلة إرسال العربون؛ راجع الحجز':'موعد دخولك خلال 24 ساعة؛ راجع تفاصيل الحجز',deliveryType:'external',readBy:[],createdAt:FieldValue.serverTimestamp()});
+    });
+  }
+});
+
+exports.removeBookingMedia = onCall(async r=>{
+  const venueId=id(r.data.venueId), path=text(r.data.path,512), filename=path.split('/').pop();
+  if(!path.startsWith(`booking_media/${venueId}/`) || !/^booking_media\/[^/]+\/[^/]+\/[A-Za-z0-9_-]+\.(jpg|png|mp4)$/.test(path)) fail('ملف غير صالح');
+  const venueRef=db.doc(`booking_venues/${venueId}`), mediaRef=db.doc(`booking_media_reviews/${venueId}_${filename}`);
+  await db.runTransaction(async tx=>{
+    const u=await actor(r,tx), venue=(await tx.get(venueRef)).data(), media=(await tx.get(mediaRef)).data();
+    if(!venue || venue.ownerId!==u.uid && !u.isAdmin || !media || media.path!==path) fail('للمالك أو الإدارة فقط');
+    tx.update(venueRef,{mediaPaths:FieldValue.arrayRemove(path)});
+    tx.update(mediaRef,{status:'removed',removedBy:u.uid,removedAt:FieldValue.serverTimestamp()});
+    tx.create(db.collection('booking_venue_audit').doc(),{venueId,actorUid:u.uid,action:'removeMedia',after:{path},createdAt:FieldValue.serverTimestamp()});
+  });
+  // Delete the object so previously issued download URLs stop serving its bytes.
+  await getStorage().bucket().file(path).delete({ignoreNotFound:true});
+  return {ok:true};
 });

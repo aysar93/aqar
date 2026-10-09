@@ -195,3 +195,72 @@ test('phase two pricing, independent review, cancellation during receipt review 
   await db.doc('users/p2reviewer').update({isBlocked:true});
   await assert.rejects(call('actOnBooking','p2reviewer',{bookingId:h.id,action:'confirmPayment'}));
 });
+
+test('discovery metadata, independent review projection and support authorization',async()=>{
+  for(const uid of ['sadmin','sowner','scustomer','sother']) await db.doc(`users/${uid}`).set({name:uid,phone:'07700000000',isAdmin:uid==='sadmin',isBlocked:false});
+  const payload={ownerId:'sowner',name:'unit',location:'Anbar',category:'chalet',price:100000,deposit:20000,terms:'terms',active:true,cancellationPolicy:{freeCancellationHours:24,lateRefundPercent:20},capacity:8,bedrooms:2,amenities:['pool'],complexName:'resort',unitName:'A'};
+  const v=await call('saveBookingVenue','sadmin',payload);
+  await assert.rejects(call('saveBookingVenue','sowner',{...payload,id:v.id,capacity:-1}));
+  await assert.rejects(call('saveBookingVenue','sowner',{...payload,id:v.id,amenities:['unknown']}));
+  await call('saveBookingVenue','sowner',{...payload,id:v.id,name:'updated'});
+  assert.equal((await db.doc(`booking_venues/${v.id}`).get()).data().capacity,8);
+  await db.doc('bookings/support-complete').set({venueId:v.id,customerId:'scustomer',ownerId:'sowner',status:'completed'});
+  await call('reviewCompletedBooking','scustomer',{bookingId:'support-complete',rating:4,comment:'verified review'});
+  assert.equal((await call('getPublishedBookingReviews','sother',{venueId:v.id})).count,0);
+  await assert.rejects(call('moderateBookingReview','sowner',{reviewId:'support-complete',approved:true}));
+  await call('moderateBookingReview','sadmin',{reviewId:'support-complete',approved:true});
+  const reviews=await call('getPublishedBookingReviews','sother',{venueId:v.id});
+  assert.equal(reviews.average,4);assert.deepEqual(Object.keys(reviews.reviews[0]).sort(),['comment','rating','verified']);
+  await call('moderateBookingReview','sadmin',{reviewId:'support-complete',approved:false});
+  assert.equal((await call('getPublishedBookingReviews','sother',{venueId:v.id})).count,0);
+  await assert.rejects(call('openBookingSupportTicket','sother',{bookingId:'support-complete',requestId:'ticket',subject:'problem',message:'help'}));
+  const ticket=await call('openBookingSupportTicket','scustomer',{bookingId:'support-complete',requestId:'ticket',subject:'problem',message:'help'});
+  const retry=await call('openBookingSupportTicket','scustomer',{bookingId:'support-complete',requestId:'ticket',subject:'problem',message:'help'});assert.equal(retry.id,ticket.id);
+  await assert.rejects(call('updateBookingSupportTicket','sowner',{ticketId:ticket.id,status:'resolved',response:'answer'}));
+  await call('updateBookingSupportTicket','sadmin',{ticketId:ticket.id,status:'in_progress',response:'following up'});
+  await call('updateBookingSupportTicket','sadmin',{ticketId:ticket.id,status:'resolved',response:'fixed'});
+  assert.equal((await db.doc(`booking_support/${ticket.id}`).get()).data().assignedTo,'sadmin');
+  await db.doc('users/scustomer').update({isBlocked:true});
+  await assert.rejects(call('openBookingSupportTicket','scustomer',{bookingId:'support-complete',requestId:'blocked',subject:'problem',message:'help'}));
+});
+
+test('availability projection, staff QR and retry-safe reminders',async()=>{
+  for(const uid of ['tadmin','towner','tstaff','tcustomer']) await db.doc(`users/${uid}`).set({name:uid,phone:'07700000000',isAdmin:uid==='tadmin',isBlocked:false});
+  const payload={ownerId:'towner',name:'test',location:'Anbar',category:'chalet',price:100000,deposit:20000,terms:'terms',active:true,cancellationPolicy:{freeCancellationHours:24,lateRefundPercent:20}};
+  const v=await call('saveBookingVenue','tadmin',payload),start=Date.now()+3600000,end=start+3600000;
+  assert.deepEqual((await call('findAvailableBookingVenues','tcustomer',{venueIds:[v.id],start,end})).venueIds,[v.id]);
+  await call('saveBookingClosure','towner',{venueId:v.id,requestId:'closed',start,end,reason:'external'});
+  assert.deepEqual((await call('findAvailableBookingVenues','tcustomer',{venueIds:[v.id],start,end})).venueIds,[]);
+  await assert.rejects(call('findAvailableBookingVenues','tcustomer',{venueIds:Array(51).fill(v.id),start,end}));
+  await call('reopenBookingClosure','towner',{closureId:`${v.id}_closed`});
+  await db.doc('bookings/tqr').set({venueId:v.id,ownerId:'towner',customerId:'tcustomer',status:'confirmed',version:1,start:Date.now()-1000,end:Date.now()+60000});
+  await call('setBookingVenueStaff','towner',{venueId:v.id,userId:'tstaff',scopes:['checkin']});
+  const code=await call('issueBookingCheckInCode','tcustomer',{bookingId:'tqr'});
+  await assert.rejects(call('verifyBookingCheckInCode','tstaff',{code:code.code,bookingId:'another'}));
+  await call('verifyBookingCheckInCode','tstaff',{code:code.code,bookingId:'tqr'});
+  await assert.rejects(call('verifyBookingCheckInCode','tstaff',{code:code.code}));
+  const reminder=db.doc('bookings/treminder');
+  await reminder.set({venueId:v.id,ownerId:'towner',customerId:'tcustomer',status:'confirmed',start,end});
+  await f.remindBookingCustomers.run({});await f.remindBookingCustomers.run({});
+  const notes=await db.collection('notifications').where('bookingId','==','treminder').get();
+  assert.equal(notes.size,1);
+  await db.doc('users/tcustomer').update({isBlocked:true});
+  await reminder.update({start:start+1000});await f.remindBookingCustomers.run({});
+  assert.equal((await db.collection('notifications').where('bookingId','==','treminder').get()).size,1);
+});
+
+test('media removal revokes publication and deletes downloadable object with safe retries',async()=>{
+  for(const uid of ['madmin','mowner','mother']) await db.doc(`users/${uid}`).set({name:uid,phone:'07700000000',isAdmin:uid==='madmin',isBlocked:false});
+  const payload={ownerId:'mowner',name:'media',location:'Anbar',category:'chalet',price:100000,deposit:20000,terms:'terms',active:true,cancellationPolicy:{freeCancellationHours:24,lateRefundPercent:20}};
+  const v=await call('saveBookingVenue','madmin',payload),path=`booking_media/${v.id}/mowner/photo.jpg`;
+  await getStorage().bucket().file(path).save(Buffer.from('synthetic'),{resumable:false,metadata:{contentType:'image/jpeg'}});
+  await call('submitBookingMedia','mowner',{venueId:v.id,path});
+  await call('reviewBookingMedia','madmin',{mediaId:`${v.id}_photo.jpg`,approved:true});
+  await assert.rejects(call('removeBookingMedia','mother',{venueId:v.id,path}));
+  await call('removeBookingMedia','mowner',{venueId:v.id,path});
+  assert.equal((await getStorage().bucket().file(path).exists())[0],false);
+  assert.deepEqual((await db.doc(`booking_venues/${v.id}`).get()).data().mediaPaths,[]);
+  assert.equal((await db.doc(`booking_media_reviews/${v.id}_photo.jpg`).get()).data().status,'removed');
+  await call('removeBookingMedia','mowner',{venueId:v.id,path});
+  await assert.rejects(call('reviewBookingMedia','madmin',{mediaId:`${v.id}_photo.jpg`,approved:true}));
+});

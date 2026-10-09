@@ -1,3 +1,4 @@
+import 'bookings_staging_main.dart' as bookings_staging;
 import 'moderation/user_blocks.dart';
 import 'bookings_test_main.dart' as bookings_test;
 import 'dart:async';
@@ -20,6 +21,10 @@ import 'services/deep_link_service.dart';
 import 'screens/onboarding/splash_screen.dart';
 
 Future<void> main() async {
+  if (appFlavor == 'bookingsStaging') {
+    await bookings_staging.main();
+    return;
+  }
   if (appFlavor == 'bookingsTest') {
     await bookings_test.main();
     return;
