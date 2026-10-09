@@ -1,3 +1,4 @@
+import '../../banners/banner_service.dart';
 import 'package:flutter/material.dart';
 import 'admin_chat_list_screen.dart';
 import 'property_management_screen.dart';
@@ -320,6 +321,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
               color: Colors.deepOrange,
               page: const BannerManagementScreen(),
             ),
+            adminButton(context,
+                icon: Icons.campaign_outlined,
+                title: "بنرات الحجوزات",
+                subtitle: "إدارة إعلانات صفحة الحجوزات",
+                color: Colors.deepOrange,
+                page: const BannerManagementScreen(
+                    placement: BannerPlacement.bookings)),
             adminButton(
               context,
               icon: Icons.settings_rounded,

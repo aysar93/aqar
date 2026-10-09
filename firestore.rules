@@ -785,6 +785,11 @@ allow delete: if isSignedIn() &&
 // ==================================================
 // البنرات الإعلانية
 // ==================================================
+match /booking_banners/{bannerId} {
+  allow read: if true;
+  allow create, update, delete: if isAdmin() && activeUser();
+}
+
 match /banners/{bannerId} {
 
   // الجميع يستطيع مشاهدة البنرات

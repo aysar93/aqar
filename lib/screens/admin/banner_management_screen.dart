@@ -6,7 +6,10 @@ import '../../banners/banner_service.dart';
 import 'add_banner_screen.dart';
 
 class BannerManagementScreen extends StatelessWidget {
-  const BannerManagementScreen({super.key});
+  const BannerManagementScreen(
+      {super.key, this.placement = BannerPlacement.home});
+
+  final BannerPlacement placement;
 
   @override
   Widget build(BuildContext context) {
@@ -14,11 +17,13 @@ class BannerManagementScreen extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('إدارة البنرات'),
+          title: Text(placement == BannerPlacement.bookings
+              ? 'إدارة بنرات الحجوزات'
+              : 'إدارة البنرات'),
           centerTitle: true,
         ),
         body: StreamBuilder<List<BannerModel>>(
-          stream: BannerService.banners(),
+          stream: BannerService.banners(placement: placement),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -56,6 +61,7 @@ class BannerManagementScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 return _BannerManagementCard(
                   banner: banners[index],
+                  placement: placement,
                 );
               },
             );
@@ -65,7 +71,7 @@ class BannerManagementScreen extends StatelessWidget {
           onPressed: () async {
             await Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const AddBannerScreen(),
+                builder: (_) => AddBannerScreen(placement: placement),
               ),
             );
           },
@@ -80,9 +86,11 @@ class BannerManagementScreen extends StatelessWidget {
 class _BannerManagementCard extends StatelessWidget {
   const _BannerManagementCard({
     required this.banner,
+    required this.placement,
   });
 
   final BannerModel banner;
+  final BannerPlacement placement;
 
   Color _statusColor(BuildContext context) {
     return banner.isActive
@@ -227,6 +235,7 @@ class _BannerManagementCard extends StatelessWidget {
             const SizedBox(width: 4),
             _BannerMenu(
               banner: banner,
+              placement: placement,
             ),
           ],
         ),
@@ -478,9 +487,11 @@ class _StatusBadge extends StatelessWidget {
 class _BannerMenu extends StatelessWidget {
   const _BannerMenu({
     required this.banner,
+    required this.placement,
   });
 
   final BannerModel banner;
+  final BannerPlacement placement;
 
   Future<void> _toggle(BuildContext context) async {
     try {
@@ -489,6 +500,7 @@ class _BannerMenu extends StatelessWidget {
         {
           'isActive': !banner.isActive,
         },
+        placement: placement,
       );
 
       if (!context.mounted) return;
@@ -522,6 +534,7 @@ class _BannerMenu extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => AddBannerScreen(
           banner: banner,
+          placement: placement,
         ),
       ),
     );
@@ -556,7 +569,7 @@ class _BannerMenu extends StatelessWidget {
     if (confirmed != true) return;
 
     try {
-      await BannerService.delete(banner.id);
+      await BannerService.delete(banner.id, placement: placement);
 
       if (!context.mounted) return;
 

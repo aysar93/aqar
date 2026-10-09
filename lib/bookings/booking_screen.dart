@@ -1,3 +1,6 @@
+import '../banners/banner_service.dart';
+import '../widgets/banner_slider.dart';
+import '../screens/admin/banner_management_screen.dart';
 import 'dart:async';
 import '../subscription/payment_accounts.dart';
 import '../screens/admin/payment_account_settings_screen.dart';
@@ -74,6 +77,8 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   int tab = 0;
   bool finance = false;
+  late final bookingBanners =
+      BannerService.activeBanners(placement: BannerPlacement.bookings);
   @override
   void initState() {
     super.initState();
@@ -119,6 +124,16 @@ class _BookingScreenState extends State<BookingScreen> {
                 actions: widget.admin
                     ? [
                         IconButton(
+                            icon: const Icon(Icons.campaign_outlined),
+                            tooltip: 'بنرات الحجوزات',
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const BannerManagementScreen(
+                                            placement:
+                                                BannerPlacement.bookings)))),
+                        IconButton(
                             icon: const Icon(Icons.add),
                             tooltip: 'إضافة مكان',
                             onPressed: () => Navigator.push(
@@ -151,57 +166,56 @@ class _BookingScreenState extends State<BookingScreen> {
                       onSelected: (_) => setState(() => tab = entry.key))
               ]),
               Expanded(
-                  child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: query.snapshots(),
-                      builder: (context, s) {
-                        if (s.hasError) {
-                          return const Center(
-                              child: Text('تعذر تحميل البيانات'));
-                        }
-                        if (!s.hasData) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        if (s.data!.docs.isEmpty) {
-                          return const Center(
-                              child: Text('لا توجد بيانات بعد'));
-                        }
-                        return ListView(
-                            children: s.data!.docs.map((doc) {
-                          final d = doc.data();
-                          return Card(
-                              child: ListTile(
-                                  title: Text('${d['name'] ?? d['venueName']}'),
-                                  subtitle: Text(tab == 0
-                                      ? '${d['location']}\nالسعر: ${d['price']} د.ع — العربون: ${d['deposit']} د.ع'
-                                      : tab == 3
-                                          ? '${d['userName']}: ${d['reason']} — ${d['status']}'
-                                          : '${d['customerName']} — ${bookingStatuses[d['status']] ?? d['status']}'),
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => tab == 0
-                                              ? (widget.admin
-                                                  ? BookingVenueEditor(
-                                                      venueId: doc.id, data: d)
-                                                  : BookingRequestScreen(
-                                                      venueId: doc.id,
-                                                      venue: d))
-                                              : BookingDetailsScreen(
-                                                  bookingId: (tab == 3
-                                                          ? d['bookingId']
-                                                          : doc.id)
-                                                      .toString()))),
-                                  trailing: tab == 3 && d['status'] == 'open'
-                                      ? IconButton(
-                                          icon: const Icon(Icons.check),
-                                          onPressed: () => bookingRun(
-                                              context,
-                                              () => doc.reference.update(
-                                                  {'status': 'resolved'})))
-                                      : null));
-                        }).toList());
-                      }))
+                  child: ListView(children: [
+                if (tab == 0) BannerSlider(stream: bookingBanners),
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: query.snapshots(),
+                    builder: (context, s) {
+                      if (s.hasError) {
+                        return const Center(child: Text('تعذر تحميل البيانات'));
+                      }
+                      if (!s.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (s.data!.docs.isEmpty) {
+                        return const Center(child: Text('لا توجد بيانات بعد'));
+                      }
+                      return Column(
+                          children: s.data!.docs.map((doc) {
+                        final d = doc.data();
+                        return Card(
+                            child: ListTile(
+                                title: Text('${d['name'] ?? d['venueName']}'),
+                                subtitle: Text(tab == 0
+                                    ? '${d['location']}\nالسعر: ${d['price']} د.ع — العربون: ${d['deposit']} د.ع'
+                                    : tab == 3
+                                        ? '${d['userName']}: ${d['reason']} — ${d['status']}'
+                                        : '${d['customerName']} — ${bookingStatuses[d['status']] ?? d['status']}'),
+                                onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => tab == 0
+                                            ? (widget.admin
+                                                ? BookingVenueEditor(
+                                                    venueId: doc.id, data: d)
+                                                : BookingRequestScreen(
+                                                    venueId: doc.id, venue: d))
+                                            : BookingDetailsScreen(
+                                                bookingId: (tab == 3
+                                                        ? d['bookingId']
+                                                        : doc.id)
+                                                    .toString()))),
+                                trailing: tab == 3 && d['status'] == 'open'
+                                    ? IconButton(
+                                        icon: const Icon(Icons.check),
+                                        onPressed: () => bookingRun(
+                                            context,
+                                            () => doc.reference.update(
+                                                {'status': 'resolved'})))
+                                    : null));
+                      }).toList());
+                    })
+              ]))
             ])));
   }
 }

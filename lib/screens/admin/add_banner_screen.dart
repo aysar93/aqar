@@ -10,10 +10,12 @@ import '../../services/cloudinary_service.dart';
 
 class AddBannerScreen extends StatefulWidget {
   final BannerModel? banner;
+  final BannerPlacement placement;
 
   const AddBannerScreen({
     super.key,
     this.banner,
+    this.placement = BannerPlacement.home,
   });
 
   bool get isEdit => banner != null;
@@ -192,9 +194,10 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
         await BannerService.update(
           banner.id,
           banner.toMap(),
+          placement: widget.placement,
         );
       } else {
-        await BannerService.add(banner);
+        await BannerService.add(banner, placement: widget.placement);
       }
 
       if (!mounted) return;
