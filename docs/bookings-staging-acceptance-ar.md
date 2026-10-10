@@ -12,6 +12,26 @@
 
 ## حالة المشروع الملاحظة
 
+### تحديث تجهيز فعلي — 10 أكتوبر 2026
+
+فُحص مشروع `aqar-bookings-test-20261009` بصلاحيات قراءة قبل التعديل. Firestore موجود في `europe-west3`، والفوترة `billingEnabled:false` دون حساب دفع مرتبط. Authentication كان يعيد `CONFIGURATION_NOT_FOUND`؛ Functions وCloud Storage for Firebase كانا معطلين، وقراءة Cloud Storage المباشرة أكدت عدم وجود buckets.
+
+نُشرت قواعد Firestore والفهارس الحالية بنجاح باستخدام `firebase.bookings-staging.json` واسم المشروع الصريح؛ أُعيدت قراءة ruleset المنشور وتأكد تطابق المحتوى مع ملف الفرع بعد توحيد نهاية السطور. الفهارس الـ37 أصبحت `READY`.
+
+نُشر إعداد Email/Password المضاف إلى ملف staging عبر `firebase deploy --only auth`. أنشأ CLI تطبيق Web باسم `Default Web App` لتهيئة المصادقة. أظهرت القراءة اللاحقة `signIn.email.enabled:true` و`passwordRequired:true` و`subtype:IDENTITY_PLATFORM`، مع استمرار Spark والفوترة معطلة. [هذا النوع متاح دون فوترة ضمن حدود Spark، ومنها 3000 مستخدم نشط يوميًا](https://firebase.google.com/docs/auth/limits). لم تُفعّل مصادقة هاتف أو SMS أو مزود إنتاج.
+
+أُنشئت أربعة حسابات اصطناعية للزبون والمالك والإدارة ومراجع العربون، ووثائق مستخدمين في staging فقط. كلمات المرور عشوائية ومحفوظة محليًا خارج Git. أُنشئ `booking_venues/staging_chalet_20261010` غير نشط؛ لم تُنشأ حسابات تحويل أو دفعات حقيقية ولم يُدّع اعتماد المكان عبر تدفق المراجعة.
+
+نجحت 10 فحوص سحابية: دخول كل حساب وقراءة ملفه (4)، رفض القراءة دون مصادقة، رفض قراءة الزبون ملف المالك، رفض ترقية الزبون لنفسه إلى الإدارة أو مراجع المال (2)، رفض إنشاء حجز مباشرة من العميل، والسماح للإدارة بقراءة ملف المالك الاصطناعي. إنشاء بيانات الاختبار عملية إعداد إضافية، وليس اختبار تدفق حجز. نجحت أيضًا اختبارات Flutter الثلاثة لعزل staging والمحاكيات.
+
+لم تُنشر Functions أو Storage rules لغياب Blaze وbucket. الحجز وقبول المالك والعربون ومراجعة المكان والوسائط ورفع/عرض/حذف الصور والفيديو وتنظيف الملفات وإبطال download tokens وإرسال FCM من الخادم لم تُختبر end-to-end في السحابة. يلزم موافقة صريحة منفصلة على ربط Billing Account وترقية **مشروع الاختبار فقط** إلى Blaze قبل استكمال هذه الخدمات؛ وجود حصص مجانية لا يضمن انعدام تكلفة البناء أو التشغيل أو التخزين.
+
+لإعادة نشر الأجزاء المتاحة على Spark، استخدم `tools/deploy-bookings-staging.ps1 -IncludeAuth`. دون هذا الخيار ينشر المساعد Firestore فقط. لا يشمل هذا المساعد Functions أو Storage أو الفوترة.
+
+بُني APK Debug عبر `--target-platform android-arm64 --split-per-abi` بنجاح؛ فحص الحزمة أكد `arm64-v8a` فقط، والمعرّف والاسم المنفصلين، وموارد Firebase الخاصة بمشروع الاختبار. نجح فحص ZIP والتوقيع v2. ثُبت وشُغّل على هاتف OPPO CPH2365 وظهرت شاشة دخول staging دون انهيار ملاحظ. لم يُسجّل الدخول عبر واجهة الهاتف ولم تُختبر عليه حجوزات أو وسائط أو إشعارات؛ اختبارات Auth الفعلية كانت REST. فشل النسخ في البناء الأول لامتلاء C، ثم نجح البناء النهائي بعد حفظ ملفات intermediates المؤقتة على D.
+
+الفقرة التالية سجل للفحص السابق قبل هذا التحديث، وليست الحالة الحالية:
+
 قراءة مشاريع Firebase أظهرت مشروع الاختبار وتطبيق Android. قراءة Cloud Functions أعادت HTTP 403 مع `SERVICE_DISABLED` واسم الخدمة `cloudfunctions.googleapis.com`. لم أفعّل خدمات أو فوترة ولم أنشر وظائف أو قواعد. قراءة Cloud Billing لمشروع الاختبار أعادت `billingEnabled:false`؛ الفوترة غير مفعّلة. لم تُقرأ تفاصيل حساب دفع ولم يُربط حساب. هذا ليس فحص IAM كاملًا.
 
 [Firebase يوضح أن نشر Cloud Functions يتطلب Blaze](https://firebase.google.com/docs/functions/faq-and-troubleshooting). لا تنفذ ترقية أو ربط حساب دفع دون موافقة المستخدم الصريحة.
@@ -19,7 +39,7 @@
 ## بناء نسخة cloud بعد تهيئة الخدمات وقبولها
 
 ```powershell
-flutter build apk --debug --flavor bookingsStaging --target lib/bookings_staging_main.dart --target-platform android-arm64
+flutter build apk --debug --flavor bookingsStaging --target lib/bookings_staging_main.dart --target-platform android-arm64 --split-per-abi
 ```
 
 لا توزعها كنسخة صالحة قبل نجاح الدخول والوظائف والقواعد والتخزين والفهارس. الشهادة Debug للاختبار فقط. لا تغير إعدادات flavor الإنتاج أو اشتراكات المكاتب.
@@ -50,4 +70,4 @@ flutter build apk --debug --flavor bookingsStaging --target lib/bookings_staging
 - بنرات الحجوزات والخريطة والصور والفيديو على شبكات بطيئة، وعدم تأثيرها في الرئيسية والمكاتب.
 - RTL وتكبير الخط ولوحة المفاتيح وشاشات صغيرة ودوران الجهاز.
 
-اختبارات المحاكيات ونجاح البناء لا تحل محل هذه القائمة. هذه الجولة لم تنشر staging ولم تثبت تسليم إشعارات سحابية.
+اختبارات المحاكيات ونجاح البناء لا تحل محل هذه القائمة. جولة الفحص السابقة لم تنشر staging؛ التحديث أعلاه نشر Auth وFirestore فقط، ولم يثبت تسليم إشعارات الحجز السحابية.
