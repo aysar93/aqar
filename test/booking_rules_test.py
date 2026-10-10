@@ -93,4 +93,45 @@ class BookingRules(unittest.TestCase):
         self.assertEqual(upload('booking_media/proof/owner/bad.mp4','owner','image/jpeg'),403)
         self.assertEqual(upload('booking_media/proof/owner/big.jpg','owner','image/jpeg',11*1024*1024),403)
 
+    def test_v3_banner_images_are_server_only_and_public_only_when_active(self):
+        path='booking_media_v3/banners/admin/banner-review.jpg'
+        media={'schemaVersion':3,'kind':'banner','provider':'firebase','venueId':'banners','ownerUid':'admin','ownerId':'admin','path':path,'type':'image/jpeg','status':'pending'}
+        self.assertEqual(write('booking_media_reviews/banner-review',media,'SEED',timestamp=None),200)
+        self.assertEqual(upload(path,'admin','image/jpeg'),403)
+        request=urllib.request.Request(STORAGE_BASE+'?name='+urllib.parse.quote(path,safe=''),data=b'jpeg',method='POST',headers={'Authorization':'Bearer owner','Content-Type':'image/jpeg','X-Goog-Upload-Protocol':'raw'})
+        with urllib.request.urlopen(request) as response: self.assertEqual(response.status,200)
+        self.assertEqual(download(path,'admin'),200)
+        self.assertEqual(download(path),403)
+        self.assertEqual(write('booking_media_reviews/banner-review',{'status':'approved','bannerId':'v3banner'},'SEED',True,timestamp=None),200)
+        self.assertEqual(write('booking_banners/v3banner',{'imageUrl':path,'mediaId':'banner-review','isActive':True},'SEED',timestamp=None),200)
+        self.assertEqual(download(path),200)
+        self.assertEqual(write('booking_banners/v3banner',{'isActive':False},'SEED',True,timestamp=None),200)
+        self.assertEqual(download(path),403)
+
+    def test_v3_video_reservations_review_and_transfer(self):
+        venue='v3venue'; path='booking_media_v3/v3venue/owner/video.mp4'
+        self.assertEqual(write('booking_venues/'+venue, {'ownerId':'owner','active':True}, 'SEED', timestamp=None),200)
+        media={'schemaVersion':3,'kind':'venue','provider':'firebase','venueId':venue,'ownerUid':'owner','ownerId':'owner','path':path,'type':'video/mp4','size':100,'status':'uploading','expiresAt':int(time.time()*1000)+60000}
+        self.assertEqual(write('booking_media_reviews/video',media,'SEED',timestamp=None),200)
+        self.assertEqual(upload(path,'other','video/mp4'),403)
+        self.assertEqual(upload(path,'owner','image/jpeg'),403)
+        self.assertEqual(upload(path,'owner','video/mp4',101),403)
+        self.assertEqual(upload(path,'owner','video/mp4'),200)
+        self.assertEqual(upload(path,'owner','video/mp4'),403)
+        self.assertEqual(download(path,'owner'),403)
+        self.assertEqual(write('booking_media_reviews/video',{'status':'pending'},'SEED',True,timestamp=None),200)
+        self.assertEqual(download(path,'owner'),200)
+        self.assertEqual(download(path),403)
+        self.assertEqual(write('booking_media_reviews/video',{'status':'approved'},'SEED',True,timestamp=None),200)
+        self.assertEqual(download(path),200)
+        self.assertEqual(write('users/owner',{'isBlocked':True},'SEED',True,timestamp=None),200)
+        self.assertEqual(download(path),403)
+        self.assertEqual(write('users/owner',{'isBlocked':False},'SEED',True,timestamp=None),200)
+        self.assertEqual(write('booking_venues/'+venue,{'ownerId':'other'},'SEED',True,timestamp=None),200)
+        self.assertEqual(download(path),403)
+        self.assertEqual(download(path,'owner'),403)
+        self.assertEqual(write('booking_media_reviews/video',{'status':'delete_pending'},'SEED',True,timestamp=None),200)
+        self.assertEqual(download(path,'admin'),403)
+        self.assertEqual(upload('booking_media_v3/v3venue/owner/unreserved.mp4','owner','video/mp4'),403)
+
 if __name__=='__main__': unittest.main()

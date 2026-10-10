@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'bookings/booking_screen.dart';
+import 'bookings/booking_media_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -33,6 +34,7 @@ Future<void> main() async {
       .useFunctionsEmulator(host, 5001, automaticHostMapping: false);
   await FirebaseStorage.instance
       .useStorageEmulator(host, 9198, automaticHostMapping: false);
+  BookingMediaService.emulatorHost = host;
   runApp(MaterialApp(
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar'), Locale('en')],

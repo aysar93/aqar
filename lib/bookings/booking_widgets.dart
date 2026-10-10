@@ -1,4 +1,5 @@
 import 'booking_media_image.dart';
+import 'booking_media_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_filters.dart';
 import 'package:flutter/material.dart';
@@ -20,8 +21,10 @@ class BookingMediaGallery extends StatelessWidget {
                 icon: const Icon(Icons.play_circle),
                 label: const Text('مشاهدة فيديو المكان'))
           else if (path.startsWith('https://'))
-            Padding(padding: const EdgeInsets.symmetric(vertical: 8),
-                child: ClipRRect(borderRadius: BorderRadius.circular(18),
+            Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
                     child: BookingMediaImage(url: path)))
           else
             FutureBuilder(
@@ -58,11 +61,26 @@ class _BookingVideoState extends State<_BookingVideo> {
 
   Future<void> load() async {
     try {
-      final url =
-          widget.path.startsWith('https://') ? widget.path : await FirebaseStorage.instance.ref(widget.path).getDownloadURL();
+      final url = widget.path.startsWith('booking_media_v3/')
+          ? BookingMediaService.videoUrl(
+              FirebaseStorage.instance.bucket, widget.path)
+          : widget.path.startsWith('https://')
+              ? widget.path
+              : await FirebaseStorage.instance
+                  .ref(widget.path)
+                  .getDownloadURL();
       if (!mounted) return;
-      final token = widget.path.startsWith('https://') ? await FirebaseAuth.instance.currentUser?.getIdToken() : null;
-      final c = VideoPlayerController.networkUrl(Uri.parse(url), httpHeaders: token == null ? {} : {'Authorization': 'Bearer $token'});
+      final token = (widget.path.startsWith('https://') ||
+              widget.path.startsWith('booking_media_v3/'))
+          ? await FirebaseAuth.instance.currentUser?.getIdToken()
+          : null;
+      final c = VideoPlayerController.networkUrl(Uri.parse(url),
+          httpHeaders: token == null
+              ? {}
+              : {
+                  'Authorization':
+                      '${widget.path.startsWith('booking_media_v3/') ? 'Firebase' : 'Bearer'} $token'
+                });
       controller = c;
       await c.initialize();
       if (mounted) setState(() {});

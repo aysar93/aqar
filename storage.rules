@@ -18,6 +18,24 @@ service firebase.storage {
       allow create: if false;
       allow update, delete: if false;
     }
+    match /booking_media_v3/{venueId}/{authorUid}/{fileName} {
+      function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
+      function media() { return firestore.get(/databases/(default)/documents/booking_media_reviews/$(fileName.split('[.]')[0])).data; }
+      function canonical() { return media().provider == 'firebase' && media().schemaVersion == 3 && media().venueId == venueId && media().ownerUid == authorUid && media().path == 'booking_media_v3/' + venueId + '/' + authorUid + '/' + fileName; }
+      function ownerActive() { return firestore.get(/databases/(default)/documents/users/$(authorUid)).data.get('isBlocked', false) == false; }
+      allow read: if canonical() && media().status in ['pending', 'approved'] &&
+        ((active() && (admin() || (request.auth.uid == authorUid && (media().kind == 'banner' || venue().ownerId == authorUid)))) ||
+         (media().status == 'approved' && ownerActive() &&
+          ((media().kind == 'venue' && venue().ownerId == authorUid && venue().active == true) ||
+           (media().kind == 'banner' && firestore.get(/databases/(default)/documents/booking_banners/$(media().bannerId)).data.isActive == true))));
+      // Images are validated and written by the callable; videos require a server reservation.
+      allow create: if resource == null && canonical() && active() && request.auth.token.firebase.sign_in_provider != 'anonymous' && request.auth.uid == authorUid && venue().ownerId == authorUid &&
+        media().kind == 'venue' && media().status == 'uploading' && media().expiresAt > request.time.toMillis() &&
+        fileName.matches('[A-Za-z0-9_-]+[.]mp4') && media().type == 'video/mp4' &&
+        request.resource.contentType == 'video/mp4' && request.resource.size == media().size &&
+        request.resource.size >= 12 && request.resource.size <= 50 * 1024 * 1024;
+      allow update, delete: if false;
+    }
     match /booking_ownership_documents/{venueId}/{authorUid}/{fileName} {
       function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
       allow read: if active() && (admin() || venue().ownerId == request.auth.uid);

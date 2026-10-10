@@ -16,6 +16,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
     try {
       const url = new URL(request.url);
+      if (url.pathname.startsWith("/bookings/") && ! ["GET", "HEAD"].includes(request.method)) return json({error:"booking_uploads_retired"}, 410, headers);
       if (url.pathname.startsWith("/bookings/")) return await bookingRoute(request, env, headers, {googleAccessToken, firestoreGet, authenticatedUser});
       if (request.method === "GET" && url.pathname === "/health") {
         return json({ ok: true, service: "aqar-reels-api" }, 200, headers);

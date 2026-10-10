@@ -38,7 +38,11 @@ service cloud.firestore {
     match /booking_legacy_media_deletions/{entry} { allow read, write: if false; }
     match /booking_media_limits/{entry} { allow read, write: if false; }
     match /booking_media_reviews/{entry} {
-      allow read: if resource.data.status == 'approved' || (activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid));
+      allow read: if (activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid)) ||
+        (resource.data.status == 'approved' && resource.data.get('kind', 'venue') == 'venue' &&
+         get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.active == true &&
+         get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.ownerId == resource.data.ownerId &&
+         get(/databases/$(database)/documents/users/$(resource.data.ownerId)).data.get('isBlocked', false) == false);
       allow write: if false;
     }
     match /booking_ledger/{entry} {

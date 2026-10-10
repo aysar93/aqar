@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../banners/banner_model.dart';
+import '../bookings/booking_media_image.dart';
 import '../banners/banner_service.dart';
 import '../office/screens/office_profile_screen.dart';
 import '../services/property_service.dart';
@@ -35,6 +36,7 @@ class _BannerSliderState extends State<BannerSlider>
     _bannersStream = (widget.stream ?? BannerService.activeBanners())
         .asyncMap((banners) async {
       final valid = await Future.wait(banners.map((banner) async {
+        if (widget.onBookingVenue != null && banner.mediaId != null) return true;
         final uri = Uri.tryParse(banner.imageUrl.trim());
         if (uri == null ||
             !['http', 'https'].contains(uri.scheme) ||
@@ -317,9 +319,10 @@ class _ReferenceBannerCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _BannerImage(
-                  imageUrl: banner.imageUrl,
-                ),
+                if (banner.mediaId != null)
+                  BookingMediaImage(url: banner.imageUrl)
+                else
+                  _BannerImage(imageUrl: banner.imageUrl),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

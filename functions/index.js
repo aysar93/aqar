@@ -330,3 +330,7 @@ exports.refreshOfficePropertyMetrics = officeCounters.refreshOfficePropertyMetri
 
 const paymentSettings = require("./payment_accounts");
 for (const name of ["getPaymentAccountSettings", "savePaymentAccountSettings", "createSubscriptionPayment", "reviewOfficeSubscription", "auditSubscriptionPayment"]) exports[name] = paymentSettings[name];
+
+if (process.env.BOOKING_LEGACY_EXTERNAL_READS === "true") {
+  Object.assign(exports, require("./booking_legacy_external_media"));
+}

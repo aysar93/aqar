@@ -1,12 +1,9 @@
-// Merge these booking-only entries into a separate staging configuration first.
-// Do not replace the existing reels bindings or vars. This is not deployable as-is.
+// Optional READ-ONLY compatibility for existing booking R2 videos.
+// New booking uploads use Firebase Storage. No booking Worker secret or bridge.
+// Keep only if old R2 booking records exist; never replace reels bindings.
 {
   "r2_buckets": [
-    {"binding": "BOOKINGS_BUCKET", "bucket_name": "REPLACE_WITH_PRIVATE_BOOKINGS_BUCKET"}
-  ],
-  "vars": {
-    "BOOKING_VIDEO_BRIDGE_URL": "https://REPLACE_WITH_FUNCTIONS_HOST/bookingVideoBridge"
-  }
-  // BOOKING_WORKER_SECRET is a Wrangler secret, never a vars entry.
-  // Disable r2.dev and custom public domains for BOOKINGS_BUCKET; access via Worker only.
+    {"binding": "BOOKINGS_BUCKET", "bucket_name": "REPLACE_WITH_EXISTING_PRIVATE_BOOKINGS_BUCKET"}
+  ]
+  // Keep r2.dev and public custom domains disabled.
 }

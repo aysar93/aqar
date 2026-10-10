@@ -7,14 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('private images wait for token before creating a network provider', (tester) async {
-    final token=Completer<String?>();
-    await tester.pumpWidget(MaterialApp(home: BookingMediaImage(url: 'https://image.test/bookingImage?mediaId=id', token: token.future)));
+  testWidgets(
+      'private images wait for token before creating a network provider',
+      (tester) async {
+    final token = Completer<String?>();
+    await tester.pumpWidget(MaterialApp(
+        home: BookingMediaImage(
+            url: 'https://image.test/bookingImage?mediaId=id',
+            token: token.future)));
     expect(find.byType(Image), findsNothing);
     token.complete('preview-token');
     await tester.pump();
-    final image=tester.widget<Image>(find.byType(Image));
-    expect((image.image as NetworkImage).headers!['Authorization'], 'Bearer preview-token');
+    final image = tester.widget<Image>(find.byType(Image));
+    expect((image.image as NetworkImage).headers!['Authorization'],
+        'Bearer preview-token');
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
@@ -34,17 +40,48 @@ void main() {
     expect(result['mediaId'], 'server-id');
   });
   test('empty images are rejected before a server call', () {
-    expect(() => BookingMediaService.uploadImage(Uint8List(0),
-        (_, __) async => throw StateError('unexpected call')), throwsStateError);
+    expect(
+        () => BookingMediaService.uploadImage(
+            Uint8List(0), (_, __) async => throw StateError('unexpected call')),
+        throwsStateError);
   });
   test('video client rejects a reservation pointing at reels', () async {
     await expectLater(
-        BookingMediaService.uploadVideo(Uint8List(12), 'venue',
+        BookingMediaService.uploadVideo(
+            Uint8List(12),
+            'venue',
             (_, __) async => {
                   'mediaId': 'id',
                   'path': 'https://worker.test/reels/original/id.mp4'
                 }),
         throwsStateError);
+  });
+  test('video uploads the reserved Firebase path then finalizes review',
+      () async {
+    final calls = <String>[];
+    await BookingMediaService.uploadVideo(Uint8List(12), 'venue',
+        (name, data) async {
+      calls.add(name);
+      return {'mediaId': 'id', 'path': 'booking_media_v3/venue/owner/id.mp4'};
+    }, upload: (path, bytes) async {
+      expect(path, 'booking_media_v3/venue/owner/id.mp4');
+      expect(bytes.length, 12);
+      calls.add('storage');
+    });
+    expect(calls, ['reserveBookingVideo', 'storage', 'finishBookingVideo']);
+  });
+  test('local booking video playback stays on the Storage emulator', () {
+    BookingMediaService.emulatorHost = '127.0.0.1';
+    expect(
+        BookingMediaService.videoUrl(
+            'demo-aqar.appspot.com', 'booking_media_v3/v/u/id.mp4'),
+        'http://127.0.0.1:9198/v0/b/demo-aqar.appspot.com/o/booking_media_v3%2Fv%2Fu%2Fid.mp4?alt=media');
+    BookingMediaService.emulatorHost = null;
+    expect(
+        BookingMediaService.videoUrl(
+            'staging.firebasestorage.app', 'booking_media_v3/v/u/id.mp4'),
+        startsWith(
+            'https://firebasestorage.googleapis.com/v0/b/staging.firebasestorage.app/'));
   });
   for (final width in [320.0, 430.0, 900.0]) {
     testWidgets('new and legacy video entries retain RTL at width $width',

@@ -1165,7 +1165,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               tooltip: 'إزالة الوسيط المنشور',
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () => bookingRun(context, () async {
-                                    await bookingCall(path.startsWith('https://') ? 'removeBookingExternalMedia' : 'removeBookingMedia', {
+                                    await bookingCall((path.startsWith('https://') || path.startsWith('booking_media_v3/')) ? 'removeBookingExternalMedia' : 'removeBookingMedia', {
                                       'venueId': widget.venueId,
                                       'path': path
                                     });
@@ -1180,7 +1180,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
               builder: (context, snapshot) => Column(children: [
                 if (snapshot.hasError) const Text('تعذر تحميل حالة الوسائط'),
                 for (final doc in snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-                  if (doc.data()['schemaVersion'] == 2 && ['uploading', 'pending', 'delete_pending'].contains(doc.data()['status']))
+                  if ([2, 3].contains(doc.data()['schemaVersion']) && ['uploading', 'pending', 'delete_pending'].contains(doc.data()['status']))
                     Card(child: Column(children: [
                       ListTile(title: Text(const {'uploading': 'لم يكتمل الرفع', 'pending': 'بانتظار مراجعة الإدارة', 'delete_pending': 'قيد الحذف'}[doc.data()['status']] ?? ''),
                         trailing: doc.data()['status'] == 'delete_pending' ? null : IconButton(
