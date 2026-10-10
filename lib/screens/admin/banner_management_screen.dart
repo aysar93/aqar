@@ -1,3 +1,4 @@
+import '../../bookings/booking_media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -99,6 +100,7 @@ class _BannerManagementCard extends StatelessWidget {
   }
 
   String _typeLabel() {
+    if (placement == BannerPlacement.bookings) return const {'chalet': 'شاليه', 'hall': 'قاعة', 'farm': 'مزرعة', 'external': 'رابط خارجي'}[banner.type] ?? 'مكان';
     switch (banner.type) {
       case 'office':
         return 'مكتب';
@@ -111,6 +113,7 @@ class _BannerManagementCard extends StatelessWidget {
   }
 
   IconData _typeIcon() {
+    if (placement == BannerPlacement.bookings) return const {'chalet': Icons.pool_outlined, 'hall': Icons.celebration_outlined, 'farm': Icons.park_outlined, 'external': Icons.open_in_new_rounded}[banner.type] ?? Icons.place_outlined;
     switch (banner.type) {
       case 'office':
         return Icons.business_outlined;
@@ -135,7 +138,9 @@ class _BannerManagementCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(
+              child: placement == BannerPlacement.bookings && banner.mediaId != null
+                  ? BookingMediaImage(url: banner.imageUrl, width: 96, height: 76)
+                  : Image.network(
                 banner.imageUrl,
                 width: 96,
                 height: 76,

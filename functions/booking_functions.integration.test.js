@@ -258,6 +258,8 @@ test('media removal revokes publication and deletes downloadable object with saf
   await call('reviewBookingMedia','madmin',{mediaId:`${v.id}_photo.jpg`,approved:true});
   await assert.rejects(call('removeBookingMedia','mother',{venueId:v.id,path}));
   await call('removeBookingMedia','mowner',{venueId:v.id,path});
+  assert.equal((await db.doc(`booking_legacy_media_deletions/${v.id}_photo.jpg`).get()).data().status,'pending');
+  await require('./booking_external_media').cleanupBookingExternalMedia.run({});
   assert.equal((await getStorage().bucket().file(path).exists())[0],false);
   assert.deepEqual((await db.doc(`booking_venues/${v.id}`).get()).data().mediaPaths,[]);
   assert.equal((await db.doc(`booking_media_reviews/${v.id}_photo.jpg`).get()).data().status,'removed');

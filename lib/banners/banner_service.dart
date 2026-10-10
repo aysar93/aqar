@@ -1,3 +1,4 @@
+import '../bookings/booking_screen.dart' show bookingCall;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'banner_model.dart';
 
@@ -37,6 +38,7 @@ class BannerService {
   /// إضافة بنر
   static Future<void> add(BannerModel banner,
       {BannerPlacement placement = BannerPlacement.home}) {
+    if (placement == BannerPlacement.bookings) throw StateError('استخدم مسار حفظ بنرات الحجوزات الآمن');
     return _collection(placement).add(banner.toMap());
   }
 
@@ -46,12 +48,18 @@ class BannerService {
     Map<String, dynamic> data, {
     BannerPlacement placement = BannerPlacement.home,
   }) {
+    if (placement == BannerPlacement.bookings) {
+      return _collection(placement).doc(id).get().then((snapshot) async {
+        await bookingCall('saveBookingBanner', {'bannerId': id, 'banner': {...?snapshot.data(), ...data}});
+      });
+    }
     return _collection(placement).doc(id).update(data);
   }
 
   /// حذف بنر
   static Future<void> delete(String id,
       {BannerPlacement placement = BannerPlacement.home}) {
+    if (placement == BannerPlacement.bookings) return bookingCall('deleteBookingBanner', {'bannerId': id}).then((_) {});
     return _collection(placement).doc(id).delete();
   }
 }

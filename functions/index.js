@@ -8,6 +8,7 @@ const crypto = require("crypto");
 
 initializeApp();
 Object.assign(exports, require('./booking_functions'));
+Object.assign(exports, require('./booking_external_media'));
 
 const db = getFirestore();
 Object.assign(exports, require('./chat_functions'));

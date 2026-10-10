@@ -1,3 +1,4 @@
+import 'booking_media_service.dart';
 import 'booking_filters.dart';
 import 'booking_extras.dart';
 import 'dart:convert';
@@ -101,7 +102,7 @@ Future<Map<String, dynamic>> bookingCall(
     return Map<String, dynamic>.from(payload['result'] as Map);
   }
   final result =
-      await FirebaseFunctions.instance.httpsCallable(name).call(data);
+      await FirebaseFunctions.instance.httpsCallable(name, options: HttpsCallableOptions(timeout: const Duration(minutes: 5))).call(data);
   return Map<String, dynamic>.from(result.data as Map);
 }
 
@@ -1164,12 +1165,32 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               tooltip: 'إزالة الوسيط المنشور',
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () => bookingRun(context, () async {
-                                    await bookingCall('removeBookingMedia', {
+                                    await bookingCall(path.startsWith('https://') ? 'removeBookingExternalMedia' : 'removeBookingMedia', {
                                       'venueId': widget.venueId,
                                       'path': path
                                     });
                                   })))
                   ])),
+        if (widget.ownerMode && widget.venueId != null)
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance.collection('booking_media_reviews')
+                  .where('venueId', isEqualTo: widget.venueId)
+                  .where('ownerId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+                  .snapshots(),
+              builder: (context, snapshot) => Column(children: [
+                if (snapshot.hasError) const Text('تعذر تحميل حالة الوسائط'),
+                for (final doc in snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                  if (doc.data()['schemaVersion'] == 2 && ['uploading', 'pending', 'delete_pending'].contains(doc.data()['status']))
+                    Card(child: Column(children: [
+                      ListTile(title: Text(const {'uploading': 'لم يكتمل الرفع', 'pending': 'بانتظار مراجعة الإدارة', 'delete_pending': 'قيد الحذف'}[doc.data()['status']] ?? ''),
+                        trailing: doc.data()['status'] == 'delete_pending' ? null : IconButton(
+                          tooltip: 'إزالة الملف', icon: const Icon(Icons.delete_outline),
+                          onPressed: () => bookingRun(context, () async {
+                            await bookingCall('removeBookingExternalMedia', {'venueId': widget.venueId, 'path': doc.data()['path']});
+                          }))),
+                      if (doc.data()['status'] == 'pending') BookingMediaGallery(paths: [doc.data()['path'] as String]),
+                    ])),
+              ])),
         if (widget.ownerMode && widget.venueId != null)
           Wrap(children: [
             for (final video in [false, true])
@@ -1198,15 +1219,11 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                     await file.readAsBytes(),
                                     format: CompressFormat.jpeg,
                                     quality: 90);
-                            final path =
-                                'booking_media/${widget.venueId}/${FirebaseAuth.instance.currentUser!.uid}/${DateTime.now().microsecondsSinceEpoch}.${video ? 'mp4' : 'jpg'}';
-                            await FirebaseStorage.instance.ref(path).putData(
-                                bytes,
-                                SettableMetadata(
-                                    contentType:
-                                        video ? 'video/mp4' : 'image/jpeg'));
-                            await bookingCall('submitBookingMedia',
-                                {'venueId': widget.venueId, 'path': path});
+                            if (video) {
+                              await BookingMediaService.uploadVideo(bytes, widget.venueId!, bookingCall);
+                            } else {
+                              await BookingMediaService.uploadImage(bytes, bookingCall, venueId: widget.venueId!);
+                            }
                             if (context.mounted)
                               ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(

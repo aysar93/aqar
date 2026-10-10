@@ -7,17 +7,15 @@ service firebase.storage {
     function active() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false; }
     match /booking_banner_media/{authorUid}/{fileName} {
       allow read: if true;
-      allow create: if resource == null && admin() && request.auth.uid == authorUid && fileName.matches('[0-9]+[.]jpg') && request.resource.contentType == 'image/jpeg' && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024;
+      // Retained legacy objects remain readable; new uploads use the server lifecycle.
+      allow create: if false;
       allow update, delete: if false;
     }
     match /booking_media/{venueId}/{authorUid}/{fileName} {
       function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
       allow read: if (active() && (admin() || venue().ownerId == request.auth.uid)) ||
         (venue().active == true && firestore.get(/databases/(default)/documents/booking_media_reviews/$(venueId + '_' + fileName)).data.status == 'approved');
-      allow create: if resource == null && active() && request.auth.uid == authorUid && venue().ownerId == authorUid && request.resource.size > 0 &&
-        ((fileName.matches('[A-Za-z0-9_-]+[.]jpg') && request.resource.contentType == 'image/jpeg' && request.resource.size <= 10 * 1024 * 1024) ||
-         (fileName.matches('[A-Za-z0-9_-]+[.]png') && request.resource.contentType == 'image/png' && request.resource.size <= 10 * 1024 * 1024) ||
-         (fileName.matches('[A-Za-z0-9_-]+[.]mp4') && request.resource.contentType == 'video/mp4' && request.resource.size <= 50 * 1024 * 1024));
+      allow create: if false;
       allow update, delete: if false;
     }
     match /booking_ownership_documents/{venueId}/{authorUid}/{fileName} {

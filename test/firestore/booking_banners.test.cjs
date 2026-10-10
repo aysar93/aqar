@@ -6,32 +6,24 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,collection,getDocs,query,where,orde
 let env;
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-aqar',firestore:{host:'127.0.0.1',port:8185,rules:readFileSync('firestore.rules','utf8')}});await env.withSecurityRulesDisabled(async c=>{for(const [id,data] of Object.entries({admin:{isAdmin:true,isBlocked:false},user:{isAdmin:false,isBlocked:false},blocked:{isAdmin:true,isBlocked:true}}))await setDoc(doc(c.firestore(),'users',id),data);});});
 after(async()=>env.cleanup());
-test('booking banner destinations reject properties and offices',async()=>{
- const db=env.authenticatedContext('admin').firestore();
- await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),'booking_venues/chalet'),{category:'chalet',active:true}));
- const banner={title:'Test',imageUrl:'https://example.com/a.jpg',isActive:true,order:1,targetId:'chalet'};
- await assertSucceeds(setDoc(doc(db,'booking_banners/chalet'),{...banner,type:'chalet'}));
- for(const type of ['property','office','hall']) await assertFails(setDoc(doc(db,`booking_banners/invalid_${type}`),{...banner,type}));
- await assertFails(setDoc(doc(db,'booking_banners/unsafe'),{...banner,type:'external',targetId:'javascript:alert(1)'}));
- await assertSucceeds(deleteDoc(doc(db,'booking_banners/chalet')));
-});
-test('booking banner CRUD, ordering, activation and links stay independent of home banners',async()=>{
- const admin=env.authenticatedContext('admin').firestore(),user=env.authenticatedContext('user').firestore(),guest=env.unauthenticatedContext().firestore(),blocked=env.authenticatedContext('blocked').firestore();
- const banner={title:'Offer',subtitle:'Details',imageUrl:'https://example.com/banner.jpg',type:'external',targetId:'https://example.com/booking',isActive:true,order:2};
- await assertSucceeds(setDoc(doc(admin,'banners/same'),{...banner,title:'Home'}));
- await assertSucceeds(setDoc(doc(admin,'booking_banners/same'),banner));
- await assertSucceeds(setDoc(doc(admin,'booking_banners/first'),{...banner,order:1}));
- for(const db of [user,guest,blocked]) {await assertFails(setDoc(doc(db,'booking_banners/forged'),banner));await assertFails(updateDoc(doc(db,'booking_banners/same'),{isActive:false}));await assertFails(deleteDoc(doc(db,'booking_banners/same')));}
- await assertSucceeds(getDoc(doc(guest,'booking_banners/same')));
- const active=()=>getDocs(query(collection(guest,'booking_banners'),where('isActive','==',true),orderBy('order')));
- assert.deepEqual((await active()).docs.map(d=>d.id),['first','same']);
- await assertSucceeds(updateDoc(doc(admin,'booking_banners/same'),{targetId:'https://wa.me/9647000000000',order:0,isActive:false}));
- assert.deepEqual((await active()).docs.map(d=>d.id),['first']);
- await assertSucceeds(updateDoc(doc(admin,'booking_banners/same'),{isActive:true}));
- assert.deepEqual((await active()).docs.map(d=>d.id),['same','first']);
- assert.equal((await getDoc(doc(guest,'booking_banners/same'))).data().targetId,'https://wa.me/9647000000000');
- await assertSucceeds(deleteDoc(doc(admin,'booking_banners/same')));
- assert.equal((await getDoc(doc(guest,'banners/same'))).data().title,'Home');
+test('booking banner mutations are server-only even for administrators',async()=>{
+ const banner={title:'Offer',subtitle:'Details',imageUrl:'https://image.test/bookingImage?mediaId=id',type:'farm',targetId:'farm',isActive:true,order:2,mediaId:'id'};
+ await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),'booking_banners/server'),banner));
+ for(const uid of ['admin','user','blocked',null]) {
+  const db=uid?env.authenticatedContext(uid).firestore():env.unauthenticatedContext().firestore();
+  await assertFails(setDoc(doc(db,'booking_banners/forged'),banner));
+  await assertFails(updateDoc(doc(db,'booking_banners/server'),{imageUrl:'https://evil.test'}));
+  await assertFails(deleteDoc(doc(db,'booking_banners/server')));
+  await assertFails(setDoc(doc(db,'booking_media_reviews/forged'),{status:'approved'}));
+  await assertFails(setDoc(doc(db,'booking_media_limits/forged'),{files:0}));
+  await assertFails(setDoc(doc(db,'booking_legacy_media_deletions/forged'),{path:'reels/file.mp4'}));
+ }
+ const guest=env.unauthenticatedContext().firestore(),admin=env.authenticatedContext('admin').firestore();
+ await assertSucceeds(getDoc(doc(guest,'booking_banners/server')));
+ // Original home banner CRUD remains authorized and independent.
+ await assertSucceeds(setDoc(doc(admin,'banners/server'),{...banner,title:'Home'}));
+ await assertSucceeds(updateDoc(doc(admin,'banners/server'),{isActive:false}));
+ await assertSucceeds(deleteDoc(doc(admin,'banners/server')));
 });
 test('blocked administrator cannot unblock self, grant roles, or mutate administrative collections',async()=>{
  const blocked=env.authenticatedContext('blocked').firestore();

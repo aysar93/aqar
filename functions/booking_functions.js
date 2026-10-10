@@ -530,9 +530,10 @@ exports.removeBookingMedia = onCall(async r=>{
     if(!venue || venue.ownerId!==u.uid && !u.isAdmin || !media || media.path!==path) fail('للمالك أو الإدارة فقط');
     tx.update(venueRef,{mediaPaths:FieldValue.arrayRemove(path)});
     tx.update(mediaRef,{status:'removed',removedBy:u.uid,removedAt:FieldValue.serverTimestamp()});
+    tx.set(db.doc(`booking_legacy_media_deletions/${mediaRef.id}`),{mediaId:mediaRef.id,path,status:'pending',attempts:0,nextAttemptAt:0,requestedBy:u.uid,createdAt:FieldValue.serverTimestamp()});
     tx.create(db.collection('booking_venue_audit').doc(),{venueId,actorUid:u.uid,action:'removeMedia',after:{path},createdAt:FieldValue.serverTimestamp()});
   });
   // Delete the object so previously issued download URLs stop serving its bytes.
-  await getStorage().bucket().file(path).delete({ignoreNotFound:true});
-  return {ok:true};
+  // Durable deletion is handled by the booking cleanup queue after reference checks.
+  return {ok:true,deletionQueued:true};
 });

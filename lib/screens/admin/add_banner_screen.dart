@@ -1,10 +1,11 @@
+import '../../bookings/booking_media_image.dart';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../bookings/booking_media_service.dart';
+import '../../bookings/booking_screen.dart' show bookingCall;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../banners/banner_model.dart';
@@ -70,11 +71,11 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
     );
 
     _selectedType = banner?.type ?? (bookings ? 'chalet' : 'property');
-    if (bookings && !['chalet', 'hall', 'external'].contains(_selectedType)) {
+    if (bookings && !['chalet', 'hall', 'farm', 'external'].contains(_selectedType)) {
       _selectedType = 'chalet';
     }
     _selectedVenueId =
-        ['chalet', 'hall'].contains(banner?.type) ? banner?.targetId : null;
+        ['chalet', 'hall', 'farm'].contains(banner?.type) ? banner?.targetId : null;
     _isActive = banner?.isActive ?? true;
 
     if (_selectedType == 'property') {
@@ -113,7 +114,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
   }
 
   String get _targetId {
-    if (['chalet', 'hall'].contains(_selectedType))
+    if (['chalet', 'hall', 'farm'].contains(_selectedType))
       return _selectedVenueId ?? '';
     if (_selectedType == 'property') {
       return _selectedPropertyId ?? '';
@@ -183,6 +184,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
 
     try {
       String? imageUrl = existingImage;
+      String? bookingMediaId;
 
       if (_selectedImage != null) {
         if (bookings) {
@@ -192,10 +194,9 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
               quality: 90);
           if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024)
             throw StateError('حجم الصورة غير صالح');
-          final ref = FirebaseStorage.instance.ref(
-              'booking_banner_media/${FirebaseAuth.instance.currentUser!.uid}/${DateTime.now().microsecondsSinceEpoch}.jpg');
-          await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-          imageUrl = await ref.getDownloadURL();
+          final media = await BookingMediaService.uploadImage(bytes, bookingCall, banner: true, venueId: _selectedType == 'external' ? null : _targetId);
+          bookingMediaId = media['mediaId'] as String;
+          imageUrl = media['path'] as String;
         } else {
           imageUrl = await uploadToCloudinary(_selectedImage!);
         }
@@ -220,7 +221,17 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
         createdAt: widget.banner?.createdAt,
       );
 
-      if (widget.isEdit) {
+      if (bookings) {
+        await bookingCall('saveBookingBanner', {
+          if (widget.isEdit) 'bannerId': banner.id,
+          if (bookingMediaId != null) 'mediaId': bookingMediaId,
+          'banner': {
+            'title': banner.title, 'subtitle': banner.subtitle,
+            'type': banner.type, 'targetId': banner.targetId,
+            'isActive': banner.isActive, 'order': banner.order,
+          },
+        });
+      } else if (widget.isEdit) {
         await BannerService.update(
           banner.id,
           banner.toMap(),
@@ -321,6 +332,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                   if (bookings) ...const [
                     DropdownMenuItem(value: 'chalet', child: Text('شاليه')),
                     DropdownMenuItem(value: 'hall', child: Text('قاعة')),
+                    DropdownMenuItem(value: 'farm', child: Text('مزرعة')),
                   ],
                   if (!bookings)
                     DropdownMenuItem(
@@ -351,7 +363,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                       },
               ),
               const SizedBox(height: 12),
-              if (['chalet', 'hall'].contains(_selectedType))
+              if (['chalet', 'hall', 'farm'].contains(_selectedType))
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: FirebaseFirestore.instance
                         .collection('booking_venues')
@@ -435,6 +447,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
               _ImagePickerCard(
                 imageFile: _selectedImage,
                 imageUrl: widget.banner?.imageUrl,
+                protectedMedia: bookings && widget.banner?.mediaId != null,
                 onPick: _pickImage,
               ),
               const SizedBox(height: 16),
@@ -975,11 +988,13 @@ class _ImagePickerCard extends StatelessWidget {
   const _ImagePickerCard({
     required this.imageFile,
     required this.imageUrl,
+    this.protectedMedia = false,
     required this.onPick,
   });
 
   final File? imageFile;
   final String? imageUrl;
+  final bool protectedMedia;
   final VoidCallback onPick;
 
   @override
@@ -1014,7 +1029,9 @@ class _ImagePickerCard extends StatelessWidget {
                           imageFile!,
                           fit: BoxFit.cover,
                         )
-                      : Image.network(
+                      : protectedMedia
+                          ? BookingMediaImage(url: imageUrl!)
+                          : Image.network(
                           imageUrl!,
                           fit: BoxFit.cover,
                         )

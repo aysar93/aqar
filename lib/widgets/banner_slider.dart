@@ -59,7 +59,7 @@ class _BannerSliderState extends State<BannerSlider>
   Future<void> _openBanner(BannerModel banner) async {
     final target = banner.targetId.trim();
     if (widget.onBookingVenue != null) {
-      if (['chalet', 'hall'].contains(banner.type)) {
+      if (['chalet', 'hall', 'farm'].contains(banner.type)) {
         await widget.onBookingVenue!(target, banner.type);
         return;
       }

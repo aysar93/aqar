@@ -140,7 +140,7 @@ class BookingMediaInbox extends StatelessWidget {
                           for (final approved in [true, false])
                             TextButton(
                                 onPressed: () => bookingRun(context, () async {
-                                      await bookingCall('reviewBookingMedia', {
+                                      await bookingCall(d.data()['schemaVersion'] == 2 ? 'reviewBookingExternalMedia' : 'reviewBookingMedia', {
                                         'mediaId': d.id,
                                         'approved': approved
                                       });

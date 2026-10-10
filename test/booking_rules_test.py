@@ -1,6 +1,9 @@
 from firestore_reports_rules_test import call, write, unittest
 from storage_chat_rules_test import upload, download
 import time
+import urllib.request
+import urllib.parse
+from storage_chat_rules_test import BASE as STORAGE_BASE
 
 class BookingRules(unittest.TestCase):
     @classmethod
@@ -80,7 +83,10 @@ class BookingRules(unittest.TestCase):
         self.assertEqual(upload(proof,'owner','image/jpeg'),403)
         self.assertEqual(upload('booking_ownership_documents/proof/customer/proof.jpg','customer','image/jpeg'),403)
         media='booking_media/proof/owner/photo.jpg'
-        self.assertEqual(upload(media,'owner','image/jpeg'),200)
+        self.assertEqual(upload(media,'owner','image/jpeg'),403)
+        # Seed a pre-existing legacy object via the isolated emulator admin API.
+        request=urllib.request.Request(STORAGE_BASE+'?name='+urllib.parse.quote(media,safe=''),data=b'legacy',method='POST',headers={'Authorization':'Bearer owner','Content-Type':'image/jpeg','X-Goog-Upload-Protocol':'raw'})
+        with urllib.request.urlopen(request) as response: self.assertEqual(response.status,200)
         self.assertEqual(download(media,None),403)
         self.assertEqual(write('booking_media_reviews/proof_photo.jpg', {'status':'approved'}, 'SEED', timestamp=None),200)
         self.assertEqual(download(media,None),200)

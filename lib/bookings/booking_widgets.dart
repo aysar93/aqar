@@ -1,3 +1,5 @@
+import 'booking_media_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,6 +19,10 @@ class BookingMediaGallery extends StatelessWidget {
                         builder: (_) => _BookingVideo(path: path))),
                 icon: const Icon(Icons.play_circle),
                 label: const Text('مشاهدة فيديو المكان'))
+          else if (path.startsWith('https://'))
+            Padding(padding: const EdgeInsets.symmetric(vertical: 8),
+                child: ClipRRect(borderRadius: BorderRadius.circular(18),
+                    child: BookingMediaImage(url: path)))
           else
             FutureBuilder(
                 future: FirebaseStorage.instance
@@ -53,9 +59,10 @@ class _BookingVideoState extends State<_BookingVideo> {
   Future<void> load() async {
     try {
       final url =
-          await FirebaseStorage.instance.ref(widget.path).getDownloadURL();
+          widget.path.startsWith('https://') ? widget.path : await FirebaseStorage.instance.ref(widget.path).getDownloadURL();
       if (!mounted) return;
-      final c = VideoPlayerController.networkUrl(Uri.parse(url));
+      final token = widget.path.startsWith('https://') ? await FirebaseAuth.instance.currentUser?.getIdToken() : null;
+      final c = VideoPlayerController.networkUrl(Uri.parse(url), httpHeaders: token == null ? {} : {'Authorization': 'Bearer $token'});
       controller = c;
       await c.initialize();
       if (mounted) setState(() {});

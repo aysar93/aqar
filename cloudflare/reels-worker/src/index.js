@@ -1,3 +1,4 @@
+import {bookingRoute} from './bookings.js';
 const counters = {
   view: "views",
   completion: "completions",
@@ -15,6 +16,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
     try {
       const url = new URL(request.url);
+      if (url.pathname.startsWith("/bookings/")) return await bookingRoute(request, env, headers, {googleAccessToken, firestoreGet, authenticatedUser});
       if (request.method === "GET" && url.pathname === "/health") {
         return json({ ok: true, service: "aqar-reels-api" }, 200, headers);
       }
