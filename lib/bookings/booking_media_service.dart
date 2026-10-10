@@ -61,9 +61,8 @@ class BookingMediaService {
         size > 50 * 1024 * 1024) {
       throw StateError('تعذر تحميل الفيديو');
     }
-    final directory = await Directory(
-            '${(await getTemporaryDirectory()).path}/booking_video_')
-        .createTemp();
+    final directory = await Directory((await getTemporaryDirectory()).path)
+        .createTemp('booking_video_');
     final file = File('${directory.path}/video.mp4');
     final sink = file.openWrite();
     try {
