@@ -28,14 +28,14 @@ jobs:
         with:
           name: aqar-bookings-test-apk
           path: build/app/outputs/flutter-apk/app-bookingstest-debug.apk
-      - run: flutter build apk --debug --flavor bookingsStaging --target lib/bookings_staging_main.dart --target-platform android-arm64
-      - run: sha256sum build/app/outputs/flutter-apk/app-bookingsstaging-debug.apk > build/app/outputs/flutter-apk/app-bookingsstaging-debug.apk.sha256
+      - run: flutter build apk --debug --split-per-abi --flavor bookingsStaging --target lib/bookings_staging_main.dart --target-platform android-arm64
+      - run: sha256sum build/app/outputs/flutter-apk/app-arm64-v8a-bookingsstaging-debug.apk > build/app/outputs/flutter-apk/app-arm64-v8a-bookingsstaging-debug.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: aqar-bookings-staging-arm64-apk
           path: |
-            build/app/outputs/flutter-apk/app-bookingsstaging-debug.apk
-            build/app/outputs/flutter-apk/app-bookingsstaging-debug.apk.sha256
+            build/app/outputs/flutter-apk/app-arm64-v8a-bookingsstaging-debug.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-bookingsstaging-debug.apk.sha256
   ios:
     runs-on: macos-15
     timeout-minutes: 45
