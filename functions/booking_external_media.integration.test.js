@@ -81,13 +81,13 @@ test('Firebase video validates bytes, ownership, expiry and one-shot finalizatio
   const originalMetadata=file.constructor.prototype.setMetadata;
   let revoked=false;
   t.mock.method(file.constructor.prototype,'setMetadata',async function(metadata,...args){
-    if(this.name===grant.path) {assert.equal(metadata.metadata.firebaseStorageDownloadTokens,null);revoked=true;}
+    if(this.name===grant.path && metadata.metadata) {assert.equal(metadata.metadata.firebaseStorageDownloadTokens,null);revoked=true;}
     return originalMetadata.call(this,metadata,...args);
   });
   await call('finishBookingVideo',uid,{mediaId:grant.mediaId});
   assert.equal(revoked,true);
   assert.equal((await db.doc(`booking_media_reviews/${grant.mediaId}`).get()).data().status,'pending');
-  await assert.rejects(call('finishBookingVideo',uid,{mediaId:grant.mediaId}));
+  assert.deepEqual(await call('finishBookingVideo',uid,{mediaId:grant.mediaId}),{ok:true});
   const orphan=await call('reserveBookingVideo',uid,{venueId,size:12});
   await getStorage().bucket().file(orphan.path).save(Buffer.alloc(12),{resumable:false,metadata:{contentType:'video/mp4'}});
   await db.doc(`booking_media_reviews/${orphan.mediaId}`).update({expiresAt:0});

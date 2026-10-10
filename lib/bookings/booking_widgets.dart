@@ -1,4 +1,5 @@
 import 'booking_media_image.dart';
+import 'dart:io';
 import 'booking_media_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_filters.dart';
@@ -20,7 +21,9 @@ class BookingMediaGallery extends StatelessWidget {
                         builder: (_) => _BookingVideo(path: path))),
                 icon: const Icon(Icons.play_circle),
                 label: const Text('مشاهدة فيديو المكان'))
-          else if (path.startsWith('https://'))
+          else if (path.startsWith('https://') ||
+              path.startsWith('booking_media_v3/') ||
+              path.startsWith('booking_media/'))
             Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: ClipRRect(
@@ -52,6 +55,7 @@ class _BookingVideo extends StatefulWidget {
 
 class _BookingVideoState extends State<_BookingVideo> {
   VideoPlayerController? controller;
+  File? localVideo;
   String? error;
   @override
   void initState() {
@@ -61,6 +65,21 @@ class _BookingVideoState extends State<_BookingVideo> {
 
   Future<void> load() async {
     try {
+      if (widget.path.startsWith('booking_media_v3/') ||
+          widget.path.startsWith('booking_media/')) {
+        final file = await BookingMediaService.downloadVideo(
+            FirebaseStorage.instance.bucket, widget.path);
+        if (!mounted) {
+          await file.parent.delete(recursive: true);
+          return;
+        }
+        localVideo = file;
+        final c = VideoPlayerController.file(file);
+        controller = c;
+        await c.initialize();
+        if (mounted) setState(() {});
+        return;
+      }
       final url = widget.path.startsWith('booking_media_v3/')
           ? BookingMediaService.videoUrl(
               FirebaseStorage.instance.bucket, widget.path)
@@ -75,12 +94,7 @@ class _BookingVideoState extends State<_BookingVideo> {
           ? await FirebaseAuth.instance.currentUser?.getIdToken()
           : null;
       final c = VideoPlayerController.networkUrl(Uri.parse(url),
-          httpHeaders: token == null
-              ? {}
-              : {
-                  'Authorization':
-                      '${widget.path.startsWith('booking_media_v3/') ? 'Firebase' : 'Bearer'} $token'
-                });
+          httpHeaders: token == null ? {} : {'Authorization': 'Bearer $token'});
       controller = c;
       await c.initialize();
       if (mounted) setState(() {});
@@ -91,7 +105,13 @@ class _BookingVideoState extends State<_BookingVideo> {
 
   @override
   void dispose() {
-    controller?.dispose();
+    final file = localVideo;
+    final disposed = controller?.dispose();
+    if (file != null) {
+      (disposed ?? Future<void>.value())
+          .then((_) => file.parent.delete(recursive: true))
+          .catchError((_) => file.parent);
+    }
     super.dispose();
   }
 

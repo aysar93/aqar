@@ -334,3 +334,7 @@ for (const name of ["getPaymentAccountSettings", "savePaymentAccountSettings", "
 if (process.env.BOOKING_LEGACY_EXTERNAL_READS === "true") {
   Object.assign(exports, require("./booking_legacy_external_media"));
 }
+
+const gateway = require('./booking_media_gateway');
+exports.bookingMediaContent = gateway.bookingMediaContent;
+exports.uploadBookingVideoChunk = gateway.uploadBookingVideoChunk;

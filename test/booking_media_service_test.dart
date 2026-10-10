@@ -5,8 +5,69 @@ import 'package:aqar/bookings/booking_media_service.dart';
 import 'package:aqar/bookings/booking_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 void main() {
+  test(
+      'large legacy images use bounded authenticated ranges without truncation',
+      () async {
+    const size = 9 * 1024 * 1024;
+    var calls = 0;
+    final client = MockClient((request) async {
+      calls++;
+      expect(request.headers['Authorization'], 'Bearer preview-token');
+      final range = request.headers['Range'];
+      if (range == null)
+        return http.Response('', 416,
+            headers: {'content-range': 'bytes */$size'});
+      final parts = RegExp(r'bytes=(\d+)-(\d+)').firstMatch(range)!;
+      final start = int.parse(parts.group(1)!),
+          end = int.parse(parts.group(2)!);
+      expect(end - start + 1, lessThanOrEqualTo(4 * 1024 * 1024));
+      return http.Response.bytes(
+          Uint8List(end - start + 1)..fillRange(0, end - start + 1, 7), 206,
+          headers: {'content-range': 'bytes $start-$end/$size'});
+    });
+    final bytes = await BookingMediaService.readImageData(
+        'https://image.test/gateway', 'preview-token',
+        client: client);
+    expect(bytes.length, size);
+    expect(bytes.every((byte) => byte == 7), isTrue);
+    expect(calls, 4);
+  });
+  test('image access revoked between ranges never returns partial content',
+      () async {
+    var calls = 0;
+    final client = MockClient((request) async {
+      calls++;
+      if (calls == 1)
+        return http.Response('', 416,
+            headers: {'content-range': 'bytes */9437184'});
+      if (calls == 2)
+        return http.Response.bytes(Uint8List(4194304), 206,
+            headers: {'content-range': 'bytes 0-4194303/9437184'});
+      return http.Response('', 403);
+    });
+    await expectLater(
+        BookingMediaService.readImageData('https://image.test/gateway', null,
+            client: client),
+        throwsStateError);
+    expect(calls, 3);
+  });
+  test('oversize legacy image rejected before downloading ranges', () async {
+    var calls = 0;
+    final client = MockClient((request) async {
+      calls++;
+      return http.Response('', 416,
+          headers: {'content-range': 'bytes */10485761'});
+    });
+    await expectLater(
+        BookingMediaService.readImageData('https://image.test/gateway', null,
+            client: client),
+        throwsStateError);
+    expect(calls, 1);
+  });
   testWidgets(
       'private images wait for token before creating a network provider',
       (tester) async {
@@ -70,18 +131,18 @@ void main() {
     });
     expect(calls, ['reserveBookingVideo', 'storage', 'finishBookingVideo']);
   });
-  test('local booking video playback stays on the Storage emulator', () {
+  test('booking playback uses the project gateway including emulator', () {
     BookingMediaService.emulatorHost = '127.0.0.1';
     expect(
         BookingMediaService.videoUrl(
             'demo-aqar.appspot.com', 'booking_media_v3/v/u/id.mp4'),
-        'http://127.0.0.1:9198/v0/b/demo-aqar.appspot.com/o/booking_media_v3%2Fv%2Fu%2Fid.mp4?alt=media');
+        'http://127.0.0.1:5001/demo-aqar/us-central1/bookingMediaContent?mediaId=id');
     BookingMediaService.emulatorHost = null;
     expect(
         BookingMediaService.videoUrl(
             'staging.firebasestorage.app', 'booking_media_v3/v/u/id.mp4'),
         startsWith(
-            'https://firebasestorage.googleapis.com/v0/b/staging.firebasestorage.app/'));
+            'https://us-central1-staging.cloudfunctions.net/bookingMediaContent'));
   });
   for (final width in [320.0, 430.0, 900.0]) {
     testWidgets('new and legacy video entries retain RTL at width $width',

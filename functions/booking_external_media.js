@@ -62,7 +62,25 @@ exports.reserveBookingVideo = onCall(async r=>{
 async function finish(r,mediaId) {
   const mRef=ref(mediaId), m=(await mRef.get()).data();
   if(!m || m.provider!=='firebase' || m.status!=='uploading' || m.expiresAt<Date.now() || m.ownerUid!==r.auth?.uid || !canonical(m,mediaId)) error('ملف غير صالح');
-  const file=getStorage().bucket().file(m.path), [meta]=await file.getMetadata();
+  const bucket=getStorage().bucket(), file=bucket.file(m.path);
+  if(m.type==='video/mp4' && !(await file.exists())[0]) {
+    // Recheck before assembly; chunks never grant access to the final namespace.
+    const u=await actor(r,{get:reference=>reference.get()});
+    const v=(await db.doc('booking_venues/'+m.venueId).get()).data();
+    if(v?.ownerId!==u.uid) error('تغيرت الصلاحيات');
+    const count=Math.ceil(m.size/(4*1024*1024));
+    const parts=Array.from({length:count},(_,i)=>bucket.file('_booking_upload_parts/'+mediaId+'/'+i));
+    for(let i=0;i<count;i++) {
+      let meta;
+      try { [meta]=await parts[i].getMetadata(); }
+      catch(e) { if(e.code===404) error('رفع غير مكتمل؛ أعد محاولة رفع الأجزاء'); throw e; }
+      if(Number(meta.size)!==Math.min(4*1024*1024,m.size-i*4*1024*1024)) error('رفع غير مكتمل');
+    }
+    await bucket.combine(parts,file,{ifGenerationMatch:0});
+  }
+  // Also repair metadata when compose succeeded but a previous request ended early.
+  if(m.type==='video/mp4') await file.setMetadata({contentType:m.type,cacheControl:'private, no-store'});
+  const [meta]=await file.getMetadata();
   if(Number(meta.size)!==m.size || meta.contentType!==m.type) error('حجم أو نوع غير صالح');
   const [head]=await file.download({start:0,end:11});
   if(m.type==='video/mp4' && (head.length<12 || head.toString('ascii',4,8)!=='ftyp')) error('فيديو MP4 غير صالح');
@@ -75,7 +93,18 @@ async function finish(r,mediaId) {
     tx.update(mRef,{status:'pending',generation:String(meta.generation)});
   });
 }
-exports.finishBookingVideo = onCall(async r=>{await finish(r,validId(r.data.mediaId));return {ok:true};});
+exports.finishBookingVideo = onCall(async r=>{
+  const id=validId(r.data.mediaId), m=(await ref(id).get()).data();
+  const u=await actor(r,{get:reference=>reference.get()});
+  const v=m?.kind==='venue'?(await db.doc('booking_venues/'+m.venueId).get()).data():null;
+  if(m && m.type==='video/mp4' && m.ownerUid===u.uid && v?.ownerId===u.uid && ['pending','approved'].includes(m.status)) {
+    await getStorage().bucket().deleteFiles({prefix:'_booking_upload_parts/'+id+'/'});
+    return {ok:true};
+  }
+  await finish(r,id);
+  await getStorage().bucket().deleteFiles({prefix:'_booking_upload_parts/'+id+'/'});
+  return {ok:true};
+});
 function canonical(m,id) {
   const extension={'image/jpeg':'jpg','image/png':'png','video/mp4':'mp4'}[m.type];
   return extension && m.path===`booking_media_v3/${validId(m.venueId)}/${validId(m.ownerUid)}/${validId(id)}.${extension}`;
@@ -127,6 +156,7 @@ async function clean(doc) {
   // Generation protects against deleting a replaced object, including abandoned uploads.
   const [exists]=await file.exists();
   if(exists) {const [meta]=await file.getMetadata(); await file.delete({ifGenerationMatch:m.generation || meta.generation,ignoreNotFound:true});}
+  await getStorage().bucket().deleteFiles({prefix:'_booking_upload_parts/'+doc.id+'/'});
   await doc.ref.update({status:'deleted',deletedAt:FieldValue.serverTimestamp(),lastError:FieldValue.delete()});
 }
 exports.cleanupBookingExternalMedia = onSchedule({schedule:'every 60 minutes',timeoutSeconds:540},async()=>{

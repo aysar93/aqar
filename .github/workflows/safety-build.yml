@@ -69,7 +69,7 @@ jobs:
       - run: npm ci --prefix test/firestore
       - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.reports-test.json "node --test test/firestore/featured_properties.test.cjs && python test/firestore_safety_rules_test.py"
       - run: npm ci --prefix functions
-      - run: node --test functions/booking_policy.test.js functions/booking_media_policy.test.js cloudflare/reels-worker/test/bookings.test.mjs
+      - run: node --test functions/booking_policy.test.js functions/booking_media_policy.test.js functions/booking_media_gateway.test.js cloudflare/reels-worker/test/bookings.test.mjs
       - run: npm audit --prefix functions --omit=dev --audit-level=moderate
       - run: npm audit --prefix test/firestore --audit-level=moderate
       - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore,storage,database --project demo-aqar --config firebase.production-readiness-test.json "node test/run_production_readiness_tests.cjs"
