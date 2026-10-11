@@ -14,11 +14,14 @@ bool bookingStagingAllowed(String? flavor, String project) =>
     flavor == 'bookingsStaging' && project == bookingStagingProject;
 final _stagingNavigator = GlobalKey<NavigatorState>();
 RemoteMessage? _pendingNotification;
+bool _stagingSessionReady = false;
 void _openNotification(RemoteMessage message) {
   final bookingId = message.data['bookingId'];
-  if (bookingId is! String || bookingId.isEmpty || bookingId.contains('/'))
+  if (bookingId is! String || bookingId.isEmpty || bookingId.contains('/')) {
     return;
-  if (FirebaseAuth.instance.currentUser == null ||
+  }
+  if (!_stagingSessionReady ||
+      FirebaseAuth.instance.currentUser == null ||
       _stagingNavigator.currentState == null) {
     _pendingNotification = message;
     return;
@@ -28,8 +31,9 @@ void _openNotification(RemoteMessage message) {
 }
 
 Future<void> main() async {
-  if (!bookingStagingAllowed(appFlavor, bookingStagingProject))
+  if (!bookingStagingAllowed(appFlavor, bookingStagingProject)) {
     throw StateError('Dedicated staging flavor required');
+  }
   WidgetsFlutterBinding.ensureInitialized();
   final app = await Firebase.initializeApp();
   if (!bookingStagingAllowed(appFlavor, app.options.projectId)) {
@@ -75,6 +79,112 @@ class _LoginState extends State<_StagingLogin> {
   String? error;
   StreamSubscription<String>? tokenUpdates;
   @override
+  void initState() {
+    super.initState();
+    busy = true;
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final user = await FirebaseAuth.instance.authStateChanges().first;
+    if (!mounted) return;
+    if (user == null) {
+      setState(() => busy = false);
+      return;
+    }
+    await _enterBookings(restore: true);
+  }
+
+  Future<void> _enterBookings({bool restore = false}) async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    bool opened = false;
+    bool inactive = false;
+    try {
+      if (!restore) {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email.text.trim(), password: password.text);
+      } else {
+        // Validate the persisted session before showing protected screens.
+        await FirebaseAuth.instance.currentUser!.getIdToken(true);
+      }
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final user = await FirebaseFirestore.instance
+          .doc('users/$uid')
+          .get(const GetOptions(source: Source.server));
+      inactive = !user.exists || user.data()?['isBlocked'] == true;
+      if (inactive) throw StateError('Inactive test account');
+      try {
+        await FirebaseMessaging.instance.requestPermission();
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          await FirebaseFirestore.instance
+              .doc('users/$uid')
+              .update({'fcmToken': token});
+        }
+        tokenUpdates =
+            FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+          FirebaseFirestore.instance
+              .doc('users/$uid')
+              .update({'fcmToken': token}).catchError((_) {});
+        });
+      } catch (_) {}
+      if (!mounted) return;
+      opened = true;
+      _stagingSessionReady = true;
+      final navigation = Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) =>
+                  BookingScreen(admin: user.data()?['isAdmin'] == true)));
+      final notification = _pendingNotification;
+      _pendingNotification = null;
+      if (notification != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (FirebaseAuth.instance.currentUser != null) {
+            _openNotification(notification);
+          }
+        });
+      }
+      await navigation;
+    } catch (e) {
+      if (e is FirebaseAuthException &&
+          const {
+            'user-disabled',
+            'user-not-found',
+            'user-token-expired',
+            'invalid-user-token'
+          }.contains(e.code)) {
+        inactive = true;
+      }
+      if (mounted) {
+        setState(() => error =
+            'تعذر الدخول. تحقق من الحساب وتشغيل خدمات staging واتصال الإنترنت.');
+      }
+    } finally {
+      _stagingSessionReady = false;
+      await tokenUpdates?.cancel();
+      tokenUpdates = null;
+      // Returning from bookings remains an explicit end of this staging session.
+      // Transient restore failures must not delete a valid persisted session.
+      if (opened || inactive || !restore) {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid != null) {
+          try {
+            await FirebaseFirestore.instance
+                .doc('users/$uid')
+                .update({'fcmToken': FieldValue.delete()});
+          } catch (_) {}
+        }
+        await FirebaseAuth.instance.signOut();
+      }
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
   void dispose() {
     tokenUpdates?.cancel();
     email.dispose();
@@ -99,72 +209,11 @@ class _LoginState extends State<_StagingLogin> {
             decoration: const InputDecoration(labelText: 'كلمة المرور')),
         if (error != null) Text(error!),
         FilledButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    setState(() {
-                      busy = true;
-                      error = null;
-                    });
-                    try {
-                      await FirebaseAuth.instance.signInWithEmailAndPassword(
-                          email: email.text.trim(), password: password.text);
-                      final uid = FirebaseAuth.instance.currentUser!.uid;
-                      final user = await FirebaseFirestore.instance
-                          .doc('users/$uid')
-                          .get();
-                      if (!user.exists || user.data()?['isBlocked'] == true)
-                        throw StateError('Inactive test account');
-                      // Notification permission failures must not prevent booking access.
-                      try {
-                        await FirebaseMessaging.instance.requestPermission();
-                        final token =
-                            await FirebaseMessaging.instance.getToken();
-                        if (token != null)
-                          await FirebaseFirestore.instance
-                              .doc('users/$uid')
-                              .update({'fcmToken': token});
-                        tokenUpdates = FirebaseMessaging.instance.onTokenRefresh
-                            .listen((token) {
-                          FirebaseFirestore.instance
-                              .doc('users/$uid')
-                              .update({'fcmToken': token}).catchError((_) {});
-                        });
-                      } catch (_) {}
-                      if (mounted) {
-                        final navigation = Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => BookingScreen(
-                                    admin: user.data()?['isAdmin'] == true)));
-                        final notification = _pendingNotification;
-                        _pendingNotification = null;
-                        if (notification != null)
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (FirebaseAuth.instance.currentUser != null)
-                              _openNotification(notification);
-                          });
-                        await navigation;
-                      }
-                    } catch (_) {
-                      if (mounted)
-                        setState(() => error =
-                            'تعذر الدخول. تحقق من الحساب وتشغيل خدمات staging واتصال الإنترنت.');
-                    } finally {
-                      await tokenUpdates?.cancel();
-                      tokenUpdates = null;
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      if (uid != null) {
-                        try {
-                          await FirebaseFirestore.instance
-                              .doc('users/$uid')
-                              .update({'fcmToken': FieldValue.delete()});
-                        } catch (_) {}
-                      }
-                      await FirebaseAuth.instance.signOut();
-                      if (mounted) setState(() => busy = false);
-                    }
-                  },
-            child: Text(busy ? 'جاري الدخول...' : 'دخول'))
+            onPressed: busy ? null : () => _enterBookings(),
+            child: Text(busy ? 'جاري الدخول...' : 'دخول')),
+        if (!busy && FirebaseAuth.instance.currentUser != null)
+          TextButton(
+              onPressed: _restoreSession,
+              child: const Text('إعادة محاولة استعادة الجلسة'))
       ]));
 }
