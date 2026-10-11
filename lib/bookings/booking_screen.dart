@@ -1,3 +1,5 @@
+import 'booking_location.dart';
+import 'booking_directions_button.dart';
 import 'booking_media_service.dart';
 import 'booking_filters.dart';
 import 'booking_extras.dart';
@@ -558,6 +560,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                 }),
           Text(
               'المالك: ${v['ownerName']}\nالموقع: ${v['location']}\nالسعر المحدد: $total د.ع\nالعربون: ${v['deposit']} د.ع\nالمتبقي بعد اعتماد العربون: ${total - (v['deposit'] as num)} د.ع\n\nالشروط: ${v['terms']}'),
+          BookingDirectionsButton(venue: v),
           if (v['pricingMode'] == 'hourly')
             Text('سعر الساعة: ${v['hourlyPrice']} د.ع — اختر ساعات كاملة'),
           if (v['pricingMode'] == 'shifts') ...[
@@ -1341,8 +1344,11 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 'lateRefundPercent':
                     'نسبة استرداد العربون بعد الموعد أعلاه (0–100)'
               }[e.key]),
+              keyboardType: ['latitude', 'longitude'].contains(e.key) ? const TextInputType.numberWithOptions(decimal: true, signed: true) : null,
+              textDirection: ['latitude', 'longitude'].contains(e.key) ? TextDirection.ltr : null,
               enabled: !(widget.ownerMode && e.key == 'commissionPercent'),
               maxLines: e.key == 'terms' ? 4 : 1),
+        const Text('إحداثيات المكان اختيارية؛ أدخل القيمتين معًا ليظهر على الخريطة. هذه إحداثيات المكان العامة.'),
         Wrap(children: [
           for (final e in bookingAmenities.entries)
             FilterChip(
@@ -1438,6 +1444,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 : () async {
                     setState(() => busy = true);
                     await bookingRun(context, () async {
+                      final coordinateError = bookingCoordinateError(fields['latitude']!.text, fields['longitude']!.text);
+                      if (coordinateError != null) throw StateError(coordinateError);
                       for (final key in ['capacity', 'bedrooms']) {
                         if (fields[key]!.text.isNotEmpty &&
                             (int.tryParse(fields[key]!.text) == null ||
