@@ -9,8 +9,34 @@ import 'package:http/http.dart' as http;
 typedef BookingMediaCall = Future<Map<String, dynamic>> Function(
     String name, Map<String, dynamic> data);
 
+class BookingReceiptIntegrityException implements Exception {
+  final String message =
+      'لم يكتمل رفع الإيصال؛ أعد المحاولة بعد استقرار الشبكة';
+}
+
 class BookingMediaService {
   static String? emulatorHost;
+
+  // A resumed native upload can report success for a truncated object. Do not
+  // submit a receipt until the private stored bytes match the compressed input.
+  static Future<void> uploadVerifiedReceipt(Uint8List bytes,
+      {required Future<void> Function(Uint8List) upload,
+      required Future<Uint8List?> Function() read}) async {
+    if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+      throw StateError('حجم الإيصال غير صالح');
+    }
+    await upload(bytes);
+    final stored = await read();
+    if (stored == null || stored.length != bytes.length) {
+      throw BookingReceiptIntegrityException();
+    }
+    for (var i = 0; i < bytes.length; i++) {
+      if (stored[i] != bytes[i]) {
+        throw BookingReceiptIntegrityException();
+      }
+    }
+  }
+
   static Future<Uint8List> readImageData(String url, String? token,
       {http.Client? client}) async {
     final headers =

@@ -113,7 +113,9 @@ Future<void> bookingRun(
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e is FirebaseFunctionsException
+          content: Text(e is BookingReceiptIntegrityException
+              ? e.message
+              : e is FirebaseFunctionsException
               ? e.message ?? 'تعذر تنفيذ العملية'
               : 'تعذر تنفيذ العملية، حاول مجدداً')));
     }
@@ -945,7 +947,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                 context: context,
                                 builder: (_) => Dialog(
                                     child: InteractiveViewer(
-                                        child: Image.memory(bytes))));
+                                        child: Image.memory(bytes,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Padding(
+                                                    padding: EdgeInsets.all(24),
+                                                    child: Text(
+                                                        'تعذر عرض الإيصال؛ الملف غير صالح'))))));
                           }
                         }),
                     child: const Text('عرض الإيصال')),
@@ -990,12 +997,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               if (image == null) return;
                               final path =
                                   'booking_receipts/${widget.bookingId}/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg';
-                              await FirebaseStorage.instance.ref(path).putData(
+                              final bytes =
                                   await FlutterImageCompress.compressWithList(
                                       await image.readAsBytes(),
                                       format: CompressFormat.jpeg,
-                                      quality: 85),
-                                  SettableMetadata(contentType: 'image/jpeg'));
+                                      quality: 85);
+                              final receipt =
+                                  FirebaseStorage.instance.ref(path);
+                              await BookingMediaService.uploadVerifiedReceipt(
+                                  bytes,
+                                  upload: (data) async {
+                                    await receipt.putData(
+                                        data,
+                                        SettableMetadata(
+                                            contentType: 'image/jpeg'));
+                                  },
+                                  read: () =>
+                                      receipt.getData(10 * 1024 * 1024));
 
                               await bookingCall('actOnBooking', {
                                 'bookingId': widget.bookingId,
