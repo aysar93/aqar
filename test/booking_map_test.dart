@@ -63,13 +63,42 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.textContaining('الأماكن القريبة ضمن'), findsNothing);
       }
-      await tester.tap(find.text('مزرعة اختبار\n100000 د.ع'));
+      await tester.tap(find.text('مزرعة اختبار'));
       await tester.pumpAndSettle();
       expect(find.text('الاتجاهات'), findsOneWidget);
       expect(find.text('التفاصيل والحجز'), findsOneWidget);
       expect(find.text('شروط اختبار'), findsOneWidget);
       expect(Directionality.of(tester.element(find.text('شروط اختبار'))),
           TextDirection.rtl);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+        'long venue name keeps the complete price visible at scale $scale',
+        (tester) async {
+      const longName = 'مزرعة عربية ذات اسم طويل جدًا لاختبار عرض السعر';
+      await tester.pumpWidget(MaterialApp(
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!),
+          home: BookingMapScreen(
+              loadTiles: false,
+              venues: Stream.value([
+                {...venue, 'name': longName}
+              ]))));
+      await tester.pumpAndSettle();
+      final price = find.text('100000 د.ع');
+      expect(price, findsOneWidget);
+      final markerButton =
+          find.ancestor(of: price, matching: find.byType(TextButton)).first;
+      final bounds = tester.getRect(markerButton);
+      expect(bounds.contains(tester.getTopLeft(price) + const Offset(.1, .1)),
+          isTrue);
+      expect(
+          bounds.contains(tester.getBottomRight(price) - const Offset(.1, .1)),
+          isTrue);
       expect(tester.takeException(), isNull);
     });
   }
@@ -102,7 +131,7 @@ void main() {
     stream.addError(StateError('offline'));
     await tester.pumpAndSettle();
     expect(find.textContaining('تعذر تحديث الأماكن'), findsOneWidget);
-    expect(find.text('مزرعة اختبار\n100000 د.ع'), findsOneWidget);
+    expect(find.text('مزرعة اختبار'), findsOneWidget);
     expect(find.text('موقعي الحالي'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     unawaited(stream.close());

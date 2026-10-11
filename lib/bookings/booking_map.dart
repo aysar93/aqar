@@ -256,10 +256,24 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                                             backgroundColor: bookingNavy,
                                             foregroundColor: Colors.white),
                                         onPressed: () => details(venue),
-                                        child: Text(
-                                            '${venue['name']}\n${bookingStartingPrice(venue)} د.ع',
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis)))),
+                                        child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: SizedBox(
+                                                width: 114,
+                                                child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text('${venue['name']}',
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis),
+                                                      FittedBox(
+                                                          fit: BoxFit.scaleDown,
+                                                          child: Text(
+                                                              '${bookingStartingPrice(venue)} د.ع',
+                                                              maxLines: 1)),
+                                                    ])))))),
                         ]),
                         const RichAttributionWidget(attributions: [
                           TextSourceAttribution('OpenStreetMap contributors')
