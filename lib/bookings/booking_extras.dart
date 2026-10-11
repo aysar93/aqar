@@ -134,19 +134,8 @@ class _SupportState extends State<BookingSupportScreen> {
   }
 
   Future<void> respond(String id, String status) async {
-    final response = TextEditingController();
     final value = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-                title: const Text('رد الدعم'),
-                content: TextField(
-                    controller: response, maxLength: 2000, maxLines: 4),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, response.text),
-                      child: const Text('إرسال'))
-                ]));
-    response.dispose();
+        context: context, builder: (_) => const BookingSupportResponseDialog());
     if (value != null && mounted)
       await bookingRun(context, () async {
         await bookingCall('updateBookingSupportTicket',
@@ -242,6 +231,36 @@ class _SupportState extends State<BookingSupportScreen> {
               })
         ]));
   }
+}
+
+class BookingSupportResponseDialog extends StatefulWidget {
+  const BookingSupportResponseDialog({super.key});
+
+  @override
+  State<BookingSupportResponseDialog> createState() =>
+      _BookingSupportResponseDialogState();
+}
+
+class _BookingSupportResponseDialogState
+    extends State<BookingSupportResponseDialog> {
+  final response = TextEditingController();
+
+  @override
+  void dispose() {
+    response.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+          title: const Text('رد الدعم'),
+          content:
+              TextField(controller: response, maxLength: 2000, maxLines: 4),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, response.text),
+                child: const Text('إرسال'))
+          ]);
 }
 
 class BookingAvailabilitySearchScreen extends StatefulWidget {

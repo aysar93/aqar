@@ -96,7 +96,7 @@ class BookingFilterBar extends StatelessWidget {
                     rooms = TextEditingController(
                         text: filters.bedrooms?.toString() ?? '');
                 final selected = Set<String>.from(filters.amenities);
-                await showDialog(
+                final route = DialogRoute<void>(
                     context: context,
                     builder: (context) => StatefulBuilder(
                         builder: (context, setState) => AlertDialog(
@@ -168,6 +168,10 @@ class BookingFilterBar extends StatelessWidget {
                                       },
                                       child: const Text('تطبيق'))
                                 ])));
+                await Navigator.of(context).push(route);
+                // The pop result precedes the reverse transition. Keep the
+                // controllers alive until the dialog's fields are unmounted.
+                await route.completed;
                 price.dispose();
                 capacity.dispose();
                 rooms.dispose();
