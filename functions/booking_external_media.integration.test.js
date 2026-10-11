@@ -8,6 +8,23 @@ initializeApp({projectId:'demo-aqar',storageBucket:'demo-aqar.appspot.com'});
 const {getStorage}=require('firebase-admin/storage');
 const db=getFirestore(),f=require('./booking_external_media');
 const call=(name,uid,data)=>f[name].run({auth:uid?{uid,token:{}}:null,data});
+test('repeated removal preserves abandoned upload safety delay and retry backoff',async()=>{
+  const uid='repeat_remove_owner',venueId='repeat_remove_venue';
+  await db.doc(`users/${uid}`).set({isBlocked:false});
+  await db.doc(`booking_venues/${venueId}`).set({ownerId:uid,active:true,mediaPaths:[]});
+  const grant=await call('reserveBookingVideo',uid,{venueId,size:12});
+  const ref=db.doc(`booking_media_reviews/${grant.mediaId}`);
+  const initial=(await ref.get()).data();
+  await call('removeBookingExternalMedia',uid,{venueId,path:grant.path});
+  const removed=(await ref.get()).data();
+  assert.equal(removed.nextAttemptAt,initial.expiresAt);
+  await call('removeBookingExternalMedia',uid,{venueId,path:grant.path});
+  assert.deepEqual((await ref.get()).data(),removed);
+  await ref.update({nextAttemptAt:Date.now()+3600000,attempts:2});
+  const retry=(await ref.get()).data();
+  await call('removeBookingExternalMedia',uid,{venueId,path:grant.path});
+  assert.deepEqual((await ref.get()).data(),retry);
+});
 test('transactional quotas, ownership, image review, banner replacement and retry lifecycle',async t=>{
   const prefix=`media_${Date.now()}`,owner=prefix+'_owner',admin=prefix+'_admin',other=prefix+'_other',blocked=prefix+'_blocked',venueId=prefix+'_venue';
   for(const uid of [owner,admin,other,blocked]) await db.doc(`users/${uid}`).set({isAdmin:uid===admin,isBlocked:uid===blocked});

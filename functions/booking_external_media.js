@@ -131,7 +131,8 @@ exports.removeBookingExternalMedia = onCall(async r=>{
     const doc=records.docs[0], m=doc.data();
     const vRef=db.doc(`booking_venues/${validId(m.venueId)}`), v=(await tx.get(vRef)).data();
     if(![2,3].includes(m.schemaVersion) || m.kind!=='venue' || m.venueId!==r.data.venueId || !v || v.ownerId!==u.uid && u.isAdmin!==true) error('للمالك أو الإدارة فقط');
-    if(m.status==='deleted') return;
+    // Repeated removals must preserve the abandoned-upload delay and retries.
+    if(['deleted','delete_pending'].includes(m.status)) return;
     tx.update(vRef,{mediaPaths:FieldValue.arrayRemove(m.path)});
     tx.update(doc.ref,{status:'delete_pending',nextAttemptAt:m.status==='uploading'?m.expiresAt:0,removedBy:u.uid,removedAt:FieldValue.serverTimestamp()});
     tx.create(db.collection('booking_venue_audit').doc(),{venueId:m.venueId,actorUid:u.uid,action:'removeExternalMedia',mediaId:doc.id,createdAt:FieldValue.serverTimestamp()});
