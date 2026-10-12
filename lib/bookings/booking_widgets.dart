@@ -147,6 +147,8 @@ class BookingSummary extends StatelessWidget {
       {super.key, required this.booking, required this.status});
   final Map<String, dynamic> booking;
   final String status;
+  String money(dynamic value) =>
+      value is num && value.isFinite ? '$value د.ع' : 'غير متوفر';
   String time(dynamic value) => value is num
       ? DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true)
           .add(const Duration(hours: 3))
@@ -170,10 +172,10 @@ class BookingSummary extends StatelessWidget {
             'الخروج — بغداد': time(booking['end'])
           },
           {
-            'الإجمالي': '${booking['total']} د.ع',
-            'العربون': '${booking['deposit']} د.ع',
-            'المدفوع المعتمد': '${booking['paid']} د.ع',
-            'المتبقي': '${booking['remaining']} د.ع'
+            'الإجمالي': money(booking['total']),
+            'العربون': money(booking['deposit']),
+            'المدفوع المعتمد': money(booking['paid']),
+            'المتبقي': money(booking['remaining'])
           },
           {
             'الزبون': '${booking['customerName']}',
