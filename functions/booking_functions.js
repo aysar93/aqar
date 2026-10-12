@@ -8,6 +8,29 @@ const {overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund
 const db = getFirestore();
 const discovery = require('./booking_discovery');
 const {CONFIG, available, recipient} = require('./payment_accounts');
+async function validReceiptFile(file, meta) {
+  if(meta.contentType!=='image/jpeg' || !Number.isSafeInteger(Number(meta.size)) || Number(meta.size)<=0 || Number(meta.size)>10*1024*1024) return false;
+  const [bytes]=await file.download();
+  if(bytes.length!==Number(meta.size) || bytes[0]!==255 || bytes[1]!==216 || bytes.at(-2)!==255 || bytes.at(-1)!==217) return false;
+  try {
+    await require('sharp')(bytes,{limitInputPixels:40000000,failOn:'warning'}).jpeg().toBuffer();
+    return true;
+  } catch (_) { return false; }
+}
+exports.discardInvalidBookingReceipt = onCall({memory:'512MiB',timeoutSeconds:120},async r=>{
+  const u=await actor(r),bookingId=id(r.data.bookingId),path=text(r.data.path,512);
+  if(!path.startsWith(`booking_receipts/${bookingId}/${u.uid}/`) || !/\/[0-9]+\.jpg$/.test(path)) fail('إيصال غير صالح');
+  const b=(await db.doc(`bookings/${bookingId}`).get()).data();
+  if(!b || b.customerId!==u.uid || b.receiptPath===path) fail('لا يمكن إزالة إيصال مرتبط أو غير مملوك');
+  const file=getStorage().bucket().file(path);
+  let meta;
+  try { [meta]=await file.getMetadata(); } catch(e) { if(e.code===404) return {ok:true,alreadyAbsent:true}; throw e; }
+  // Only malformed, unsubmitted files qualify. Valid receipts remain immutable.
+  if(await validReceiptFile(file,meta)) fail('لا يمكن إزالة إيصال صالح');
+  await file.delete({ifGenerationMatch:meta.generation,ignoreNotFound:true});
+  console.info('booking_invalid_receipt_discarded',JSON.stringify({bookingId,bytes:Number(meta.size),generation:String(meta.generation)}));
+  return {ok:true};
+});
 function policy(fn) { try { return fn(); } catch(e) { fail(e.message); } }
 function finance(u) { return u.canReviewBookingPayments === true; }
 function nextVersion(b) { return Number.isSafeInteger(b.version) && b.version >= 0 ? b.version + 1 : 1; }
@@ -318,14 +341,14 @@ exports.requestBooking = onCall(async r => {
     tx.update(venueRef,{bookingRevision:FieldValue.increment(1)});
   }); return {id:ref.id};
 });
-exports.actOnBooking = onCall(async r => {
+exports.actOnBooking = onCall({memory:'512MiB',timeoutSeconds:120},async r => {
   const u = await actor(r), d = r.data, ref = db.doc(`bookings/${id(d.bookingId)}`);
   let receipt;
   if (d.action === 'submitPayment') {
     const path = text(d.receiptPath,512);
     if (!path.startsWith(`booking_receipts/${ref.id}/${u.uid}/`) || !/\/[0-9]+\.jpg$/.test(path)) fail('إيصال غير صالح');
-    const [meta] = await getStorage().bucket().file(path).getMetadata();
-    if (meta.contentType !== 'image/jpeg' || !Number.isSafeInteger(Number(meta.size)) || Number(meta.size)<=0 || Number(meta.size)>10*1024*1024) fail('إيصال غير صالح');
+    const file=getStorage().bucket().file(path), [meta] = await file.getMetadata();
+    if (!await validReceiptFile(file,meta)) fail('إيصال غير صالح أو رفع غير مكتمل');
     receipt = path;
   }
   await db.runTransaction(async tx => {

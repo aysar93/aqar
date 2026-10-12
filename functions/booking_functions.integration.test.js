@@ -7,6 +7,30 @@ if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8185' || process.env.FIREBAS
 initializeApp({projectId:'demo-aqar',storageBucket:'demo-aqar.appspot.com'});
 const db=getFirestore(), f=require('./booking_functions');
 const call=(name,uid,data)=>f[name].run({auth:{uid},data});
+const receiptBytes=()=>require('sharp')({create:{width:16,height:16,channels:3,background:'red'}}).jpeg().toBuffer();
+test('malformed receipt is rejected, removable only by author while unlinked, and removal is idempotent',async()=>{
+  const uid='receipt_cleanup_customer',bookingId='receipt_cleanup_booking';
+  await db.doc(`users/${uid}`).set({isBlocked:false});
+  await db.doc('users/receipt_cleanup_other').set({isBlocked:false});
+  const bRef=db.doc(`bookings/${bookingId}`);
+  await bRef.set({customerId:uid,status:'held',version:1});
+  const path=`booking_receipts/${bookingId}/${uid}/100.jpg`,file=getStorage().bucket().file(path);
+  await file.save((await receiptBytes()).subarray(0,100),{resumable:false,metadata:{contentType:'image/jpeg'}});
+  const before=(await bRef.get()).data();
+  await assert.rejects(call('actOnBooking',uid,{bookingId,action:'submitPayment',receiptPath:path}));
+  assert.deepEqual((await bRef.get()).data(),before);
+  await assert.rejects(call('discardInvalidBookingReceipt','receipt_cleanup_other',{bookingId,path}));
+  await bRef.update({receiptPath:path});
+  await assert.rejects(call('discardInvalidBookingReceipt',uid,{bookingId,path}));
+  await bRef.set(before);
+  await call('discardInvalidBookingReceipt',uid,{bookingId,path});
+  assert.equal((await file.exists())[0],false);
+  assert.deepEqual((await bRef.get()).data(),before);
+  assert.equal((await call('discardInvalidBookingReceipt',uid,{bookingId,path})).alreadyAbsent,true);
+  await file.save(await receiptBytes(),{resumable:false,metadata:{contentType:'image/jpeg'}});
+  await assert.rejects(call('discardInvalidBookingReceipt',uid,{bookingId,path}));
+  assert.equal((await file.exists())[0],true);
+});
 test('owner management, closures, private availability, transfer, QR and completed reviews',async()=>{
   for(const uid of ['xadmin','xowner','xnew','xcustomer','xother']) await db.doc(`users/${uid}`).set({name:uid,phone:'07700000000',isAdmin:uid==='xadmin',isBlocked:false});
   const payload={ownerId:'xowner',name:'test',location:'Anbar',category:'chalet',price:100000,deposit:20000,terms:'terms',active:true,cancellationPolicy:{freeCancellationHours:24,lateRefundPercent:20}};
@@ -102,7 +126,7 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   assert.equal(record.total,100000);assert.equal(record.customerName,uid);assert.equal(record.ownerName,'owner');assert.equal(record.venueName,'test venue');assert.equal(record.remaining,100000);
   await assert.rejects(call('actOnBooking','admin',{bookingId:chosen.id,action:'confirmPayment'}));
   const path=`booking_receipts/${chosen.id}/${uid}/123.jpg`;
-  await getStorage().bucket().file(path).save(Buffer.from('test receipt'),{resumable:false,metadata:{contentType:'image/jpeg'}});
+  await getStorage().bucket().file(path).save(await receiptBytes(),{resumable:false,metadata:{contentType:'image/jpeg'}});
   await assert.rejects(call('actOnBooking','stranger',{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'t1'}));
   await db.doc('payment_configuration/shared').update({'methods.qicard.enabled':false});
   await assert.rejects(call('actOnBooking',uid,{bookingId:chosen.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'t1'}));
@@ -165,7 +189,7 @@ test('phase two pricing, independent review, cancellation during receipt review 
   assert.equal((await db.collection('booking_finance_audit').where('targetUid','==','p2owner').get()).size,1);
   await call('actOnBooking','p2owner',{bookingId:booking.id,action:'approve'});
   const path=`booking_receipts/${booking.id}/p2customer/222.jpg`;
-  await getStorage().bucket().file(path).save(Buffer.from('receipt'),{resumable:false,metadata:{contentType:'image/jpeg'}});
+  await getStorage().bucket().file(path).save(await receiptBytes(),{resumable:false,metadata:{contentType:'image/jpeg'}});
   await assert.rejects(call('actOnBooking','p2customer',{bookingId:booking.id,action:'submitPayment',receiptPath:path,method:'zaincash',transactionNumber:'z'}));
   await call('actOnBooking','p2customer',{bookingId:booking.id,action:'submitPayment',receiptPath:path,method:'qicard',expectedNumber:'7066135323',transactionNumber:'q'});
   assert.match((await db.doc(`bookings/${booking.id}`).get()).data().paymentAccount,/7066135323/);

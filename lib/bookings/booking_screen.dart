@@ -1016,7 +1016,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                             contentType: 'image/jpeg'));
                                   },
                                   read: () =>
-                                      receipt.getData(10 * 1024 * 1024));
+                                      receipt.getData(10 * 1024 * 1024),
+                                  discardInvalid: () async {
+                                    await bookingCall('discardInvalidBookingReceipt', {
+                                      'bookingId': widget.bookingId,
+                                      'path': path,
+                                    });
+                                  });
 
                               await bookingCall('actOnBooking', {
                                 'bookingId': widget.bookingId,

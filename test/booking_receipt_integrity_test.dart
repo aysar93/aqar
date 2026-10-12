@@ -44,4 +44,25 @@ void main() {
         throwsStateError);
     expect(read, isFalse);
   });
+  test('rejected readback requests cleanup before returning integrity error',
+      () async {
+    var discarded = false;
+    await expectLater(
+        BookingMediaService.uploadVerifiedReceipt(original,
+            upload: (_) async {},
+            read: () async => Uint8List.fromList([0xff, 0xd8]),
+            discardInvalid: () async {
+              discarded = true;
+            }),
+        throwsA(isA<BookingReceiptIntegrityException>()));
+    expect(discarded, isTrue);
+  });
+  test('failed cleanup never permits payment submission', () async {
+    await expectLater(
+        BookingMediaService.uploadVerifiedReceipt(original,
+            upload: (_) async {},
+            read: () async => null,
+            discardInvalid: () async => throw StateError('offline')),
+        throwsA(isA<BookingReceiptIntegrityException>()));
+  });
 }

@@ -21,18 +21,27 @@ class BookingMediaService {
   // submit a receipt until the private stored bytes match the compressed input.
   static Future<void> uploadVerifiedReceipt(Uint8List bytes,
       {required Future<void> Function(Uint8List) upload,
-      required Future<Uint8List?> Function() read}) async {
+      required Future<Uint8List?> Function() read,
+      Future<void> Function()? discardInvalid}) async {
     if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
       throw StateError('حجم الإيصال غير صالح');
     }
     await upload(bytes);
     final stored = await read();
-    if (stored == null || stored.length != bytes.length) {
+    Future<Never> reject() async {
+      // Cleanup cannot turn a failed verification into a successful submission.
+      try {
+        await discardInvalid?.call();
+      } catch (_) {}
       throw BookingReceiptIntegrityException();
+    }
+
+    if (stored == null || stored.length != bytes.length) {
+      await reject();
     }
     for (var i = 0; i < bytes.length; i++) {
       if (stored[i] != bytes[i]) {
-        throw BookingReceiptIntegrityException();
+        await reject();
       }
     }
   }
