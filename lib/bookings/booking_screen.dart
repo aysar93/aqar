@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'booking_detail_access.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -708,13 +709,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      FirebaseFirestore.instance.doc('users/$uid').get().then((s) {
-        if (mounted) {
+      FirebaseFirestore.instance
+          .doc('users/$uid')
+          .get(const GetOptions(source: Source.server))
+          .then((s) {
+        if (mounted && FirebaseAuth.instance.currentUser?.uid == uid) {
           setState(() {
             admin = s.data()?['isAdmin'] == true;
             finance = s.data()?['canReviewBookingPayments'] == true;
           });
         }
+      }).catchError((_) {
+        // Keep privileged access disabled when server verification fails.
       });
     }
   }
@@ -761,7 +767,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             final uid = FirebaseAuth.instance.currentUser?.uid,
                 owner = uid == b['ownerId'],
                 customer = uid == b['customerId'];
-            final held = b['status'] == 'held' &&
+              if (!bookingCanDisplayDetails(
+                  uid: uid, booking: b, admin: admin, finance: finance)) {
+                return const Center(child: Text('لا تملك صلاحية عرض هذا الحجز'));
+              }
+              final held = b['status'] == 'held' &&
                 (b['holdUntil'] as num) > DateTime.now().millisecondsSinceEpoch;
             Widget button(String label, String action) => FilledButton(
                 onPressed: busy ? null : () => act(action), child: Text(label));
