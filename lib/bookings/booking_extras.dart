@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -72,8 +73,12 @@ class _ScannerState extends State<BookingScannerScreen> {
       }
     } catch (e) {
       if (mounted)
-        setState(() => error =
-            'تعذر اعتماد الرمز. تحقق من الموعد وصلاحية الرمز واتصال الإنترنت.');
+        setState(() => error = e is FirebaseFunctionsException &&
+                e.code == 'failed-precondition' &&
+                e.details is Map &&
+                e.details['reason'] == 'already-checked-in'
+            ? 'تم تسجيل الوصول مسبقًا، ولا يمكن استخدام هذا الرمز مرة أخرى'
+            : 'تعذر اعتماد الرمز. تحقق من الموعد وصلاحية الرمز واتصال الإنترنت.');
     }
   }
 

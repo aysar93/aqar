@@ -882,7 +882,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       MaterialPageRoute(
                           builder: (_) => BookingSupportScreen(
                               bookingId: widget.bookingId)))),
-              if (owner && b['status'] == 'confirmed')
+              if (owner && ['confirmed', 'arrived'].contains(b['status']))
                 TextButton.icon(
                     icon: const Icon(Icons.qr_code_scanner),
                     label: const Text('مسح رمز الوصول بالكاميرا'),

@@ -266,3 +266,31 @@ test('media removal revokes publication and deletes downloadable object with saf
   await call('removeBookingMedia','mowner',{venueId:v.id,path});
   await assert.rejects(call('reviewBookingMedia','madmin',{mediaId:`${v.id}_photo.jpg`,approved:true}));
 });
+
+test('QR retries preserve arrival and audit under concurrency and revoked authorization',async()=>{
+  const venueId='retryqr', bookingId='retryqr';
+  for(const uid of ['retryowner','retrystaff','retrycustomer','retryother']) await db.doc(`users/${uid}`).set({name:uid,isBlocked:false});
+  await db.doc(`booking_venues/${venueId}`).set({ownerId:'retryowner'});
+  const ref=db.doc(`bookings/${bookingId}`);
+  await ref.set({venueId,ownerId:'retryowner',customerId:'retrycustomer',status:'confirmed',version:1,start:Date.now()-1000,end:Date.now()+600000});
+  await db.doc(`booking_venue_staff/${venueId}_retrystaff`).set({ownerId:'retryowner',scopes:['checkin']});
+  const {code}=await call('issueBookingCheckInCode','retrycustomer',{bookingId});
+  const invalid=code.slice(0,-64)+'0'.repeat(64);
+  await assert.rejects(call('verifyBookingCheckInCode','retryowner',{bookingId,code:invalid}));
+  assert.equal((await ref.get()).data().status,'confirmed');
+  const attempts=await Promise.allSettled(['retryowner','retrystaff'].map(uid=>call('verifyBookingCheckInCode',uid,{bookingId,code})));
+  assert.equal(attempts.filter(x=>x.status==='fulfilled').length,1);
+  const already=e=>e.code==='failed-precondition' && e.details?.reason==='already-checked-in' && e.message==='تم تسجيل الوصول مسبقًا، ولا يمكن استخدام هذا الرمز مرة أخرى';
+  assert(already(attempts.find(x=>x.status==='rejected').reason));
+  const before=(await ref.get()).data();
+  for(const uid of ['retryowner','retrystaff']) await assert.rejects(call('verifyBookingCheckInCode',uid,{bookingId,code}),already);
+  await assert.rejects(call('verifyBookingCheckInCode','retryother',{bookingId,code}),e=>!already(e));
+  await db.doc(`booking_venue_staff/${venueId}_retrystaff`).update({scopes:[]});
+  await assert.rejects(call('verifyBookingCheckInCode','retrystaff',{bookingId,code}),e=>!already(e));
+  await db.doc('users/retryowner').update({isBlocked:true});
+  await assert.rejects(call('verifyBookingCheckInCode','retryowner',{bookingId,code}),e=>!already(e));
+  assert.deepEqual((await ref.get()).data(),before);
+  assert.equal((await db.doc(`booking_checkin_codes/${bookingId}`).get()).exists,false);
+  const audit=await db.collection('booking_action_audit').where('bookingId','==',bookingId).get();
+  assert.equal(audit.docs.filter(x=>x.data().action==='qrCheckIn').length,1);
+});

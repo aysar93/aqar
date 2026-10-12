@@ -453,7 +453,7 @@ class _BookingStaffScreenState extends State<BookingStaffScreen> {
                           child: const Text('رفض الطلب'))
                     ]),
                   if (widget.scopes.contains('checkin') &&
-                      b['status'] == 'confirmed')
+                      ['confirmed', 'arrived'].contains(b['status']))
                     TextButton.icon(
                         icon: const Icon(Icons.qr_code_scanner),
                         label: const Text('مسح رمز الوصول'),

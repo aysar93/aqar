@@ -248,7 +248,9 @@ exports.verifyBookingCheckInCode = onCall(async r=>{
     const owner=(await tx.get(db.doc(`users/${b.ownerId}`))).data();
     const staff=(await tx.get(db.doc(`booking_venue_staff/${b.venueId}_${u.uid}`))).data();
     const allowed=b.ownerId===u.uid || (venue?.ownerId===b.ownerId && staff?.ownerId===b.ownerId && staff.scopes?.includes('checkin'));
-    if(!owner || owner.isBlocked || !allowed || b.status!=='confirmed' || !code || code.version!==b.version || code.expiresAt<=Date.now() || code.hash!==createHash('sha256').update(parts[2]).digest('hex') || Date.now()<b.start || Date.now()>=b.end) fail('الرمز منتهي أو غير مخول');
+    if(!owner || owner.isBlocked || !allowed) fail('الرمز منتهي أو غير مخول');
+    if(b.status==='arrived') throw new HttpsError('failed-precondition','تم تسجيل الوصول مسبقًا، ولا يمكن استخدام هذا الرمز مرة أخرى',{reason:'already-checked-in'});
+    if(b.status!=='confirmed' || !code || code.version!==b.version || code.expiresAt<=Date.now() || code.hash!==createHash('sha256').update(parts[2]).digest('hex') || Date.now()<b.start || Date.now()>=b.end) fail('الرمز منتهي أو غير مخول');
     tx.update(ref,{status:'arrived',arrivedAt:Date.now(),version:nextVersion(b),updatedAt:FieldValue.serverTimestamp()});
     tx.delete(codeRef);
     tx.create(db.collection('booking_action_audit').doc(),{bookingId:ref.id,actorUid:u.uid,action:'qrCheckIn',version:nextVersion(b),before:{status:'confirmed'},after:{status:'arrived'},createdAt:FieldValue.serverTimestamp()});
