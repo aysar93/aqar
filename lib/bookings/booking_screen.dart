@@ -21,6 +21,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_detail_access.dart';
+import 'booking_finance_query.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -176,8 +177,7 @@ class _BookingScreenState extends State<BookingScreen> {
     } else {
       query = FirebaseFirestore.instance.collection('bookings');
       if (tab == 4) {
-        query = query.where('status',
-            whereIn: ['payment_review', 'cancel_requested', 'cancelled']);
+        query = bookingFinanceQueue(query);
       } else if (!widget.admin) {
         query =
             query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid);
