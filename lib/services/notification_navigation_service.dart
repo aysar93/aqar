@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'notification_route_coordinator.dart';
+import 'push_migration.dart';
 
 import '../chat/chat_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -79,6 +80,10 @@ class NotificationNavigationService {
     Map<String, dynamic> data,
   ) async {
     final normalized = _normalizePayload(data);
+    if (PushMigration.enabled &&
+        normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
+      return;
+    }
     final notificationKey = _notificationKey(normalized);
     final now = DateTime.now();
     if (_lastHandledKey == notificationKey &&
@@ -90,7 +95,31 @@ class NotificationNavigationService {
     _lastHandledAt = now;
     // External taps open the existing notifications inbox. Its items retain
     // their normal property/office/chat destinations.
-    await routes.open(_openNotifications);
+    await routes.open((context) async {
+      if (PushMigration.enabled) {
+        if (normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
+          return;
+        }
+        await _navigate(context: context, data: normalized);
+        if (normalized['type'] == 'general' ||
+            ![
+              'property',
+              'property_approved',
+              'property_rejected',
+              'comment',
+              'reply',
+              'office',
+              'office_notification',
+              'office_approved',
+              'chat',
+              'chat_message'
+            ].contains(normalized['type'])) {
+          if (context.mounted) await _openNotifications(context);
+        }
+      } else {
+        await _openNotifications(context);
+      }
+    });
   }
 
   static Future<void> _navigate({

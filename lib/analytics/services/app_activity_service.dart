@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import 'presence_service.dart';
 import 'visit_tracking_service.dart';
+import '../../services/push_device_service.dart';
 
 /// One observer and one auth subscription; transitions are always serialized.
 class AppActivityService with WidgetsBindingObserver {
@@ -169,6 +170,7 @@ class AppActivityService with WidgetsBindingObserver {
     try {
       await _enqueue(_stopCurrent);
       presence.invalidateDashboardAuthorization();
+      await PushDeviceService.detach();
       await _auth.signOut();
     } finally {
       _signingOut = false;

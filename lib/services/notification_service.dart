@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'push_migration.dart';
 
 class NotificationService {
   NotificationService._();
@@ -43,6 +44,7 @@ class NotificationService {
       if (officeId.isNotEmpty) 'officeId': officeId,
       if (chatId.isNotEmpty) 'chatId': chatId,
       if (extraData != null) ...extraData,
+      ...PushMigration.fields,
     };
 
     // =======================================================
@@ -266,6 +268,8 @@ class NotificationService {
       'userId': userId,
       'chatId': chatId,
       'unreadCount': unreadCount,
+      'deliveryType': 'external',
+      ...PushMigration.fields,
       if (messageId.isNotEmpty) 'messageId': messageId,
       'readBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
@@ -344,6 +348,9 @@ class NotificationService {
     Map<String, dynamic>? extraData,
   }) async {
     try {
+      // The committed Firestore document owns delivery in migration builds.
+      // Never invoke both providers for the same event.
+      if (PushMigration.enabled || deliveryType == 'internal') return;
       final data = <String, dynamic>{
         'type': type,
         'deliveryType': deliveryType,

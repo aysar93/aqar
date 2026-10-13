@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'notification_navigation_service.dart';
 import 'push_token_sync.dart';
+import 'push_migration.dart';
+import 'push_device_service.dart';
 
 class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -36,7 +39,33 @@ class FCMService {
     // وصول إشعار FCM والتطبيق مفتوح
     // =========================================================
 
-    FirebaseMessaging.onMessage.listen((message) {
+    FirebaseMessaging.onMessage.listen((message) async {
+      if (PushMigration.enabled &&
+          !kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.android) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null || message.data['userId'] != user.uid) return;
+        final profile = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (profile.data()?['notificationsEnabled'] == false ||
+            FirebaseAuth.instance.currentUser?.uid != user.uid) {
+          return;
+        }
+        final context =
+            NotificationNavigationService.navigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text(
+                '${message.notification?.title ?? ''}\n${message.notification?.body ?? ''}'),
+            action: SnackBarAction(
+                label: 'عرض',
+                onPressed: () => _handleNotificationClick(
+                    Map<String, dynamic>.from(message.data))),
+          ));
+        }
+      }
       debugPrint("========== Firebase ==========");
       debugPrint(message.notification?.title);
       debugPrint(message.notification?.body);
@@ -61,53 +90,55 @@ class FCMService {
     // OneSignal
     // =========================================================
 
-    OneSignal.initialize(
-      "810a4d8d-cfac-492a-956e-0cff98248d25",
-    );
+    if (!PushMigration.enabled) {
+      OneSignal.initialize(
+        "810a4d8d-cfac-492a-956e-0cff98248d25",
+      );
 
-    // عند كون التطبيق مفتوحاً، OneSignal قد يعترض الإشعار
-    // ولا يعرضه في شريط إشعارات الهاتف افتراضياً.
-    // نطلب منه عرضه صراحةً.
-    OneSignal.Notifications.addForegroundWillDisplayListener(
-      (event) {
-        debugPrint("========== ONESIGNAL FOREGROUND ==========");
-        debugPrint(
-          "Notification ID: ${event.notification.notificationId}",
-        );
-        event.notification.display();
-      },
-    );
+      // عند كون التطبيق مفتوحاً، OneSignal قد يعترض الإشعار
+      // ولا يعرضه في شريط إشعارات الهاتف افتراضياً.
+      // نطلب منه عرضه صراحةً.
+      OneSignal.Notifications.addForegroundWillDisplayListener(
+        (event) {
+          debugPrint("========== ONESIGNAL FOREGROUND ==========");
+          debugPrint(
+            "Notification ID: ${event.notification.notificationId}",
+          );
+          event.notification.display();
+        },
+      );
 
-    // مهم:
-    // لا نطلب Permission هنا.
-    // سيتم طلبه لاحقاً بعد تسجيل الدخول.
+      // مهم:
+      // لا نطلب Permission هنا.
+      // سيتم طلبه لاحقاً بعد تسجيل الدخول.
 
-    // =========================================================
-    // الضغط على إشعار OneSignal
-    // =========================================================
+      // =========================================================
+      // الضغط على إشعار OneSignal
+      // =========================================================
 
-    OneSignal.Notifications.addClickListener(
-      (event) async {
-        debugPrint("========== ONESIGNAL CLICK ==========");
+      OneSignal.Notifications.addClickListener(
+        (event) async {
+          debugPrint("========== ONESIGNAL CLICK ==========");
 
-        final additionalData = event.notification.additionalData;
+          final additionalData = event.notification.additionalData;
 
-        debugPrint("Data: $additionalData");
+          debugPrint("Data: $additionalData");
 
-        await _handleNotificationClick(
-          Map<String, dynamic>.from(additionalData ?? <String, dynamic>{}),
-        );
-      },
-    );
+          await _handleNotificationClick(
+            Map<String, dynamic>.from(additionalData ?? <String, dynamic>{}),
+          );
+        },
+      );
 
-    // =========================================================
-    // OneSignal Subscription
-    // =========================================================
+      // =========================================================
+      // OneSignal Subscription
+      // =========================================================
 
-    OneSignal.User.pushSubscription.addObserver((state) async {
-      final id = state.current.id;
-      if (id != null) await _saveRefreshedToken('oneSignalId', id);
-    });
+      OneSignal.User.pushSubscription.addObserver((state) async {
+        final id = state.current.id;
+        if (id != null) await _saveRefreshedToken('oneSignalId', id);
+      });
+    }
 
     await saveTokens();
 
@@ -168,12 +199,14 @@ class FCMService {
       debugPrint('FCM permission check failed: $error');
     }
 
-    try {
-      final oneSignalAllowed =
-          await OneSignal.Notifications.requestPermission(true);
-      allowed = allowed || oneSignalAllowed;
-    } catch (error) {
-      debugPrint('OneSignal permission check failed: $error');
+    if (!PushMigration.enabled) {
+      try {
+        final oneSignalAllowed =
+            await OneSignal.Notifications.requestPermission(true);
+        allowed = allowed || oneSignalAllowed;
+      } catch (error) {
+        debugPrint('OneSignal permission check failed: $error');
+      }
     }
 
     if (allowed) await saveTokens();
@@ -315,6 +348,9 @@ class FCMService {
         {field: token},
         SetOptions(merge: true),
       );
+      if (field == 'fcmToken') {
+        await PushDeviceService.register(token, user.uid);
+      }
     } catch (error) {
       debugPrint('Refreshed push token save failed for $field: $error');
     }
@@ -323,16 +359,21 @@ class FCMService {
   static Future<void> saveTokens() async {
     await synchronizePushTokens(
       currentUserId: () => FirebaseAuth.instance.currentUser?.uid,
-      readOneSignalId: () async => OneSignal.User.pushSubscription.id,
+      readOneSignalId: () async =>
+          PushMigration.enabled ? null : OneSignal.User.pushSubscription.id,
       readFcmToken: () => readFcmTokenWhenReady(
         requiresApns: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS,
         readApnsToken: _messaging.getAPNSToken,
         readFcmToken: _messaging.getToken,
       ),
-      write: (userId, fields) => FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .set(fields, SetOptions(merge: true)),
+      write: (userId, fields) async {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .set(fields, SetOptions(merge: true));
+        final token = fields['fcmToken'];
+        if (token != null) await PushDeviceService.register(token, userId);
+      },
       onError: (provider, error) =>
           debugPrint('Push token sync failed for $provider: $error'),
     );

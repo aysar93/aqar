@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/notification_service.dart';
+import '../../services/push_migration.dart';
 import '../../subscription/models/subscription_package_model.dart';
 import '../models/office_subscription_model.dart';
 
@@ -152,6 +153,7 @@ class OfficeSubscriptionGiftService {
       });
       transaction.set(notificationRef, {
         'notificationId': notificationRef.id,
+        ...PushMigration.fields,
         'title': title,
         'message': message,
         'type': 'office_notification',

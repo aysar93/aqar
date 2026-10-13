@@ -16,6 +16,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:photo_view/photo_view.dart';
 import '../models/property_model.dart';
 import '../services/favorites_service.dart';
+import '../services/push_migration.dart';
 import '../core/data/document_read_cache.dart';
 
 import '../features/property_map/models/property_location.dart';
@@ -1255,7 +1256,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
     final userData = userDoc.data() ?? {};
 
-    await FirebaseFirestore.instance
+    final commentRef = await FirebaseFirestore.instance
         .collection("properties")
         .doc(widget.docId)
         .collection("comments")
@@ -1274,6 +1275,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
     if (widget.publisherUid.isNotEmpty && widget.publisherUid != user.uid) {
       await FirebaseFirestore.instance.collection("notifications").add({
+        ...PushMigration.fields,
+        'commentId': commentRef.id,
         "userId": widget.publisherUid,
         "title": "تعليق جديد على عقارك",
         "message": "${userData["name"] ?? "مستخدم"} أضاف تعليقاً على عقارك",
@@ -1344,7 +1347,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
     final commentData = commentSnapshot.data();
 
-    await FirebaseFirestore.instance
+    final replyRef = await FirebaseFirestore.instance
         .collection("properties")
         .doc(widget.docId)
         .collection("comments")
@@ -1362,6 +1365,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
     if (commentData != null && commentData["userId"] != user.uid) {
       await FirebaseFirestore.instance.collection("notifications").add({
+        ...PushMigration.fields,
+        'commentId': commentId,
+        'replyId': replyRef.id,
         "userId": commentData["userId"],
         "title": "تم الرد على تعليقك",
         "message": "${userData["name"] ?? "مستخدم"} رد على تعليقك",

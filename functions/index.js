@@ -11,6 +11,7 @@ initializeApp();
 const db = getFirestore();
 Object.assign(exports, require('./chat_functions'));
 Object.assign(exports, require('./analytics_presence_access'));
+Object.assign(exports, require('./push_functions'));
 
 function normalizeIraqiPhone(input) {
   const localizedDigits = {
@@ -255,6 +256,7 @@ exports.sendNotificationToUser = onDocumentCreated(
   async (event) => {
 
     const data = event.data.data();
+    if (data.pushTransport === 'fcm_v1' || data.deliveryType === 'internal') return null;
 
     const userId = data.userId;
     const title = data.title;
