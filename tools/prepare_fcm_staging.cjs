@@ -18,6 +18,7 @@ fs.writeFileSync(path.join(out, 'functions', `.env.${project}`), 'FCM_MIGRATION_
 fs.copyFileSync(path.join(root, 'firestore.rules'), path.join(out, 'firestore.rules'));
 fs.copyFileSync(path.join(root, 'firestore.indexes.json'), path.join(out, 'firestore.indexes.json'));
 fs.writeFileSync(path.join(out, 'firebase.json'), JSON.stringify({
+  auth: { providers: { anonymous: true } },
   functions: [{ source: 'functions', codebase: 'fcm-staging', runtime: 'nodejs22' }],
   firestore: { rules: 'firestore.rules', indexes: 'firestore.indexes.json' }
 }, null, 2));
