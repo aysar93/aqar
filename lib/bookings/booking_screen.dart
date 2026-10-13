@@ -1008,25 +1008,32 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                   maxWidth: 1600,
                                   imageQuality: 85);
                               if (image == null) return;
-                              final path =
-                                  'booking_receipts/${widget.bookingId}/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg';
                               final bytes =
                                   await FlutterImageCompress.compressWithList(
                                       await image.readAsBytes(),
                                       format: CompressFormat.jpeg,
                                       quality: 85);
+                              final path =
+                                  'booking_receipts/${widget.bookingId}/$uid/${BookingMediaService.receiptFileName(bytes)}';
                               final receipt =
                                   FirebaseStorage.instance.ref(path);
                               await BookingMediaService.uploadVerifiedReceipt(
                                   bytes,
+                                  reuseExisting: true,
                                   upload: (data) async {
                                     await receipt.putData(
                                         data,
                                         SettableMetadata(
                                             contentType: 'image/jpeg'));
                                   },
-                                  read: () =>
-                                      receipt.getData(10 * 1024 * 1024),
+                                  read: () async {
+                                    try {
+                                      return await receipt.getData(10 * 1024 * 1024);
+                                    } on FirebaseException catch (e) {
+                                      if (e.code == 'object-not-found') return null;
+                                      rethrow;
+                                    }
+                                  },
                                   discardInvalid: () async {
                                     await bookingCall('discardInvalidBookingReceipt', {
                                       'bookingId': widget.bookingId,

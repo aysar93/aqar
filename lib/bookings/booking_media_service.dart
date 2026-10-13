@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 
 typedef BookingMediaCall = Future<Map<String, dynamic>> Function(
     String name, Map<String, dynamic> data);
@@ -17,17 +18,24 @@ class BookingReceiptIntegrityException implements Exception {
 class BookingMediaService {
   static String? emulatorHost;
 
+  // Content-addressed within the booking/customer namespace. A process restart
+  // and re-selection of identical compressed bytes must reuse the same object.
+  static String receiptFileName(Uint8List bytes) =>
+      '${BigInt.parse(sha256.convert(bytes).toString(), radix: 16)}.jpg';
+
   // A resumed native upload can report success for a truncated object. Do not
   // submit a receipt until the private stored bytes match the compressed input.
   static Future<void> uploadVerifiedReceipt(Uint8List bytes,
       {required Future<void> Function(Uint8List) upload,
       required Future<Uint8List?> Function() read,
-      Future<void> Function()? discardInvalid}) async {
+      Future<void> Function()? discardInvalid,
+      bool reuseExisting = false}) async {
     if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
       throw StateError('حجم الإيصال غير صالح');
     }
-    await upload(bytes);
-    final stored = await read();
+    final existing = reuseExisting ? await read() : null;
+    if (existing == null) await upload(bytes);
+    final stored = existing ?? await read();
     Future<Never> reject() async {
       // Cleanup cannot turn a failed verification into a successful submission.
       try {
