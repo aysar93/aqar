@@ -43,6 +43,9 @@ android {
 
     defaultConfig {
         applicationId = if (fcmStaging) "com.andalus.aqar.staging" else "com.andalus.aqar"
+        manifestPlaceholders["aqarAppLabel"] = if (fcmStaging) "Aqar FCM staging" else "عقارات الانبار"
+        manifestPlaceholders["facebookProviderAuthority"] = if (fcmStaging) "com.andalus.aqar.staging.facebook.provider" else "com.facebook.app.FacebookContentProvider1745018726927685"
+        manifestPlaceholders["facebookAutoInit"] = (!fcmStaging).toString()
 
         minSdk = flutter.minSdkVersion
         targetSdk = 36
