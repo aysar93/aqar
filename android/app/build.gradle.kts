@@ -8,8 +8,19 @@ plugins {
 
 import java.util.Properties
 
+val fcmStaging = System.getenv("FCM_STAGING_BUILD") == "true"
 val keystoreProperties = Properties().apply {
-    load(rootProject.file("key.properties").inputStream())
+    val keyFile = rootProject.file("key.properties")
+    if (!fcmStaging && keyFile.exists()) load(keyFile.inputStream())
+}
+if (fcmStaging) {
+    val config = file("google-services.json").readText()
+    require(!config.contains("aqar-9f3f9") && config.contains("aqar-fcm-test-") && config.contains("com.andalus.aqar.staging")) {
+        "Install isolated staging google-services.json before building"
+    }
+}
+require(fcmStaging || keystoreProperties.containsKey("storeFile")) {
+    "Production signing configuration is required outside the isolated staging build"
 }
 
 android {
@@ -31,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.andalus.aqar"
+        applicationId = if (fcmStaging) "com.andalus.aqar.staging" else "com.andalus.aqar"
 
         minSdk = flutter.minSdkVersion
         targetSdk = 36
@@ -44,7 +55,7 @@ android {
 
 
     signingConfigs {
-    create("release") {
+    if (keystoreProperties.containsKey("storeFile")) create("release") {
         storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
         storePassword = keystoreProperties["storePassword"] as String
         keyAlias = keystoreProperties["keyAlias"] as String
@@ -54,7 +65,7 @@ android {
 
     buildTypes {
     release {
-        signingConfig = signingConfigs.getByName("release")
+        signingConfig = if (fcmStaging) signingConfigs.getByName("debug") else signingConfigs.getByName("release")
 
         isMinifyEnabled = true
         isShrinkResources = true

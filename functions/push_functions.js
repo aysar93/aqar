@@ -74,7 +74,10 @@ exports.deliverFcmNotification = onDocumentWritten({ document: 'notifications/{n
     });
     if (!claimed) continue;
     try {
-      const messageId = await getMessaging().send(messageFor(push, claimed.token));
+      // FCM has no emulator. Never make a network send from the Functions emulator.
+      const messageId = process.env.FUNCTIONS_EMULATOR === 'true'
+        ? `emulator-mock:${push.key}`
+        : await getMessaging().send(messageFor(push, claimed.token));
       await stateRef.update({ status: 'accepted', messageId, updatedAt: FieldValue.serverTimestamp() });
     } catch (error) {
       // Record uncertainty; no blind retries and no deletion of token records.
