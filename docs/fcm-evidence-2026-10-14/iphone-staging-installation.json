@@ -1,0 +1,14 @@
+{
+  "installed": true,
+  "bundleId": "com.andalus.aqar.staging",
+  "displayName": "Aqar FCM staging",
+  "version": "1.0.5",
+  "build": "20",
+  "deviceModel": "iPhone 12 Pro Max",
+  "iosVersion": "26.6.2",
+  "registeredDeviceMatched": true,
+  "ipaSha256": "cbec067fa39e8a221dca7e1f8653d19f5509d1b1da819d28f526c75572a7b748",
+  "launchVerified": false,
+  "notificationReceptionVerified": false,
+  "productionAppModified": false
+}

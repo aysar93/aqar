@@ -1,0 +1,15 @@
+{
+  "team": "H96JUT8PUM",
+  "bundle": "com.andalus.aqar.staging",
+  "deviceCount": 1,
+  "profileName": "Aqar FCM Staging AdHoc 20261014",
+  "uuid": "40e592b5-83a7-49fd-97b1-f87de3c04c77",
+  "expiresUtc": "2027-10-14T15:48:18+00:00",
+  "apnsEnvironment": "production",
+  "profileId": "LYPN3NFP6U",
+  "certificateId": "T8RL9ANSX6",
+  "approvedIphoneMatched": true,
+  "certificateMatched": true,
+  "deviceModelFromAppleReview": "iPhone 12 Pro Max",
+  "deviceIdentifierPublished": false
+}

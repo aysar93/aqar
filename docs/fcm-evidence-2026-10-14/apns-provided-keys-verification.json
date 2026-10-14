@@ -1,0 +1,30 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "team": "H96JUT8PUM",
+  "providedFiles": [
+    {
+      "fileName": "AuthKey_D336L54R3T.p8",
+      "privateKeyFormatValid": true,
+      "activeApnsKeyFoundInTeam": false,
+      "uploaded": false,
+      "reason": "Not present among active APNs keys; no assumption about other Apple services"
+    },
+    {
+      "fileName": "AuthKey_L74V23VW58.p8",
+      "privateKeyFormatValid": true,
+      "activeApnsKeyFoundInTeam": true,
+      "appleKeyName": "Aqar Anbar APNs",
+      "scope": "Team Scoped (All topics)",
+      "environments": [
+        "Sandbox",
+        "Production"
+      ],
+      "uploadAuthorizedByUser": true,
+      "uploaded": false
+    }
+  ],
+  "productionFirebaseModified": false,
+  "keysUploadedToGithub": false,
+  "cryptographicApnsAuthenticationProven": false,
+  "checkedAt": "2026-10-14T16:30:09.341Z"
+}
