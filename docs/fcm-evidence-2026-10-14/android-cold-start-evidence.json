@@ -1,0 +1,13 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "device": "OPPO CPH2365 / Android 13",
+  "app": "com.andalus.aqar.staging",
+  "notificationId": "fullapp-1791971121055-general-1791975133665",
+  "pidBefore": 12402,
+  "pidAfterLaunch": "14252",
+  "processAbsentBeforeSend": true,
+  "initialMessageCallbackVerified": true,
+  "inboxDestinationVerified": true,
+  "debugBuild": true,
+  "forceStopUsed": false
+}

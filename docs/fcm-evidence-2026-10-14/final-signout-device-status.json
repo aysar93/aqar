@@ -1,0 +1,36 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "accounts": [
+    {
+      "uid": "jvlBZFLUsrVVzmdTTOGjXqPOdHF2",
+      "notificationsEnabled": true,
+      "publicRawTokenPresent": false,
+      "devices": [
+        {
+          "active": false,
+          "platform": "android",
+          "path": "push_tokens/d29618d27d545644a6a89847f1ed0c919fd49f42c96f7d7bd55c92f0c849aa79"
+        }
+      ]
+    },
+    {
+      "uid": "TdXqmrx4r6a01dYa6JTMCfb1aq83",
+      "notificationsEnabled": true,
+      "publicRawTokenPresent": false,
+      "devices": [
+        {
+          "active": false,
+          "platform": "android",
+          "path": "push_tokens/cc35f4d418093f6b1dd9cb3ed67ee12c038eb51ec0bfdd61ba4cb06602bdd2e6"
+        }
+      ]
+    },
+    {
+      "uid": "KyLbdKobXrXYkw2xE087Xu7tLxe2",
+      "notificationsEnabled": true,
+      "publicRawTokenPresent": false,
+      "devices": []
+    }
+  ],
+  "observedAt": "2026-10-14T11:52:36.387Z"
+}

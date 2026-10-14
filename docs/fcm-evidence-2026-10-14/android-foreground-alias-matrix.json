@@ -1,0 +1,54 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "device": "OPPO CPH2365",
+  "results": [
+    {
+      "type": "property",
+      "notificationId": "fullapp-1791971121055-property-1791978227205",
+      "fcmAccepted": true,
+      "foregroundTap": true,
+      "destinationVerified": true,
+      "screenshot": "android-foreground-property-destination.png"
+    },
+    {
+      "type": "property_rejected",
+      "notificationId": "fullapp-1791971121055-property_rejected-1791978243059",
+      "fcmAccepted": true,
+      "foregroundTap": true,
+      "destinationVerified": true,
+      "screenshot": "android-foreground-property-rejected-destination.png"
+    },
+    {
+      "type": "chat",
+      "notificationId": "fullapp-1791971121055-chat-1791978278275",
+      "fcmAccepted": true,
+      "foregroundTap": true,
+      "destinationVerified": true,
+      "screenshot": "android-foreground-chat-destination.png"
+    },
+    {
+      "type": "office",
+      "notificationId": "fullapp-1791971121055-office-1791978329263",
+      "fcmAccepted": true,
+      "foregroundTap": true,
+      "destinationVerified": true,
+      "screenshot": "android-foreground-office-destination.png"
+    },
+    {
+      "type": "office_approved",
+      "notificationId": "fullapp-1791971121055-office_approved-1791978346120",
+      "fcmAccepted": true,
+      "foregroundTap": true,
+      "destinationVerified": true,
+      "screenshot": "android-foreground-office-approved-destination.png"
+    },
+    {
+      "type": "chat",
+      "notificationId": "fullapp-1791971121055-chat-1791978362801",
+      "fcmAccepted": true,
+      "foregroundTap": true,
+      "destinationVerified": true,
+      "screenshot": "android-foreground-chat-destination.png"
+    }
+  ]
+}
