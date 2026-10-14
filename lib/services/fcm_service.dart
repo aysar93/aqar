@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'notification_navigation_service.dart';
 import 'push_token_sync.dart';
 import 'push_migration.dart';
@@ -146,6 +147,7 @@ class FCMService {
     // The route coordinator waits for the real shell/login to become ready.
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
+      debugPrint('FCM initial message: ${initialMessage.messageId}');
       await _handleNotificationClick(
           Map<String, dynamic>.from(initialMessage.data));
     }
@@ -369,5 +371,26 @@ class FCMService {
       onError: (provider, error) =>
           debugPrint('Push token sync failed for $provider: $error'),
     );
+  }
+
+  /// Rotate the token and clear notifications belonging to the previous account.
+  /// Detach the server installation before calling this while signing out.
+  static Future<void> clearAccountNotifications() async {
+    if (!PushMigration.enabled) return;
+    try {
+      await _messaging.deleteToken();
+    } catch (error) {
+      debugPrint('FCM token reset failed: $error');
+    }
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      try {
+        await const MethodChannel('aqar/push_privacy')
+            .invokeMethod<void>('clearDeliveredNotifications');
+      } catch (error) {
+        debugPrint('Delivered notification cleanup failed: $error');
+      }
+    }
   }
 }

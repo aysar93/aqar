@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -12,5 +13,19 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let channel = FlutterMethodChannel(
+      name: "aqar/push_privacy",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "clearDeliveredNotifications" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let center = UNUserNotificationCenter.current()
+      center.removeAllDeliveredNotifications()
+      center.removeAllPendingNotificationRequests()
+      result(nil)
+    }
   }
 }
