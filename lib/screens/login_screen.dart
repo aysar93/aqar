@@ -15,6 +15,7 @@ import '../services/apple_auth_service.dart';
 import '../services/facebook_auth_service.dart';
 import '../services/google_auth_service.dart';
 import '../services/password_auth_service.dart';
+import '../services/push_migration.dart';
 import '../services/user_service.dart';
 import 'main_shell.dart';
 import 'register_screen.dart';
@@ -114,6 +115,10 @@ class _LoginScreenState extends State<LoginScreen> {
     Future<UserCredential?> Function() signIn,
     String provider,
   ) async {
+    if (PushMigration.enabled) {
+      setState(() => _error = 'استخدم حساب الاختبار بالبريد وكلمة المرور.');
+      return;
+    }
     if (_loading) return;
     setState(() {
       _loading = true;

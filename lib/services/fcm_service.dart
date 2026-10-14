@@ -274,6 +274,7 @@ class FCMService {
   static Future<void> _handleNotificationClick(
     Map<String, dynamic> data,
   ) async {
+    clearForegroundNotifications();
     // بعض الخوادم قد ترسل بيانات الوجهة داخل data
     // وبعضها قد يرسلها مباشرة.
     final nestedData = data["data"];
@@ -377,6 +378,7 @@ class FCMService {
   /// Detach the server installation before calling this while signing out.
   static Future<void> clearAccountNotifications() async {
     if (!PushMigration.enabled) return;
+    clearForegroundNotifications();
     try {
       await _messaging.deleteToken();
     } catch (error) {
@@ -392,5 +394,14 @@ class FCMService {
         debugPrint('Delivered notification cleanup failed: $error');
       }
     }
+  }
+
+  static void clearForegroundNotifications() {
+    if (!PushMigration.enabled) return;
+    final context = NotificationNavigationService.navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.clearSnackBars();
+    messenger?.removeCurrentSnackBar();
   }
 }

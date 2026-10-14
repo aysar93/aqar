@@ -174,6 +174,7 @@ class AppActivityService with WidgetsBindingObserver {
       await PushDeviceService.detach();
       await FCMService.clearAccountNotifications();
       await _auth.signOut();
+      FCMService.clearForegroundNotifications();
     } finally {
       _signingOut = false;
       await _enqueue(_reconcile);
