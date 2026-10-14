@@ -1,0 +1,18 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "bundle": "com.andalus.aqar.staging",
+  "device": "iPhone12ProMax",
+  "developerModeEnabled": true,
+  "appLaunchUserConfirmed": true,
+  "registrationActiveIOSVerified": true,
+  "foregroundNotificationUserConfirmed": true,
+  "firstTapOpenedProperty": false,
+  "firstTapExactControlUnknown": true,
+  "retryNotification": "fullapp-1792009809883-property_approved-1792010107068",
+  "retryTapResult": "User confirmed foreground banner action opened correct property",
+  "background": "not tested",
+  "appSwitcherClose": "not tested",
+  "productionModified": false,
+  "updatedAt": "2026-10-14T20:36:01.3397744Z",
+  "foregroundPropertyNavigationUserConfirmed": true
+}

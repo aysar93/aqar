@@ -29,6 +29,7 @@
   ],
   "productionFirebaseModified": false,
   "keysUploadedToGithub": false,
-  "cryptographicApnsAuthenticationProven": false,
-  "checkedAt": "2026-10-14T20:18:38.3737348Z"
+  "cryptographicApnsAuthenticationProven": true,
+  "checkedAt": "2026-10-14T20:37:25.3319446Z",
+  "authenticationEvidence": "FCM accepted staging iOS delivery and user confirmed foreground display and property navigation on registered physical iPhone"
 }

@@ -8,6 +8,12 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // UIScene creates the Flutter engine after this launch callback. Install
+    // the lifecycle forwarding delegate early so system notification taps reach
+    // the registered messaging plugin. Limit this migration to the test bundle.
+    if Bundle.main.bundleIdentifier == "com.andalus.aqar.staging" {
+      UNUserNotificationCenter.current().delegate = self
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
