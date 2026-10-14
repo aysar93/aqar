@@ -452,7 +452,9 @@ class NotificationNavigationService {
       }
 
       if (!context.mounted ||
-          FirebaseAuth.instance.currentUser?.uid != actorUid) return;
+          FirebaseAuth.instance.currentUser?.uid != actorUid) {
+        return;
+      }
 
       Navigator.of(context).push(
         MaterialPageRoute(
