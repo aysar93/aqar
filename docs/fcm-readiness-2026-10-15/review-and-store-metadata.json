@@ -1,0 +1,524 @@
+{
+  "checkedAt": "2026-10-14T22:24:52.802Z",
+  "project": "aqar-fcm-test-20261014",
+  "receiptCounts": {
+    "accepted": 75,
+    "attempting": 0,
+    "review_required": 0,
+    "invalid_token": 0
+  },
+  "receiptScope": "All historical test-project receipts; not exclusively this load test.",
+  "pr": {
+    "number": 3,
+    "url": "https://github.com/aysar93/aqar/pull/3",
+    "draft": true,
+    "base": "staging/fcm-isolated-2026-10-13",
+    "head": "staging/fcm-complete-2026-10-14",
+    "sha": "a75aef3ba7d5e708a05e9484867d3cef2dd2b1fc",
+    "changedFiles": 73,
+    "returnedFiles": 73,
+    "files": [
+      {
+        "name": ".github/workflows/fcm-android-staging.yml",
+        "status": "added",
+        "additions": 40,
+        "deletions": 0
+      },
+      {
+        "name": ".github/workflows/fcm-ios-adhoc.yml",
+        "status": "added",
+        "additions": 97,
+        "deletions": 0
+      },
+      {
+        "name": ".github/workflows/fcm-ios-staging.yml",
+        "status": "added",
+        "additions": 28,
+        "deletions": 0
+      },
+      {
+        "name": ".github/workflows/fcm-isolated.yml",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3
+      },
+      {
+        "name": ".github/workflows/safety-build.yml",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0
+      },
+      {
+        "name": "android/app/src/main/kotlin/com/andalus/aqar/MainActivity.kt",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0
+      },
+      {
+        "name": "config/fcm-android.staging.json",
+        "status": "added",
+        "additions": 8,
+        "deletions": 0
+      },
+      {
+        "name": "config/fcm-ios.staging.json",
+        "status": "added",
+        "additions": 8,
+        "deletions": 0
+      },
+      {
+        "name": "config/staging/GoogleService-Info.plist",
+        "status": "added",
+        "additions": 30,
+        "deletions": 0
+      },
+      {
+        "name": "config/staging/README.md",
+        "status": "added",
+        "additions": 6,
+        "deletions": 0
+      },
+      {
+        "name": "config/staging/google-services.json",
+        "status": "added",
+        "additions": 29,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-completion-2026-10-14-ar.md",
+        "status": "added",
+        "additions": 108,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/account-switch-device-status.json",
+        "status": "added",
+        "additions": 36,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/after-logout-device-status.json",
+        "status": "added",
+        "additions": 30,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/android-build-provenance.json",
+        "status": "added",
+        "additions": 11,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/android-cold-start-evidence.json",
+        "status": "added",
+        "additions": 13,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/android-foreground-alias-matrix.json",
+        "status": "added",
+        "additions": 54,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/android-process-termination.json",
+        "status": "added",
+        "additions": 11,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/apns-provided-keys-verification.json",
+        "status": "added",
+        "additions": 35,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/cloud-state.json",
+        "status": "added",
+        "additions": 34,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/dedup-active-device-status.json",
+        "status": "added",
+        "additions": 36,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/emulator-performance.json",
+        "status": "added",
+        "additions": 31,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/final-ios-cloud-state.json",
+        "status": "added",
+        "additions": 36,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/final-signout-device-status.json",
+        "status": "added",
+        "additions": 36,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-adhoc-profile-state.json",
+        "status": "added",
+        "additions": 15,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-ipa-verification.json",
+        "status": "added",
+        "additions": 23,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-notification-fix-ci.json",
+        "status": "added",
+        "additions": 80,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-signed-ci-progress.json",
+        "status": "added",
+        "additions": 16,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-signing-certificate-state.json",
+        "status": "added",
+        "additions": 10,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-signing-ci-runs.json",
+        "status": "added",
+        "additions": 54,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-signing-log-privacy-check.json",
+        "status": "added",
+        "additions": 9,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/ios-signing-secrets-state.json",
+        "status": "added",
+        "additions": 32,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-account-switch-evidence.json",
+        "status": "added",
+        "additions": 16,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-admin-chat-read-state.json",
+        "status": "added",
+        "additions": 9,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-after-final-logout.json",
+        "status": "added",
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-android-live-dedup.json",
+        "status": "added",
+        "additions": 12,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-connection-state.json",
+        "status": "added",
+        "additions": 10,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-fcm-registration-status.json",
+        "status": "added",
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-live-uat.json",
+        "status": "added",
+        "additions": 93,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-native-tap-observations.json",
+        "status": "added",
+        "additions": 11,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-staging-installation.json",
+        "status": "added",
+        "additions": 15,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/iphone-supported-types-accepted.json",
+        "status": "added",
+        "additions": 83,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/live-reply-dedup.json",
+        "status": "added",
+        "additions": 15,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/live-security-checks.json",
+        "status": "added",
+        "additions": 37,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/multi-device-registration.json",
+        "status": "added",
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/native-tray-after-logout.json",
+        "status": "added",
+        "additions": 5,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/native-tray-before-logout.json",
+        "status": "added",
+        "additions": 5,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/preferences-disabled-status.json",
+        "status": "added",
+        "additions": 30,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/preferences-enabled-status.json",
+        "status": "added",
+        "additions": 30,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/synthetic-cleanup.json",
+        "status": "added",
+        "additions": 18,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-evidence-2026-10-14/test-realtime-cleanup-state.json",
+        "status": "added",
+        "additions": 6,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-ios-signing-update-2026-10-14-ar.md",
+        "status": "added",
+        "additions": 57,
+        "deletions": 0
+      },
+      {
+        "name": "docs/fcm-iphone-live-report-2026-10-14-ar.md",
+        "status": "added",
+        "additions": 61,
+        "deletions": 0
+      },
+      {
+        "name": "functions/push_functions.integration.test.js",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0
+      },
+      {
+        "name": "functions/push_functions.js",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2
+      },
+      {
+        "name": "ios/Runner/AppDelegate.swift",
+        "status": "modified",
+        "additions": 68,
+        "deletions": 0
+      },
+      {
+        "name": "ios/Runner/SceneDelegate.swift",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 1
+      },
+      {
+        "name": "lib/analytics/services/app_activity_service.dart",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0
+      },
+      {
+        "name": "lib/analytics/services/presence_service.dart",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2
+      },
+      {
+        "name": "lib/chat/services/chat_audio_service.dart",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0
+      },
+      {
+        "name": "lib/main.dart",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 2
+      },
+      {
+        "name": "lib/main_fcm_app_staging.dart",
+        "status": "added",
+        "additions": 28,
+        "deletions": 0
+      },
+      {
+        "name": "lib/reels/services/reel_service.dart",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0
+      },
+      {
+        "name": "lib/screens/admin/settings_screen.dart",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "name": "lib/screens/login_screen.dart",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0
+      },
+      {
+        "name": "lib/services/cloudinary_service.dart",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0
+      },
+      {
+        "name": "lib/services/fcm_service.dart",
+        "status": "modified",
+        "additions": 85,
+        "deletions": 33
+      },
+      {
+        "name": "lib/services/notification_navigation_service.dart",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 4
+      },
+      {
+        "name": "lib/services/push_device_service.dart",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 1
+      },
+      {
+        "name": "test/notification_route_coordinator_test.dart",
+        "status": "added",
+        "additions": 76,
+        "deletions": 0
+      },
+      {
+        "name": "tools/prepare_ios_fcm_staging.py",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0
+      },
+      {
+        "name": "tools/test_validate_ios_fcm_signing.py",
+        "status": "added",
+        "additions": 48,
+        "deletions": 0
+      },
+      {
+        "name": "tools/validate_ios_fcm_signing.py",
+        "status": "added",
+        "additions": 43,
+        "deletions": 0
+      }
+    ],
+    "reviewStates": [],
+    "reviewCommentCount": 0,
+    "checks": [
+      {
+        "name": "signed-staging-adhoc",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643765218/job/116125464705"
+      },
+      {
+        "name": "push-migration",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643765218/job/116125463072"
+      },
+      {
+        "name": "ios",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643765218/job/116125463017"
+      },
+      {
+        "name": "firestore",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643765218/job/116125462437"
+      },
+      {
+        "name": "emulators",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643765114/job/116125462165"
+      },
+      {
+        "name": "flutter",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643765114/job/116125461917"
+      },
+      {
+        "name": "flutter",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643758542/job/116125439898"
+      },
+      {
+        "name": "emulators",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/aysar93/aqar/actions/runs/38643758542/job/116125439473"
+      }
+    ]
+  },
+  "apple": {
+    "source": "https://itunes.apple.com/lookup?id=6815804115&country=iq",
+    "resultCount": 1,
+    "apps": [
+      {
+        "bundleId": "com.andalus.aqar",
+        "version": "1.0.5",
+        "releasedAt": "2026-10-04T17:00:13Z"
+      }
+    ]
+  }
+}
