@@ -1,0 +1,8 @@
+{
+  "FCM_MIGRATION": true,
+  "STAGING_EMULATORS": false,
+  "STAGING_APP_ID": "1:371338154133:android:310ff431d875fdf26dcb9c",
+  "STAGING_API_KEY": "AIzaSyDvK4Lgv63Ho7CIdciqlf2ocLogVflvjh8",
+  "STAGING_PROJECT_ID": "aqar-fcm-test-20261014",
+  "STAGING_SENDER_ID": "371338154133"
+}
