@@ -1,6 +1,14 @@
 name: FCM iOS signed Ad Hoc (manual, no store upload)
 on:
   workflow_dispatch:
+  workflow_call:
+    secrets:
+      FCM_STAGING_P12_BASE64:
+        required: true
+      FCM_STAGING_P12_PASSWORD:
+        required: true
+      FCM_STAGING_ADHOC_PROFILE_BASE64:
+        required: true
 permissions:
   contents: read
 jobs:
