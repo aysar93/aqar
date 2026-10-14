@@ -14,6 +14,13 @@ class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   static bool _initialized = false;
+  static const _privacyChannel = MethodChannel('aqar/push_privacy');
+
+  static Future<void> _drainNativeNotificationTap() async {
+    final payload = await _privacyChannel
+        .invokeMapMethod<String, dynamic>('getPendingNotificationTap');
+    if (payload != null) await _handleNotificationClick(payload);
+  }
 
   // =========================================================
   // تهيئة نظام الإشعارات
@@ -23,6 +30,17 @@ class FCMService {
     if (_initialized) return;
 
     _initialized = true;
+
+    if (PushMigration.enabled &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      _privacyChannel.setMethodCallHandler((call) async {
+        if (call.method == 'notificationTapAvailable') {
+          await _drainNativeNotificationTap();
+        }
+      });
+      await _drainNativeNotificationTap();
+    }
 
     // =========================================================
     // Firebase Messaging
@@ -147,7 +165,13 @@ class FCMService {
 
     // Read the launch payload before any network-dependent token writes.
     // The route coordinator waits for the real shell/login to become ready.
-    final initialMessage = await _messaging.getInitialMessage();
+    final initialRequest = _messaging.getInitialMessage();
+    final initialMessage = PushMigration.enabled &&
+            !kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.iOS
+        ? await initialRequest.timeout(const Duration(seconds: 3),
+            onTimeout: () => null)
+        : await initialRequest;
     if (initialMessage != null) {
       debugPrint('FCM initial message: ${initialMessage.messageId}');
       await _handleNotificationClick(
