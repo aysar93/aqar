@@ -9,6 +9,12 @@ import UserNotifications
   private var lastStagingTapId: String?
 
   func receiveStagingNotificationTap(_ userInfo: [AnyHashable: Any]) {
+    if !Thread.isMainThread {
+      DispatchQueue.main.async { [weak self] in
+        self?.receiveStagingNotificationTap(userInfo)
+      }
+      return
+    }
     guard Bundle.main.bundleIdentifier == "com.andalus.aqar.staging",
           let messageId = userInfo["gcm.message_id"] as? String else { return }
     guard lastStagingTapId != messageId else { return }
