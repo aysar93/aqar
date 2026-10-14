@@ -59,6 +59,8 @@ class FCMService {
         final context =
             NotificationNavigationService.navigatorKey.currentContext;
         if (context != null && context.mounted) {
+          // Replace stale banners, including those held by accessibility mode.
+          clearForegroundNotifications();
           ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
             content: Text(
                 '${message.notification?.title ?? ''}\n${message.notification?.body ?? ''}'),
