@@ -14,12 +14,10 @@
   "approvedIphoneIncluded": true,
   "deviceCount": 1,
   "certificateId": "T8RL9ANSX6",
-  "sha256": "cbec067fa39e8a221dca7e1f8653d19f5509d1b1da819d28f526c75572a7b748",
+  "sha256": "c7290786dd4ccd8d0b716e3c7393accd292b2453b3432b3bebc73983b9c38fb9",
   "deviceInstallationVerified": true,
-  "fullSignatureEnforcement": "Xcode archive/export succeeded; actual iOS installation accepted the signed IPA on the approved physical device",
+  "fullSignatureEnforcement": "Xcode export and subsequent actual iOS installation; no claim of Windows codesign verification",
   "privateDeviceIdPublished": false,
-  "sourceCommit": "738165e4726683b520633f61777eada49993f7c1",
-  "ciRunId": 38596439511,
-  "launchVerified": false,
-  "notificationReceptionVerified": false
+  "sourceSha": "a2822d4aa2e7ca8ebabb7996b8fce63ab096ad70",
+  "ciRun": 38637856896
 }

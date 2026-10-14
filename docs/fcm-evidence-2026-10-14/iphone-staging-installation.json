@@ -7,8 +7,9 @@
   "deviceModel": "iPhone 12 Pro Max",
   "iosVersion": "26.6.2",
   "registeredDeviceMatched": true,
-  "ipaSha256": "cbec067fa39e8a221dca7e1f8653d19f5509d1b1da819d28f526c75572a7b748",
-  "launchVerified": false,
-  "notificationReceptionVerified": false,
-  "productionAppModified": false
+  "ipaSha256": "c7290786dd4ccd8d0b716e3c7393accd292b2453b3432b3bebc73983b9c38fb9",
+  "launchVerified": true,
+  "notificationReceptionVerified": true,
+  "productionAppModified": false,
+  "uiVerificationMethod": "User-confirmed physical iPhone launch/display/navigation; app log corroborates native chat tap. No automatic screen observation."
 }

@@ -1,12 +1,18 @@
 {
   "project": "aqar-fcm-test-20261014",
-  "checkedAt": "2026-10-14T11:54:44.542Z",
+  "checkedAt": "2026-10-14T21:48:54.838Z",
   "syntheticAccountsDeleted": 3,
-  "syntheticDocumentsDeleted": 55,
-  "syntheticDocumentsVerifiedAbsent": 55,
+  "syntheticDocumentsDeleted": 61,
+  "syntheticDocumentsVerifiedAbsent": 61,
   "settingsRestored": true,
   "authEmailConfigurationRestored": true,
   "deliveryReceiptsRetained": true,
   "emailVerification": "Protocol-buffer response omits enabled=false; normalized boolean equals saved state",
-  "syntheticAccountsVerifiedAbsent": true
+  "syntheticAccountsVerifiedAbsent": true,
+  "postLogoutAdditionalDocumentsDeleted": 0,
+  "ownedSubtreesAndSessionResiduesChecked": true,
+  "additionalDocumentsVerifiedAbsent": true,
+  "bothPhonesLoggedOutUserConfirmed": true,
+  "run": "fullapp-1792009809883",
+  "documentCountMeaning": "61 distinct tracked document paths received successful delete requests and were verified absent; includes probes already removed during testing."
 }

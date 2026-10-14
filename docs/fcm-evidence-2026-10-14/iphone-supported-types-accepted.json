@@ -1,0 +1,83 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "types": [
+    {
+      "type": "chat",
+      "notificationId": "fullapp-1792009809883-chat-1792013462780",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "chat_message",
+      "notificationId": "fullapp-1792009809883-chat_message-1792013116603",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "comment",
+      "notificationId": "fullapp-1792009809883-comment-1792013349657",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic non-admin; IAM-seeded source checked by security rules",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "general",
+      "notificationId": "fullapp-1792009809883-general-1792013467602",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "office",
+      "notificationId": "fullapp-1792009809883-office-1792013458493",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "office_approved",
+      "notificationId": "fullapp-1792009809883-office_approved-1792013363175",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "office_notification",
+      "notificationId": "fullapp-1792009809883-office_notification-1792013359118",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "property",
+      "notificationId": "fullapp-1792009809883-property-1792013450370",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "property_approved",
+      "notificationId": "fullapp-1792009809883-property_approved-1792013289368",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "property_rejected",
+      "notificationId": "fullapp-1792009809883-property_rejected-1792013454413",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+      "displayVerifiedByServerReceiptAlone": false
+    },
+    {
+      "type": "reply",
+      "notificationId": "fullapp-1792009809883-reply-1792013354326",
+      "acceptedDeviceCount": 2,
+      "writeMode": "Firebase Auth synthetic non-admin; IAM-seeded source checked by security rules",
+      "displayVerifiedByServerReceiptAlone": false
+    }
+  ],
+  "checkedAt": "2026-10-14T21:33:08.6326490Z"
+}

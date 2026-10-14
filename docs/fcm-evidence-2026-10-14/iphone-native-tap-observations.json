@@ -1,0 +1,11 @@
+{
+  "source": "a2822d4",
+  "filteredAppLogs": [
+    "Oct 15 00:26:06 iPhone Runner(Flutter)[791] <Notice>: flutter: Notification clicked: type=chat_message, propertyId=, officeId=, chatId=4Q768gqtHkUQeNcaZqzW9znyLl93",
+    "Oct 15 00:26:53 iPhone Runner(Flutter)[791] <Notice>: flutter: Navigation Data: {unreadCount: 1, type: chat_message, chatId: 4Q768gqtHkUQeNcaZqzW9znyLl93, messageId: fullapp-1792009809883-chat_message-1792013116603, notificationId: fullapp-1792009809883-chat_message-1792013116603, userId: 4Q768gqtHkUQeNcaZqzW9znyLl93}",
+    "Oct 15 00:26:53 iPhone Runner(Flutter)[791] <Notice>: flutter: Notification clicked: type=chat_message, propertyId=, officeId=, chatId=4Q768gqtHkUQeNcaZqzW9znyLl93"
+  ],
+  "unrelatedPhoneLogsSaved": false,
+  "privateDeviceIdIncluded": false,
+  "rawFcmTokenIncluded": false
+}
