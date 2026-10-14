@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,15 @@ import 'push_migration.dart';
 
 class PushDeviceService {
   static Future<void> _queue = Future.value();
+  static StreamSubscription<User?>? _authChanges;
+  static String? _detachingUser;
+
+  static void _observeAuth() {
+    _authChanges ??= FirebaseAuth.instance.authStateChanges().listen((user) {
+      // A fresh sign-in can register again after the old identity has left.
+      if (user?.uid != _detachingUser) _detachingUser = null;
+    });
+  }
 
   static Future<String> _installationId() async {
     final prefs = await SharedPreferences.getInstance();
@@ -22,9 +32,14 @@ class PushDeviceService {
 
   static Future<void> register(String token, String uid) {
     if (!PushMigration.enabled) return Future.value();
+    _observeAuth();
+    if (_detachingUser == uid) return Future.value();
     return _queue = _queue.catchError((Object _) {}).then((_) async {
       final installationId = await _installationId();
-      if (FirebaseAuth.instance.currentUser?.uid != uid) return;
+      if (_detachingUser == uid ||
+          FirebaseAuth.instance.currentUser?.uid != uid) {
+        return;
+      }
       await FirebaseFunctions.instance
           .httpsCallable('registerPushDevice')
           .call({
@@ -38,7 +53,13 @@ class PushDeviceService {
   /// Must complete while the previous account is still authenticated.
   static Future<void> detach() {
     if (!PushMigration.enabled) return Future.value();
+    _observeAuth();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Future.value();
+    // Block refresh callbacks immediately, before waiting for previous writes.
+    _detachingUser = uid;
     return _queue = _queue.catchError((Object _) {}).then((_) async {
+      if (FirebaseAuth.instance.currentUser?.uid != uid) return;
       await FirebaseFunctions.instance
           .httpsCallable('unregisterPushDevice')
           .call({
