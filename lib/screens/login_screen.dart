@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Future<UserCredential?> Function() signIn,
     String provider,
   ) async {
-    if (PushMigration.enabled) {
+    if (PushMigration.isolated) {
       setState(() => _error = 'استخدم حساب الاختبار بالبريد وكلمة المرور.');
       return;
     }

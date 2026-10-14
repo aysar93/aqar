@@ -12,6 +12,7 @@ const db = getFirestore();
 Object.assign(exports, require('./chat_functions'));
 Object.assign(exports, require('./analytics_presence_access'));
 Object.assign(exports, require('./push_functions'));
+Object.assign(exports, require('./push_bridge_functions'));
 
 function normalizeIraqiPhone(input) {
   const localizedDigits = {

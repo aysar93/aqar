@@ -22,8 +22,15 @@ Future<void> main() async {
   await startAqar(DefaultFirebaseOptions.currentPlatform);
 }
 
-Future<void> startAqar(FirebaseOptions options, {bool isolated = false}) async {
+Future<void> startAqar(FirebaseOptions options,
+    {bool isolated = false, bool bridgeCandidate = false}) async {
+  final approvedCandidate = bridgeCandidate &&
+      PushMigration.bridgeEnabled &&
+      !PushMigration.isolated &&
+      options.projectId == 'aqar-9f3f9' &&
+      options.messagingSenderId == '1031621585901';
   if (PushMigration.enabled &&
+      !approvedCandidate &&
       (!isolated || options.projectId != 'aqar-fcm-test-20261014')) {
     throw StateError('FCM migration requires the isolated staging entry point');
   }

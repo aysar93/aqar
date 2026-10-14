@@ -772,6 +772,12 @@ allow delete: if isSignedIn() &&
     match /push_tokens/{id} { allow read, write: if false; }
     match /push_installations/{id} { allow read, write: if false; }
     match /push_deliveries/{id} { allow read, write: if false; }
+    match /push_registration_limits/{id} { allow read, write: if false; }
+    match /push_bridge_events/{id} { allow read, write: if false; }
+    match /push_bridge_inbox/{id} { allow read, write: if false; }
+    match /push_ingress_limits/{id} { allow read, write: if false; }
+    match /push_subscription_bindings/{id} { allow read, write: if false; }
+    match /push_legacy_token_approvals/{id} { allow read, write: if false; }
 
 // ==================================================
 // البنرات الإعلانية

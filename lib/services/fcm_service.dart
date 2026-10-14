@@ -113,16 +113,39 @@ class FCMService {
     // OneSignal
     // =========================================================
 
-    if (!PushMigration.enabled) {
-      OneSignal.initialize(
-        "810a4d8d-cfac-492a-956e-0cff98248d25",
+    if (PushMigration.oneSignalEnabled) {
+      const bridgeAppId = String.fromEnvironment('BRIDGE_ONESIGNAL_APP_ID');
+      if (PushMigration.bridgeEnabled &&
+          PushMigration.isolated &&
+          (bridgeAppId.isEmpty ||
+              bridgeAppId == '810a4d8d-cfac-492a-956e-0cff98248d25')) {
+        throw StateError(
+            'Dedicated test OneSignal app required for isolated bridge');
+      }
+      await OneSignal.initialize(
+        PushMigration.bridgeEnabled && bridgeAppId.isNotEmpty
+            ? bridgeAppId
+            : "810a4d8d-cfac-492a-956e-0cff98248d25",
       );
 
       // عند كون التطبيق مفتوحاً، OneSignal قد يعترض الإشعار
       // ولا يعرضه في شريط إشعارات الهاتف افتراضياً.
       // نطلب منه عرضه صراحةً.
       OneSignal.Notifications.addForegroundWillDisplayListener(
-        (event) {
+        (event) async {
+          if (PushMigration.bridgeEnabled) {
+            event.preventDefault();
+            final uid = FirebaseAuth.instance.currentUser?.uid;
+            if (uid == null ||
+                event.notification.additionalData?['userId'] != uid) return;
+            final profile = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .get();
+            if (FirebaseAuth.instance.currentUser?.uid != uid ||
+                profile.data()?['isBlocked'] == true ||
+                profile.data()?['notificationsEnabled'] == false) return;
+          }
           debugPrint("========== ONESIGNAL FOREGROUND ==========");
           debugPrint(
             "Notification ID: ${event.notification.notificationId}",
@@ -210,7 +233,7 @@ class FCMService {
       debugPrint('FCM permission check failed: $error');
     }
 
-    if (!PushMigration.enabled) {
+    if (PushMigration.oneSignalEnabled) {
       try {
         final oneSignalAllowed =
             await OneSignal.Notifications.requestPermission(true);
@@ -356,6 +379,10 @@ class FCMService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || token.isEmpty) return;
     try {
+      if (PushMigration.bridgeEnabled) {
+        await saveTokens();
+        return;
+      }
       if (PushMigration.enabled && field == 'fcmToken') {
         await PushDeviceService.register(token, user.uid);
         return;
@@ -373,6 +400,32 @@ class FCMService {
   }
 
   static Future<void> saveTokens() async {
+    await PushDeviceService.flushPendingRevocations();
+    if (PushMigration.bridgeEnabled) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final profile =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (FirebaseAuth.instance.currentUser?.uid != uid) return;
+      if (OneSignal.User.pushSubscription.optedIn != true &&
+          profile.data()?['notificationsEnabled'] != false &&
+          profile.data()?['isBlocked'] != true) {
+        await OneSignal.User.pushSubscription.optIn();
+      }
+      final token = await readFcmTokenWhenReady(
+          requiresApns: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS,
+          readApnsToken: _messaging.getAPNSToken,
+          readFcmToken: _messaging.getToken);
+      final subscription = OneSignal.User.pushSubscription.id;
+      final apns = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+          ? await _messaging.getAPNSToken()
+          : null;
+      if (token != null && FirebaseAuth.instance.currentUser?.uid == uid) {
+        await PushDeviceService.register(token, uid,
+            oneSignalId: subscription, providerToken: apns);
+      }
+      return;
+    }
     await synchronizePushTokens(
       currentUserId: () => FirebaseAuth.instance.currentUser?.uid,
       readOneSignalId: () async =>
@@ -405,6 +458,16 @@ class FCMService {
   static Future<void> clearAccountNotifications() async {
     if (!PushMigration.enabled) return;
     clearForegroundNotifications();
+    if (PushMigration.bridgeEnabled) {
+      try {
+        await OneSignal.User.pushSubscription
+            .optOut()
+            .timeout(const Duration(seconds: 2));
+        await OneSignal.logout().timeout(const Duration(seconds: 2));
+      } catch (_) {
+        debugPrint('OneSignal local logout queued or unavailable');
+      }
+    }
     try {
       await _messaging.deleteToken();
     } catch (error) {

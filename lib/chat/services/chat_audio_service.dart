@@ -7,7 +7,7 @@ import '../widgets/voice_recorder_sheet.dart';
 class ChatAudioService {
   static Future<Map<String, dynamic>> upload(
       String chatId, VoiceRecording recording) async {
-    if (PushMigration.enabled)
+    if (PushMigration.isolated)
       throw StateError('Media upload unavailable in FCM staging');
     final file = File(recording.path);
     if (await file.length() > 5 * 1024 * 1024) {

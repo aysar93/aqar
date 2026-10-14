@@ -16,7 +16,7 @@ class PresenceService {
       : _database = database ??
             FirebaseDatabase.instanceFor(
               app: Firebase.app(),
-              databaseURL: PushMigration.enabled
+              databaseURL: PushMigration.isolated
                   ? 'https://aqar-fcm-test-20261014-default-rtdb.firebaseio.com'
                   : 'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app',
             ),
@@ -42,7 +42,7 @@ class PresenceService {
   }
 
   Future<void> _ensureDashboardAuthorization() async {
-    if (PushMigration.enabled) {
+    if (PushMigration.isolated) {
       throw StateError('Presence dashboard unavailable in FCM staging');
     }
     final user = (_auth ?? FirebaseAuth.instance).currentUser;
@@ -125,7 +125,7 @@ class PresenceService {
   );
 
   Future<void> connect(String uid) async {
-    if (PushMigration.enabled) return;
+    if (PushMigration.isolated) return;
     if (_uid == uid && _connectedSubscription != null) {
       if (_connection != null) _publish(_connection!, _generation);
       return;

@@ -18,7 +18,7 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter analyze --no-pub lib/main_fcm_staging.dart lib/main_fcm_app_staging.dart lib/services/fcm_service.dart lib/services/notification_navigation_service.dart
-      - run: flutter test --no-pub test/push_migration_test.dart test/push_token_sync_test.dart test/notification_route_coordinator_test.dart
+      - run: flutter test --no-pub test/push_migration_test.dart test/push_token_sync_test.dart test/notification_route_coordinator_test.dart test/push_logout_policy_test.dart
   emulators:
     runs-on: ubuntu-latest
     steps:
@@ -31,9 +31,12 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: npm ci --prefix functions
+      - run: npm audit --prefix functions --omit=dev --audit-level=moderate
       - run: npm ci --prefix test/firestore
       - run: npm install -g firebase-tools@15.28.1
       - run: node --test functions/push_policy.test.js
+      - run: node --test functions/push_bridge.test.js functions/push_onesignal.test.js integrations/vercel/legacy-ingress.test.cjs
+      - run: python3 -m unittest discover -s tools -p 'test_prepare_push_bridge_rc.py'
       - run: node --test tools/validate_fcm_staging.test.cjs
       - run: python3 -m unittest discover -s tools -p 'test_validate_ios_fcm_signing.py'
       - run: node tools/run_fcm_emulators.cjs
