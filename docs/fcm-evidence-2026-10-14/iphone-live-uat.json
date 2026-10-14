@@ -10,9 +10,14 @@
   "firstTapExactControlUnknown": true,
   "retryNotification": "fullapp-1792009809883-property_approved-1792010107068",
   "retryTapResult": "User confirmed foreground banner action opened correct property",
-  "background": "not tested",
+  "background": "System notification displayed, user confirmed; direct external tap failed twice (inbox, then home). Inbox item opens correct chat.",
   "appSwitcherClose": "not tested",
   "productionModified": false,
-  "updatedAt": "2026-10-14T20:36:01.3397744Z",
-  "foregroundPropertyNavigationUserConfirmed": true
+  "updatedAt": "2026-10-14T20:42:23.9922712Z",
+  "foregroundPropertyNavigationUserConfirmed": true,
+  "externalChatTapPassed": false,
+  "candidateFixSource": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023",
+  "candidateFixInstalled": true,
+  "candidateFixIpaSha256": "3d36504418719645743a8ae2e41ef4132a2410fa533abb0469f00df5fe999f81",
+  "candidateFixPhysicalRetest": "waiting for user to reopen updated staging app and put it in background"
 }

@@ -1,0 +1,80 @@
+{
+  "sha": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023",
+  "runs": [
+    {
+      "id": 38634141034,
+      "name": "FCM isolated emulators",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38634141034",
+      "sourceSha": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023"
+    },
+    {
+      "id": 38634141142,
+      "name": "Safety and iOS build",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38634141142",
+      "sourceSha": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023"
+    },
+    {
+      "id": 38634134858,
+      "name": "Safety and iOS build",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38634134858",
+      "sourceSha": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023",
+      "jobs": [
+        {
+          "name": "signed-staging-adhoc / signed-staging",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ios",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 11927678596,
+          "name": "Aqar-FCM-staging-AdHoc-encrypted",
+          "size": 44928045
+        }
+      ]
+    },
+    {
+      "id": 38634134246,
+      "name": "FCM isolated emulators",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38634134246",
+      "sourceSha": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023"
+    },
+    {
+      "id": 38634134210,
+      "name": "FCM iOS staging build (no signing or publishing)",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38634134210",
+      "sourceSha": "21f1fc8ec2e50ebf8997c3ebc010c32877dd0023"
+    }
+  ],
+  "checkedAt": "2026-10-14T20:58:35.858Z"
+}
