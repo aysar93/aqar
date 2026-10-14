@@ -20,11 +20,15 @@
         "Production"
       ],
       "uploadAuthorizedByUser": true,
-      "uploaded": false
+      "uploaded": true,
+      "firebaseSlots": [
+        "Development",
+        "Production"
+      ]
     }
   ],
   "productionFirebaseModified": false,
   "keysUploadedToGithub": false,
   "cryptographicApnsAuthenticationProven": false,
-  "checkedAt": "2026-10-14T16:30:09.341Z"
+  "checkedAt": "2026-10-14T20:18:38.3737348Z"
 }

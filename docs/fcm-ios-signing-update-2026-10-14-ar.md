@@ -34,3 +34,9 @@ SHA256 للنسخة الموقعة: cbec067fa39e8a221dca7e1f8653d19f5509d1b1da81
 4. لا يوجد TestFlight أو نشر متجر. لا يزال الجهاز الثاني Android واختبار الانتشار المختلط والأداء السحابي ومتابعة تنبيهات التبعيات ضمن البنود السابقة غير المكتملة.
 
 الأدلة: ios-signing-certificate-state.json، ios-signing-secrets-state.json، ios-adhoc-profile-state.json، iphone-connection-state.json، ios-signed-ci-progress.json، ios-ipa-verification.json، iphone-staging-installation.json، apns-provided-keys-verification.json، ولقطات Apple المحلية.
+
+فحص لاحق لسجل CI الناجح لم يجد UDID خامًا أو كلمة مرور التوقيع أو P12/profile بصيغة Base64؛ الدليل ios-signing-log-privacy-check.json.
+
+## تحديث ربط APNs بعد تسجيل Google
+
+تم حفظ المفتاح L74V23VW58 للفريق H96JUT8PUM في خانتَي Development وProduction لتطبيق Aqar FCM iOS Staging داخل aqar-fcm-test-20261014، والتحقق من ظهوره في الخانتين في واجهة Firebase. خانة Production لازمة لنسخة Ad Hoc التجريبية؛ لم يتغير مشروع Firebase الإنتاجي. لم يُستخدم D336L54R3T ولم يُرفع أي APNs إلى GitHub. دليل الواجهة المحلي: firebase-apns-L74-configured.png. هذا يحل البند الأول أعلاه؛ لا يثبت استقبال iPhone قبل تجربة الجهاز الفعلية.
