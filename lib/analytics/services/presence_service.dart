@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../services/push_migration.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,8 +16,9 @@ class PresenceService {
       : _database = database ??
             FirebaseDatabase.instanceFor(
               app: Firebase.app(),
-              databaseURL:
-                  'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app',
+              databaseURL: PushMigration.enabled
+                  ? 'https://aqar-fcm-test-20261014-default-rtdb.firebaseio.com'
+                  : 'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app',
             ),
         _functions = functions,
         _auth = auth,
@@ -40,6 +42,9 @@ class PresenceService {
   }
 
   Future<void> _ensureDashboardAuthorization() async {
+    if (PushMigration.enabled) {
+      throw StateError('Presence dashboard unavailable in FCM staging');
+    }
     final user = (_auth ?? FirebaseAuth.instance).currentUser;
     if (user == null || user.isAnonymous) {
       invalidateDashboardAuthorization();
@@ -120,6 +125,7 @@ class PresenceService {
   );
 
   Future<void> connect(String uid) async {
+    if (PushMigration.enabled) return;
     if (_uid == uid && _connectedSubscription != null) {
       if (_connection != null) _publish(_connection!, _generation);
       return;

@@ -55,15 +55,16 @@ exports.deliverFcmNotification = onDocumentWritten({ document: 'notifications/{n
   if (!push) return;
   const db = getFirestore();
   const userRef = db.doc(`users/${push.userId}`);
+  const settingsRef = db.doc('settings/app_settings');
   const devices = await db.collection('push_tokens').where('uid', '==', push.userId).get();
   for (const device of devices.docs) {
     const stateRef = db.doc(`push_deliveries/${hash(`${push.key}:${device.id}`)}`);
     // Claim before contacting FCM. An ambiguous result is never automatically
     // resent: FCM offers no atomic transaction with Firestore/exactly-once send.
     const claimed = await db.runTransaction(async tx => {
-      const [state, latestDevice, user, inbox] = await Promise.all([tx.get(stateRef), tx.get(device.ref), tx.get(userRef), tx.get(event.data.after.ref)]);
+      const [state, latestDevice, user, inbox, settings] = await Promise.all([tx.get(stateRef), tx.get(device.ref), tx.get(userRef), tx.get(event.data.after.ref), tx.get(settingsRef)]);
       const current = latestDevice.data();
-      if (state.exists || !inbox.exists || !user.exists || user.data().notificationsEnabled === false || user.data().isBlocked === true || !current?.active || current.uid !== push.userId || !current.updatedAt || Date.now() - current.updatedAt.toMillis() > 60 * 86400000) return null;
+      if (state.exists || !inbox.exists || settings.data()?.allowNotifications === false || !user.exists || user.data().notificationsEnabled === false || user.data().isBlocked === true || !current?.active || current.uid !== push.userId || !current.updatedAt || Date.now() - current.updatedAt.toMillis() > 60 * 86400000) return null;
       if (push.type === 'chat_message') {
         if (inbox.data().messageId !== push.messageId || inbox.data().unreadCount === 0) return null;
         const source = await tx.get(db.doc(`chats/${push.chatId}/messages/${push.messageId}`));

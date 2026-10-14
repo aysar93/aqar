@@ -122,6 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<String?> uploadLogoToCloudinary(File image) async {
+    if (const bool.fromEnvironment('FCM_MIGRATION')) throw StateError('Media upload unavailable in FCM staging');
     const cloudName = "hwxcrlcj";
     const uploadPreset = "pmlhhqdd";
 

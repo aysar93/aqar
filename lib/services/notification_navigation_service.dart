@@ -81,6 +81,7 @@ class NotificationNavigationService {
   ) async {
     final normalized = _normalizePayload(data);
     if (PushMigration.enabled &&
+        FirebaseAuth.instance.currentUser != null &&
         normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
       return;
     }

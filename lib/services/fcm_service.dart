@@ -42,14 +42,16 @@ class FCMService {
     FirebaseMessaging.onMessage.listen((message) async {
       if (PushMigration.enabled &&
           !kIsWeb &&
-          defaultTargetPlatform == TargetPlatform.android) {
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null || message.data['userId'] != user.uid) return;
         final profile = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
-        if (profile.data()?['notificationsEnabled'] == false ||
+        if (profile.data()?['isBlocked'] == true ||
+            profile.data()?['notificationsEnabled'] == false ||
             FirebaseAuth.instance.currentUser?.uid != user.uid) {
           return;
         }
@@ -140,41 +142,22 @@ class FCMService {
       });
     }
 
-    await saveTokens();
+    // Read the launch payload before any network-dependent token writes.
+    // The route coordinator waits for the real shell/login to become ready.
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      await _handleNotificationClick(
+          Map<String, dynamic>.from(initialMessage.data));
+    }
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-      try {
-        await _messaging.setForegroundNotificationPresentationOptions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-      } catch (error) {
-        debugPrint('FCM foreground presentation setup failed: $error');
-      }
-    }
-
-    // =========================================================
-    // فتح التطبيق من FCM وهو مغلق
-    // =========================================================
-
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-
-    if (initialMessage != null) {
-      debugPrint("========== FCM INITIAL ==========");
-      debugPrint("Data: ${initialMessage.data}");
-
-      Future.delayed(
-        const Duration(milliseconds: 1200),
-        () async {
-          await _handleNotificationClick(
-            Map<String, dynamic>.from(
-              initialMessage.data,
-            ),
-          );
-        },
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: !PushMigration.enabled,
+        badge: !PushMigration.enabled,
+        sound: !PushMigration.enabled,
       );
     }
+    await saveTokens();
   }
 
   // =========================================================
@@ -344,6 +327,10 @@ class FCMService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || token.isEmpty) return;
     try {
+      if (PushMigration.enabled && field == 'fcmToken') {
+        await PushDeviceService.register(token, user.uid);
+        return;
+      }
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
         {field: token},
         SetOptions(merge: true),
@@ -367,6 +354,11 @@ class FCMService {
         readFcmToken: _messaging.getToken,
       ),
       write: (userId, fields) async {
+        if (PushMigration.enabled) {
+          final token = fields['fcmToken'];
+          if (token != null) await PushDeviceService.register(token, userId);
+          return;
+        }
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)

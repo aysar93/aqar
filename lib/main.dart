@@ -13,11 +13,20 @@ import 'providers/user_provider.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/fcm_service.dart';
+import 'services/push_migration.dart';
 import 'services/notification_navigation_service.dart';
 import 'services/deep_link_service.dart';
 import 'screens/onboarding/splash_screen.dart';
 
 Future<void> main() async {
+  await startAqar(DefaultFirebaseOptions.currentPlatform);
+}
+
+Future<void> startAqar(FirebaseOptions options, {bool isolated = false}) async {
+  if (PushMigration.enabled &&
+      (!isolated || options.projectId != 'aqar-fcm-test-20261014')) {
+    throw StateError('FCM migration requires the isolated staging entry point');
+  }
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -30,12 +39,12 @@ Future<void> main() async {
       systemNavigationBarContrastEnforced: false,
     ));
   }
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(options: options);
 
   // Anonymous sessions created by older app versions are persisted by Firebase.
   // Remove only those sessions; real users remain signed in across app restarts.
   final currentUser = FirebaseAuth.instance.currentUser;
-  if (currentUser?.isAnonymous ?? false) {
+  if (!isolated && (currentUser?.isAnonymous ?? false)) {
     await FirebaseAuth.instance.signOut();
   }
 

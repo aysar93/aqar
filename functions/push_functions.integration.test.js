@@ -65,6 +65,15 @@ test('disabled preferences, internal delivery, stale tokens and legacy are skipp
   await db.doc(`push_tokens/${hash(request().data.token)}`).update({ updatedAt: Timestamp.fromMillis(0) });
   await deliverFcmNotification.run(await event('stale')); assert.equal(sends.length, 0);
 });
+test('global notification setting prevents sends; re-enable permits new events', async () => {
+  await registerPushDevice.run(request());
+  await db.doc('settings/app_settings').update({ allowNotifications: false });
+  await deliverFcmNotification.run(await event('global-disabled'));
+  assert.equal(sends.length, 0);
+  await db.doc('settings/app_settings').update({ allowNotifications: true });
+  await deliverFcmNotification.run(await event('global-enabled'));
+  assert.equal(sends.length, 1);
+});
 test('concurrent retries are claimed once; collapsed chat sends successive source messages', async () => {
   await registerPushDevice.run(request());
   for (const id of ['m1', 'm2']) await db.doc(`chats/c/messages/${id}`).set({ senderId: 'sender' });

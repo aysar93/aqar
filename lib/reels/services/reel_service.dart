@@ -1,5 +1,6 @@
 import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:convert';
+import '../../services/push_migration.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show ChangeNotifier;
@@ -65,6 +66,7 @@ class ReelService {
 
   Future<void> track(String reelId, String event,
       {Map<String, dynamic>? data}) async {
+    if (PushMigration.enabled) return;
     if (_apiBaseUrl.isEmpty) return;
     await _post(
         '/event',
@@ -157,6 +159,8 @@ class ReelService {
       {required Uint8List bytes,
       required String fileName,
       required String contentType}) async {
+    if (PushMigration.enabled)
+      throw StateError('Reels API unavailable in FCM staging');
     if (_apiBaseUrl.isEmpty) throw StateError('REELS_API_NOT_CONFIGURED');
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     if (token == null) throw StateError('AUTH_REQUIRED');
@@ -177,6 +181,8 @@ class ReelService {
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body,
       {bool authenticated = true}) async {
+    if (PushMigration.enabled)
+      throw StateError('Reels API unavailable in FCM staging');
     if (_apiBaseUrl.isEmpty) throw StateError('REELS_API_NOT_CONFIGURED');
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (authenticated) {

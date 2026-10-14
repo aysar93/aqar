@@ -20,6 +20,22 @@ pbx = (root / "ios/Runner.xcodeproj/project.pbxproj").read_text(encoding="utf-8"
 pbx = pbx.replace("PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar;", "PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging;")
 pbx = pbx.replace("PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.RunnerTests;", "PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging.RunnerTests;")
 (out / "project.pbxproj").write_text(pbx, encoding="utf-8")
+with (root / 'ios/Runner/Info.plist').open('rb') as stream:
+    info = plistlib.load(stream)
+# The isolated test app must not initialize the production social application.
+for key in ['CFBundleURLTypes', 'FacebookAppID', 'FacebookClientToken', 'FacebookDisplayName']:
+    info.pop(key, None)
+info['FacebookAutoInitEnabled'] = False
+info['FacebookAutoLogAppEventsEnabled'] = False
+info['FacebookAdvertiserIDCollectionEnabled'] = False
+info['CFBundleDisplayName'] = 'Aqar FCM staging'
+with (out / 'Info.plist').open('wb') as stream:
+    plistlib.dump(info, stream)
 with (out / "GoogleService-Info.plist").open("wb") as stream:
     plistlib.dump(native, stream)
+if '--apply' in sys.argv[3:]:
+    import shutil
+    shutil.copyfile(out / 'project.pbxproj', root / 'ios/Runner.xcodeproj/project.pbxproj')
+    shutil.copyfile(out / 'Info.plist', root / 'ios/Runner/Info.plist')
+    shutil.copyfile(out / 'GoogleService-Info.plist', root / 'ios/Runner/GoogleService-Info.plist')
 print("Validated and prepared iOS staging inputs:", out)
