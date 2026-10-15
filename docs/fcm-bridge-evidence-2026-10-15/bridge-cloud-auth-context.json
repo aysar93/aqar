@@ -1,0 +1,9 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "observedAt": "2026-10-15T11:26:03.619Z",
+  "cloudTriggerExecuted": true,
+  "authType": "api_key",
+  "authPrincipalMatchesFirebaseUid": true,
+  "rawUserIdOrTokensLogged": false,
+  "notificationsToDevicesSent": 0
+}

@@ -1,0 +1,13 @@
+{
+  "package": "com.andalus.aqar",
+  "liveLegacyReceptionVerified": false,
+  "productionPushSent": false,
+  "installer": "com.android.vending",
+  "versionCode": 20,
+  "oneSignalComponentsPresent": true,
+  "sha256": "cae75ed5495f9e1f93e41877fe05815dd4cad28353d05c7e918d89a6471fee3e",
+  "launchedOrModified": false,
+  "firebaseAppId": "1:1031621585901:android:25571868cd8afe2d4b95e4",
+  "versionName": "1.0.5",
+  "firebaseMessagingComponentsPresent": true
+}

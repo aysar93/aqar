@@ -1,0 +1,14 @@
+{
+  "project": "aqar-9f3f9",
+  "checkedAt": "2026-10-15T11:38:41.557Z",
+  "aggregateOnly": true,
+  "rawTokensRead": false,
+  "productionWrites": false,
+  "productionPushes": false,
+  "counts": {
+    "profiles": 458,
+    "fcmToken": 453,
+    "oneSignalId": 454
+  },
+  "limitations": "Profile fields, not device counts, unique users or validated active tokens; not an estimate of guaranteed delivery."
+}
