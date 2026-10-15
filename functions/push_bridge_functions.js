@@ -81,6 +81,11 @@ async function dispatchBridge(push,db=getFirestore()) {
    if(t.oneSignalId)binding=await tx.get(db.doc('push_subscription_bindings/'+hash(t.oneSignalId)));
    if(t.legacyFcmApprovalHash)recoveryApproval=await tx.get(db.doc('push_legacy_token_approvals/'+t.legacyFcmApprovalHash));
    if(t.installationId){registration=await tx.get(db.doc('push_installations/'+t.installationId));if(t.tokenHash)token=await tx.get(db.doc('push_tokens/'+t.tokenHash));}
+   if(e.type==='chat_message') {
+    const message=await tx.get(db.doc(`chats/${e.chatId}/messages/${e.messageId}`));
+    const inbox=await tx.get(db.doc('notifications/'+e.notificationId));
+    if(!message.exists||message.data().deletedAt||message.data().isRead===true||message.data().status==='read'||inbox.exists && (inbox.data().unreadCount===0 || inbox.data().messageId && inbox.data().messageId!==e.messageId))return false;
+   }
    if(claim.exists||aliasState?.exists||!user.exists||user.data().isBlocked===true||user.data().notificationsEnabled===false||global.data()?.allowNotifications===false||rollout.data()?.mode==='paused')return false;
    if(t.installationId && (!registration.exists||registration.data().active===false||registration.data().uid!==e.userId||registration.data().tokenHash!==t.tokenHash && t.provider==='fcm'))return false;
    if(t.provider==='fcm' && t.installationId && (!token?.data()?.active||token.data().uid!==e.userId||token.data().token!==t.endpoint))return false;

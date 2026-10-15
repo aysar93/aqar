@@ -6,7 +6,7 @@ const key='a'.repeat(64);
 function fixture({verified=true,available=true}={}) {
  const documents=new Map();
  if(available)documents.set('push_bridge_inbox/'+hash('n'),{notificationId:'n',eventKey:key});
- documents.set('push_bridge_events/'+key,{notificationId:'n',key,userId:'real-recipient',title:'saved title',...(verified?{verifiedAt:1}:{})});
+ documents.set('push_bridge_events/'+key,{notificationId:'n',key,userId:'real-recipient',title:'saved title',...(verified?{verifiedAt:Date.now()}:{})});
  const db={doc:path=>({path,get:async()=>({data:()=>documents.get(path)})}),runTransaction:async fn=>fn({get:ref=>ref.get(),set:(ref,value)=>documents.set(ref.path,value)})};
  const sends=[];const handler=createLegacyIngress({db,dispatch:async event=>sends.push(event)});
  const res={status(code){this.code=code;return this;},json(value){this.value=value;return this;}};

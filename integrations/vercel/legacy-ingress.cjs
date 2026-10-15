@@ -19,13 +19,16 @@ function createLegacyIngress({db,dispatch,clock=Date.now}) {
    });
    if(!allowed)return res.status(429).json({success:false,error:'rate_limited'});
    const pointer=(await db.doc('push_bridge_inbox/'+hash(id)).get()).data();
-   if(!pointer)return res.status(202).json({success:true,queued:true,reason:'awaiting_verified_firestore_event'});
+   if(!pointer)return res.status(202).json({success:true,pendingVerification:true,pushSent:false,reason:'awaiting_verified_firestore_event'});
    if(pointer.notificationId!==id||!/^[a-f0-9]{64}$/.test(pointer.eventKey))throw Error('Invalid protected pointer');
    const event=(await db.doc('push_bridge_events/'+pointer.eventKey).get()).data();
-   if(!event||event.notificationId!==id||event.key!==pointer.eventKey||!event.verifiedAt)return res.status(202).json({success:true,queued:true});
+   if(!event||event.key!==pointer.eventKey||!event.verifiedAt)return res.status(202).json({success:true,pendingVerification:true,pushSent:false});
+   const verifiedAt=typeof event.verifiedAt==='number'?event.verifiedAt:event.verifiedAt.toMillis?.();
+   if(!verifiedAt||clock()-verifiedAt>30*60000)return res.status(200).json({success:true,skipped:true,pushSent:false,reason:'stale_verified_event'});
    await dispatch(event);
-   return res.status(200).json({success:true,notificationId:id,routed:true});
+   return res.status(200).json({success:true,notificationId:id,handled:true,deliveryConfirmed:false});
   }catch(_){return res.status(503).json({success:false,error:'bridge_temporarily_unavailable'});}
  };
 }
 module.exports={createLegacyIngress};
+
