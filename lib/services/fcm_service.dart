@@ -137,14 +137,18 @@ class FCMService {
             event.preventDefault();
             final uid = FirebaseAuth.instance.currentUser?.uid;
             if (uid == null ||
-                event.notification.additionalData?['userId'] != uid) return;
+                event.notification.additionalData?['userId'] != uid) {
+              return;
+            }
             final profile = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(uid)
                 .get();
             if (FirebaseAuth.instance.currentUser?.uid != uid ||
                 profile.data()?['isBlocked'] == true ||
-                profile.data()?['notificationsEnabled'] == false) return;
+                profile.data()?['notificationsEnabled'] == false) {
+              return;
+            }
           }
           debugPrint("========== ONESIGNAL FOREGROUND ==========");
           debugPrint(

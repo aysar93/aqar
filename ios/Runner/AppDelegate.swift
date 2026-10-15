@@ -7,6 +7,12 @@ import UserNotifications
   private var pushChannel: FlutterMethodChannel?
   private var pendingStagingTap: [String: Any]?
   private var lastStagingTapId: String?
+  private var supportsBridgeTaps: Bool {
+    let bundle = Bundle.main.bundleIdentifier
+    return bundle == "com.andalus.aqar.staging" ||
+      (bundle == "com.andalus.aqar" &&
+        Bundle.main.object(forInfoDictionaryKey: "AqarPushBridgeCandidate") as? Bool == true)
+  }
 
   func receiveStagingNotificationTap(_ userInfo: [AnyHashable: Any]) {
     if !Thread.isMainThread {
@@ -15,7 +21,7 @@ import UserNotifications
       }
       return
     }
-    guard Bundle.main.bundleIdentifier == "com.andalus.aqar.staging",
+    guard supportsBridgeTaps,
           let messageId = userInfo["gcm.message_id"] as? String else { return }
     guard lastStagingTapId != messageId else { return }
     lastStagingTapId = messageId
@@ -46,7 +52,7 @@ import UserNotifications
     // UIScene creates the Flutter engine after this launch callback. Install
     // the lifecycle forwarding delegate early so system notification taps reach
     // the registered messaging plugin. Limit this migration to the test bundle.
-    if Bundle.main.bundleIdentifier == "com.andalus.aqar.staging" {
+    if supportsBridgeTaps {
       UNUserNotificationCenter.current().delegate = self
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -59,12 +65,12 @@ import UserNotifications
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     pushChannel = channel
-    if Bundle.main.bundleIdentifier == "com.andalus.aqar.staging" {
+    if supportsBridgeTaps {
       UNUserNotificationCenter.current().delegate = self
     }
     channel.setMethodCallHandler { [weak self] call, result in
       if call.method == "getPendingNotificationTap",
-         Bundle.main.bundleIdentifier == "com.andalus.aqar.staging" {
+         self?.supportsBridgeTaps == true {
         let payload = self?.pendingStagingTap
         self?.pendingStagingTap = nil
         result(payload)
