@@ -168,29 +168,30 @@ test('rules allow source-backed chat create/update, reject message and recipient
 });
 test('bridge validates write actor, routes mixed devices and shares transactional claims across ingress', async()=>{
  const {verifiedEvent,dispatchBridge}=require('./push_bridge_functions').internals;
+ const previous=process.env.FUNCTIONS_EMULATOR;process.env.FUNCTIONS_EMULATOR='true';
  const os='12345678-1234-4234-a234-123456789abc',legacy='22345678-1234-4234-a234-123456789abc';
  await registerPushDevice.run(request());
  await db.doc('push_installations/'+'a'.repeat(32)).update({oneSignalId:os});
  await db.doc('push_subscription_bindings/'+hash(os)).set({uid:'owner',installationId:'a'.repeat(32),active:true});
  await db.doc('users/owner').update({oneSignalId:legacy});
- await db.doc('settings/push_rollout').set({mode:'fcm',percent:100});
+ await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true});
  const e=await event('bridge',{pushTransport:'legacy'});
  assert.equal(await verifiedEvent({...e,authId:'sender',authType:'unknown'},db),null);
  assert.equal(await verifiedEvent({...e,authId:'admin',authType:'unauthenticated'},db),null);
  const push=await verifiedEvent({...e,authId:'admin',authType:'unknown'},db);assert.ok(push);
- const previous=process.env.FUNCTIONS_EMULATOR;process.env.FUNCTIONS_EMULATOR='true';
+ assert.ok(await verifiedEvent({...e,authId:'admin',authType:'api_key'},db));
  try{
   await Promise.all([dispatchBridge(push,db),dispatchBridge(push,db)]);
   let claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');
   assert.equal(claims.length,2);assert.deepEqual(claims.map(d=>d.data().provider).sort(),['fcm','onesignal']);
-  await db.doc('settings/push_rollout').set({mode:'legacy'});
+  await db.doc('push_bridge_config/rollout').set({mode:'legacy',legacyIngressCoordinated:true});
   await dispatchBridge(push,db);
   claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');assert.equal(claims.length,2);
  }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;}
 });
 test('protected bridge and rate-limit collections reject client read/write',async()=>{
  const sender=env.authenticatedContext('sender').firestore();
- for(const collection of ['push_registration_limits','push_ingress_limits','push_bridge_events','push_bridge_inbox','push_subscription_bindings']){
+ for(const collection of ['push_registration_limits','push_ingress_limits','push_bridge_events','push_bridge_inbox','push_subscription_bindings','push_bridge_config','push_legacy_token_approvals']){
   await assertFails(getDoc(doc(sender,collection+'/x')));await assertFails(setDoc(doc(sender,collection+'/x'),{forged:true}));
  }
 });
@@ -201,4 +202,19 @@ test('delivery monitor detects stale attempts and failed sends; non-admin cannot
  const health=await bridge.internals.deliveryHealth(db);
  assert.equal(health.staleAttempting,1);assert.equal(health.reviewRequired,1);
  await assert.rejects(bridge.reviewPushDeliveryHealth.run({auth:{uid:'sender'}}),e=>e.code==='permission-denied');
+});
+test('legacy source trigger and modern inbox share a delivery even without old inbox source IDs',async()=>{
+ const bridge=require('./push_bridge_functions'),previous=process.env.FUNCTIONS_EMULATOR,enabled=process.env.PUSH_BRIDGE_ENABLED;
+ process.env.FUNCTIONS_EMULATOR='true';process.env.PUSH_BRIDGE_ENABLED='true';
+ try{
+  await registerPushDevice.run(request());
+  await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true});
+  await db.doc('properties/p').set({publisherUid:'owner'});
+  const source=db.doc('properties/p/comments/c');await source.set({userId:'sender',text:'source comment'});
+  await bridge.bridgeCommentCreated.run({authId:'sender',authType:'api_key',params:{propertyId:'p',commentId:'c'},data:await source.get()});
+  const modern=await event('modern-comment',{type:'comment',propertyId:'p',commentId:'c'});
+  const canonical=await bridge.internals.verifiedEvent({...modern,authId:'sender',authType:'api_key'},db);
+  await bridge.internals.dispatchBridge(canonical,db);
+  assert.equal((await db.collection('push_deliveries').where('status','==','accepted').get()).size,1);
+ }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;if(enabled===undefined)delete process.env.PUSH_BRIDGE_ENABLED;else process.env.PUSH_BRIDGE_ENABLED=enabled;}
 });

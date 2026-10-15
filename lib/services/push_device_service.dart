@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'push_migration.dart';
+import 'push_registration_policy.dart';
 
 class PushDeviceService {
   static Future<void> _queue = Future.value();
@@ -83,17 +84,35 @@ class PushDeviceService {
           FirebaseAuth.instance.currentUser?.uid != uid) {
         return;
       }
-      await FirebaseFunctions.instance
-          .httpsCallable('registerPushDevice')
-          .call({
+      final payload = <String, dynamic>{
         'installationId': installationId,
         'token': token,
         'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
         'revokeSecret': await _revokeSecret(),
         'generation': generation,
-        if (oneSignalId != null) 'oneSignalId': oneSignalId,
-        if (providerToken != null) 'providerToken': providerToken,
-      }).timeout(const Duration(seconds: 8));
+      };
+      Future<void> send(Map<String, dynamic> data) async {
+        await FirebaseFunctions.instance
+            .httpsCallable('registerPushDevice')
+            .call(data)
+            .timeout(const Duration(seconds: 8));
+      }
+
+      await registerDeviceWithOptionalFallback(
+        registerFcm: () => send(payload),
+        bindFallback: oneSignalId == null
+            ? null
+            : () => send({
+                  ...payload,
+                  'oneSignalId': oneSignalId,
+                  if (providerToken != null) 'providerToken': providerToken
+                }),
+        stillCurrentAccount: () =>
+            _detachingUser != uid &&
+            FirebaseAuth.instance.currentUser?.uid == uid,
+        onFallbackError: (_) => debugPrint(
+            'OneSignal fallback binding unavailable; FCM remains registered'),
+      );
     });
   }
 

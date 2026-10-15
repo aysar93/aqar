@@ -1,5 +1,15 @@
 # Vercel compatibility adapter — not deployed
 
+Run `node tools/build_push_bridge_preview.cjs` to prepare a standalone test-only
+preview bundle under ignored `work/bridge-vercel-preview-20261015`. It contains
+the exact audited dependency lock and no `.env` or credentials. Its bootstrap
+rejects production project/service-account inputs. No Vercel deployment is made.
+Set `GCLOUD_PROJECT=aqar-fcm-test-20261014` and a matching test service account
+only in the future isolated preview. Do not reuse production environment values.
+The operator-only configuration is `push_bridge_config/rollout` (not public
+`settings`). Dispatch is disabled until `legacyIngressCoordinated=true` proves
+that legacy HTTP and Firestore events share the same bridge/claim ledger.
+
 Keep the current production deployment unchanged. In a separate preview checkout,
 copy `legacy-ingress.cjs` and the audited `functions/push_*` modules together with
 their exact package lock. After Firebase Admin initialization and before the old

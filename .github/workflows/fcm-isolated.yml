@@ -18,7 +18,7 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter analyze --no-pub lib/main_fcm_staging.dart lib/main_fcm_app_staging.dart lib/services/fcm_service.dart lib/services/notification_navigation_service.dart
-      - run: flutter test --no-pub test/push_migration_test.dart test/push_token_sync_test.dart test/notification_route_coordinator_test.dart test/push_logout_policy_test.dart
+      - run: flutter test --no-pub test/push_migration_test.dart test/push_token_sync_test.dart test/notification_route_coordinator_test.dart test/push_logout_policy_test.dart test/push_registration_policy_test.dart
   emulators:
     runs-on: ubuntu-latest
     steps:

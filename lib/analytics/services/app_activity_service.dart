@@ -190,6 +190,8 @@ class AppActivityService with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _foreground = true;
+      unawaited(PushDeviceService.flushPendingRevocations()
+          .catchError((Object _) {}));
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {

@@ -778,6 +778,7 @@ allow delete: if isSignedIn() &&
     match /push_ingress_limits/{id} { allow read, write: if false; }
     match /push_subscription_bindings/{id} { allow read, write: if false; }
     match /push_legacy_token_approvals/{id} { allow read, write: if false; }
+    match /push_bridge_config/{id} { allow read, write: if false; }
 
 // ==================================================
 // البنرات الإعلانية
