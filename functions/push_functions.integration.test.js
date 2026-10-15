@@ -214,7 +214,20 @@ test('legacy source trigger and modern inbox share a delivery even without old i
   await bridge.bridgeCommentCreated.run({authId:'sender',authType:'api_key',params:{propertyId:'p',commentId:'c'},data:await source.get()});
   const modern=await event('modern-comment',{type:'comment',propertyId:'p',commentId:'c'});
   const canonical=await bridge.internals.verifiedEvent({...modern,authId:'sender',authType:'api_key'},db);
-  await bridge.internals.dispatchBridge(canonical,db);
+  await bridge.deliverBridgeNotification.run({...modern,authId:'sender',authType:'api_key'});
   assert.equal((await db.collection('push_deliveries').where('status','==','accepted').get()).size,1);
+  const {createLegacyIngress}=require('../integrations/vercel/legacy-ingress.cjs');
+  const ingress=createLegacyIngress({db,dispatch:push=>bridge.internals.dispatchBridge(push,db)});
+  const server=require('node:http').createServer(async(req,res)=>{
+   let body='';for await(const chunk of req)body+=chunk;
+   req.body=JSON.parse(body);
+   await ingress(req,{status(code){res.statusCode=code;return this;},json(value){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(value));}});
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try {
+   const response=await fetch('http://127.0.0.1:'+server.address().port+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notificationId:'modern-comment',userId:'admin',title:'forged'})});
+   assert.equal(response.status,200);
+   assert.equal((await db.collection('push_deliveries').where('status','==','accepted').get()).size,1);
+  }finally{await new Promise(resolve=>server.close(resolve));}
  }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;if(enabled===undefined)delete process.env.PUSH_BRIDGE_ENABLED;else process.env.PUSH_BRIDGE_ENABLED=enabled;}
 });
