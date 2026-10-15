@@ -9,5 +9,24 @@
   "productionChanged": false,
   "keyId": "L74V23VW58",
   "teamId": "H96JUT8PUM",
-  "appleTopicScopeVerified": false
+  "appleTopicScopeVerified": true,
+  "scope": "Team scoped (All topics), Sandbox & Production",
+  "productionAppPushCapabilityEnabled": true,
+  "appStoreProfile": {
+    "capabilities": [
+      "In-App Purchase",
+      "Push Notifications",
+      "Sign In with Apple"
+    ],
+    "certificateCount": 1,
+    "appId": "com.andalus.aqar",
+    "expires": "2027-09-25",
+    "status": "Active"
+  },
+  "distributionCertificateExpirations": [
+    "2027-09-25",
+    "2027-10-14"
+  ],
+  "privateSigningKeyAvailabilityVerified": false,
+  "appleChangesPerformed": false
 }

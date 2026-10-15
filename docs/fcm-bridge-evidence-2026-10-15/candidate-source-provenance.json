@@ -1,0 +1,17 @@
+{
+  "builtCommit": "2400ede78b488d33c0238d77f71d6f3a4f805f7d",
+  "reviewedCommit": "eade86c01492a40ba1f20d3de02d679e66ac265c",
+  "appPaths": [
+    "lib",
+    "android",
+    "ios",
+    "config",
+    "pubspec.yaml",
+    "pubspec.lock",
+    "tools/prepare_push_bridge_rc.py"
+  ],
+  "identical": true,
+  "treeSha256": "7ef3a1f93eab68ede53062193484acd7182c0b7618fd7521273c5ce963db9061",
+  "unsignedOnly": true,
+  "storeRelease": false
+}

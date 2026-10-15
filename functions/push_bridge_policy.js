@@ -51,4 +51,3 @@ function oneSignalMessage(event,target,appId) {
   return {app_id:appId,include_subscription_ids:[target.endpoint],headings:{en:fcm.notification.title},contents:{en:fcm.notification.body},data:{...fcm.data,eventId:event.key},idempotency_key:uuidFor(deliveryId(event,target)),...(event.type==='chat_message'?{collapse_id:'chat_'+event.chatId}:{})};
 }
 module.exports={subscriptionId,canonicalEvent,rolloutAllows,planDevices,deliveryId,oneSignalMessage};
-
