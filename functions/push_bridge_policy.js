@@ -14,7 +14,8 @@ function rolloutAllows(installationId, rollout = {}) {
 }
 function planDevices({uid, devices, installations, legacySubscriptionId, legacyBinding, legacyFcmToken, legacyFcmApproval, rollout={}, now=Date.now()}) {
   if (rollout.mode === 'paused') return [];
-  const plans=[], knownSubscriptions=new Set(), seen=new Set();
+  const plans=[], knownSubscriptions=new Set(installations.map(i=>i.oneSignalId).filter(subscriptionId)), seen=new Set();
+  const unresolvedLegacy=subscriptionId(legacySubscriptionId) && !legacyBinding && !knownSubscriptions.has(legacySubscriptionId);
   for(const installation of installations) {
     if(subscriptionId(installation.oneSignalId)) knownSubscriptions.add(installation.oneSignalId);
     if(installation.uid!==uid || installation.active===false) continue;
@@ -23,7 +24,7 @@ function planDevices({uid, devices, installations, legacySubscriptionId, legacyB
     const fcm=!!device?.token;
     // Retain OneSignal as fallback, including a server-side rollback. An
     // FCM-only installation is allowed only by explicit rollout selection.
-    const provider=fcm && rolloutAllows(installation.id,rollout)?'fcm':os?'onesignal':null;
+    const provider=fcm && rolloutAllows(installation.id,rollout) && !(unresolvedLegacy && !os)?'fcm':os?'onesignal':null;
     if(!provider)continue;
     const endpoint=provider==='fcm'?device.token:os;
     if(seen.has(provider+':'+endpoint))continue;
@@ -50,3 +51,4 @@ function oneSignalMessage(event,target,appId) {
   return {app_id:appId,include_subscription_ids:[target.endpoint],headings:{en:fcm.notification.title},contents:{en:fcm.notification.body},data:{...fcm.data,eventId:event.key},idempotency_key:uuidFor(deliveryId(event,target)),...(event.type==='chat_message'?{collapse_id:'chat_'+event.chatId}:{})};
 }
 module.exports={subscriptionId,canonicalEvent,rolloutAllows,planDevices,deliveryId,oneSignalMessage};
+

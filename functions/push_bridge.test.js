@@ -48,3 +48,11 @@ test('accepted send with failed receipt write stays claimed and is not sent agai
  const run=()=>deliverBridge({event,targets:[plan({mode:'fcm',percent:100})[0]],store,sendFcm:async()=>{sends++;return 'ok';},sendOneSignal:async()=>{},appId:'test'});
  await assert.rejects(run());await run();assert.equal(sends,1);
 });
+
+test('unmapped legacy subscription blocks dual delivery when optional binding fails',()=>{
+ const targets=planDevices({uid:'u',devices:[device],installations:[{...installation,oneSignalId:null}],legacySubscriptionId:old,rollout:{mode:'fcm',percent:100}});
+ assert.deepEqual(targets.map(t=>t.provider),['onesignal']);
+ assert.equal(targets[0].endpoint,old);
+ const newUser=planDevices({uid:'u',devices:[device],installations:[{...installation,oneSignalId:null}],rollout:{mode:'fcm',percent:100}});
+ assert.deepEqual(newUser.map(t=>t.provider),['fcm']);
+});
