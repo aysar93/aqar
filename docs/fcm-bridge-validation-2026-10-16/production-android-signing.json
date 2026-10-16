@@ -1,0 +1,15 @@
+{
+  "bundle": "com.andalus.aqar",
+  "firebaseProject": "aqar-9f3f9",
+  "version": "1.0.5",
+  "build": 20,
+  "apkSha256": "beaca5c6546b31c86ac627582c4fbb3fd8a63c1fea62f275eeeb2880ff631916",
+  "certificateSha256": "71504105ea3b229354e2a8fa942c882e1e090842229d07b00b5b552f0909228e",
+  "v2Verified": true,
+  "v3Verified": true,
+  "existingLocalKeyUsed": true,
+  "storeUploadPerformed": false,
+  "deviceInstalled": false,
+  "playUploadKeyAssociationVerified": false,
+  "aabPrepared": false
+}

@@ -1,0 +1,96 @@
+{
+  "sha": "3b903d00a7b68a4cbfda6ac208a022e12ff328f0",
+  "checkedAt": "2026-10-16T20:11:11.994Z",
+  "runs": [
+    {
+      "id": 38959207009,
+      "name": "Safety and iOS build",
+      "event": "pull_request",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/aysar93/aqar/actions/runs/38959207009",
+      "sha": "3b903d00a7b68a4cbfda6ac208a022e12ff328f0",
+      "jobs": [
+        {
+          "id": 117169721346,
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 117169721571,
+          "name": "ios",
+          "status": "in_progress",
+          "conclusion": null
+        },
+        {
+          "id": 117169721681,
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 117169723082,
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "id": 117169723331,
+          "name": "bridge-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38959206933,
+      "name": "FCM isolated emulators",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38959206933",
+      "sha": "3b903d00a7b68a4cbfda6ac208a022e12ff328f0",
+      "jobs": [
+        {
+          "id": 117169719479,
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 117169720052,
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38959199860,
+      "name": "FCM isolated emulators",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38959199860",
+      "sha": "3b903d00a7b68a4cbfda6ac208a022e12ff328f0",
+      "jobs": [
+        {
+          "id": 117169692824,
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 117169692833,
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    }
+  ]
+}

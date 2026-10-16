@@ -1,0 +1,13 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-16T20:04:41.745Z",
+  "sourceWrittenWithFirebaseAuth": true,
+  "sourceActorIsAdmin": false,
+  "sourceTriggerAccepted": 1,
+  "legacyInboxWithoutSourceIdWritten": true,
+  "modernInboxWithSameSourceWritten": true,
+  "acceptedAfterBoth": 1,
+  "sameDeliveryIds": true,
+  "deviceDisplayVerified": false,
+  "productionChanged": false
+}

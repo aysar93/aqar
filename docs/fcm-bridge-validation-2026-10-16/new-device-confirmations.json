@@ -1,0 +1,71 @@
+{
+  "scope": "new staging binaries using test Firebase and deployed bridge; not published store binaries or actual OneSignal SDK binding",
+  "android": {
+    "model": "HONOR JMS-W09",
+    "source": "2400ede78b488d33c0238d77f71d6f3a4f805f7d",
+    "installed": true
+  },
+  "ios": {
+    "model": "iPhone 12 Pro Max",
+    "source": "c9b1dda930dffff796210d3ab01cc92f2d992ed4",
+    "ipaSha256": "460a17fe0cfabb79e4ba2bc5545f38da699ea124044a57311452ae06a8bdc200",
+    "installed": true
+  },
+  "appSourceIdenticalThrough": "3b903d00a7b68a4cbfda6ac208a022e12ff328f0",
+  "confirmations": [
+    {
+      "date": "2026-10-15",
+      "test": "foreground/inbox property opens",
+      "devices": [
+        "Android",
+        "iPhone"
+      ],
+      "evidence": "user confirmation; Android banner observed; iPhone inbox route confirmed"
+    },
+    {
+      "date": "2026-10-15",
+      "test": "legacy sender background external system notification opens chat",
+      "devices": [
+        "Android",
+        "iPhone"
+      ],
+      "evidence": "user confirmation"
+    },
+    {
+      "date": "2026-10-15",
+      "test": "cold external notification launches correct property",
+      "devices": [
+        "Android",
+        "iPhone"
+      ],
+      "evidence": "user confirmation; Android process absence observed before send; iPhone swiped closed by user"
+    },
+    {
+      "date": "2026-10-15",
+      "test": "account switch to admin routes admin chat and isolates old account",
+      "devices": [
+        "iPhone"
+      ],
+      "evidence": "user confirmation and protected token ownership observation"
+    },
+    {
+      "date": "2026-10-16",
+      "test": "comment/reply open property; office_notification/office_approved open office",
+      "devices": [
+        "iPhone"
+      ],
+      "evidence": "user confirmed all four arrived and opened"
+    },
+    {
+      "date": "2026-10-16",
+      "test": "final signout",
+      "devices": [
+        "iPhone"
+      ],
+      "evidence": "user confirmation"
+    }
+  ],
+  "allElevenTypesRetested": false,
+  "bookingsRetested": false,
+  "actualPublishedBinaryTested": false
+}

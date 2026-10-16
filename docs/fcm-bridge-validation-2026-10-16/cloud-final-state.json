@@ -1,0 +1,109 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-16T20:09:49.420Z",
+  "functions": [
+    {
+      "name": "bridgeCommentCreated",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "bridgeChatMessageCreated",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 1,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "deliverFcmNotification",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "deliverBridgeNotification",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    },
+    {
+      "name": "bridgeReplyCreated",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "maxInstances": 2,
+      "minInstances": 0,
+      "migrationEnabled": true,
+      "bridgeEnabled": true
+    }
+  ],
+  "jobs": [
+    {
+      "name": "projects/aqar-fcm-test-20261014/locations/us-central1/jobs/firebase-schedule-monitorPushDeliveryHealth-us-central1",
+      "state": "ENABLED",
+      "schedule": "every 5 minutes",
+      "lastAttemptTime": "2026-10-16T20:09:05.484182Z",
+      "statusCode": 0
+    }
+  ],
+  "errorWindowStart": "2026-10-15T12:19:00Z",
+  "runtimeErrorEntries": 1,
+  "expectedSyntheticMonitorErrors": 1,
+  "unexpectedErrors": 0,
+  "errorResultsTruncated": false,
+  "currentHealth": {
+    "staleAttempting": 0,
+    "reviewRequired": 0,
+    "truncated": false,
+    "checkedAt": "2026-10-16T20:09:49.420Z"
+  },
+  "actualCostVerified": false,
+  "productionChanged": false
+}
