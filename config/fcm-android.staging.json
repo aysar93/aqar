@@ -1,5 +1,7 @@
 {
   "FCM_MIGRATION": true,
+  "PUSH_BRIDGE": true,
+  "BRIDGE_ONESIGNAL_APP_ID": "2ef06b79-ae17-4ae0-afd1-3c2a766de0f4",
   "STAGING_EMULATORS": false,
   "STAGING_APP_ID": "1:371338154133:android:310ff431d875fdf26dcb9c",
   "STAGING_API_KEY": "AIzaSyDvK4Lgv63Ho7CIdciqlf2ocLogVflvjh8",

@@ -4,6 +4,9 @@ const assert = require('node:assert/strict');
 function validate(config, android) {
   assert.match(config.STAGING_PROJECT_ID, /^aqar-fcm-test-[a-z0-9-]+$/);
   assert.equal(config.FCM_MIGRATION, true);
+  if (config.PUSH_BRIDGE === true) {
+    assert.equal(config.BRIDGE_ONESIGNAL_APP_ID, '2ef06b79-ae17-4ae0-afd1-3c2a766de0f4', 'Dedicated isolated OneSignal app required');
+  }
   assert.equal(config.STAGING_EMULATORS, false);
   assert.equal(android.project_info.project_id, config.STAGING_PROJECT_ID);
   assert.equal(String(android.project_info.project_number), config.STAGING_SENDER_ID);

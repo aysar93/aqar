@@ -1,5 +1,8 @@
 'use strict';
 const {subscriptionId}=require('./push_bridge_policy');
+const {defineSecret}=require('firebase-functions/params');
+const apiKeySecret=defineSecret('BRIDGE_ONESIGNAL_API_KEY');
+const providerSecretOptions=()=>process.env.PUSH_BRIDGE_ENABLED==='true'?{secrets:[apiKeySecret]}:{};
 const PRODUCTION_APP='810a4d8d-cfac-492a-956e-0cff98248d25';
 function providerConfig() {
  const project=process.env.GCLOUD_PROJECT,appId=process.env.BRIDGE_ONESIGNAL_APP_ID,key=process.env.BRIDGE_ONESIGNAL_API_KEY;
@@ -30,4 +33,4 @@ async function sendOneSignal(message) {
  if(!result.id)throw Object.assign(Error('Provider did not acknowledge a notification'),{code:'onesignal_no_ack'});
  return result;
 }
-module.exports={providerConfig,verifySubscriptionBinding,sendOneSignal};
+module.exports={providerConfig,verifySubscriptionBinding,sendOneSignal,providerSecretOptions};

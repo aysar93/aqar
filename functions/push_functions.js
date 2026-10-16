@@ -15,7 +15,7 @@ function requestDevice(request) {
   return { uid: request.auth.uid, id };
 }
 
-exports.registerPushDevice = onCall(async request => {
+exports.registerPushDevice = onCall(require('./push_onesignal').providerSecretOptions(), async request => {
   const { uid, id } = requestDevice(request);
   const { token, platform, oneSignalId, revokeSecret, providerToken, generation=0 } = request.data || {};
   if (typeof token !== 'string' || token.length < 20 || token.length > 4096 || !['android', 'iOS', 'web'].includes(platform)) throw new HttpsError('invalid-argument', 'رمز الجهاز غير صالح');

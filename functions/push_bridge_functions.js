@@ -9,6 +9,7 @@ const logger=require('firebase-functions/logger');
 const {hash,validId}=require('./push_policy');
 const {canonicalEvent,planDevices,rolloutAllows}=require('./push_bridge_policy');
 const {deliverBridge}=require('./push_bridge_delivery');
+const {providerSecretOptions}=require('./push_onesignal');
 const bridgeEnabled=()=>process.env.PUSH_BRIDGE_ENABLED==='true' && process.env.FCM_MIGRATION_ENABLED==='true';
 
 async function verifiedEvent(event,db) {
@@ -122,7 +123,7 @@ async function dispatchBridge(push,db=getFirestore()) {
   sendOneSignal:emulator?async()=>({id:`emulator-onesignal:${push.key}`}):provider.sendOneSignal});
 }
 
-exports.deliverBridgeNotification=onDocumentWrittenWithAuthContext({document:'notifications/{notificationId}',retry:true,maxInstances:2},async event=>{
+exports.deliverBridgeNotification=onDocumentWrittenWithAuthContext({document:'notifications/{notificationId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
  if(!bridgeEnabled())return;
  const db=getFirestore(),push=await verifiedEvent(event,db);
  if(!push){if(event.data?.after.exists)logger.warn('push_bridge_source_rejected',{notificationHash:hash(event.params.notificationId)});return;}
@@ -147,19 +148,19 @@ async function fromSource(event,payload) {
  const adapted={authId:event.authId,authType:event.authType,params:{notificationId:id},data:{before:{exists:false},after:{exists:true,data:()=>payload}}};
  const push=await verifiedEvent(adapted,db);if(push)await publishVerified(push,db);
 }
-exports.bridgeCommentCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}',retry:true,maxInstances:2},async event=>{
+exports.bridgeCommentCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
  if(!bridgeEnabled()||!event.data?.exists)return;
  const property=(await getFirestore().doc('properties/'+event.params.propertyId).get()).data();
  if(!validId(property?.publisherUid))return;
  return fromSource(event,{type:'comment',userId:property.publisherUid,propertyId:event.params.propertyId,commentId:event.params.commentId,title:'تعليق جديد',message:'تعليق جديد على عقارك'});
 });
-exports.bridgeReplyCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}/replies/{replyId}',retry:true,maxInstances:2},async event=>{
+exports.bridgeReplyCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}/replies/{replyId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
  if(!bridgeEnabled()||!event.data?.exists)return;
  const p=event.params,parent=(await getFirestore().doc(`properties/${p.propertyId}/comments/${p.commentId}`).get()).data();
  if(!validId(parent?.userId))return;
  return fromSource(event,{type:'reply',userId:parent.userId,propertyId:p.propertyId,commentId:p.commentId,replyId:p.replyId,title:'رد جديد',message:'رد جديد على تعليقك'});
 });
-exports.bridgeChatMessageCreated=onDocumentCreatedWithAuthContext({document:'chats/{chatId}/messages/{messageId}',retry:true,maxInstances:2},async event=>{
+exports.bridgeChatMessageCreated=onDocumentCreatedWithAuthContext({document:'chats/{chatId}/messages/{messageId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
  if(!bridgeEnabled()||!event.data?.exists)return;
  const source=event.data.data(),p=event.params;
  if(source.senderId!==event.authId||source.deletedAt)return;
