@@ -1,12 +1,17 @@
 name: Push bridge production candidate (compile only)
 on:
   workflow_dispatch:
+    inputs:
+      android_bundle_only:
+        description: 'Compile only an unsigned Android AAB; no credentials or upload'
+        type: boolean
+        default: false
   workflow_call:
 permissions:
   contents: read
 jobs:
   android-candidate:
-    if: startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    if: startsWith(github.ref, 'refs/heads/staging/fcm-complete-') && inputs.android_bundle_only != true
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -31,7 +36,7 @@ jobs:
           path: build/app/outputs/flutter-apk/
           retention-days: 7
   ios-candidate:
-    if: startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    if: startsWith(github.ref, 'refs/heads/staging/fcm-complete-') && inputs.android_bundle_only != true
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -48,4 +53,29 @@ jobs:
         with:
           name: Push-bridge-iOS-UNSIGNED-NOT-FOR-INSTALL
           path: build/ios/Push-bridge-iOS-UNSIGNED.zip
+          retention-days: 7
+  android-bundle-candidate:
+    if: startsWith(github.ref, 'refs/heads/staging/fcm-complete-') && inputs.android_bundle_only == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PUSH_BRIDGE_UNSIGNED_RC: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+      - run: python3 tools/prepare_push_bridge_rc.py
+      - run: flutter pub get
+      - run: flutter build appbundle --release --target lib/main_push_bridge_rc.dart --dart-define-from-file=config/push-bridge.rc.json --build-number=2026101601
+      - run: sha256sum build/app/outputs/bundle/release/*.aab > build/app/outputs/bundle/release/compile-only.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Push-bridge-Android-AAB-UNSIGNED-NOT-FOR-INSTALL
+          path: build/app/outputs/bundle/release/
           retention-days: 7
