@@ -40,7 +40,7 @@ def verify(ipa):
             profile.get('ProvisionedDevices') or profile.get('ProvisionsAllDevices')):
             raise ValueError('App Store production signing required')
         cert_path = root / 'signing-cert'
-        subprocess.run(['codesign', '--display', '--extract-certificates', str(cert_path), str(app)], check=True, capture_output=True)
+        subprocess.run(['codesign', '--display', '--extract-certificates=' + str(cert_path), str(app)], check=True, capture_output=True)
         leaf = pathlib.Path(str(cert_path) + '0').read_bytes()
         if leaf not in profile['DeveloperCertificates']:
             raise ValueError('Signer not authorized by profile')
