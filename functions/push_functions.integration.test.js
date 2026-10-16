@@ -189,6 +189,25 @@ test('bridge validates write actor, routes mixed devices and shares transactiona
   claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');assert.equal(claims.length,2);
  }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;}
 });
+test('bridge rollback, cohort reduction and ingress shutdown cancel an already planned FCM claim',async()=>{
+ const {dispatchBridge}=require('./push_bridge_functions').internals;
+ const previous=process.env.FUNCTIONS_EMULATOR;process.env.FUNCTIONS_EMULATOR='true';
+ try {
+  await registerPushDevice.run(request());
+  for(const [index,next] of [{mode:'legacy',legacyIngressCoordinated:true},{mode:'fcm',percent:0,legacyIngressCoordinated:true},{mode:'fcm',percent:100,legacyIngressCoordinated:false}].entries()) {
+   await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true});
+   const e=await event('rollback-race-'+index),push=require('./push_bridge_policy').canonicalEvent(e.data.after.data(),null,e.params.notificationId);
+   let changed=false;
+   const racingDb={doc:db.doc.bind(db),collection:db.collection.bind(db),runTransaction:async callback=>{
+    if(!changed){changed=true;await db.doc('push_bridge_config/rollout').set(next);}
+    return db.runTransaction(callback);
+   }};
+   assert.deepEqual(await dispatchBridge(push,racingDb),[{id:require('./push_bridge_policy').deliveryId(push,{key:'installation:'+'a'.repeat(32)}),status:'skipped'}]);
+   assert.equal((await db.collection('push_deliveries').get()).size,0);
+  }
+ } finally {if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;}
+});
+
 test('protected bridge and rate-limit collections reject client read/write',async()=>{
  const sender=env.authenticatedContext('sender').firestore();
  for(const collection of ['push_registration_limits','push_ingress_limits','push_bridge_events','push_bridge_inbox','push_subscription_bindings','push_bridge_config','push_legacy_token_approvals']){

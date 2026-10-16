@@ -7,7 +7,7 @@ const {getMessaging}=require('firebase-admin/messaging');
 const {getAuth}=require('firebase-admin/auth');
 const logger=require('firebase-functions/logger');
 const {hash,validId}=require('./push_policy');
-const {canonicalEvent,planDevices}=require('./push_bridge_policy');
+const {canonicalEvent,planDevices,rolloutAllows}=require('./push_bridge_policy');
 const {deliverBridge}=require('./push_bridge_delivery');
 const bridgeEnabled=()=>process.env.PUSH_BRIDGE_ENABLED==='true' && process.env.FCM_MIGRATION_ENABLED==='true';
 
@@ -86,7 +86,10 @@ async function dispatchBridge(push,db=getFirestore()) {
     const inbox=await tx.get(db.doc('notifications/'+e.notificationId));
     if(!message.exists||message.data().deletedAt||message.data().isRead===true||message.data().status==='read'||inbox.exists && (inbox.data().unreadCount===0 || inbox.data().messageId && inbox.data().messageId!==e.messageId))return false;
    }
-   if(claim.exists||aliasState?.exists||!user.exists||user.data().isBlocked===true||user.data().notificationsEnabled===false||global.data()?.allowNotifications===false||rollout.data()?.mode==='paused')return false;
+   if(claim.exists||aliasState?.exists||!user.exists||user.data().isBlocked===true||user.data().notificationsEnabled===false||global.data()?.allowNotifications===false||rollout.data()?.mode==='paused'||rollout.data()?.legacyIngressCoordinated!==true)return false;
+   // A rollback or cohort reduction can race the initial device planning read.
+   // Recheck the current rollout in the same transaction that claims delivery.
+   if(t.provider==='fcm' && t.installationId && !rolloutAllows(t.installationId,rollout.data()))return false;
    if(t.installationId && (!registration.exists||registration.data().active===false||registration.data().uid!==e.userId||registration.data().tokenHash!==t.tokenHash && t.provider==='fcm'))return false;
    if(t.provider==='fcm' && t.installationId && (!token?.data()?.active||token.data().uid!==e.userId||token.data().token!==t.endpoint))return false;
    if(t.legacyFcmApprovalHash && (user.data().fcmToken!==t.endpoint||rollout.data()?.legacyRecovery!=='fcm'||!rollout.data()?.legacyRecoveryAllowlist?.includes(e.userId)||recoveryApproval?.data()?.uid!==e.userId||recoveryApproval.data().active!==true||recoveryApproval.data().expiresAtMs<=Date.now()))return false;
