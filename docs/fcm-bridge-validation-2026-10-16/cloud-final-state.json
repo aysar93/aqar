@@ -1,6 +1,6 @@
 {
   "project": "aqar-fcm-test-20261014",
-  "checkedAt": "2026-10-16T20:09:49.420Z",
+  "checkedAt": "2026-10-16T20:24:02.400Z",
   "functions": [
     {
       "name": "bridgeCommentCreated",
@@ -89,7 +89,7 @@
       "name": "projects/aqar-fcm-test-20261014/locations/us-central1/jobs/firebase-schedule-monitorPushDeliveryHealth-us-central1",
       "state": "ENABLED",
       "schedule": "every 5 minutes",
-      "lastAttemptTime": "2026-10-16T20:09:05.484182Z",
+      "lastAttemptTime": "2026-10-16T20:19:03.987160Z",
       "statusCode": 0
     }
   ],
@@ -102,7 +102,7 @@
     "staleAttempting": 0,
     "reviewRequired": 0,
     "truncated": false,
-    "checkedAt": "2026-10-16T20:09:49.420Z"
+    "checkedAt": "2026-10-16T20:24:02.400Z"
   },
   "actualCostVerified": false,
   "productionChanged": false

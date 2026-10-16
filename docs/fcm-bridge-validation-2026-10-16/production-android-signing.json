@@ -10,6 +10,6 @@
   "existingLocalKeyUsed": true,
   "storeUploadPerformed": false,
   "deviceInstalled": false,
-  "playUploadKeyAssociationVerified": false,
-  "aabPrepared": false
+  "playUploadKeyAssociationVerified": true,
+  "aabPrepared": true
 }
