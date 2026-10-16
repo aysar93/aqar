@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: false
+      android_bundle_only:
+        description: 'Compile only the unsigned Android production-config bundle'
+        required: false
+        type: boolean
+        default: false
       staging_adhoc:
         description: 'Build only the isolated signed Ad Hoc IPA (no store upload)'
         required: false
@@ -86,3 +91,5 @@ jobs:
   bridge-candidate:
     if: github.event_name == 'workflow_dispatch' && inputs.bridge_candidate == true && startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
     uses: ./.github/workflows/push-bridge-rc.yml
+    with:
+      android_bundle_only: ${{ inputs.android_bundle_only || false }}
