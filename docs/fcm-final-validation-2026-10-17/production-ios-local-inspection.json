@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-17T10:46:56.240746+00:00",
+  "ipaSha256": "9c43f726998b393f2c8954e7a483bab4367d831cff7e6ef6cf6aea950b03c825",
+  "localHashMatchesMacReport": true,
+  "bundle": "com.andalus.aqar",
+  "build": "2026101701",
+  "firebaseProject": "aqar-9f3f9",
+  "firebaseSender": "1031621585901",
+  "executableEntitlementsMatch": true,
+  "apnsEnvironment": "production",
+  "debuggable": false,
+  "profileCmsSignatureVerified": true,
+  "profileTrustChainVerifiedLocally": false,
+  "profileExpirationUtc": "2027-09-25T13:48:10Z",
+  "appStoreProfile": true,
+  "profileContainsCiSigner": true,
+  "macCodesignStrictVerified": true,
+  "localWindowsCodesignVerification": false,
+  "productionChanged": false,
+  "storeUploaded": false
+}

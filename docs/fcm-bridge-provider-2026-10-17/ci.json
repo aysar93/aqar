@@ -1,0 +1,107 @@
+{
+  "sha": "d3bf0d5edee348996613a50d23907da87565b187",
+  "checkedAt": "2026-10-17T08:26:50.842Z",
+  "runs": [
+    {
+      "id": 38967773070,
+      "event": "pull_request",
+      "name": "Safety and iOS build",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38967773070",
+      "jobs": [
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ios",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "bridge-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38967773019,
+      "event": "pull_request",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38967773019",
+      "jobs": [
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38967768949,
+      "event": "push",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38967768949",
+      "jobs": [
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38967769261,
+      "event": "push",
+      "name": "FCM Android full-app staging APK",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38967769261",
+      "jobs": [
+        {
+          "name": "android-staging",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 12076052997,
+          "name": "Aqar-FCM-staging-Android-arm64-debug",
+          "size": 104234215,
+          "digest": "sha256:24c64a08ccdbc4a7f024ba5cb116c10bd52cab58acfdd218bc92b3058b977d4d"
+        }
+      ]
+    }
+  ]
+}

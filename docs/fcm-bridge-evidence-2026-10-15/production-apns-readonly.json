@@ -1,0 +1,32 @@
+{
+  "app": "AQAR iOS",
+  "project": "aqar-9f3f9",
+  "developmentApnsKeyPresent": false,
+  "productionApnsKeyPresent": true,
+  "oldIphoneLiveDeliveryVerified": false,
+  "readOnly": true,
+  "checkedAt": "2026-10-15T11:56:41.6379988Z",
+  "productionChanged": false,
+  "keyId": "L74V23VW58",
+  "teamId": "H96JUT8PUM",
+  "appleTopicScopeVerified": true,
+  "scope": "Team scoped (All topics), Sandbox & Production",
+  "productionAppPushCapabilityEnabled": true,
+  "appStoreProfile": {
+    "capabilities": [
+      "In-App Purchase",
+      "Push Notifications",
+      "Sign In with Apple"
+    ],
+    "certificateCount": 1,
+    "appId": "com.andalus.aqar",
+    "expires": "2027-09-25",
+    "status": "Active"
+  },
+  "distributionCertificateExpirations": [
+    "2027-09-25",
+    "2027-10-14"
+  ],
+  "privateSigningKeyAvailabilityVerified": false,
+  "appleChangesPerformed": false
+}

@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-17T13:58:04.982Z",
+  "readOnly": true,
+  "project": "notification-server",
+  "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+  "team": "aysar93s-projects",
+  "domain": "notification-server-henna.vercel.app",
+  "runtime": "24.x",
+  "region": "iad1",
+  "productionEnvironmentVariableNames": [
+    "ONESIGNAL_APP_ID",
+    "ONESIGNAL_API_KEY",
+    "FIREBASE_SERVICE_ACCOUNT"
+  ],
+  "secretValuesRead": false,
+  "changes": false
+}

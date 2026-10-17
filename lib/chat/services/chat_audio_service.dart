@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../services/push_migration.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../widgets/voice_recorder_sheet.dart';
@@ -6,6 +7,8 @@ import '../widgets/voice_recorder_sheet.dart';
 class ChatAudioService {
   static Future<Map<String, dynamic>> upload(
       String chatId, VoiceRecording recording) async {
+    if (PushMigration.isolated)
+      throw StateError('Media upload unavailable in FCM staging');
     final file = File(recording.path);
     if (await file.length() > 5 * 1024 * 1024) {
       throw StateError('Audio too large');

@@ -1,0 +1,17 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-14T22:25:39.313Z",
+  "syntheticAccountsDeleted": 3,
+  "syntheticDocumentsDeleted": 17,
+  "syntheticDocumentsVerifiedAbsent": 17,
+  "settingsRestored": true,
+  "authEmailConfigurationRestored": true,
+  "deliveryReceiptsRetained": true,
+  "emailVerification": "Protocol-buffer response omits enabled=false; normalized boolean equals saved state",
+  "syntheticAccountsVerifiedAbsent": true,
+  "postLogoutAdditionalDocumentsDeleted": 0,
+  "ownedSubtreesAndSessionResiduesChecked": true,
+  "additionalDocumentsVerifiedAbsent": true,
+  "secondDeviceUiLogoutObserved": true,
+  "firstAndroidAndIPhoneLogoutReferToPriorPhase": true
+}

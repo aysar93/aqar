@@ -1,0 +1,97 @@
+name: FCM iOS signed Ad Hoc (manual, no store upload)
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      FCM_STAGING_P12_BASE64:
+        required: true
+      FCM_STAGING_P12_PASSWORD:
+        required: true
+      FCM_STAGING_ADHOC_PROFILE_BASE64:
+        required: true
+permissions:
+  contents: read
+jobs:
+  signed-staging:
+    if: startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      P12_DATA: ${{ secrets.FCM_STAGING_P12_BASE64 }}
+      P12_PASSWORD: ${{ secrets.FCM_STAGING_P12_PASSWORD }}
+      PROFILE_DATA: ${{ secrets.FCM_STAGING_ADHOC_PROFILE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require dedicated staging signing inputs
+        run: |
+          test -n "$P12_DATA" && test -n "$P12_PASSWORD" && test -n "$PROFILE_DATA" || { echo 'Dedicated staging signing secrets are required'; exit 1; }
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+      - name: Validate Ad Hoc profile and prepare temporary signing keychain
+        shell: bash
+        run: |
+          printf '%s' "$PROFILE_DATA" | base64 --decode > "$RUNNER_TEMP/staging.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/staging.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+          python3 tools/validate_ios_fcm_signing.py "$RUNNER_TEMP/profile.plist" "$RUNNER_TEMP/signing.json"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_UUID=$(python3 -c "import json,os;print(json.load(open(os.environ['RUNNER_TEMP']+'/signing.json'))['uuid'])")
+          cp "$RUNNER_TEMP/staging.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          printf '%s' "$P12_DATA" | base64 --decode > "$RUNNER_TEMP/staging.p12"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          KEYCHAIN_PATH="$RUNNER_TEMP/fcm-staging.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/staging.p12" -P "$P12_PASSWORD" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+      - name: Apply isolated native config and explicit Ad Hoc export settings
+        run: |
+          python3 tools/prepare_ios_fcm_staging.py config/fcm-ios.staging.json config/staging/GoogleService-Info.plist --apply
+          python3 - <<'PY'
+          import json, os, pathlib, plistlib
+          info = json.load(open(os.environ['RUNNER_TEMP']+'/signing.json'))
+          pbx = pathlib.Path('ios/Runner.xcodeproj/project.pbxproj')
+          content = pbx.read_text().replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
+          content = content.replace('PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging;', 'PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging; DEVELOPMENT_TEAM = H96JUT8PUM; CODE_SIGN_IDENTITY = "Apple Distribution"; PROVISIONING_PROFILE_SPECIFIER = "'+info['profileName']+'";')
+          pbx.write_text(content)
+          with open(os.environ['RUNNER_TEMP']+'/ExportOptions.plist','wb') as out:
+              plistlib.dump({'method':'ad-hoc','signingStyle':'manual','teamID':info['team'],'signingCertificate':'Apple Distribution','provisioningProfiles':{info['bundle']:info['profileName']}},out)
+          PY
+      - run: flutter pub get
+      - name: Build signed isolated IPA
+        run: flutter build ipa --release --target lib/main_fcm_app_staging.dart --dart-define-from-file=config/fcm-ios.staging.json --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+      - name: Encrypt IPA before artifact storage (profile contains device UDID)
+        shell: bash
+        run: |
+          IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -type f -print -quit)
+          test -n "$IPA_PATH" && test -f "$IPA_PATH"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 -md sha256 -in "$IPA_PATH" -out build/ios/ipa/Aqar-FCM-staging.ipa.enc -pass env:P12_PASSWORD
+          python3 - <<'PY'
+          import hashlib, hmac, os, pathlib
+          encrypted = pathlib.Path('build/ios/ipa/Aqar-FCM-staging.ipa.enc')
+          key = hashlib.pbkdf2_hmac('sha256', os.environ['P12_PASSWORD'].encode(), b'Aqar-FCM-artifact-v1', 200000)
+          encrypted.with_suffix(encrypted.suffix+'.hmac').write_text(hmac.new(key, encrypted.read_bytes(), 'sha256').hexdigest()+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aqar-FCM-staging-AdHoc-encrypted
+          path: |
+            build/ios/ipa/Aqar-FCM-staging.ipa.enc
+            build/ios/ipa/Aqar-FCM-staging.ipa.enc.hmac
+          retention-days: 7
+      - name: Remove temporary signing material and unencrypted IPA
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/fcm-staging.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/staging.p12" "$RUNNER_TEMP/staging.mobileprovision" "$RUNNER_TEMP/profile.plist"
+          if test -f "$RUNNER_TEMP/signing.json"; then
+            PROFILE_UUID=$(python3 -c "import json,os;print(json.load(open(os.environ['RUNNER_TEMP']+'/signing.json'))['uuid'])")
+            case "$PROFILE_UUID" in *[!a-fA-F0-9-]*|'') exit 1;; esac
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          fi
+          rm -f "$RUNNER_TEMP/signing.json" build/ios/ipa/*.ipa

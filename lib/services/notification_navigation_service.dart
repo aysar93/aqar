@@ -81,6 +81,7 @@ class NotificationNavigationService {
   ) async {
     final normalized = _normalizePayload(data);
     if (PushMigration.enabled &&
+        FirebaseAuth.instance.currentUser != null &&
         normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
       return;
     }
@@ -290,6 +291,7 @@ class NotificationNavigationService {
     BuildContext context,
     String propertyId,
   ) async {
+    final actorUid = FirebaseAuth.instance.currentUser?.uid;
     try {
       final snapshot =
           await _firestore.collection('properties').doc(propertyId).get();
@@ -316,7 +318,8 @@ class NotificationNavigationService {
         return;
       }
 
-      if (!context.mounted) {
+      if (!context.mounted ||
+          FirebaseAuth.instance.currentUser?.uid != actorUid) {
         return;
       }
 
@@ -433,6 +436,7 @@ class NotificationNavigationService {
     BuildContext context,
     String officeId,
   ) async {
+    final actorUid = FirebaseAuth.instance.currentUser?.uid;
     try {
       final snapshot =
           await _firestore.collection('offices').doc(officeId).get();
@@ -447,7 +451,10 @@ class NotificationNavigationService {
         return;
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted ||
+          FirebaseAuth.instance.currentUser?.uid != actorUid) {
+        return;
+      }
 
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -508,7 +515,8 @@ class NotificationNavigationService {
 
       final isAdmin = userDoc.data()?['isAdmin'] == true;
 
-      if (!context.mounted) {
+      if (!context.mounted ||
+          FirebaseAuth.instance.currentUser?.uid != currentUser.uid) {
         return;
       }
 
@@ -549,7 +557,8 @@ class NotificationNavigationService {
 
       final chatData = chatDoc.data() ?? <String, dynamic>{};
 
-      if (!context.mounted) {
+      if (!context.mounted ||
+          FirebaseAuth.instance.currentUser?.uid != currentUser.uid) {
         return;
       }
 

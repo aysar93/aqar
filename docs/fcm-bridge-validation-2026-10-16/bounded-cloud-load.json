@@ -1,0 +1,14 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "authenticatedSyntheticWrites": 20,
+  "legacyPayloads": 10,
+  "modernPayloads": 10,
+  "maxConcurrentWrites": 4,
+  "verifiedCloudEvents": 20,
+  "providerSendReceipts": 0,
+  "devicePushes": 0,
+  "writeLatencyP50Ms": 1051,
+  "writeLatencyP95Ms": 1398,
+  "elapsedMs": 6104,
+  "actualCostVerified": false
+}

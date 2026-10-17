@@ -1,0 +1,20 @@
+{
+  "scope": "Static review of notifications and proposed private push matches only; no tests or production writes",
+  "currentProductionNotificationRules": {
+    "score": 2,
+    "summary": "Existing production create accepts any signed-in writer; owner update can change recipient/content. These are baseline findings, not introduced by paused deployment.",
+    "findings": [
+      {"check":"Authority Source","severity":"major","issue":"Authenticated users can create inbox entries for arbitrary recipients without verified source IDs.","recommendation":"Use the prepared source-authorized notification patch before opening production delivery; reconcile old writer contracts separately."},
+      {"check":"Update Bypass / ownership","severity":"major","issue":"Owner update has no immutable recipient or field allowlist in current production rules.","recommendation":"Use immutable userId and restricted read-state updates in deferred notification patch."},
+      {"check":"Type safety / resource exhaustion","severity":"minor","issue":"Notification fields/read arrays lack comprehensive type/size bounds; not a new paused-only change.","recommendation":"Do not broaden authorization or trust HTTP content; bound server-generated content and account for remaining client-write limits before broad activation."}
+    ]
+  },
+  "pausedOnlyProposal": {
+    "summary": "Adds ten private push matches denying all client reads/writes; preserves existing production rules byte-for-byte outside the insertion. Existing isAdmin/activeUser helpers remain unchanged and isAdmin is not client-creatable/updatable through self profile edits.",
+    "storageRulesChanged": false,
+    "mediaDocumentRulesChanged": false,
+    "recipientReadPolicyChanged": false,
+    "runtimeCompilationClaimed": false
+  },
+  "productionChanged": false
+}

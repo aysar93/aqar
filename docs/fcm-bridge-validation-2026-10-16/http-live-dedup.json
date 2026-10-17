@@ -1,0 +1,18 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "actualCloudFirestore": true,
+  "localHttpAdapter": true,
+  "concurrentReplays": 12,
+  "receiptsBefore": 2,
+  "receiptsAfter": 2,
+  "providers": [
+    "fcm",
+    "fcm"
+  ],
+  "allReplaysHandled": true,
+  "forgedCallerRecipientIgnored": true,
+  "missingIdentityRejected": true,
+  "unknownEventNotSent": true,
+  "productionVercelChanged": false,
+  "providerResends": 0
+}

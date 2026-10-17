@@ -30,6 +30,7 @@ beforeEach(async () => {
   for (const uid of ['owner', 'sender', 'admin']) await db.doc(`users/${uid}`).set({ isAdmin: uid === 'admin', isBlocked: false, notificationsEnabled: true });
   await db.doc('settings/app_settings').set({ adminUid: 'admin' });
 });
+const approvedBridgeCohort={userIds:['owner'],installations:[{uid:'owner',id:'a'.repeat(32)}],legacyTargets:[{uid:'owner',key:'legacy:'+hash('22345678-1234-4234-a234-123456789abc')}],providers:['fcm','onesignal']};
 const request = (uid = 'owner', id = 'a'.repeat(32), token = 'token-'.repeat(12)) => ({ auth: { uid }, data: { installationId: id, token, platform: 'android' } });
 async function event(id = 'n', data = {}) {
   const ref = db.doc(`notifications/${id}`);
@@ -64,6 +65,48 @@ test('disabled preferences, internal delivery, stale tokens and legacy are skipp
   await deliverFcmNotification.run(await event('legacy', { pushTransport: 'legacy' }));
   await db.doc(`push_tokens/${hash(request().data.token)}`).update({ updatedAt: Timestamp.fromMillis(0) });
   await deliverFcmNotification.run(await event('stale')); assert.equal(sends.length, 0);
+});
+test('offline logout revocation survives sign-out and cannot revoke a newer login generation', async () => {
+  const r=request();r.data.revokeSecret='1'.repeat(64);
+  await registerPushDevice.run(r);
+  await unregisterPushDevice.run({data:{installationId:r.data.installationId,revokeSecret:r.data.revokeSecret}});
+  assert.equal((await db.doc(`push_tokens/${hash(r.data.token)}`).get()).data().active,false);
+  await assert.rejects(registerPushDevice.run(r),e=>e.code==='failed-precondition');
+  await registerPushDevice.run({...r,data:{...r.data,revokeSecret:'2'.repeat(64)}});
+  await unregisterPushDevice.run({auth:{uid:'owner'},data:{installationId:r.data.installationId,revokeSecret:r.data.revokeSecret}});
+  assert.equal((await db.doc(`push_tokens/${hash(r.data.token)}`).get()).data().active,true);
+});
+test('revocation before a delayed registration prevents reactivation', async()=>{
+  const r=request();r.data.revokeSecret='3'.repeat(64);
+  await unregisterPushDevice.run({auth:{uid:'owner'},data:{installationId:r.data.installationId,revokeSecret:r.data.revokeSecret}});
+  await assert.rejects(registerPushDevice.run(r),e=>e.code==='failed-precondition');
+});
+test('late registration from a previous account generation cannot replace a new owner',async()=>{
+ const r=request();r.data.generation=2;r.data.revokeSecret='4'.repeat(64);
+ await registerPushDevice.run(r);
+ await registerPushDevice.run({...r,auth:{uid:'sender'},data:{...r.data,generation:3,revokeSecret:'5'.repeat(64)}});
+ await assert.rejects(registerPushDevice.run(r),e=>e.code==='failed-precondition');
+ assert.equal((await db.doc(`push_tokens/${hash(r.data.token)}`).get()).data().uid,'sender');
+});
+test('unknown anonymous revocation capability cannot create billable tombstones',async()=>{
+ const id='9'.repeat(32);
+ assert.equal((await unregisterPushDevice.run({data:{installationId:id,revokeSecret:'6'.repeat(64)}})).detached,false);
+ assert.equal((await db.doc('push_installations/'+id).get()).exists,false);
+});
+test('registration limits bound device count and refresh attempts',async()=>{
+  for(let i=0;i<10;i++)await registerPushDevice.run(request('owner',i.toString(16).padStart(32,'0'),'device-token-'.repeat(3)+i));
+  await assert.rejects(registerPushDevice.run(request('owner','f'.repeat(32))),e=>e.code==='resource-exhausted');
+  for(let i=10;i<30;i++)await registerPushDevice.run(request('owner','0'.repeat(32)));
+  await assert.rejects(registerPushDevice.run(request('owner','0'.repeat(32))),e=>e.code==='resource-exhausted');
+});
+test('global notification setting prevents sends; re-enable permits new events', async () => {
+  await registerPushDevice.run(request());
+  await db.doc('settings/app_settings').update({ allowNotifications: false });
+  await deliverFcmNotification.run(await event('global-disabled'));
+  assert.equal(sends.length, 0);
+  await db.doc('settings/app_settings').update({ allowNotifications: true });
+  await deliverFcmNotification.run(await event('global-enabled'));
+  assert.equal(sends.length, 1);
 });
 test('concurrent retries are claimed once; collapsed chat sends successive source messages', async () => {
   await registerPushDevice.run(request());
@@ -123,4 +166,103 @@ test('rules allow source-backed chat create/update, reject message and recipient
   await assertFails(updateDoc(ref, { pushTransport: 'legacy' }));
   await db.doc('notifications/legacy_chat').set({ ...notification, pushTransport: 'legacy' });
   await assertSucceeds(setDoc(doc(sender, 'notifications/legacy_chat'), { ...notification, messageId: 'm2' }));
+});
+
+test('legacy transport cannot bypass sender authorization or retarget/edit recipient inbox', async () => {
+  const sender=env.authenticatedContext('sender').firestore();
+  const owner=env.authenticatedContext('owner').firestore();
+  await assertFails(setDoc(doc(sender,'notifications/legacy-spam'),{userId:'owner',type:'general'}));
+  await db.doc('properties/p').set({publisherUid:'owner'});
+  await db.doc('properties/p/comments/c').set({userId:'sender'});
+  const legacy={userId:'owner',type:'comment',propertyId:'p',commentId:'c'};
+  await assertSucceeds(setDoc(doc(sender,'notifications/legacy-verified'),legacy));
+  await assertFails(setDoc(doc(sender,'notifications/legacy-foreign'),{...legacy,userId:'admin'}));
+  await assertFails(setDoc(doc(sender,'notifications/legacy-unverifiable'),{userId:'owner',type:'comment',propertyId:'p'}));
+  await assertFails(updateDoc(doc(owner,'notifications/legacy-verified'),{userId:'admin'}));
+  await assertFails(updateDoc(doc(owner,'notifications/legacy-verified'),{title:'spoofed'}));
+  await assertSucceeds(updateDoc(doc(owner,'notifications/legacy-verified'),{readBy:['owner'],isRead:true}));
+});
+test('bridge validates write actor, routes mixed devices and shares transactional claims across ingress', async()=>{
+ const {verifiedEvent,dispatchBridge}=require('./push_bridge_functions').internals;
+ const previous=process.env.FUNCTIONS_EMULATOR;process.env.FUNCTIONS_EMULATOR='true';
+ const os='12345678-1234-4234-a234-123456789abc',legacy='22345678-1234-4234-a234-123456789abc';
+ await registerPushDevice.run(request());
+ await db.doc('push_installations/'+'a'.repeat(32)).update({oneSignalId:os});
+ await db.doc('push_subscription_bindings/'+hash(os)).set({uid:'owner',installationId:'a'.repeat(32),active:true});
+ await db.doc('users/owner').update({oneSignalId:legacy});
+ await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
+ const e=await event('bridge',{pushTransport:'legacy'});
+ assert.equal(await verifiedEvent({...e,authId:'sender',authType:'unknown'},db),null);
+ assert.equal(await verifiedEvent({...e,authId:'admin',authType:'unauthenticated'},db),null);
+ const push=await verifiedEvent({...e,authId:'admin',authType:'unknown'},db);assert.ok(push);
+ assert.ok(await verifiedEvent({...e,authId:'admin',authType:'api_key'},db));
+ try{
+  await Promise.all([dispatchBridge(push,db),dispatchBridge(push,db)]);
+  let claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');
+  assert.equal(claims.length,2);assert.deepEqual(claims.map(d=>d.data().provider).sort(),['fcm','onesignal']);
+  await db.doc('push_bridge_config/rollout').set({mode:'legacy',legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
+  await dispatchBridge(push,db);
+  claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');assert.equal(claims.length,2);
+ }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;}
+});
+test('bridge rollback, cohort reduction and ingress shutdown cancel an already planned FCM claim',async()=>{
+ const {dispatchBridge}=require('./push_bridge_functions').internals;
+ const previous=process.env.FUNCTIONS_EMULATOR;process.env.FUNCTIONS_EMULATOR='true';
+ try {
+  await registerPushDevice.run(request());
+  for(const [index,next] of [{mode:'legacy',legacyIngressCoordinated:true},{mode:'fcm',percent:0,legacyIngressCoordinated:true},{mode:'fcm',percent:100,legacyIngressCoordinated:false}].entries()) {
+   await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
+   const e=await event('rollback-race-'+index),push=require('./push_bridge_policy').canonicalEvent(e.data.after.data(),null,e.params.notificationId);
+   let changed=false;
+   const racingDb={doc:db.doc.bind(db),collection:db.collection.bind(db),runTransaction:async callback=>{
+    if(!changed){changed=true;await db.doc('push_bridge_config/rollout').set(next);}
+    return db.runTransaction(callback);
+   }};
+   assert.deepEqual(await dispatchBridge(push,racingDb),[{id:require('./push_bridge_policy').deliveryId(push,{key:'installation:'+'a'.repeat(32)}),status:'skipped'}]);
+   assert.equal((await db.collection('push_deliveries').get()).size,0);
+  }
+ } finally {if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;}
+});
+
+test('protected bridge and rate-limit collections reject client read/write',async()=>{
+ const sender=env.authenticatedContext('sender').firestore();
+ for(const collection of ['push_registration_limits','push_ingress_limits','push_bridge_events','push_bridge_inbox','push_subscription_bindings','push_bridge_config','push_legacy_token_approvals']){
+  await assertFails(getDoc(doc(sender,collection+'/x')));await assertFails(setDoc(doc(sender,collection+'/x'),{forged:true}));
+ }
+});
+test('delivery monitor detects stale attempts and failed sends; non-admin cannot inspect it',async()=>{
+ const bridge=require('./push_bridge_functions');
+ await db.doc('push_deliveries/stale').set({status:'attempting',createdAt:Timestamp.fromMillis(Date.now()-180000)});
+ await db.doc('push_deliveries/review').set({status:'review_required',createdAt:Timestamp.now()});
+ const health=await bridge.internals.deliveryHealth(db);
+ assert.equal(health.staleAttempting,1);assert.equal(health.reviewRequired,1);
+ await assert.rejects(bridge.reviewPushDeliveryHealth.run({auth:{uid:'sender'}}),e=>e.code==='permission-denied');
+});
+test('legacy source trigger and modern inbox share a delivery even without old inbox source IDs',async()=>{
+ const bridge=require('./push_bridge_functions'),previous=process.env.FUNCTIONS_EMULATOR,enabled=process.env.PUSH_BRIDGE_ENABLED;
+ process.env.FUNCTIONS_EMULATOR='true';process.env.PUSH_BRIDGE_ENABLED='true';
+ try{
+  await registerPushDevice.run(request());
+  await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
+  await db.doc('properties/p').set({publisherUid:'owner'});
+  const source=db.doc('properties/p/comments/c');await source.set({userId:'sender',text:'source comment'});
+  await bridge.bridgeCommentCreated.run({authId:'sender',authType:'api_key',params:{propertyId:'p',commentId:'c'},data:await source.get()});
+  const modern=await event('modern-comment',{type:'comment',propertyId:'p',commentId:'c'});
+  const canonical=await bridge.internals.verifiedEvent({...modern,authId:'sender',authType:'api_key'},db);
+  await bridge.deliverBridgeNotification.run({...modern,authId:'sender',authType:'api_key'});
+  assert.equal((await db.collection('push_deliveries').where('status','==','accepted').get()).size,1);
+  const {createLegacyIngress}=require('../integrations/vercel/legacy-ingress.cjs');
+  const ingress=createLegacyIngress({db,dispatch:push=>bridge.internals.dispatchBridge(push,db)});
+  const server=require('node:http').createServer(async(req,res)=>{
+   let body='';for await(const chunk of req)body+=chunk;
+   req.body=JSON.parse(body);
+   await ingress(req,{status(code){res.statusCode=code;return this;},json(value){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(value));}});
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try {
+   const response=await fetch('http://127.0.0.1:'+server.address().port+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notificationId:'modern-comment',userId:'admin',title:'forged'})});
+   assert.equal(response.status,200);
+   assert.equal((await db.collection('push_deliveries').where('status','==','accepted').get()).size,1);
+  }finally{await new Promise(resolve=>server.close(resolve));}
+ }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;if(enabled===undefined)delete process.env.PUSH_BRIDGE_ENABLED;else process.env.PUSH_BRIDGE_ENABLED=enabled;}
 });

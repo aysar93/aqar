@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-14T22:28:07.785Z",
+  "project": "aqar-fcm-test-20261014",
+  "manufacturer": "HONOR",
+  "model": "JMS-W09",
+  "android": "15",
+  "distinctFromFirstDevice": "OPPO CPH2365 / Android 13",
+  "googlePlayServicesPresent": true,
+  "apk": {
+    "package": "com.andalus.aqar.staging",
+    "source": "af7363e6b0777b8e92bfa3f2b421558c63d6ee92",
+    "sha256": "9675da6aff7e3e28f09d4ce356d3983d96cd1a4a2c5ea54c8a950855bae0818e"
+  },
+  "foreground": {
+    "systemPermissionGrantedViaObservedDialog": true,
+    "protectedTokenRegistered": true,
+    "inAppBannerObserved": true,
+    "title": "FCM HONOR foreground property",
+    "actionTapped": "عرض",
+    "destinationObserved": "FCM isolated property test"
+  },
+  "background": {
+    "systemNotificationObserved": true,
+    "title": "FCM HONOR background chat",
+    "systemNotificationTapped": true,
+    "destinationObserved": "عقارات الأنبار",
+    "messageObserved": "Synthetic notification"
+  },
+  "coldStart": {
+    "firstAmKillDidNotTerminate": true,
+    "terminatedBy": "run-as of own debug package, kill -9 of observed app PID",
+    "pidBefore": 9732,
+    "pidAbsentBeforeNewSend": true,
+    "title": "FCM HONOR after process death",
+    "systemNotificationObservedAndTapped": true,
+    "newPid": 12868,
+    "destinationObserved": "FCM isolated property test",
+    "androidForceStopTested": false
+  },
+  "logout": {
+    "protectedDeviceActiveFalseVerified": true,
+    "loginScreenObserved": true
+  },
+  "installedLegacyApp": {
+    "package": "com.andalus.aqar",
+    "version": "1.0.5",
+    "versionCode": 20,
+    "installer": "com.android.vending",
+    "modified": false,
+    "liveLegacyPushTested": false
+  },
+  "scope": "Second hardware foreground/property, background/chat, process-death/property. Other 11-type/preference/switch/dedup cases refer to earlier first Android/iPhone evidence; not repeated as an 11-type second-device matrix.",
+  "rawHardwareIdentifiersOmitted": true
+}

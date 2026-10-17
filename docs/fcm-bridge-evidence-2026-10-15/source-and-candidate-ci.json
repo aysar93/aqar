@@ -1,0 +1,113 @@
+{
+  "checkedAt": "2026-10-15T12:10:53.698Z",
+  "runs": [
+    {
+      "id": 38731757451,
+      "url": "https://github.com/aysar93/aqar/actions/runs/38731757451",
+      "sha": "eade86c01492a40ba1f20d3de02d679e66ac265c",
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38731757417,
+      "url": "https://github.com/aysar93/aqar/actions/runs/38731757417",
+      "sha": "eade86c01492a40ba1f20d3de02d679e66ac265c",
+      "status": "in_progress",
+      "conclusion": null,
+      "jobs": [
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ios",
+          "status": "in_progress",
+          "conclusion": null
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "bridge-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38729435021,
+      "url": "https://github.com/aysar93/aqar/actions/runs/38729435021",
+      "sha": "2400ede78b488d33c0238d77f71d6f3a4f805f7d",
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "name": "bridge-candidate / ios-candidate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "bridge-candidate / android-candidate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "ios",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 11970286503,
+          "name": "Push-bridge-Android-UNSIGNED-NOT-FOR-INSTALL",
+          "size": 64421154,
+          "digest": "sha256:0e946337094101f73440d6c2b0e146e9ee1b281ee4bd5dfc17ea9e1a14c4b3b8"
+        },
+        {
+          "id": 11969969692,
+          "name": "Push-bridge-iOS-UNSIGNED-NOT-FOR-INSTALL",
+          "size": 50670142,
+          "digest": "sha256:cc38b826e14262a10327077f6702e75b7019cf605e996216feaa211630b575e3"
+        }
+      ]
+    }
+  ]
+}

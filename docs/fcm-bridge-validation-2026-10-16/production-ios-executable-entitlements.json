@@ -1,0 +1,9 @@
+{
+  "ipaSha256": "774dcc57a61c9bd8192661c49c549294231a679ed14668b55f1016b5e38a49a1",
+  "signedExecutableApplicationIdentifier": "H96JUT8PUM.com.andalus.aqar",
+  "signedExecutableApnsEnvironment": "production",
+  "signedExecutableDebuggable": false,
+  "localHashMatchesCi": true,
+  "cryptographicCodesignVerifiedLocallyOnWindows": false,
+  "ciCodesignStrictPassed": true
+}

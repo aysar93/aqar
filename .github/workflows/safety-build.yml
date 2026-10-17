@@ -4,10 +4,27 @@ on:
     branches: [main, 'codex/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      bridge_candidate:
+        description: 'Compile unsigned production bridge candidates only; no deployment'
+        required: false
+        type: boolean
+        default: false
+      android_bundle_only:
+        description: 'Compile only the unsigned Android production-config bundle'
+        required: false
+        type: boolean
+        default: false
+      staging_adhoc:
+        description: 'Build only the isolated signed Ad Hoc IPA (no store upload)'
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   ios:
+    if: github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true)
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -23,6 +40,7 @@ jobs:
       - run: flutter build ios --release --no-codesign
       - run: flutter build ios --release --no-codesign --dart-define=FCM_MIGRATION=true
   push-migration:
+    if: github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -46,6 +64,7 @@ jobs:
       - run: flutter pub get
       - run: flutter test test/push_migration_test.dart test/push_token_sync_test.dart test/navigation_return_test.dart test/office_subscription_gift_test.dart
   firestore:
+    if: github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -62,3 +81,15 @@ jobs:
           python-version: '3.12'
       - run: npm ci --prefix test/firestore
       - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.reports-test.json "node --test test/firestore/featured_properties.test.cjs && python test/firestore_safety_rules_test.py"
+  signed-staging-adhoc:
+    if: github.event_name == 'workflow_dispatch' && inputs.staging_adhoc == true && startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    uses: ./.github/workflows/fcm-ios-adhoc.yml
+    secrets:
+      FCM_STAGING_P12_BASE64: ${{ secrets.FCM_STAGING_P12_BASE64 }}
+      FCM_STAGING_P12_PASSWORD: ${{ secrets.FCM_STAGING_P12_PASSWORD }}
+      FCM_STAGING_ADHOC_PROFILE_BASE64: ${{ secrets.FCM_STAGING_ADHOC_PROFILE_BASE64 }}
+  bridge-candidate:
+    if: github.event_name == 'workflow_dispatch' && inputs.bridge_candidate == true && startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    uses: ./.github/workflows/push-bridge-rc.yml
+    with:
+      android_bundle_only: ${{ inputs.android_bundle_only || false }}

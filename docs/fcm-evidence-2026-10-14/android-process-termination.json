@@ -1,0 +1,11 @@
+{
+  "device": "4724b3cc",
+  "app": "com.andalus.aqar.staging",
+  "method": "JDWP VirtualMachine.Exit on debuggable isolated app",
+  "pidBefore": "12402",
+  "pidAfter": "",
+  "processTerminated": true,
+  "forceStopUsed": false,
+  "verification": "PID and process list empty after asynchronous VM exit, before sending FCM",
+  "verifiedUtc": "2026-10-14T10:52:11.997Z"
+}

@@ -1,0 +1,14 @@
+{
+  "bundle": "com.andalus.aqar",
+  "project": "aqar-9f3f9",
+  "build": "2026101701",
+  "signedCandidateFlag": true,
+  "codesignStrictVerified": true,
+  "profileAuthorizesSigner": true,
+  "apnsEnvironment": "production",
+  "debuggable": false,
+  "ipaSha256": "9c43f726998b393f2c8954e7a483bab4367d831cff7e6ef6cf6aea950b03c825",
+  "signingCertificateSha256": "c718efa24dec9d95f0f9a52e45da0d355c3905e648ac01aa73d9f4d9d3bea521",
+  "storeUploadPerformed": false,
+  "deviceInstallationVerified": false
+}

@@ -1,0 +1,98 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T08:30:05.076Z",
+  "permissions": [
+    "cloudmessaging.messages.create",
+    "firebase.projects.get"
+  ],
+  "functions": [
+    {
+      "name": "bridgeCommentCreated",
+      "state": "ACTIVE",
+      "secrets": [
+        {
+          "key": "BRIDGE_ONESIGNAL_API_KEY",
+          "version": "2",
+          "projectId": "aqar-fcm-test-20261014"
+        }
+      ],
+      "testAppMatches": true
+    },
+    {
+      "name": "bridgeChatMessageCreated",
+      "state": "ACTIVE",
+      "secrets": [
+        {
+          "key": "BRIDGE_ONESIGNAL_API_KEY",
+          "version": "2",
+          "projectId": "aqar-fcm-test-20261014"
+        }
+      ],
+      "testAppMatches": true
+    },
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "secrets": [],
+      "testAppMatches": true
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "secrets": [
+        {
+          "key": "BRIDGE_ONESIGNAL_API_KEY",
+          "version": "2",
+          "projectId": "aqar-fcm-test-20261014"
+        }
+      ],
+      "testAppMatches": true
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE",
+      "secrets": [],
+      "testAppMatches": true
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE",
+      "secrets": [],
+      "testAppMatches": true
+    },
+    {
+      "name": "deliverFcmNotification",
+      "state": "ACTIVE",
+      "secrets": [],
+      "testAppMatches": true
+    },
+    {
+      "name": "deliverBridgeNotification",
+      "state": "ACTIVE",
+      "secrets": [
+        {
+          "key": "BRIDGE_ONESIGNAL_API_KEY",
+          "version": "2",
+          "projectId": "aqar-fcm-test-20261014"
+        }
+      ],
+      "testAppMatches": true
+    },
+    {
+      "name": "bridgeReplyCreated",
+      "state": "ACTIVE",
+      "secrets": [
+        {
+          "key": "BRIDGE_ONESIGNAL_API_KEY",
+          "version": "2",
+          "projectId": "aqar-fcm-test-20261014"
+        }
+      ],
+      "testAppMatches": true
+    }
+  ],
+  "allBindingsCorrect": true,
+  "providerAuthenticationVerified": true,
+  "physicalDeliveryVerified": false,
+  "productionChanged": false
+}

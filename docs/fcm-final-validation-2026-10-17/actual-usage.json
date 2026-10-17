@@ -1,0 +1,65 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "measuredAt": "2026-10-17T10:47:05.557Z",
+  "intervalStart": "2026-10-14T00:00:00Z",
+  "intervalEnd": "2026-10-17T10:47:05.557Z",
+  "actualMeasuredUsage": [
+    {
+      "metric": "firestore.googleapis.com/document/read_count",
+      "unit": "1",
+      "metricKind": "DELTA",
+      "total": 3962,
+      "seriesCount": 3
+    },
+    {
+      "metric": "firestore.googleapis.com/document/write_count",
+      "unit": "1",
+      "metricKind": "DELTA",
+      "total": 1286,
+      "seriesCount": 3
+    },
+    {
+      "metric": "firestore.googleapis.com/document/delete_count",
+      "unit": "1",
+      "metricKind": "DELTA",
+      "total": 419,
+      "seriesCount": 1
+    },
+    {
+      "metric": "run.googleapis.com/request_count",
+      "unit": "1",
+      "metricKind": "DELTA",
+      "total": 1408,
+      "seriesCount": 32
+    },
+    {
+      "metric": "run.googleapis.com/container/billable_instance_time",
+      "unit": "s",
+      "metricKind": "DELTA",
+      "total": 566.959737985736,
+      "seriesCount": 44
+    },
+    {
+      "metric": "logging.googleapis.com/billing/bytes_ingested",
+      "unit": "By",
+      "metricKind": "DELTA",
+      "total": 4806168,
+      "seriesCount": 5
+    }
+  ],
+  "loggingBuckets": [
+    {
+      "name": "_Default",
+      "retentionDays": 30,
+      "locked": false
+    },
+    {
+      "name": "_Required",
+      "retentionDays": 400,
+      "locked": true
+    }
+  ],
+  "currencyCostVerified": false,
+  "budgetIsHardCap": false,
+  "productionChanged": false
+}

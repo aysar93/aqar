@@ -1,0 +1,14 @@
+{
+  "source": "586ed3ad04e646b9ed621b7415ccc8cac4d71fcc",
+  "checkedAt": "2026-10-17T10:38:16.772Z",
+  "codemagicBuildUrl": "https://codemagic.io/app/6a8a22aaf706e1573768bc52/build/6ad34e4d7550aed8108f89d2",
+  "entries": [
+    {
+      "name": "Aqar FCM bridge - signed production candidate - NO PUBLISH",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://codemagic.io/app/6a8a22aaf706e1573768bc52/build/6ad34e4d7550aed8108f89d2"
+    }
+  ],
+  "statusThroughGithubAvailable": true
+}

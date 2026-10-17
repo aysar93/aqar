@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'push_migration.dart';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -6,6 +7,8 @@ import 'package:http/http.dart' as http;
 Future<String?> uploadToCloudinary(
   File imageFile,
 ) async {
+  if (PushMigration.isolated)
+    throw StateError('Media upload unavailable in FCM staging');
   final url = Uri.parse(
     'https://api.cloudinary.com/v1_1/hwxcrlcj/image/upload',
   );

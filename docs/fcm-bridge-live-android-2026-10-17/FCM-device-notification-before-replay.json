@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-17T09:08:53.441Z",
+  "package": "com.andalus.aqar.staging",
+  "testNotificationTitles": [
+    "BRIDGE-LIVE-FCM-CANONICAL"
+  ],
+  "titleCounts": {
+    "BRIDGE-LIVE-FCM-CANONICAL": 1
+  }
+}

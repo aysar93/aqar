@@ -1,0 +1,10 @@
+{
+  "certificateId": "T8RL9ANSX6",
+  "team": "H96JUT8PUM",
+  "purpose": "additional distribution certificate for isolated staging",
+  "certificatePrivateKeyMatch": true,
+  "p12Created": true,
+  "existingCertificateUntouched": true,
+  "sha1": "0EECA4ED5670C126EE60971FC4FC44832293D6C7",
+  "expiresUtc": "2027-10-14T15:48:18Z"
+}

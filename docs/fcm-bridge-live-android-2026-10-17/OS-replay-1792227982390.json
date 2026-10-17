@@ -1,0 +1,19 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T09:06:22.390Z",
+  "command": "replay",
+  "label": "OS",
+  "notificationId": "fullapp-1792226990821-replay-1792227967260",
+  "eventKey": "11ef64caaa4d86eb6f24fc828cbb101080b41755b672a678c26dfc634f8a9a99",
+  "title": "BRIDGE-LIVE-OS-CANONICAL",
+  "receipts": [
+    {
+      "id": "25d5ba019e33af63f0a5ff817f22f12b7933d445cf4ff2dc009f9791d02ffb5b",
+      "status": "accepted",
+      "provider": "onesignal",
+      "providerMessageId": "23cdc8ee-7fcc-483a-bf8b-a358297568ea"
+    }
+  ],
+  "acceptedCount": 1,
+  "physicalDisplayVerified": false
+}

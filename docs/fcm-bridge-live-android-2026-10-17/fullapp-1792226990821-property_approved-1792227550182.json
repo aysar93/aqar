@@ -1,0 +1,15 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "id": "fullapp-1792226990821-property_approved-1792227550182",
+  "type": "property_approved",
+  "recipient": "XN6U8GZTjbaOiSy5ZRLu7uARJCF2",
+  "actor": "rg8WZwfLRlZAMqAXAxJV0SupNxN2",
+  "actorIsAdmin": true,
+  "writeMode": "Firebase Auth synthetic admin; security rules enforced",
+  "receipts": [
+    {
+      "status": "accepted"
+    }
+  ],
+  "deviceDisplayVerified": false
+}

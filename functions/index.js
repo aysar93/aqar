@@ -12,6 +12,7 @@ const db = getFirestore();
 Object.assign(exports, require('./chat_functions'));
 Object.assign(exports, require('./analytics_presence_access'));
 Object.assign(exports, require('./push_functions'));
+Object.assign(exports, require('./push_bridge_functions'));
 
 function normalizeIraqiPhone(input) {
   const localizedDigits = {
@@ -255,6 +256,8 @@ exports.sendNotificationToUser = onDocumentCreated(
   "notifications/{notificationId}",
   async (event) => {
 
+    // The coordinated bridge owns all delivery while enabled, including pause.
+    if (process.env.PUSH_BRIDGE_ENABLED === 'true') return null;
     const data = event.data.data();
     if (data.pushTransport === 'fcm_v1' || data.deliveryType === 'internal') return null;
 

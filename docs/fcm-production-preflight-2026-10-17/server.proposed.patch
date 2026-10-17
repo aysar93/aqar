@@ -1,0 +1,352 @@
+--- notification-server/HEAD/server.js
++++ proposed/server.js
+@@ -1,327 +1,23 @@
+-require("dotenv").config();
+-
+-const express = require("express");
+-const axios = require("axios");
+-const cors = require("cors");
+-const bodyParser = require("body-parser");
+-const admin = require("firebase-admin/app");
+-const { getFirestore } = require("firebase-admin/firestore");
+-
+-const app = express();
+-
+-app.use(cors());
+-app.use(bodyParser.json());
+-
+-
+-// ==========================
+-// Firebase Admin
+-// ==========================
+-
+-const serviceAccount =
+-  JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+-
+-
+-const { cert, initializeApp } = require("firebase-admin/app");
+-
+-initializeApp({
+-  credential: cert(serviceAccount),
+-});
+-
+-
+-const db = getFirestore();
+-
+-
+-// ==========================
+-// Health Check
+-// ==========================
+-
+-app.get("/", (req, res) => {
+-  res.send("Notification Server is Running");
+-});
+-
+-
+-// ==========================
+-// Send Notification
+-// ==========================
+-
+-app.post("/send", async (req, res) => {
+-
+-  try {
+-
+-    const {
+-  title,
+-  message,
+-  type,
+-  target,
+-  userId,
+-  propertyId,
+-  chatId,
+-  data = {},
+-} = req.body;
+-
+-
+-    if (!title || !message) {
+-
+-      return res.status(400).json({
+-
+-        success:false,
+-        error:"العنوان أو الرسالة فارغة"
+-
+-      });
+-
+-    }
+-
+-
+-
+-    let playerIds = [];
+-
+-
+-
+-    // ==========================
+-    // مستخدم واحد
+-    // ==========================
+-
+-    if (
+-      target === "user" &&
+-      userId
+-    ) {
+-
+-
+-      const userDoc =
+-        await db
+-        .collection("users")
+-        .doc(userId)
+-        .get();
+-
+-
+-
+-      if (userDoc.exists) {
+-
+-  const userData =
+-    userDoc.data();
+-
+-  // إذا أوقف المستخدم الإشعارات من إعدادات التطبيق
+-  // لا نرسل له Push عبر OneSignal.
+-  if (userData.notificationsEnabled === false) {
+-
+-    return res.json({
+-      success: true,
+-      skipped: true,
+-      reason: "notifications_disabled",
+-    });
+-
+-  }
+-
+-  if (userData.oneSignalId) {
+-
+-    playerIds.push(
+-      userData.oneSignalId
+-    );
+-
+-  }
+-
+-}
+-
+-    }
+-
+-
+-
+-    const notificationData = {
+-  ...(data && typeof data === "object" ? data : {}),
+-
+-  type:
+-    type ||
+-    data?.type ||
+-    "general",
+-
+-  ...(propertyId
+-    ? { propertyId }
+-    : {}),
+-
+-  ...(chatId
+-    ? { chatId }
+-    : {}),
+-};
+-
+-
+-const body = {
+-
+-  app_id:
+-    process.env.ONESIGNAL_APP_ID,
+-
+-  headings: {
+-    en: title
+-  },
+-
+-  contents: {
+-    en: message
+-  },
+-
+-  data: {
+-    type: type || data.type || "",
+-
+-    propertyId:
+-      propertyId ||
+-      data.propertyId ||
+-      "",
+-
+-    chatId:
+-      chatId ||
+-      data.chatId ||
+-      "",
+-
+-    unreadCount:
+-      data.unreadCount ?? 0,
+-  }
+-
+-};
+-
+-
+-// ==========================
+-// تجميع إشعارات المحادثة
+-// ==========================
+-
+-const collapseId =
+-  data.collapseId ||
+-  (
+-    (type === "chat_message" ||
+-      data.type === "chat_message") &&
+-    (chatId || data.chatId)
+-      ? `chat_${chatId || data.chatId}`
+-      : null
+-  );
+-
+-if (collapseId) {
+-  body.collapse_id = collapseId;
+-}
+-
+-
+-// ==========================
+-// تحديد مستلم الإشعار
+-// ==========================
+-
+-if (target === "user") {
+-
+-  if (playerIds.length === 0) {
+-
+-    return res.status(404).json({
+-      success: false,
+-      error: "لا يوجد OneSignal ID لهذا المستخدم",
+-    });
+-
+-  }
+-
+-  body.include_subscription_ids =
+-    playerIds;
+-
+-} else {
+-
+-  // ==========================
+-  // الإرسال العام
+-  // ==========================
+-
+-  const usersSnapshot =
+-    await db
+-      .collection("users")
+-      .get();
+-
+-  const enabledPlayerIds = [];
+-
+-  usersSnapshot.forEach((doc) => {
+-
+-    const userData = doc.data();
+-
+-    // المستخدمون القدامى الذين لا يملكون الحقل
+-    // يعتبرون مفعّلين افتراضيًا.
+-    if (
+-      userData.notificationsEnabled !== false &&
+-      userData.oneSignalId
+-    ) {
+-
+-      enabledPlayerIds.push(
+-        userData.oneSignalId
+-      );
+-
+-    }
+-
+-  });
+-
+-  // لا يوجد مستخدم مفعّل لديه OneSignal ID
+-  if (enabledPlayerIds.length === 0) {
+-
+-    return res.json({
+-      success: true,
+-      skipped: true,
+-      reason: "no_enabled_subscribers",
+-    });
+-
+-  }
+-
+-  body.include_subscription_ids =
+-    enabledPlayerIds;
+-
+-}
+-
+-
+-    console.log("========== Request Body ==========");
+-console.log(JSON.stringify(body, null, 2));
+-
+-
+-
+-    const response = await axios.post(
+-  "https://api.onesignal.com/notifications?c=push",
+-  body,
+-  {
+-    headers: {
+-      Authorization: `Key ${process.env.ONESIGNAL_API_KEY}`,
+-      "Content-Type": "application/json",
+-    },
+-  }
+-);
+-
+-console.log("========== Full Response ==========");
+-console.log(JSON.stringify(response.data, null, 2));
+-
+-
+-
+-    res.json({
+-
+-      success:true,
+-
+-      data:response.data
+-
+-    });
+-
+-
+-
+-  } catch (e) {
+-
+-  console.log("========== ERROR ==========");
+-  console.error(e);
+-
+-  res.status(500).json({
+-    success: false,
+-    error: e.message,
+-  });
+-
+-}
+-
+-});
+-
+-
+-
+-// ==========================
+-// Start Server
+-// ==========================
+-
+-const PORT =
+-  process.env.PORT || 3000;
+-
+-
+-app.listen(PORT,()=>{
+-
+-  console.log(
+-    `Notification Server Running On Port ${PORT}`
+-  );
+-
+-});+'use strict';
++require('dotenv').config();
++const express=require('express'),cors=require('cors');
++const {initializeApp,cert}=require('firebase-admin/app');
++const {getFirestore}=require('firebase-admin/firestore');
++const project='aqar-9f3f9',appId='810a4d8d-cfac-492a-956e-0cff98248d25';
++if(process.env.GCLOUD_PROJECT!==project || process.env.PUSH_BRIDGE_ENABLED!=='true' || process.env.FCM_MIGRATION_ENABLED!=='true')throw Error('COORDINATED_PRODUCTION_BRIDGE_REQUIRED');
++let service;try{service=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT||'{}');}catch{throw Error('INVALID_SERVER_CREDENTIAL');}
++if(service.project_id!==project || service.client_email!=='aqar-push-vercel@'+project+'.iam.gserviceaccount.com')throw Error('DEDICATED_PRODUCTION_ACCOUNT_REQUIRED');
++if(process.env.ONESIGNAL_APP_ID!==appId)throw Error('PRODUCTION_APP_ID_REQUIRED');
++if(!process.env.ONESIGNAL_API_KEY)throw Error('PROVIDER_CREDENTIAL_REQUIRED');
++process.env.BRIDGE_ONESIGNAL_APP_ID=appId;
++process.env.BRIDGE_ONESIGNAL_API_KEY=process.env.ONESIGNAL_API_KEY;
++initializeApp({projectId:project,credential:cert(service)});
++const db=getFirestore();
++const {dispatchBridge}=require('./push_bridge_dispatch');
++const ingress=require('./legacy-ingress.cjs').createLegacyIngress({db,dispatch:event=>dispatchBridge(event,db)});
++const app=express();app.use(cors());app.use(express.json({limit:'64kb'}));
++app.get('/',(_req,res)=>res.send('Notification Server is Running'));
++app.post('/send',async(req,res)=>{await ingress(req,res);});
++app.use((error,_req,res,_next)=>res.status(error.type==='entity.too.large'?413:error.type==='entity.parse.failed'?400:503).json({success:false,error:error.type==='entity.too.large'?'payload_too_large':error.type==='entity.parse.failed'?'invalid_json':'bridge_temporarily_unavailable'}));
++module.exports=app;
++if(require.main===module)app.listen(Number(process.env.PORT)||3000);

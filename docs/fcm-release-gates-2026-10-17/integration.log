@@ -1,0 +1,29 @@
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-aqar", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
++  firestore: Firestore Emulator was started in standard edition.
++  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: node work/final-release-20261017/run-final-gates.cjs
+(node:4580) MetadataLookupWarning: received unexpected error = All promises were rejected code = ETIMEDOUT, ENOTFOUND
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ inbox gate: admin/inbox + legacy HTTP retain correct visible content before each provider (36145.7713ms)
+✔ inbox gate: comment/reply/chat source-only events create visible items and fold later verified duplicates (3617.1935ms)
+✔ inbox gate: pause and opt-out retain source inbox; wrong recipient, deleted item and failed persistence cannot send (915.7532ms)
+✔ cohort gate: missing/empty cohort, excluded account/device/provider and unapproved legacy cannot send (803.4741ms)
+✔ cohort gate: allowed OneSignal and legacy FCM are explicit, all other subscriptions stay excluded (1650.118ms)
+✔ cohort gate: removal after planning cancels FCM and OneSignal claims; old sender cannot bypass bridge pause (470.0303ms)
+✔ inbox gate: concurrent source/client publication keeps one visible item and one claim (3815.8876ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 54293.6684
++  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+!  Firestore Emulator has exited upon receiving signal: SIGINT
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

@@ -1,0 +1,15 @@
+{
+  "mode": "paused",
+  "percent": 0,
+  "installationAllowlist": [],
+  "legacyIngressCoordinated": false,
+  "legacyRecoveryAllowlist": [],
+  "cohort": {
+    "userIds": [],
+    "installations": [],
+    "legacyTargets": [],
+    "providers": [
+      "fcm"
+    ]
+  }
+}

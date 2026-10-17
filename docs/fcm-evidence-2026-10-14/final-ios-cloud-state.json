@@ -1,0 +1,36 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-14T21:48:58.957Z",
+  "functions": [
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "minInstances": 0,
+      "maxInstances": 2,
+      "migrationEnabled": "true"
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "minInstances": 0,
+      "maxInstances": 2,
+      "migrationEnabled": "true"
+    },
+    {
+      "name": "deliverFcmNotification",
+      "state": "ACTIVE",
+      "runtime": "nodejs22",
+      "minInstances": 0,
+      "maxInstances": 2,
+      "migrationEnabled": "true"
+    }
+  ],
+  "errorWindowStart": "2026-10-14T21:18:57.617Z",
+  "runtimeErrorCount": 0,
+  "moreErrorsAvailable": false,
+  "errorMetadata": [],
+  "costAmountVerified": false,
+  "productionModified": false
+}

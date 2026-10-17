@@ -1,0 +1,19 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T10:54:43.840Z",
+  "readOnly": true,
+  "results": [
+    {
+      "label": "billingLink",
+      "billingEnabled": true,
+      "billingAccountLinked": true
+    },
+    {
+      "label": "existingBillingExportCandidates",
+      "datasetCount": 0,
+      "billingNamedDatasetCount": 0
+    }
+  ],
+  "actualCurrencyCostAvailable": false,
+  "loadTestsRepeated": false
+}

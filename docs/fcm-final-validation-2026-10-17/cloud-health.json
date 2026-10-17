@@ -1,0 +1,59 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T10:48:22.038Z",
+  "functions": [
+    {
+      "name": "bridgeCommentCreated",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "bridgeChatMessageCreated",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "deliverFcmNotification",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "deliverBridgeNotification",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "bridgeReplyCreated",
+      "state": "ACTIVE"
+    }
+  ],
+  "jobs": [
+    {
+      "state": "ENABLED",
+      "lastAttemptTime": "2026-10-17T10:44:06.132592Z",
+      "statusCode": 0
+    }
+  ],
+  "errorWindowStart": "2026-10-17T10:08:00Z",
+  "runtimeErrorEntries": 0,
+  "truncated": false,
+  "currentHealth": {
+    "staleAttempting": 0,
+    "reviewRequired": 0,
+    "truncated": false,
+    "checkedAt": "2026-10-17T10:48:22.038Z"
+  },
+  "productionChanged": false
+}

@@ -1,0 +1,9 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "sourceCommit": "e42de8d",
+  "deploySucceeded": true,
+  "updatedFunctions": 9,
+  "bundleMatchesReviewedSource": true,
+  "moduleSha256": "f60ea8bbed2e525f7fe89f271400441dcd334a596a44ce388c16c17a6bb8bf61",
+  "productionChanged": false
+}

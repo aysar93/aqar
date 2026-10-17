@@ -9,6 +9,7 @@ plugins {
 import java.util.Properties
 
 val fcmStaging = System.getenv("FCM_STAGING_BUILD") == "true"
+val unsignedBridgeCandidate = System.getenv("PUSH_BRIDGE_UNSIGNED_RC") == "true" && !fcmStaging
 val keystoreProperties = Properties().apply {
     val keyFile = rootProject.file("key.properties")
     if (!fcmStaging && keyFile.exists()) load(keyFile.inputStream())
@@ -19,7 +20,7 @@ if (fcmStaging) {
         "Install isolated staging google-services.json before building"
     }
 }
-require(fcmStaging || keystoreProperties.containsKey("storeFile")) {
+require(fcmStaging || unsignedBridgeCandidate || keystoreProperties.containsKey("storeFile")) {
     "Production signing configuration is required outside the isolated staging build"
 }
 
@@ -68,7 +69,7 @@ android {
 
     buildTypes {
     release {
-        signingConfig = if (fcmStaging) signingConfigs.getByName("debug") else signingConfigs.getByName("release")
+        signingConfig = if (unsignedBridgeCandidate) null else if (fcmStaging) signingConfigs.getByName("debug") else signingConfigs.getByName("release")
 
         isMinifyEnabled = true
         isShrinkResources = true

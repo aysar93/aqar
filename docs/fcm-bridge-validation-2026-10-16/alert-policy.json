@@ -1,0 +1,14 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "enabled": true,
+  "policy": "projects/aqar-fcm-test-20261014/alertPolicies/1146465930846884196",
+  "channel": "projects/aqar-fcm-test-20261014/notificationChannels/13724542603548169466",
+  "channelType": "email",
+  "channelEnabled": true,
+  "notificationRateLimitSeconds": 1800,
+  "mailReceiptVerified": true,
+  "productionChanged": false,
+  "syntheticFailureDetected": true,
+  "syntheticStuckDetected": true,
+  "confirmation": "User confirmed receipt on 2026-10-15"
+}

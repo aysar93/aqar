@@ -1,0 +1,15 @@
+{
+  "installed": true,
+  "bundleId": "com.andalus.aqar.staging",
+  "displayName": "Aqar FCM staging",
+  "version": "1.0.5",
+  "build": "20",
+  "deviceModel": "iPhone 12 Pro Max",
+  "iosVersion": "26.6.2",
+  "registeredDeviceMatched": true,
+  "ipaSha256": "c7290786dd4ccd8d0b716e3c7393accd292b2453b3432b3bebc73983b9c38fb9",
+  "launchVerified": true,
+  "notificationReceptionVerified": true,
+  "productionAppModified": false,
+  "uiVerificationMethod": "User-confirmed physical iPhone launch/display/navigation; app log corroborates native chat tap. No automatic screen observation."
+}

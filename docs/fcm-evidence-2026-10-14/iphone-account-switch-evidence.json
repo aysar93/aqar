@@ -1,0 +1,16 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "oldAccountActiveIOSCount": 0,
+  "oldAccountActiveAndroidCount": 1,
+  "adminActiveIOSCount": 1,
+  "iosTokenHashChanged": true,
+  "adminRoleVerified": true,
+  "allPublicProfilesLackRawToken": true,
+  "oldAccountAcceptedDeviceCount": 1,
+  "adminAcceptedDeviceCount": 1,
+  "adminNavigationUserConfirmed": true,
+  "oldAccountNotificationsUserCheck": "User confirmed FCM OLD ACCOUNT A test absent on iPhone; prior tray removal not separately established",
+  "checkedAt": "2026-10-14T21:43:02.1574627Z",
+  "adminLogoutUserConfirmed": true,
+  "adminIosTokenInactiveAfterLogoutVerified": true
+}

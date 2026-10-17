@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "af7363e6b0777b8e92bfa3f2b421558c63d6ee92",
+  "entry": "lib/main_fcm_app_staging.dart",
+  "package": "com.andalus.aqar.staging",
+  "project": "aqar-fcm-test-20261014",
+  "debug": true,
+  "abi": "arm64-v8a",
+  "sha256": "9675da6aff7e3e28f09d4ce356d3983d96cd1a4a2c5ea54c8a950855bae0818e",
+  "installedOn": "OPPO CPH2365 / Android 13",
+  "builtAt": "2026-10-14T11:46:32.000Z"
+}

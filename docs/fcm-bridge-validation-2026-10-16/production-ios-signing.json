@@ -1,0 +1,21 @@
+{
+  "source": "3b903d00a7b68a4cbfda6ac208a022e12ff328f0",
+  "buildUrl": "https://codemagic.io/app/6a8a22aaf706e1573768bc52/build/6ad2830d7550aed8108f64b5",
+  "workflow": "ios-bridge-candidate-no-publish",
+  "result": "finished",
+  "bundle": "com.andalus.aqar",
+  "project": "aqar-9f3f9",
+  "build": "2026101501",
+  "signedCandidateFlag": true,
+  "codesignStrictVerified": true,
+  "profileAuthorizesSigner": true,
+  "apnsEnvironment": "production",
+  "debuggable": false,
+  "ipaSha256": "774dcc57a61c9bd8192661c49c549294231a679ed14668b55f1016b5e38a49a1",
+  "signingCertificateSha256": "c718efa24dec9d95f0f9a52e45da0d355c3905e648ac01aa73d9f4d9d3bea521",
+  "existingCertificateAndProfileUsed": true,
+  "appleCredentialsCreated": false,
+  "storeUploadPerformed": false,
+  "deviceInstallationVerified": false,
+  "codemagicWorkflowEditorRestored": true
+}

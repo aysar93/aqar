@@ -725,7 +725,8 @@ match /auth_rate_limits/{document=**} {
 
       function migrated(d) { return d.get('pushTransport', '') == 'fcm_v1'; }
       function validPushSource(d) {
-        return activeUser() && d.createdBy == request.auth.uid &&
+        return activeUser() &&
+          d.get('createdBy', request.auth.uid) == request.auth.uid &&
           (isAdmin() ||
             (d.type == 'chat_message' && d.chatId == request.auth.uid &&
               get(/databases/$(database)/documents/settings/app_settings).data.adminUid == d.userId &&
@@ -740,8 +741,10 @@ match /auth_rate_limits/{document=**} {
       }
 
       // الإنشاء للمستخدمين المسجلين والأدمن
-      allow create: if isSignedIn() &&
-        (!migrated(request.resource.data) || validPushSource(request.resource.data));
+      // Legacy payloads are not an authorization bypass. Older senders without
+      // verifiable source IDs need the authenticated source-trigger path.
+      allow create: if isSignedIn() && validPushSource(request.resource.data) &&
+        (!migrated(request.resource.data) || request.resource.data.createdBy == request.auth.uid);
 
       // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
 allow read: if isSignedIn() &&
@@ -751,14 +754,14 @@ allow read: if isSignedIn() &&
 );
 
       // التحديث لصاحب الإشعار أو الأدمن
-      allow update: if isSignedIn() && (
-        (!migrated(resource.data) && !migrated(request.resource.data) &&
-          (resource.data.userId == request.auth.uid || isAdmin())) ||
-        (migrated(request.resource.data) &&
-          resource.data.userId == request.resource.data.userId && (
-            (migrated(resource.data) && (resource.data.userId == request.auth.uid || isAdmin()) &&
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy', 'isRead', 'unreadCount', 'updatedAt'])) ||
-            (request.resource.data.type == 'chat_message' && resource.data.chatId == request.resource.data.chatId && validPushSource(request.resource.data)))));
+      allow update: if activeUser() &&
+        resource.data.userId == request.resource.data.userId && (
+          ((resource.data.userId == request.auth.uid || isAdmin()) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy', 'isRead', 'unreadCount', 'updatedAt'])) ||
+          (request.resource.data.type == 'chat_message' &&
+            resource.data.chatId == request.resource.data.chatId &&
+            validPushSource(request.resource.data) &&
+            (!migrated(resource.data) || migrated(request.resource.data))));
 
       // الحذف لصاحب الإشعار أو الأدمن
 allow delete: if isSignedIn() &&
@@ -772,6 +775,13 @@ allow delete: if isSignedIn() &&
     match /push_tokens/{id} { allow read, write: if false; }
     match /push_installations/{id} { allow read, write: if false; }
     match /push_deliveries/{id} { allow read, write: if false; }
+    match /push_registration_limits/{id} { allow read, write: if false; }
+    match /push_bridge_events/{id} { allow read, write: if false; }
+    match /push_bridge_inbox/{id} { allow read, write: if false; }
+    match /push_ingress_limits/{id} { allow read, write: if false; }
+    match /push_subscription_bindings/{id} { allow read, write: if false; }
+    match /push_legacy_token_approvals/{id} { allow read, write: if false; }
+    match /push_bridge_config/{id} { allow read, write: if false; }
 
 // ==================================================
 // البنرات الإعلانية

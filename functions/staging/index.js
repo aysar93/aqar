@@ -6,3 +6,4 @@ if (project !== 'demo-aqar' || process.env.FUNCTIONS_EMULATOR !== 'true') {
 }
 initializeApp({ projectId: project });
 Object.assign(exports, require('../push_functions'));
+Object.assign(exports, require('../push_bridge_functions'));
