@@ -166,6 +166,21 @@ test('rules allow source-backed chat create/update, reject message and recipient
   await db.doc('notifications/legacy_chat').set({ ...notification, pushTransport: 'legacy' });
   await assertSucceeds(setDoc(doc(sender, 'notifications/legacy_chat'), { ...notification, messageId: 'm2' }));
 });
+
+test('legacy transport cannot bypass sender authorization or retarget/edit recipient inbox', async () => {
+  const sender=env.authenticatedContext('sender').firestore();
+  const owner=env.authenticatedContext('owner').firestore();
+  await assertFails(setDoc(doc(sender,'notifications/legacy-spam'),{userId:'owner',type:'general'}));
+  await db.doc('properties/p').set({publisherUid:'owner'});
+  await db.doc('properties/p/comments/c').set({userId:'sender'});
+  const legacy={userId:'owner',type:'comment',propertyId:'p',commentId:'c'};
+  await assertSucceeds(setDoc(doc(sender,'notifications/legacy-verified'),legacy));
+  await assertFails(setDoc(doc(sender,'notifications/legacy-foreign'),{...legacy,userId:'admin'}));
+  await assertFails(setDoc(doc(sender,'notifications/legacy-unverifiable'),{userId:'owner',type:'comment',propertyId:'p'}));
+  await assertFails(updateDoc(doc(owner,'notifications/legacy-verified'),{userId:'admin'}));
+  await assertFails(updateDoc(doc(owner,'notifications/legacy-verified'),{title:'spoofed'}));
+  await assertSucceeds(updateDoc(doc(owner,'notifications/legacy-verified'),{readBy:['owner'],isRead:true}));
+});
 test('bridge validates write actor, routes mixed devices and shares transactional claims across ingress', async()=>{
  const {verifiedEvent,dispatchBridge}=require('./push_bridge_functions').internals;
  const previous=process.env.FUNCTIONS_EMULATOR;process.env.FUNCTIONS_EMULATOR='true';
