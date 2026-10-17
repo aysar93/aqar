@@ -1,0 +1,9 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T09:02:39.960Z",
+  "sdkAppMatches": true,
+  "sdkSubscriptionEnabled": true,
+  "defaultAndProviderTokensDiffer": true,
+  "providerBindingVerified": true,
+  "privateTokensPrinted": false
+}

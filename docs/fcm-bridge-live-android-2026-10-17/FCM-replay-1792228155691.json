@@ -1,0 +1,19 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T09:09:15.691Z",
+  "command": "replay",
+  "label": "FCM",
+  "notificationId": "fullapp-1792226990821-replay-1792228140934",
+  "eventKey": "9a8f5993085f5967761dd561ea475ad446ed92ac8e4a33cc3c8cdc96431ffefd",
+  "title": "BRIDGE-LIVE-FCM-CANONICAL",
+  "receipts": [
+    {
+      "id": "0029c1fde8979d3f854c3c9f36dbb83f7451a33434ddf1790178e54a0b4ce391",
+      "status": "accepted",
+      "provider": "fcm",
+      "providerMessageId": "projects/aqar-fcm-test-20261014/messages/0:1792228116064651%a753dec9a753dec9"
+    }
+  ],
+  "acceptedCount": 1,
+  "physicalDisplayVerified": false
+}
