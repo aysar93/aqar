@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-17T21:24:18.569Z",
+  "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+  "ssoProtection": {
+    "deploymentType": "all_except_custom_domains"
+  },
+  "passwordProtectionConfigured": false,
+  "trustedIpsConfigured": false,
+  "protectionBypassConfigurationPresent": true
+}

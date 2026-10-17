@@ -1,0 +1,46 @@
+{
+  "preparedAt": "2026-10-17T21:27:27.449Z",
+  "approved": false,
+  "executed": false,
+  "mode": "paused",
+  "recipientLists": [],
+  "fcmSendPermission": false,
+  "productionChangesForSeparateApproval": [
+    {
+      "resource": "Firestore notifications rules only",
+      "candidate": "firestore.compat-update-only.rules",
+      "effect": "protect update identities and read-state fields while preserving legacy creation; DOES NOT close creation authorization",
+      "baselineRuleset": "c67b967f-6cb6-4a73-bb68-53135c0736f8"
+    },
+    {
+      "resource": "Vercel historical deployments only",
+      "deploymentIds": [
+        "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+        "dpl_EwEDSV3vYPb3wbgQA9mzXXq1tDf7"
+      ],
+      "branchAlias": "notification-server-git-main-aysar93s-projects.vercel.app",
+      "effect": "retire privileged legacy code paths; current public protection already present",
+      "rollback": "dpl_BJ7BcrBbLzNFPywfjzRamajXyKYw",
+      "deleteReversible": false
+    },
+    {
+      "resource": "legacy server automatic production promotion",
+      "effect": "prevent unreviewed legacy source reintroduction; exact project-setting patch must be selected before execution"
+    },
+    {
+      "resource": "strict notification creation",
+      "status": "not ready for compatible production deployment",
+      "requires": "authoritative server cutover for legacy writers and explicit handling of rejected old client writes"
+    }
+  ],
+  "noChangeTo": [
+    "existing eight Functions",
+    "old keys",
+    "OneSignal configuration",
+    "Cloudinary",
+    "Storage",
+    "reels",
+    "app stores",
+    "PR merge"
+  ]
+}

@@ -1,0 +1,67 @@
+diff --git a/functions/push_functions.js b/server-candidates/legacy-ingress-hardening/push_functions.js
+index 6a0ce55..c28f97a 100644
+--- a/functions/push_functions.js
++++ b/server-candidates/legacy-ingress-hardening/push_functions.js
+@@ -1,8 +1,7 @@
+ const { onCall, HttpsError } = require('firebase-functions/v2/https');
+ const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+-const { getMessaging } = require('firebase-admin/messaging');
+-const { hash, pushEvent, messageFor, permanentErrors } = require('./push_policy');
++const { hash } = require('./push_policy');
+ const {subscriptionId} = require('./push_bridge_policy');
+ 
+ // Default off. Configure only on a test project until device acceptance.
+@@ -122,47 +121,8 @@ exports.unregisterPushDevice = onCall(async request => {
+   return { detached };
+ });
+ 
+-exports.deliverFcmNotification = onDocumentWritten({ document: 'notifications/{notificationId}', retry: true }, async event => {
+-  if (process.env.PUSH_BRIDGE_ENABLED === 'true') return;
+-  if (!enabled()) return;
+-  const after = event.data?.after.exists ? event.data.after.data() : null;
+-  const before = event.data?.before.exists ? event.data.before.data() : null;
+-  const push = pushEvent(after, before, event.params.notificationId);
+-  if (!push) return;
+-  const db = getFirestore();
+-  const userRef = db.doc(`users/${push.userId}`);
+-  const settingsRef = db.doc('settings/app_settings');
+-  const devices = await db.collection('push_tokens').where('uid', '==', push.userId).get();
+-  for (const device of devices.docs) {
+-    const stateRef = db.doc(`push_deliveries/${hash(`${push.key}:${device.id}`)}`);
+-    // Claim before contacting FCM. An ambiguous result is never automatically
+-    // resent: FCM offers no atomic transaction with Firestore/exactly-once send.
+-    const claimed = await db.runTransaction(async tx => {
+-      const [state, latestDevice, user, inbox, settings] = await Promise.all([tx.get(stateRef), tx.get(device.ref), tx.get(userRef), tx.get(event.data.after.ref), tx.get(settingsRef)]);
+-      const current = latestDevice.data();
+-      if (state.exists || !inbox.exists || settings.data()?.allowNotifications === false || !user.exists || user.data().notificationsEnabled === false || user.data().isBlocked === true || !current?.active || current.uid !== push.userId || !current.updatedAt || Date.now() - current.updatedAt.toMillis() > 60 * 86400000) return null;
+-      if (push.type === 'chat_message') {
+-        if (inbox.data().messageId !== push.messageId || inbox.data().unreadCount === 0) return null;
+-        const source = await tx.get(db.doc(`chats/${push.chatId}/messages/${push.messageId}`));
+-        if (!source.exists || source.data().deletedAt) return null;
+-      }
+-      tx.create(stateRef, { status: 'attempting', uid: push.userId, eventKey: push.key, notificationId: push.notificationId, tokenHash: device.id, createdAt: FieldValue.serverTimestamp() });
+-      return current;
+-    });
+-    if (!claimed) continue;
+-    try {
+-      // FCM has no emulator. Never make a network send from the Functions emulator.
+-      const messageId = process.env.FUNCTIONS_EMULATOR === 'true'
+-        ? `emulator-mock:${push.key}`
+-        : await getMessaging().send(messageFor(push, claimed.token));
+-      await stateRef.update({ status: 'accepted', messageId, updatedAt: FieldValue.serverTimestamp() });
+-    } catch (error) {
+-      // Record uncertainty; no blind retries and no deletion of token records.
+-      await stateRef.update({ status: permanentErrors.has(error.code) ? 'invalid_token' : 'review_required', errorCode: String(error.code || 'unknown'), updatedAt: FieldValue.serverTimestamp() });
+-      if (permanentErrors.has(error.code)) await db.runTransaction(async tx => {
+-        const current = await tx.get(device.ref);
+-        if (current.data()?.uid === push.userId && current.data()?.installationId === claimed.installationId && current.data()?.updatedAt?.isEqual(claimed.updatedAt)) tx.update(device.ref, { active: false });
+-      });
+-    }
+-  }
+-});
++// Retained export for controlled retirement; all delivery belongs to the verified bridge.
++exports.deliverFcmNotification = onDocumentWritten(
++  { document: 'notifications/{notificationId}', retry: false },
++  require('./retired_push_ingress').ignoreLegacySend
++);

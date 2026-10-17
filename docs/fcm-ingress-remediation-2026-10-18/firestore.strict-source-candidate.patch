@@ -1,0 +1,94 @@
+diff --git a/work/production-preflight-20261017/firestore.paused-only.proposed.rules b/docs/fcm-ingress-remediation-2026-10-18/firestore.strict-source-candidate.rules
+index 2a5be27..f44fa00 100644
+--- a/work/production-preflight-20261017/firestore.paused-only.proposed.rules
++++ b/docs/fcm-ingress-remediation-2026-10-18/firestore.strict-source-candidate.rules
+@@ -723,8 +723,63 @@ match /auth_rate_limits/{document=**} {
+     // ==================================================
+     match /notifications/{notificationId} {
+ 
++      
++      function notificationReadState(d) {
++        return d.get('readBy', []) is list && d.get('readBy', []).size() <= 100 &&
++          d.get('readBy', []).toSet().hasAll(resource.data.get('readBy', []).toSet()) &&
++          d.get('readBy', []).toSet().difference(resource.data.get('readBy', []).toSet()).hasOnly([request.auth.uid]) &&
++          d.get('isRead', false) is bool &&
++          (!('unreadCount' in d) || (d.unreadCount is int && d.unreadCount >= 0 && d.unreadCount <= 100000)) &&
++          (!('updatedAt' in d) || d.updatedAt is timestamp);
++      }
++      function notificationUpdate(d) {
++        let changed = d.diff(resource.data).affectedKeys();
++        return activeUser() && d.userId == resource.data.userId &&
++          ((resource.data.userId == request.auth.uid || isAdmin()) &&
++            changed.hasOnly(['readBy', 'isRead', 'unreadCount', 'updatedAt']) &&
++            notificationReadState(d) &&
++            (!changed.hasAny(['unreadCount']) || d.unreadCount == 0) ||
++           // Legacy collapsed chat writers have no messageId. Preserve their
++           // own-user-to-configured-admin inbox writes, not arbitrary recipients.
++           resource.data.type == 'chat_message' && d.type == 'chat_message' &&
++            d.chatId == resource.data.chatId &&
++            (isAdmin() || d.chatId == request.auth.uid &&
++              get(/databases/$(database)/documents/settings/app_settings).data.adminUid == d.userId) &&
++            changed.hasOnly(['title','message','unreadCount','readBy','createdAt','updatedAt','messageId','pushTransport','createdBy']) &&
++            d.title is string && d.title.size() <= 120 && d.message is string && d.message.size() <= 2000 &&
++            d.unreadCount is int && d.unreadCount >= 0 && d.unreadCount <= 100000 &&
++            d.get('readBy', []) is list && d.get('readBy', []).size() == 0 &&
++            d.get('createdBy', request.auth.uid) == request.auth.uid);
++      }
++
++      function notificationShape(d) {
++        return d.userId is string && d.userId.size() > 0 && d.userId.size() <= 128 && d.userId != 'all' &&
++          d.type is string && d.type.size() <= 64 && d.title is string && d.title.size() <= 120 &&
++          d.message is string && d.message.size() <= 2000 && d.createdAt is timestamp &&
++          !d.keys().hasAny(['bridgeEventKey','eventId','key','verifiedAt','visibleNotificationId']);
++      }
++      function migrated(d) { return d.get('pushTransport', '') == 'fcm_v1'; }
++      function validPushSource(d) {
++        return activeUser() &&
++          d.get('createdBy', request.auth.uid) == request.auth.uid &&
++          (isAdmin() ||
++            (d.type == 'chat_message' && d.chatId == request.auth.uid &&
++              get(/databases/$(database)/documents/settings/app_settings).data.adminUid == d.userId &&
++              get(/databases/$(database)/documents/chats/$(d.chatId)/messages/$(d.messageId)).data.senderId == request.auth.uid &&
++              get(/databases/$(database)/documents/chats/$(d.chatId)/messages/$(d.messageId)).data.get('deletedAt', null) == null) ||
++            (d.type == 'comment' &&
++              get(/databases/$(database)/documents/properties/$(d.propertyId)).data.publisherUid == d.userId &&
++              get(/databases/$(database)/documents/properties/$(d.propertyId)/comments/$(d.commentId)).data.userId == request.auth.uid) ||
++            (d.type == 'reply' &&
++              get(/databases/$(database)/documents/properties/$(d.propertyId)/comments/$(d.commentId)).data.userId == d.userId &&
++              get(/databases/$(database)/documents/properties/$(d.propertyId)/comments/$(d.commentId)/replies/$(d.replyId)).data.userId == request.auth.uid));
++      }
++
+       // الإنشاء للمستخدمين المسجلين والأدمن
+-      allow create: if isSignedIn();
++      // Legacy payloads are not an authorization bypass. Older senders without
++      // verifiable source IDs need the authenticated source-trigger path.
++      allow create: if isSignedIn() && notificationShape(request.resource.data) && validPushSource(request.resource.data) &&
++        (!migrated(request.resource.data) || request.resource.data.createdBy == request.auth.uid);
+ 
+       // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
+ allow read: if isSignedIn() &&
+@@ -734,11 +789,10 @@ allow read: if isSignedIn() &&
+ );
+ 
+       // التحديث لصاحب الإشعار أو الأدمن
+-      allow update: if isSignedIn() &&
+-        (
+-          resource.data.userId == request.auth.uid ||
+-          isAdmin()
+-        );
++      allow update: if notificationUpdate(request.resource.data) &&
++        (!migrated(resource.data) || migrated(request.resource.data)) &&
++        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy','isRead','unreadCount','updatedAt']) ||
++          validPushSource(request.resource.data));
+ 
+       // الحذف لصاحب الإشعار أو الأدمن
+ allow delete: if isSignedIn() &&
+@@ -748,7 +802,7 @@ allow delete: if isSignedIn() &&
+ );
+     }
+ 
+-    // Server-managed push state: no client access.
++    // Tokens and delivery claims are managed through authenticated Functions.
+     match /push_tokens/{id} { allow read, write: if false; }
+     match /push_installations/{id} { allow read, write: if false; }
+     match /push_deliveries/{id} { allow read, write: if false; }
