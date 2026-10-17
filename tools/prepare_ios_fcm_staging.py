@@ -11,6 +11,8 @@ with pathlib.Path(sys.argv[2]).open("rb") as stream:
 project = config["STAGING_PROJECT_ID"]
 assert project.startswith("aqar-fcm-test-") and project != "aqar-9f3f9"
 assert config["FCM_MIGRATION"] is True and config["STAGING_EMULATORS"] is False
+if config.get('PUSH_BRIDGE') is True:
+    assert config.get('BRIDGE_ONESIGNAL_APP_ID') == '2ef06b79-ae17-4ae0-afd1-3c2a766de0f4', 'Dedicated test OneSignal app required'
 for native_key, config_key in [("PROJECT_ID", "STAGING_PROJECT_ID"), ("GOOGLE_APP_ID", "STAGING_APP_ID"), ("GCM_SENDER_ID", "STAGING_SENDER_ID"), ("API_KEY", "STAGING_API_KEY")]:
     assert str(native[native_key]) == config[config_key], f"Mismatch: {native_key}"
 assert native["BUNDLE_ID"] == "com.andalus.aqar.staging"
