@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-17T21:34:06.284Z",
+  "command": "node --test test/fcm-retirement-gate.test.cjs",
+  "runtime": "Node 24.19.0",
+  "newTests": 3,
+  "pass": 3,
+  "fail": 0,
+  "scope": "offline synthetic retirement gate only",
+  "previousTestsRepeated": false,
+  "cloudWrites": 0,
+  "providerCalls": 0,
+  "productionControlsApplied": false
+}

@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-17T21:32:28.717Z",
+  "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+  "gitLink": {
+    "type": "github",
+    "org": "aysar93",
+    "repo": "notification_server",
+    "repoId": 1299842380,
+    "productionBranch": "main"
+  },
+  "deployHooks": [],
+  "hookInventoryComplete": true,
+  "gitIntegrationChanged": false,
+  "hookUrlsOrSecretsCaptured": false
+}
