@@ -76,7 +76,7 @@ jobs:
           channel: stable
       - run: python3 tools/prepare_push_bridge_rc.py
       - run: flutter pub get
-      - run: flutter build appbundle --release --target lib/main_push_bridge_rc.dart --dart-define-from-file=config/push-bridge.rc.json --build-number=2026101601
+      - run: flutter build appbundle --release --target lib/main_push_bridge_rc.dart --dart-define-from-file=config/push-bridge.rc.json --build-number=2026101701
       - run: sha256sum build/app/outputs/bundle/release/*.aab > build/app/outputs/bundle/release/compile-only.sha256
       - uses: actions/upload-artifact@v4
         with:

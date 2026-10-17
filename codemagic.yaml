@@ -146,7 +146,7 @@ workflows:
           xcode-project use-profiles
       - name: Build signed candidate without App Store upload
         script: |
-          flutter build ipa --release --target lib/main_push_bridge_rc.dart --dart-define-from-file=config/push-bridge.rc.json --build-number=2026101501 --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --target lib/main_push_bridge_rc.dart --dart-define-from-file=config/push-bridge.rc.json --build-number=2026101701 --export-options-plist=/Users/builder/export_options.plist
       - name: Verify production signing and Firebase configuration
         script: |
           python3 tools/verify_production_ipa.py build/ios/ipa/*.ipa
