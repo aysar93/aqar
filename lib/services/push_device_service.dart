@@ -12,6 +12,12 @@ class PushDeviceService {
   static Future<void> _queue = Future.value();
   static StreamSubscription<User?>? _authChanges;
   static String? _detachingUser;
+  static bool registrationAllowed(String uid) {
+    _observeAuth();
+    return _detachingUser != uid &&
+        FirebaseAuth.instance.currentUser?.uid == uid;
+  }
+
   static String _randomSecret() {
     final random = Random.secure();
     return List.generate(64, (_) => random.nextInt(16).toRadixString(16))

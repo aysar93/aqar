@@ -416,14 +416,15 @@ class FCMService {
     await PushDeviceService.flushPendingRevocations();
     if (PushMigration.bridgeEnabled) {
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return;
+      if (uid == null || !PushDeviceService.registrationAllowed(uid)) return;
       final profile =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (FirebaseAuth.instance.currentUser?.uid != uid) return;
+      if (!PushDeviceService.registrationAllowed(uid)) return;
       if (OneSignal.User.pushSubscription.optedIn != true &&
           await isSystemNotificationPermissionGranted() &&
           profile.data()?['notificationsEnabled'] != false &&
-          profile.data()?['isBlocked'] != true) {
+          profile.data()?['isBlocked'] != true &&
+          PushDeviceService.registrationAllowed(uid)) {
         await OneSignal.User.pushSubscription.optIn();
       }
       final token = await readFcmTokenWhenReady(
