@@ -30,6 +30,7 @@ beforeEach(async () => {
   for (const uid of ['owner', 'sender', 'admin']) await db.doc(`users/${uid}`).set({ isAdmin: uid === 'admin', isBlocked: false, notificationsEnabled: true });
   await db.doc('settings/app_settings').set({ adminUid: 'admin' });
 });
+const approvedBridgeCohort={userIds:['owner'],installations:[{uid:'owner',id:'a'.repeat(32)}],legacyTargets:[{uid:'owner',key:'legacy:'+hash('22345678-1234-4234-a234-123456789abc')}],providers:['fcm','onesignal']};
 const request = (uid = 'owner', id = 'a'.repeat(32), token = 'token-'.repeat(12)) => ({ auth: { uid }, data: { installationId: id, token, platform: 'android' } });
 async function event(id = 'n', data = {}) {
   const ref = db.doc(`notifications/${id}`);
@@ -189,7 +190,7 @@ test('bridge validates write actor, routes mixed devices and shares transactiona
  await db.doc('push_installations/'+'a'.repeat(32)).update({oneSignalId:os});
  await db.doc('push_subscription_bindings/'+hash(os)).set({uid:'owner',installationId:'a'.repeat(32),active:true});
  await db.doc('users/owner').update({oneSignalId:legacy});
- await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true});
+ await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
  const e=await event('bridge',{pushTransport:'legacy'});
  assert.equal(await verifiedEvent({...e,authId:'sender',authType:'unknown'},db),null);
  assert.equal(await verifiedEvent({...e,authId:'admin',authType:'unauthenticated'},db),null);
@@ -199,7 +200,7 @@ test('bridge validates write actor, routes mixed devices and shares transactiona
   await Promise.all([dispatchBridge(push,db),dispatchBridge(push,db)]);
   let claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');
   assert.equal(claims.length,2);assert.deepEqual(claims.map(d=>d.data().provider).sort(),['fcm','onesignal']);
-  await db.doc('push_bridge_config/rollout').set({mode:'legacy',legacyIngressCoordinated:true});
+  await db.doc('push_bridge_config/rollout').set({mode:'legacy',legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
   await dispatchBridge(push,db);
   claims=(await db.collection('push_deliveries').get()).docs.filter(d=>d.data().status==='accepted');assert.equal(claims.length,2);
  }finally{if(previous===undefined)delete process.env.FUNCTIONS_EMULATOR;else process.env.FUNCTIONS_EMULATOR=previous;}
@@ -210,7 +211,7 @@ test('bridge rollback, cohort reduction and ingress shutdown cancel an already p
  try {
   await registerPushDevice.run(request());
   for(const [index,next] of [{mode:'legacy',legacyIngressCoordinated:true},{mode:'fcm',percent:0,legacyIngressCoordinated:true},{mode:'fcm',percent:100,legacyIngressCoordinated:false}].entries()) {
-   await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true});
+   await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
    const e=await event('rollback-race-'+index),push=require('./push_bridge_policy').canonicalEvent(e.data.after.data(),null,e.params.notificationId);
    let changed=false;
    const racingDb={doc:db.doc.bind(db),collection:db.collection.bind(db),runTransaction:async callback=>{
@@ -242,7 +243,7 @@ test('legacy source trigger and modern inbox share a delivery even without old i
  process.env.FUNCTIONS_EMULATOR='true';process.env.PUSH_BRIDGE_ENABLED='true';
  try{
   await registerPushDevice.run(request());
-  await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true});
+  await db.doc('push_bridge_config/rollout').set({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:approvedBridgeCohort});
   await db.doc('properties/p').set({publisherUid:'owner'});
   const source=db.doc('properties/p/comments/c');await source.set({userId:'sender',text:'source comment'});
   await bridge.bridgeCommentCreated.run({authId:'sender',authType:'api_key',params:{propertyId:'p',commentId:'c'},data:await source.get()});

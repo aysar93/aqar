@@ -12,6 +12,16 @@ function rolloutAllows(installationId, rollout = {}) {
   const percent = Math.max(0, Math.min(100, Number(rollout.percent) || 0));
   return parseInt(hash(installationId).slice(0, 8), 16) / 0x100000000 * 100 < percent;
 }
+// The cohort is a separate, fail-closed boundary for EVERY provider.
+// Percentages select transport inside it; they never authorize a recipient.
+function cohortAllows(uid, target, rollout = {}) {
+  const c=rollout.cohort;
+  return !!c && Array.isArray(c.userIds) && c.userIds.includes(uid) &&
+    Array.isArray(c.providers) && c.providers.includes(target.provider) &&
+    (target.installationId
+      ? Array.isArray(c.installations) && c.installations.some(entry=>entry?.uid===uid && entry.id===target.installationId)
+      : Array.isArray(c.legacyTargets) && c.legacyTargets.some(entry=>entry?.uid===uid && entry.key===target.key));
+}
 function planDevices({uid, devices, installations, legacySubscriptionId, legacyBinding, legacyFcmToken, legacyFcmApproval, rollout={}, now=Date.now()}) {
   if (rollout.mode === 'paused') return [];
   const plans=[], knownSubscriptions=new Set(installations.map(i=>i.oneSignalId).filter(subscriptionId)), seen=new Set();
@@ -42,7 +52,7 @@ function planDevices({uid, devices, installations, legacySubscriptionId, legacyB
     if(recovery)plans.push({key,uid,provider:'fcm',endpoint:legacyFcmToken,legacyFcmApprovalHash:hash(legacyFcmToken),oneSignalId:subscriptionId(legacySubscriptionId)?legacySubscriptionId:null});
     else if(subscriptionId(legacySubscriptionId))plans.push({key,uid,provider:'onesignal',endpoint:legacySubscriptionId,oneSignalId:legacySubscriptionId});
   }
-  return plans;
+  return plans.filter(target=>cohortAllows(uid,target,rollout));
 }
 function deliveryId(event, target) { return hash(JSON.stringify([event.key,target.key])); }
 function uuidFor(value) { const h=hash(value);return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`; }
@@ -50,4 +60,4 @@ function oneSignalMessage(event,target,appId) {
   const fcm=messageFor(event,'unused');
   return {app_id:appId,include_subscription_ids:[target.endpoint],headings:{en:fcm.notification.title},contents:{en:fcm.notification.body},data:{...fcm.data,eventId:event.key},idempotency_key:uuidFor(deliveryId(event,target)),...(event.type==='chat_message'?{collapse_id:'chat_'+event.chatId}:{})};
 }
-module.exports={subscriptionId,canonicalEvent,rolloutAllows,planDevices,deliveryId,oneSignalMessage};
+module.exports={subscriptionId,canonicalEvent,rolloutAllows,cohortAllows,planDevices,deliveryId,oneSignalMessage};

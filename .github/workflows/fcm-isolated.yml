@@ -41,5 +41,5 @@ jobs:
       - run: node --test tools/validate_fcm_staging.test.cjs
       - run: python3 -m unittest discover -s tools -p 'test_validate_ios_fcm_signing.py'
       - run: node tools/run_fcm_emulators.cjs
-      - run: firebase emulators:exec --project demo-aqar --config firebase.push-test.json --only firestore 'node --test --test-concurrency=1 functions/push_functions.integration.test.js test/firestore/featured_properties.test.cjs'
+      - run: firebase emulators:exec --project demo-aqar --config firebase.push-test.json --only firestore 'node --test --test-concurrency=1 functions/push_functions.integration.test.js functions/push_bridge_release_gates.integration.test.js test/firestore/featured_properties.test.cjs'
 

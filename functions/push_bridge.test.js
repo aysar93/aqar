@@ -1,6 +1,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {canonicalEvent,planDevices,deliveryId,oneSignalMessage}=require('./push_bridge_policy');
+const {canonicalEvent,planDevices:rawPlanDevices,deliveryId,oneSignalMessage}=require('./push_bridge_policy');
 const {deliverBridge}=require('./push_bridge_delivery');
+// Existing transport fixtures explicitly approve their own recipients/devices.
+function planDevices(input){const {hash}=require('./push_policy');return rawPlanDevices({...input,rollout:{...input.rollout,cohort:{userIds:[input.uid],installations:input.installations.map(i=>({uid:input.uid,id:i.id})),legacyTargets:['legacy:'+hash(String(input.legacySubscriptionId)),'legacy-fcm:'+hash(String(input.legacyFcmToken))].map(key=>({uid:input.uid,key})),providers:['fcm','onesignal']}}});}
 const os='12345678-1234-4234-a234-123456789abc', old='22345678-1234-4234-a234-123456789abc';
 const event=canonicalEvent({userId:'u',type:'comment',propertyId:'p',commentId:'c',title:'test'},null,'n');
 const installation={id:'i',uid:'u',active:true,tokenHash:'h',oneSignalId:os};
