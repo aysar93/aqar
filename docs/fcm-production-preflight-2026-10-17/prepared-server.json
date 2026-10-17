@@ -1,0 +1,45 @@
+{
+  "preparedAt": "2026-10-17T14:25:25.001414+00:00",
+  "proposalOnly": true,
+  "sourceBase": "aysar93/notification_server HEAD (working user modification excluded)",
+  "routes": [
+    "GET /",
+    "POST /send"
+  ],
+  "existingWorkingServerModified": false,
+  "productionChanged": false,
+  "functionalTestsRepeated": false,
+  "serverExecuted": false,
+  "targetNode": "24.x",
+  "dependencyAudit": {
+    "packages": 250,
+    "vulnerabilities": 0,
+    "source": "npm lock preparation for this new candidate"
+  },
+  "files": [
+    {
+      "name": "server.js",
+      "sha256": "0af615857f2957871cb5cab3b42b9e4937d361a7c073fda46e9f74033afabfef"
+    },
+    {
+      "name": "package.json",
+      "sha256": "10b19d61335851b19ce58a648483aaff9e1e64fd05a30aba62404d5b4c3c0281"
+    },
+    {
+      "name": "package-lock.json",
+      "sha256": "d02c345d08673f1f795d8cdcb348fb4fd42fa36938aa935ef6545be4b44d6e6d"
+    },
+    {
+      "name": "push_bridge_dispatch.js",
+      "sha256": "70a57e18dab91754cea2f9cc5a1c3301bbfdaabc1c710c47c80a677c7c20bce2"
+    },
+    {
+      "name": "push_bridge_policy.js",
+      "sha256": "51d8f982c20f750f033a9e1076064a3f608eb8740de75969c0e066ac9adcfdeb"
+    },
+    {
+      "name": "legacy-ingress.cjs",
+      "sha256": "09bc557e4efb8d3c73e59735fc09e5ef0eb3d9c6cede761d5ad388f4764d8955"
+    }
+  ]
+}

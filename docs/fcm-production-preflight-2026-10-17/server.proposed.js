@@ -1,0 +1,23 @@
+'use strict';
+require('dotenv').config();
+const express=require('express'),cors=require('cors');
+const {initializeApp,cert}=require('firebase-admin/app');
+const {getFirestore}=require('firebase-admin/firestore');
+const project='aqar-9f3f9',appId='810a4d8d-cfac-492a-956e-0cff98248d25';
+if(process.env.GCLOUD_PROJECT!==project || process.env.PUSH_BRIDGE_ENABLED!=='true' || process.env.FCM_MIGRATION_ENABLED!=='true')throw Error('COORDINATED_PRODUCTION_BRIDGE_REQUIRED');
+let service;try{service=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT||'{}');}catch{throw Error('INVALID_SERVER_CREDENTIAL');}
+if(service.project_id!==project || service.client_email!=='aqar-push-vercel@'+project+'.iam.gserviceaccount.com')throw Error('DEDICATED_PRODUCTION_ACCOUNT_REQUIRED');
+if(process.env.ONESIGNAL_APP_ID!==appId)throw Error('PRODUCTION_APP_ID_REQUIRED');
+if(!process.env.ONESIGNAL_API_KEY)throw Error('PROVIDER_CREDENTIAL_REQUIRED');
+process.env.BRIDGE_ONESIGNAL_APP_ID=appId;
+process.env.BRIDGE_ONESIGNAL_API_KEY=process.env.ONESIGNAL_API_KEY;
+initializeApp({projectId:project,credential:cert(service)});
+const db=getFirestore();
+const {dispatchBridge}=require('./push_bridge_dispatch');
+const ingress=require('./legacy-ingress.cjs').createLegacyIngress({db,dispatch:event=>dispatchBridge(event,db)});
+const app=express();app.use(cors());app.use(express.json({limit:'64kb'}));
+app.get('/',(_req,res)=>res.send('Notification Server is Running'));
+app.post('/send',async(req,res)=>{await ingress(req,res);});
+app.use((error,_req,res,_next)=>res.status(error.type==='entity.too.large'?413:error.type==='entity.parse.failed'?400:503).json({success:false,error:error.type==='entity.too.large'?'payload_too_large':error.type==='entity.parse.failed'?'invalid_json':'bridge_temporarily_unavailable'}));
+module.exports=app;
+if(require.main===module)app.listen(Number(process.env.PORT)||3000);
