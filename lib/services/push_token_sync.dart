@@ -1,3 +1,15 @@
+/// SDK token reads may themselves notify subscription observers. Share the
+/// current sync so those callbacks cannot recursively enqueue registration.
+class PushTokenSyncGate {
+  Future<void>? _pending;
+
+  Future<void> run(Future<void> Function() action) {
+    return _pending ??= Future<void>.microtask(action).whenComplete(() {
+      _pending = null;
+    });
+  }
+}
+
 /// Synchronizes the two push providers independently. A slow or unavailable
 /// Firebase/APNs token must not prevent saving the OneSignal subscription.
 Future<void> synchronizePushTokens({

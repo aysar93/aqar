@@ -3,6 +3,46 @@ import 'package:aqar/services/push_token_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('subscription feedback and concurrent refresh share one sync', () async {
+    final gate = PushTokenSyncGate();
+    final finish = Completer<void>();
+    var calls = 0;
+    late Future<void> current;
+    current = gate.run(() async {
+      calls++;
+      expect(
+          identical(gate.run(() async {
+            calls++;
+          }), current),
+          true);
+      await finish.future;
+    });
+    final others = List.generate(
+        50,
+        (_) => gate.run(() async {
+              calls++;
+            }));
+    await Future<void>.delayed(Duration.zero);
+    expect(calls, 1);
+    finish.complete();
+    await Future.wait([current, ...others]);
+    await gate.run(() async {
+      calls++;
+    });
+    expect(calls, 2);
+  });
+
+  test('failed sync releases the gate for a later retry', () async {
+    final gate = PushTokenSyncGate();
+    await expectLater(gate.run(() async {
+      throw StateError('offline');
+    }), throwsStateError);
+    var retried = false;
+    await gate.run(() async {
+      retried = true;
+    });
+    expect(retried, true);
+  });
   test('OneSignal is saved even when Firebase fails', () async {
     final writes = <Map<String, String>>[];
     final failures = <String>[];

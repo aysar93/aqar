@@ -14,6 +14,7 @@ class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   static bool _initialized = false;
+  static final _tokenSync = PushTokenSyncGate();
   static const _privacyChannel = MethodChannel('aqar/push_privacy');
 
   static Future<void> _drainNativeNotificationTap() async {
@@ -186,7 +187,12 @@ class FCMService {
 
       OneSignal.User.pushSubscription.addObserver((state) async {
         final id = state.current.id;
-        if (id != null) await _saveRefreshedToken('oneSignalId', id);
+        if (id != null &&
+            (id != state.previous.id ||
+                state.current.token != state.previous.token ||
+                state.current.optedIn != state.previous.optedIn)) {
+          await _saveRefreshedToken('oneSignalId', id);
+        }
       });
     }
 
@@ -403,7 +409,9 @@ class FCMService {
     }
   }
 
-  static Future<void> saveTokens() async {
+  static Future<void> saveTokens() => _tokenSync.run(_saveTokens);
+
+  static Future<void> _saveTokens() async {
     await PushDeviceService.flushPendingRevocations();
     if (PushMigration.bridgeEnabled) {
       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -412,6 +420,7 @@ class FCMService {
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (FirebaseAuth.instance.currentUser?.uid != uid) return;
       if (OneSignal.User.pushSubscription.optedIn != true &&
+          await isSystemNotificationPermissionGranted() &&
           profile.data()?['notificationsEnabled'] != false &&
           profile.data()?['isBlocked'] != true) {
         await OneSignal.User.pushSubscription.optIn();
