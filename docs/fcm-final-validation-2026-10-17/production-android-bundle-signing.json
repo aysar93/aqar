@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-17T10:02:15.060Z",
+  "bundle": "com.andalus.aqar",
+  "version": "1.0.5",
+  "build": 2026101701,
+  "firebaseProject": "aqar-9f3f9",
+  "aabSha256": "be4e297226f26b7c3db2fcca04d7d292f00e84843af6ffafe89fed30353d1431",
+  "signatureVerified": true,
+  "signingCertificateSha256": "71504105ea3b229354e2a8fa942c882e1e090842229d07b00b5b552f0909228e",
+  "playUploadCertificateMatches": true,
+  "privateKeyStayedLocal": true,
+  "signingCredentialsUploaded": false,
+  "productionInstalled": false,
+  "storeUploadPerformed": false
+}

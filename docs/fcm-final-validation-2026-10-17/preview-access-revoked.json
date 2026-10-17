@@ -1,0 +1,10 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T10:47:38.797Z",
+  "temporaryPrivateKeyRevoked": true,
+  "serviceAccountDisabled": true,
+  "remainingUserManagedKeys": 0,
+  "projectRoleBindingRemoved": true,
+  "localKeyFileRemoved": true,
+  "productionChanged": false
+}

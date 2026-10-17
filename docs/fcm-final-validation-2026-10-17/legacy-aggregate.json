@@ -1,0 +1,16 @@
+{
+  "project": "aqar-9f3f9",
+  "checkedAt": "2026-10-17T09:30:36.973Z",
+  "operation": "Four read-only aggregate queries",
+  "counts": {
+    "profilesWithFcmToken": 456,
+    "profilesWithOneSignalId": 457,
+    "registeredInstallations": 0,
+    "registeredTokens": 0
+  },
+  "candidateProfilesAreNotVerifiedDevices": true,
+  "rawTokensRetrieved": false,
+  "userIdentifiersRetrieved": false,
+  "productionWrites": false,
+  "productionSendPerformed": false
+}

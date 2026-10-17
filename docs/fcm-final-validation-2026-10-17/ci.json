@@ -1,0 +1,84 @@
+{
+  "sha": "a2b8adf885f8d2acb497d88fa1bfe1b530219985",
+  "checkedAt": "2026-10-17T10:47:05.910Z",
+  "runs": [
+    {
+      "id": 39023359655,
+      "event": "pull_request",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/39023359655",
+      "jobs": [
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 39023359662,
+      "event": "pull_request",
+      "name": "Safety and iOS build",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/39023359662",
+      "jobs": [
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ios",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "bridge-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 39023356598,
+      "event": "push",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/39023356598",
+      "jobs": [
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    }
+  ]
+}
