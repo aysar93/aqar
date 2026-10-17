@@ -430,12 +430,13 @@ class FCMService {
           readApnsToken: _messaging.getAPNSToken,
           readFcmToken: _messaging.getToken);
       final subscription = OneSignal.User.pushSubscription.id;
-      final apns = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
-          ? await _messaging.getAPNSToken()
-          : null;
+      final providerToken =
+          !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+              ? await _messaging.getAPNSToken()
+              : OneSignal.User.pushSubscription.token;
       if (token != null && FirebaseAuth.instance.currentUser?.uid == uid) {
         await PushDeviceService.register(token, uid,
-            oneSignalId: subscription, providerToken: apns);
+            oneSignalId: subscription, providerToken: providerToken);
       }
       return;
     }

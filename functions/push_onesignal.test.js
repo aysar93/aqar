@@ -11,6 +11,8 @@ test('subscription ID alone cannot bind another physical device; secret provider
  try {
   await assert.rejects(verifySubscriptionBinding({oneSignalId:os,token:'other-token-1234567890',platform:'android'}),e=>e.code==='subscription_unverified');
   await verifySubscriptionBinding({oneSignalId:os,token:'provider-secret-token-123456',platform:'android'});
+  await verifySubscriptionBinding({oneSignalId:os,token:'different-default-fcm-token',platform:'android',providerToken:'provider-secret-token-123456'});
+  await assert.rejects(verifySubscriptionBinding({oneSignalId:os,token:'provider-secret-token-123456',platform:'android',providerToken:'another-devices-provider-token'}),e=>e.code==='subscription_unverified');
   await verifySubscriptionBinding({oneSignalId:os,token:'different-fcm-token',platform:'iOS',providerToken:'provider-secret-token-123456'});
   await assert.rejects(sendOneSignal({app_id:process.env.BRIDGE_ONESIGNAL_APP_ID,included_segments:['All']}),e=>e.code==='provider_audience_guard');
  } finally {global.fetch=fetch;}

@@ -23,7 +23,9 @@ async function verifySubscriptionBinding({oneSignalId,token,platform,providerTok
  if(!subscriptionId(id))throw Object.assign(Error('Unverified subscription'),{code:'subscription_unverified'});
  const user=await providerRequest(`/apps/${appId}/users/by/onesignal_id/${id}`);
  const subscription=user.subscriptions?.find(x=>x.id===oneSignalId);
- const expected=platform==='iOS'?providerToken:token;
+ // OneSignal uses its own FirebaseApp on Android, so its transport token can
+ // differ from the default FirebaseMessaging token on the same physical device.
+ const expected=providerToken ?? (platform==='android'?token:undefined);
  if(typeof expected!=='string'||expected.length<20||expected.length>4096||subscription?.token!==expected||subscription.enabled===false)throw Object.assign(Error('Subscription token mismatch'),{code:'subscription_unverified'});
 }
 async function sendOneSignal(message) {
