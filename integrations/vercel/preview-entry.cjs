@@ -33,6 +33,13 @@ async function handler(req,res) {
   if(!req.body){let size=0,body='';for await(const chunk of req){size+=chunk.length;if(size>65536)return response.status(413).json({error:'payload_too_large'});body+=chunk;}req.body=JSON.parse(body);}
   ingress ||= initializePreview();
   return await ingress(req,response);
- }catch(error){return response.status(error instanceof SyntaxError?400:503).json({success:false,error:error instanceof SyntaxError?'invalid_json':'isolated_preview_unavailable'});}
+ }catch(error){
+  if(!(error instanceof SyntaxError))console.error({message:'isolated_preview_request_failed',
+   code:typeof error.code==='number'?error.code:typeof error.code==='string'&&/^[a-zA-Z0-9_./-]{1,64}$/.test(error.code)?error.code:error.name||'unknown',
+   stage:ingress?'request':'initialize',projectMatches:process.env.GCLOUD_PROJECT==='aqar-fcm-test-20261014',
+   credentialProvided:!!process.env.FIREBASE_SERVICE_ACCOUNT,
+   frames:String(error.stack||'').split('\n').slice(1,3)});
+  return response.status(error instanceof SyntaxError?400:503).json({success:false,error:error instanceof SyntaxError?'invalid_json':'isolated_preview_unavailable'});
+ }
 }
 module.exports={handler,initializePreview};
