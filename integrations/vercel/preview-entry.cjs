@@ -20,9 +20,9 @@ function initializePreview({credential,db}={}) {
   }
  }
  if(getApps()[0].options.projectId!==project)throw Error('Mixed Firebase application forbidden');
- const {internals}=require('./push_bridge_functions');
+ const {dispatchBridge}=require('./push_bridge_dispatch');
  const store=db||getFirestore();
- return ingress=createLegacyIngress({db:store,dispatch:event=>internals.dispatchBridge(event,store)});
+ return ingress=createLegacyIngress({db:store,dispatch:event=>dispatchBridge(event,store)});
 }
 async function handler(req,res) {
  const response={status(code){res.statusCode=code;return this;},json(data){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));}};

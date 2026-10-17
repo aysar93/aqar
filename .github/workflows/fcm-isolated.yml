@@ -36,7 +36,7 @@ jobs:
       - run: npm ci --prefix test/firestore
       - run: npm install -g firebase-tools@15.28.1
       - run: node --test functions/push_policy.test.js
-      - run: node --test functions/push_bridge.test.js functions/push_onesignal.test.js integrations/vercel/legacy-ingress.test.cjs integrations/vercel/preview-entry.test.cjs
+      - run: node --test functions/push_bridge.test.js functions/push_onesignal.test.js integrations/vercel/legacy-ingress.test.cjs integrations/vercel/preview-entry.test.cjs integrations/vercel/runtime-load.test.cjs
       - run: python3 -m unittest discover -s tools -p 'test_prepare_push_bridge_rc.py'
       - run: node --test tools/validate_fcm_staging.test.cjs
       - run: python3 -m unittest discover -s tools -p 'test_validate_ios_fcm_signing.py'

@@ -2,7 +2,9 @@
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),output=path.join(root,'work','bridge-vercel-preview-20261015');
 fs.mkdirSync(path.join(output,'api'),{recursive:true});
-const modules=['push_policy.js','push_bridge_policy.js','push_bridge_delivery.js','push_bridge_functions.js','push_onesignal.js'];
+const obsoleteWrapper=path.join(output,'push_bridge_functions.js');
+if(fs.existsSync(obsoleteWrapper))fs.unlinkSync(obsoleteWrapper);
+const modules=['push_policy.js','push_bridge_policy.js','push_bridge_delivery.js','push_bridge_dispatch.js','push_onesignal.js'];
 for(const name of modules)fs.copyFileSync(path.join(root,'functions',name),path.join(output,name));
 for(const name of ['legacy-ingress.cjs','preview-entry.cjs'])fs.copyFileSync(path.join(root,'integrations','vercel',name),path.join(output,name));
 for(const name of ['package.json','package-lock.json'])fs.copyFileSync(path.join(root,'functions',name),path.join(output,name));
