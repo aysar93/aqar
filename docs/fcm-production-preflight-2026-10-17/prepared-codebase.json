@@ -1,0 +1,78 @@
+{
+  "preparedAt": "2026-10-17T14:16:50.953Z",
+  "proposalOnly": true,
+  "productionChanged": false,
+  "codebase": "push-bridge",
+  "runtime": "24",
+  "functions": [
+    "registerPushDevice",
+    "unregisterPushDevice",
+    "deliverBridgeNotification",
+    "bridgeCommentCreated",
+    "bridgeReplyCreated",
+    "bridgeChatMessageCreated",
+    "reviewPushDeliveryHealth",
+    "monitorPushDeliveryHealth"
+  ],
+  "excludedModules": [
+    "index.js from main app (auth/presence/media)",
+    "chat_functions.js",
+    "analytics_presence_access.js",
+    "office_counters.js"
+  ],
+  "firebaseConfigExcludes": [
+    "storage",
+    "database",
+    "hosting",
+    "apphosting",
+    "flutter",
+    "indexes"
+  ],
+  "sourceFiles": [
+    {
+      "name": "push_functions.js",
+      "sha256": "11fe6f95c5d7ea07ea0e184239951738315ac4f34f9ac3e00df7bdd8d9b037a4"
+    },
+    {
+      "name": "push_policy.js",
+      "sha256": "d85add7c215df6f2d5157b12c5f5ed8513b9c4a236f183386002b65daa7ecad0"
+    },
+    {
+      "name": "push_bridge_functions.js",
+      "sha256": "bc2e225c1c1db2653ed63b6b6d9589ab2534f41402fb4b5925712b316a4f6791"
+    },
+    {
+      "name": "push_bridge_dispatch.js",
+      "sha256": "70a57e18dab91754cea2f9cc5a1c3301bbfdaabc1c710c47c80a677c7c20bce2"
+    },
+    {
+      "name": "push_bridge_policy.js",
+      "sha256": "51d8f982c20f750f033a9e1076064a3f608eb8740de75969c0e066ac9adcfdeb"
+    },
+    {
+      "name": "push_bridge_delivery.js",
+      "sha256": "0cd0cec91da5f8d1f587e2942ada37395e5cd090383817f32843c27fb8be85d7"
+    },
+    {
+      "name": "push_onesignal.js",
+      "sha256": "1c1af79477ced84809b40ea387cb99001ab9f8a2750d2dfed61910c2d399f89c"
+    },
+    {
+      "name": "package-lock.json",
+      "sha256": "d848b8d00698b0b4233c5228c8671d469097ed8400dbf9492093e74e5f0855ce"
+    },
+    {
+      "name": "index.js",
+      "sha256": "a0c9bdbc57dac7e4a1cd20fd90d6818202b2b757239f2f84ec577214906e375e"
+    },
+    {
+      "name": "package.json",
+      "sha256": "ad0ef4e6ec53daa1bb13804e34588ed34339f2e609e0386dd4b5efb078a73dc0"
+    },
+    {
+      "name": ".env.aqar-9f3f9",
+      "sha256": "6575778eda6d219962c7b37ca1e836c7e4bbcf9f19fa5a9df26df3e802ba59a2"
+    }
+  ],
+  "privateSecretsIncluded": false
+}
