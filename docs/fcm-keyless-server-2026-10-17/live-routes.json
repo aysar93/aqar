@@ -1,0 +1,56 @@
+{
+  "at": "2026-10-17T19:13:44.648Z",
+  "project": "aqar-fcm-test-20261014",
+  "url": "https://aqar-fcm-bridge-isolated-20261017-7duldk9mx-aysar93s-projects.vercel.app",
+  "scope": "new keyless bootstrap and routes only; no device tests or provider sends",
+  "longLivedKeysCreated": 0,
+  "providerSendCalls": 0,
+  "checks": [
+    {
+      "name": "missing-id-before-auth",
+      "status": 400,
+      "body": {
+        "success": false,
+        "error": "notification_id_required"
+      }
+    },
+    {
+      "name": "unknown-protected-pointer",
+      "status": 202,
+      "body": {
+        "success": true,
+        "pendingVerification": true,
+        "pushSent": false,
+        "reason": "awaiting_verified_firestore_event"
+      }
+    },
+    {
+      "name": "verified-event-nonexistent-recipient",
+      "status": 200,
+      "body": {
+        "success": true,
+        "notificationId": "keyless_1792264422757",
+        "handled": true,
+        "deliveryConfirmed": false
+      }
+    },
+    {
+      "name": "invalid-json-no-bootstrap",
+      "status": 400,
+      "body": {
+        "success": false,
+        "error": "invalid_json"
+      }
+    },
+    {
+      "name": "body-size-limit-new-entry",
+      "status": 413,
+      "body": {
+        "success": false,
+        "error": "payload_too_large"
+      }
+    }
+  ],
+  "fixturesRemoved": true,
+  "completedAt": "2026-10-17T19:14:08.516Z"
+}

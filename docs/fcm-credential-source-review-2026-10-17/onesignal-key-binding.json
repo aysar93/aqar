@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-17T14:53:21.582Z",
+  "readOnly": true,
+  "providerRequests": "GET only; no sends",
+  "userReported": {
+    "appId": "810a4d8d-cfac-492a-956e-0cff98248d25",
+    "keyId": "age36umveu2oft5vnm2xjggs3",
+    "name": "aqar",
+    "type": "REST API Key",
+    "createdDate": "2026-07-14"
+  },
+  "localAppIdMatches": true,
+  "vercelValueUnavailable": true,
+  "vercelBindingProven": false,
+  "keyMetadataReadStatus": 401,
+  "mappingUnavailable": "No authorized key metadata response; response body not logged"
+}

@@ -1,0 +1,46 @@
+{
+  "verifiedAt": "2026-10-17T18:54:18.342Z",
+  "functions": [
+    {
+      "name": "registerPushDevice",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "unregisterPushDevice",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "deliverBridgeNotification",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "bridgeCommentCreated",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "bridgeReplyCreated",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "bridgeChatMessageCreated",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "secretParams": []
+    }
+  ],
+  "scope": "identity metadata only; no prior functional tests repeated"
+}

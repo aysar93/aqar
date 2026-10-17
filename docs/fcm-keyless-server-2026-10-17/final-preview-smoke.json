@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-17T19:20:17.133Z",
+  "deploymentId": "dpl_739FTV1sJwFeD8snNRqCA3i9rmPY",
+  "url": "https://aqar-fcm-bridge-isolated-20261017-6j7aa4sj6-aysar93s-projects.vercel.app",
+  "scope": "final client-error logging change only; previous transaction/adapter cases reused",
+  "health": {
+    "status": 200,
+    "body": {
+      "service": "notification-server",
+      "status": "ready",
+      "mode": "paused",
+      "pushSent": false
+    }
+  },
+  "malformed": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": "invalid_json"
+    }
+  },
+  "oversized": {
+    "status": 413,
+    "body": {
+      "success": false,
+      "error": "payload_too_large"
+    }
+  },
+  "providerSendCalls": 0
+}

@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-17T19:24:57.445Z",
+  "evidence": "completed tool outputs during this turn; not rerun for report generation",
+  "runtime": "Node 24.19.0",
+  "initialBootstrapChecks": {
+    "pass": 5,
+    "fail": 0
+  },
+  "affectedHttpLoggingCheckAfterFix": {
+    "pass": 1,
+    "fail": 0
+  },
+  "previousDeviceOrLoadOrFullCiTestsRepeated": false
+}

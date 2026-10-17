@@ -1,0 +1,22 @@
+{
+  "recordedAt": "2026-10-17T19:24:57.444Z",
+  "scope": "new keyless candidate lockfile only",
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 175,
+      "dev": 0,
+      "optional": 91,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 265
+    }
+  }
+}

@@ -1,0 +1,179 @@
+{
+  "checkedAt": "2026-10-17T15:25:08.471Z",
+  "status": "PARTIAL_STOPPED_EVENTARC_PERMISSION",
+  "project": "aqar-9f3f9",
+  "readOnlyVerification": true,
+  "newFunctions": [
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/functions/unregisterPushDevice",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:10.985309468Z",
+      "runtime": "nodejs24",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "minInstances": 0,
+      "maxInstances": 2,
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": [],
+      "hasEventTrigger": false
+    },
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/functions/registerPushDevice",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:03.058973786Z",
+      "runtime": "nodejs24",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "minInstances": 0,
+      "maxInstances": 2,
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": [],
+      "hasEventTrigger": false
+    },
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/functions/monitorPushDeliveryHealth",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:09.694445777Z",
+      "runtime": "nodejs24",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "minInstances": 0,
+      "maxInstances": 1,
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": [],
+      "hasEventTrigger": false
+    },
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/functions/reviewPushDeliveryHealth",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:09.454361623Z",
+      "runtime": "nodejs24",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "minInstances": 0,
+      "maxInstances": 2,
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": [],
+      "hasEventTrigger": false
+    }
+  ],
+  "oldFunctionsUnchanged": true,
+  "oldComparisonScope": "presence/state/runtime identity/labels including code hash; no original updateTime captured",
+  "rollout": {
+    "mode": "paused",
+    "percent": 0,
+    "cohort": {
+      "installations": [],
+      "legacyTargets": [],
+      "userIds": [],
+      "providers": [
+        "fcm"
+      ]
+    },
+    "legacyRecoveryAllowlist": [],
+    "installationAllowlist": [],
+    "legacyIngressCoordinated": false
+  },
+  "ruleset": "projects/aqar-9f3f9/rulesets/c67b967f-6cb6-4a73-bb68-53135c0736f8",
+  "bindings": [
+    {
+      "role": "projects/aqar-9f3f9/roles/aqarPushAuthLookup",
+      "members": [
+        "serviceAccount:aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com"
+      ]
+    },
+    {
+      "role": "projects/aqar-9f3f9/roles/aqarPushDataRuntime",
+      "members": [
+        "serviceAccount:aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+        "serviceAccount:aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "name": "projects/aqar-9f3f9/roles/aqarPushDataRuntime",
+      "permissions": [
+        "datastore.databases.get",
+        "datastore.entities.create",
+        "datastore.entities.delete",
+        "datastore.entities.get",
+        "datastore.entities.list",
+        "datastore.entities.update"
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/roles/aqarPushAuthLookup",
+      "permissions": [
+        "firebaseauth.users.get"
+      ]
+    }
+  ],
+  "noFcmSendInDirectGrants": true,
+  "accountKeys": [
+    {
+      "account": "aqar-push-vercel",
+      "keys": []
+    },
+    {
+      "account": "aqar-push-runtime",
+      "keys": []
+    }
+  ],
+  "scopedJobs": [
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/jobs/firebase-schedule-monitorPushDeliveryHealth-us-central1",
+      "state": "ENABLED",
+      "schedule": "every 5 minutes",
+      "timeZone": "UTC",
+      "statusCode": -1
+    }
+  ],
+  "services": [
+    {
+      "service": "cloudscheduler.googleapis.com",
+      "state": "ENABLED"
+    },
+    {
+      "service": "secretmanager.googleapis.com",
+      "state": "DISABLED"
+    }
+  ],
+  "deliveryDocumentsObserved": 0,
+  "deliveryReadError": null,
+  "vercelVariables": [
+    {
+      "name": "ONESIGNAL_API_KEY",
+      "id": "5plLiQLO1EvcikP7",
+      "type": "sensitive",
+      "target": [
+        "production"
+      ],
+      "updatedAt": 1787255450330
+    },
+    {
+      "name": "FIREBASE_SERVICE_ACCOUNT",
+      "id": "mZdj1Btn5z4AWsDi",
+      "type": "sensitive",
+      "target": [
+        "production"
+      ],
+      "updatedAt": 1787506932942
+    }
+  ],
+  "vercelWriteOperationsThisRun": 0,
+  "providerSendCallsThisRun": 0,
+  "oldKeysRevoked": false
+}

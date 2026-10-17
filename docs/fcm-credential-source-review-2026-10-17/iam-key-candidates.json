@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-17T14:34:08.468Z",
+  "project": "aqar-9f3f9",
+  "accountsListed": 4,
+  "paginationRemaining": false,
+  "userManagedKeys": [
+    {
+      "serviceAccount": "firebase-adminsdk-fbsvc@aqar-9f3f9.iam.gserviceaccount.com",
+      "serviceAccountDisplayName": "firebase-adminsdk",
+      "keyId": "f1d18eb767c7a11be42c680f257cfc2f0ec0ba39",
+      "disabled": false,
+      "validAfterTime": "2026-07-14T04:11:53Z",
+      "validBeforeTime": "9999-12-31T23:59:59Z",
+      "keyType": "USER_MANAGED",
+      "keyOrigin": "GOOGLE_PROVIDED"
+    },
+    {
+      "serviceAccount": "firebase-adminsdk-fbsvc@aqar-9f3f9.iam.gserviceaccount.com",
+      "serviceAccountDisplayName": "firebase-adminsdk",
+      "keyId": "63ab747c6bafa290b22433711cb3c9d85fdd2259",
+      "disabled": false,
+      "validAfterTime": "2026-07-14T04:12:21Z",
+      "validBeforeTime": "9999-12-31T23:59:59Z",
+      "keyType": "USER_MANAGED",
+      "keyOrigin": "GOOGLE_PROVIDED"
+    },
+    {
+      "serviceAccount": "firebase-adminsdk-fbsvc@aqar-9f3f9.iam.gserviceaccount.com",
+      "serviceAccountDisplayName": "firebase-adminsdk",
+      "keyId": "eb46e4ac9674ce5a603f6396fc6d6c72b4511a0a",
+      "disabled": false,
+      "validAfterTime": "2026-07-14T21:50:35Z",
+      "validBeforeTime": "9999-12-31T23:59:59Z",
+      "keyType": "USER_MANAGED",
+      "keyOrigin": "GOOGLE_PROVIDED"
+    },
+    {
+      "serviceAccount": "firebase-adminsdk-fbsvc@aqar-9f3f9.iam.gserviceaccount.com",
+      "serviceAccountDisplayName": "firebase-adminsdk",
+      "keyId": "01eb7bbe4539e1b703b8a4276e5bce3fec37a71a",
+      "disabled": false,
+      "validAfterTime": "2026-08-23T17:39:43Z",
+      "validBeforeTime": "9999-12-31T23:59:59Z",
+      "keyType": "USER_MANAGED",
+      "keyOrigin": "GOOGLE_PROVIDED"
+    },
+    {
+      "serviceAccount": "firebase-adminsdk-fbsvc@aqar-9f3f9.iam.gserviceaccount.com",
+      "serviceAccountDisplayName": "firebase-adminsdk",
+      "keyId": "ef3caff6c4095b483411469408f1c2d862c21111",
+      "disabled": false,
+      "validAfterTime": "2026-09-06T22:46:26Z",
+      "validBeforeTime": "9999-12-31T23:59:59Z",
+      "keyType": "USER_MANAGED",
+      "keyOrigin": "GOOGLE_PROVIDED"
+    }
+  ],
+  "metadataOnly": true,
+  "privateKeysRead": false,
+  "theseAreCandidatesNotVercelMatches": true,
+  "productionChanged": false
+}

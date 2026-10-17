@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-17T19:12:19.933Z",
+  "url": "https://aqar-fcm-bridge-isolated-20261017-7duldk9mx-aysar93s-projects.vercel.app",
+  "status": 200,
+  "body": {
+    "service": "notification-server",
+    "status": "ready",
+    "mode": "paused",
+    "pushSent": false
+  }
+}

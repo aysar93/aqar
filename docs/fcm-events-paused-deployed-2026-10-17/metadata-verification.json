@@ -1,0 +1,260 @@
+{
+  "verifiedAt": "2026-10-17T18:58:30.657Z",
+  "project": "aqar-9f3f9",
+  "allEightActive": true,
+  "existingFourUnchanged": true,
+  "existingRuntimeProjectPermissionsUnchanged": true,
+  "functions": [
+    {
+      "name": "bridgeCommentCreated",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T18:56:32.207995006Z",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/bridgecommentcreated",
+      "trigger": "projects/aqar-9f3f9/locations/nam5/triggers/bridgecommentcreated-791463",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "bridgeChatMessageCreated",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T18:56:33.728925709Z",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/bridgechatmessagecreated",
+      "trigger": "projects/aqar-9f3f9/locations/nam5/triggers/bridgechatmessagecreated-785381",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:10.985309468Z",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/unregisterpushdevice",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:03.058973786Z",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/registerpushdevice",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:09.694445777Z",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/monitorpushdeliveryhealth",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T15:23:09.454361623Z",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/reviewpushdeliveryhealth",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "deliverBridgeNotification",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T18:56:28.921290519Z",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/deliverbridgenotification",
+      "trigger": "projects/aqar-9f3f9/locations/nam5/triggers/deliverbridgenotification-732161",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    },
+    {
+      "name": "bridgeReplyCreated",
+      "state": "ACTIVE",
+      "updateTime": "2026-10-17T18:56:32.875409022Z",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "service": "projects/aqar-9f3f9/locations/us-central1/services/bridgereplycreated",
+      "trigger": "projects/aqar-9f3f9/locations/nam5/triggers/bridgereplycreated-016652",
+      "flags": {
+        "FCM_MIGRATION_ENABLED": "true",
+        "PUSH_BRIDGE_ENABLED": "true",
+        "BRIDGE_ONESIGNAL_ENABLED": "false"
+      },
+      "secretBindings": []
+    }
+  ],
+  "rollout": {
+    "mode": "paused",
+    "cohort": {
+      "installations": [],
+      "providers": [
+        "fcm"
+      ],
+      "legacyTargets": [],
+      "userIds": []
+    },
+    "legacyRecoveryAllowlist": [],
+    "percent": 0,
+    "installationAllowlist": [],
+    "legacyIngressCoordinated": false
+  },
+  "projectRoleBindings": [
+    {
+      "role": "projects/aqar-9f3f9/roles/aqarPushAuthLookup",
+      "members": [
+        "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+      ]
+    },
+    {
+      "role": "projects/aqar-9f3f9/roles/aqarPushDataRuntime",
+      "members": [
+        "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+      ]
+    },
+    {
+      "role": "projects/aqar-9f3f9/roles/aqarPushEventReceive",
+      "members": [
+        "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "name": "projects/aqar-9f3f9/roles/aqarPushDataRuntime",
+      "permissions": [
+        "datastore.databases.get",
+        "datastore.entities.create",
+        "datastore.entities.delete",
+        "datastore.entities.get",
+        "datastore.entities.list",
+        "datastore.entities.update"
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/roles/aqarPushAuthLookup",
+      "permissions": [
+        "firebaseauth.users.get"
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/roles/aqarPushEventReceive",
+      "permissions": [
+        "eventarc.events.receiveEvent"
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/roles/aqarPushServiceInvoke",
+      "permissions": [
+        "run.routes.invoke"
+      ]
+    }
+  ],
+  "serviceScopedBindings": [
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/services/bridgereplycreated",
+      "bindings": [
+        {
+          "role": "projects/aqar-9f3f9/roles/aqarPushServiceInvoke",
+          "members": [
+            "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/services/bridgechatmessagecreated",
+      "bindings": [
+        {
+          "role": "projects/aqar-9f3f9/roles/aqarPushServiceInvoke",
+          "members": [
+            "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/services/bridgecommentcreated",
+      "bindings": [
+        {
+          "role": "projects/aqar-9f3f9/roles/aqarPushServiceInvoke",
+          "members": [
+            "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "projects/aqar-9f3f9/locations/us-central1/services/deliverbridgenotification",
+      "bindings": [
+        {
+          "role": "projects/aqar-9f3f9/roles/aqarPushServiceInvoke",
+          "members": [
+            "serviceAccount:aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+          ]
+        }
+      ]
+    }
+  ],
+  "noProjectInvokeGrant": true,
+  "noFcmSendPermission": true,
+  "noUserManagedKeys": true,
+  "deliveryDocuments": 0,
+  "triggers": [
+    {
+      "function": "bridgeCommentCreated",
+      "name": "projects/aqar-9f3f9/locations/nam5/triggers/bridgecommentcreated-791463",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "conditions": {}
+    },
+    {
+      "function": "bridgeChatMessageCreated",
+      "name": "projects/aqar-9f3f9/locations/nam5/triggers/bridgechatmessagecreated-785381",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "conditions": {}
+    },
+    {
+      "function": "deliverBridgeNotification",
+      "name": "projects/aqar-9f3f9/locations/nam5/triggers/deliverbridgenotification-732161",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "conditions": {}
+    },
+    {
+      "function": "bridgeReplyCreated",
+      "name": "projects/aqar-9f3f9/locations/nam5/triggers/bridgereplycreated-016652",
+      "serviceAccount": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com",
+      "conditions": {}
+    }
+  ],
+  "artifactCleanupPolicyUnchanged": true
+}

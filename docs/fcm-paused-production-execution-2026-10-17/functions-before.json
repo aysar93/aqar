@@ -1,0 +1,48 @@
+[
+  {
+    "name": "projects/aqar-9f3f9/locations/us-central1/functions/authorizePresenceDashboard",
+    "state": "ACTIVE",
+    "serviceAccount": "1031621585901-compute@developer.gserviceaccount.com",
+    "labels": {
+      "deployment-tool": "cli-firebase",
+      "deployment-callable": "true",
+      "firebase-functions-hash": "63a32a993c1ab1fa95a34c055a9b77afe224e03b"
+    }
+  },
+  {
+    "name": "projects/aqar-9f3f9/locations/us-central1/functions/refreshOfficeFollowerMetrics",
+    "state": "ACTIVE",
+    "serviceAccount": "1031621585901-compute@developer.gserviceaccount.com",
+    "labels": {
+      "firebase-functions-hash": "073cf1cf33f3b015166d67a343da21bd2de4a1e3",
+      "deployment-tool": "cli-firebase"
+    }
+  },
+  {
+    "name": "projects/aqar-9f3f9/locations/us-central1/functions/refreshOfficePropertyMetrics",
+    "state": "ACTIVE",
+    "serviceAccount": "1031621585901-compute@developer.gserviceaccount.com",
+    "labels": {
+      "firebase-functions-hash": "073cf1cf33f3b015166d67a343da21bd2de4a1e3",
+      "deployment-tool": "cli-firebase"
+    }
+  },
+  {
+    "name": "projects/aqar-9f3f9/locations/us-central1/functions/syncPresenceAdminRole",
+    "state": "ACTIVE",
+    "serviceAccount": "1031621585901-compute@developer.gserviceaccount.com",
+    "labels": {
+      "deployment-tool": "cli-firebase",
+      "firebase-functions-hash": "63a32a993c1ab1fa95a34c055a9b77afe224e03b"
+    }
+  },
+  {
+    "name": "projects/aqar-9f3f9/locations/us-central1/functions/refreshOfficeReviewMetrics",
+    "state": "ACTIVE",
+    "serviceAccount": "1031621585901-compute@developer.gserviceaccount.com",
+    "labels": {
+      "deployment-tool": "cli-firebase",
+      "firebase-functions-hash": "073cf1cf33f3b015166d67a343da21bd2de4a1e3"
+    }
+  }
+]

@@ -1,0 +1,60 @@
+{
+  "preparedAt": "2026-10-17T19:24:57.445Z",
+  "approved": false,
+  "executed": false,
+  "project": "aqar-9f3f9",
+  "projectNumber": "1031621585901",
+  "existingServiceAccount": "aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com",
+  "enableApis": [
+    "sts.googleapis.com"
+  ],
+  "alreadyEnabledApis": [
+    "iamcredentials.googleapis.com"
+  ],
+  "workloadPool": {
+    "id": "aqar-vercel-paused",
+    "providerId": "vercel-production",
+    "issuer": "https://oidc.vercel.com/aysar93s-projects",
+    "allowedAudiences": [
+      "https://vercel.com/aysar93s-projects"
+    ],
+    "googleSubject": "assertion.sub",
+    "attributeCondition": "assertion.owner_id == 'team_OuMMNqbA3ALsK4nAoBE7UxSe' && assertion.project_id == 'prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X' && assertion.environment == 'production' && assertion.sub == 'owner:aysar93s-projects:project:notification-server:environment:production'"
+  },
+  "customRole": {
+    "id": "aqarPushFederatedToken",
+    "permissions": [
+      "iam.serviceAccounts.getAccessToken"
+    ],
+    "bindingScope": "aqar-push-vercel service account only",
+    "principal": "principal://iam.googleapis.com/projects/1031621585901/locations/global/workloadIdentityPools/aqar-vercel-paused/subject/owner:aysar93s-projects:project:notification-server:environment:production"
+  },
+  "vercel": {
+    "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+    "productionPublicVariables": {
+      "FCM_SERVER_PROFILE": "production-paused",
+      "GCLOUD_PROJECT": "aqar-9f3f9",
+      "GCP_PROJECT_NUMBER": "1031621585901",
+      "FCM_MIGRATION_ENABLED": "true",
+      "PUSH_BRIDGE_ENABLED": "true",
+      "BRIDGE_ONESIGNAL_ENABLED": "false"
+    },
+    "deploymentOrder": [
+      "production environment build with --skip-domain",
+      "health and paused verification on candidate URL",
+      "promote only on successful verification"
+    ],
+    "currentDeploymentId": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "legacyVariablesUnchanged": [
+      "FIREBASE_SERVICE_ACCOUNT",
+      "ONESIGNAL_API_KEY",
+      "ONESIGNAL_APP_ID"
+    ]
+  },
+  "rollbackArtifact": "server-candidates/fcm-paused-maintenance",
+  "jsonKeyCreation": false,
+  "fcmSendPermission": false,
+  "recipientListsRemainEmpty": true,
+  "mergeOrStorePublish": false,
+  "oneSignalStorageCloudinaryReelsChanges": false
+}

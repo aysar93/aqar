@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-10-17T18:50:49.019Z",
+  "readOnly": true,
+  "productionMutations": 0,
+  "predefinedRole": {
+    "name": "roles/run.invoker",
+    "permissions": [
+      "run.instances.invoke",
+      "run.jobs.run",
+      "run.routes.invoke"
+    ]
+  },
+  "minimalExtraPermission": {
+    "name": "run.routes.invoke",
+    "customRolesSupportLevel": "SUPPORTED",
+    "onlyInPredefinedRoles": false
+  },
+  "currentSuccessfulFunctions": [
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:10.985309468Z"
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:03.058973786Z"
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:09.694445777Z"
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:09.454361623Z"
+    }
+  ],
+  "rolloutFields": {
+    "legacyIngressCoordinated": {
+      "booleanValue": false
+    },
+    "installationAllowlist": {
+      "arrayValue": {}
+    },
+    "mode": {
+      "stringValue": "paused"
+    },
+    "cohort": {
+      "mapValue": {
+        "fields": {
+          "providers": {
+            "arrayValue": {
+              "values": [
+                {
+                  "stringValue": "fcm"
+                }
+              ]
+            }
+          },
+          "userIds": {
+            "arrayValue": {}
+          },
+          "legacyTargets": {
+            "arrayValue": {}
+          },
+          "installations": {
+            "arrayValue": {}
+          }
+        }
+      }
+    },
+    "percent": {
+      "integerValue": "0"
+    },
+    "legacyRecoveryAllowlist": {
+      "arrayValue": {}
+    }
+  },
+  "requiredAdditionalApproval": "Custom role aqarPushServiceInvoke containing only run.routes.invoke, bound only on four private Cloud Run target services to aqar-push-events; no project-wide invocation grant, no run.jobs.run"
+}

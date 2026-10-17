@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-17T14:34:01.584Z",
+  "projectsScanned": 2,
+  "paginationRemaining": false,
+  "matches": [
+    {
+      "project": "notification-server",
+      "id": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+      "repository": {
+        "type": "github",
+        "repo": "notification_server",
+        "org": "aysar93"
+      },
+      "variables": [
+        {
+          "name": "ONESIGNAL_API_KEY",
+          "id": "5plLiQLO1EvcikP7",
+          "type": "sensitive",
+          "target": [
+            "production"
+          ],
+          "gitBranch": null
+        },
+        {
+          "name": "FIREBASE_SERVICE_ACCOUNT",
+          "id": "mZdj1Btn5z4AWsDi",
+          "type": "sensitive",
+          "target": [
+            "production"
+          ],
+          "gitBranch": null
+        }
+      ]
+    }
+  ],
+  "onlyNamesAndMetadataSaved": true,
+  "secretValuesRequested": false,
+  "sameNamedVariablesDoNotProveSameCredential": true,
+  "productionChanges": false
+}

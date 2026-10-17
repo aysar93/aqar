@@ -1,0 +1,46 @@
+{
+  "project": "aqar-9f3f9",
+  "startedAt": "2026-10-17T15:16:37.589Z",
+  "changes": [
+    {
+      "at": "2026-10-17T15:16:39.725Z",
+      "kind": "customRoleCreated",
+      "resource": "projects/aqar-9f3f9/roles/aqarPushDataRuntime"
+    },
+    {
+      "at": "2026-10-17T15:16:40.538Z",
+      "kind": "customRoleCreated",
+      "resource": "projects/aqar-9f3f9/roles/aqarPushAuthLookup"
+    },
+    {
+      "at": "2026-10-17T15:16:41.948Z",
+      "kind": "serviceAccountCreated",
+      "resource": "aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com"
+    },
+    {
+      "at": "2026-10-17T15:16:42.752Z",
+      "kind": "serviceAccountCreated",
+      "resource": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com"
+    },
+    {
+      "at": "2026-10-17T15:16:45.362Z",
+      "kind": "iamBindingsAdded",
+      "resource": "data CRUD both identities; Auth get runtime; no FCM send"
+    },
+    {
+      "at": "2026-10-17T15:17:20.070Z",
+      "kind": "rolloutCreated",
+      "resource": "push_bridge_config/rollout: paused, percent 0, all recipient lists empty"
+    },
+    {
+      "at": "2026-10-17T15:18:15.907Z",
+      "kind": "rulesetCreated",
+      "resource": "projects/aqar-9f3f9/rulesets/c67b967f-6cb6-4a73-bb68-53135c0736f8"
+    },
+    {
+      "at": "2026-10-17T15:18:43.925Z",
+      "kind": "privateRulesPublished",
+      "resource": "projects/aqar-9f3f9/rulesets/c67b967f-6cb6-4a73-bb68-53135c0736f8"
+    }
+  ]
+}

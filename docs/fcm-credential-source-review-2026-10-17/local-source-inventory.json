@@ -1,0 +1,320 @@
+{
+  "checkedAt": "2026-10-17T14:32:08.304Z",
+  "roots": [
+    "D:/Projects",
+    "C:/Users/AL-NOOR/Downloads",
+    "D:/Codex-task-work/fcm-complete-20261014"
+  ],
+  "filesInventoried": 1827,
+  "serviceAccountCandidates": [
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\work\\bridge-provider-private\\onesignal-test-fcm-service-account.json",
+      "project": "aqar-fcm-test-20261014",
+      "email": "aqar-onesignal-test-sender@aqar-fcm-test-20261014.iam.gserviceaccount.com",
+      "keyId": "623d8e4a7544dcc9bb87e6f913a765f17639089d",
+      "privateContentsCopied": false,
+      "productionCandidate": false
+    }
+  ],
+  "environmentAssignments": [
+    {
+      "path": "D:/Projects\\notification_server\\.env",
+      "name": "ONESIGNAL_API_KEY",
+      "nonempty": true,
+      "hasServiceAccountMetadata": false
+    }
+  ],
+  "references": [
+    {
+      "path": "D:/Projects\\notification_server\\server.js",
+      "line": 21,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Projects\\notification_server\\server.js",
+      "line": 304,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Projects\\notification_server\\.env",
+      "line": 2,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\tools\\run_fcm_emulators.cjs",
+      "line": 5,
+      "names": [
+        "GOOGLE_APPLICATION_CREDENTIALS"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\integrations\\vercel\\preview-entry.cjs",
+      "line": 16,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\integrations\\vercel\\preview-entry.cjs",
+      "line": 40,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\functions\\push_onesignal.test.js",
+      "line": 4,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\functions\\push_onesignal.js",
+      "line": 4,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\functions\\push_onesignal.js",
+      "line": 8,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-release-gates-2026-10-17\\vercel-production-metadata.json",
+      "line": 12,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-release-gates-2026-10-17\\vercel-production-metadata.json",
+      "line": 13,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-release-gates-2026-10-17\\production-resource-inventory.json",
+      "line": 48,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-release-gates-2026-10-17\\production-resource-inventory.json",
+      "line": 52,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-release-gates-2026-10-17\\production-resource-inventory.json",
+      "line": 54,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-production-preflight-2026-10-17\\server.proposed.js",
+      "line": 8,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-production-preflight-2026-10-17\\server.proposed.js",
+      "line": 11,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-production-preflight-2026-10-17\\server.proposed.js",
+      "line": 13,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-production-preflight-2026-10-17\\credential-access-metadata.json",
+      "line": 17,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-production-preflight-2026-10-17\\credential-access-metadata.json",
+      "line": 27,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-bridge-provider-2026-10-17\\provider-state.json",
+      "line": 14,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-bridge-provider-2026-10-17\\provider-state.json",
+      "line": 26,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-bridge-provider-2026-10-17\\provider-state.json",
+      "line": 44,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-bridge-provider-2026-10-17\\provider-state.json",
+      "line": 74,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\docs\\fcm-bridge-provider-2026-10-17\\provider-state.json",
+      "line": 86,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\cloudflare\\reels-worker\\src\\index.js",
+      "line": 158,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\release-gates-20261017\\production-resource-inventory.json",
+      "line": 48,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\release-gates-20261017\\production-resource-inventory.json",
+      "line": 52,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\release-gates-20261017\\production-resource-inventory.json",
+      "line": 54,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\production-preflight-20261017\\credential-access-metadata.json",
+      "line": 17,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\production-preflight-20261017\\credential-access-metadata.json",
+      "line": 27,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-provider-live-20261017\\preview-env-configured.json",
+      "line": 6,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-provider-live-20261017\\preview-env-configured.json",
+      "line": 11,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-live-20261015\\provider-state-20261017.json",
+      "line": 14,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-live-20261015\\provider-state-20261017.json",
+      "line": 26,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-live-20261015\\provider-state-20261017.json",
+      "line": 44,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-live-20261015\\provider-state-20261017.json",
+      "line": 74,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Codex-task-work/fcm-complete-20261014\\local-outputs\\bridge-live-20261015\\provider-state-20261017.json",
+      "line": 86,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Projects\\aqar\\docs\\ios-push-review-readonly.cjs",
+      "line": 7,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Projects\\aqar\\docs\\ios-push-review-2026-10-04\\configure-onesignal-apns.cjs",
+      "line": 17,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Projects\\aqar\\docs\\ios-push-review-2026-10-04\\configure-onesignal-apns.cjs",
+      "line": 18,
+      "names": [
+        "ONESIGNAL_API_KEY"
+      ]
+    },
+    {
+      "path": "D:/Projects\\aqar\\cloudflare\\reels-worker\\src\\index.js",
+      "line": 158,
+      "names": [
+        "FIREBASE_SERVICE_ACCOUNT"
+      ]
+    }
+  ],
+  "rawValuesPrinted": false,
+  "secretsCopied": false,
+  "historyOrBrowserStorageRead": false,
+  "productionChanged": false
+}
