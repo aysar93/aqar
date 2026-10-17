@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-17T21:07:03.008Z",
+  "since": "2026-10-17T21:05:27.667Z",
+  "errorRecords": 0,
+  "summary": {
+    "type": "summary",
+    "recordsReturned": 0,
+    "timeRange": {
+      "start": "2026-10-17T21:05:27.667Z",
+      "end": "2026-10-17T21:06:59.990Z"
+    },
+    "pagination": {
+      "hasMore": false,
+      "next": null
+    },
+    "excludedIntervals": []
+  }
+}
