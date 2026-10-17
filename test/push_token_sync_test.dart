@@ -3,6 +3,19 @@ import 'package:aqar/services/push_token_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('new account sync is not swallowed by the previous account flight',
+      () async {
+    final gate = PushTokenSyncGate();
+    final oldAccount = Completer<void>();
+    final previous = gate.run(() => oldAccount.future, key: 'A');
+    var registeredNew = false;
+    await gate.run(() async {
+      registeredNew = true;
+    }, key: 'B');
+    expect(registeredNew, true);
+    oldAccount.complete();
+    await previous;
+  });
   test('subscription feedback and concurrent refresh share one sync', () async {
     final gate = PushTokenSyncGate();
     final finish = Completer<void>();

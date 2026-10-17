@@ -1,11 +1,11 @@
 /// SDK token reads may themselves notify subscription observers. Share the
 /// current sync so those callbacks cannot recursively enqueue registration.
 class PushTokenSyncGate {
-  Future<void>? _pending;
+  final _pending = <Object?, Future<void>>{};
 
-  Future<void> run(Future<void> Function() action) {
-    return _pending ??= Future<void>.microtask(action).whenComplete(() {
-      _pending = null;
+  Future<void> run(Future<void> Function() action, {Object? key}) {
+    return _pending[key] ??= Future<void>.microtask(action).whenComplete(() {
+      _pending.remove(key);
     });
   }
 }

@@ -409,7 +409,8 @@ class FCMService {
     }
   }
 
-  static Future<void> saveTokens() => _tokenSync.run(_saveTokens);
+  static Future<void> saveTokens() =>
+      _tokenSync.run(_saveTokens, key: FirebaseAuth.instance.currentUser?.uid);
 
   static Future<void> _saveTokens() async {
     await PushDeviceService.flushPendingRevocations();
