@@ -1,0 +1,11 @@
+{
+  "name": "Aqar reversible legacy notification hosts",
+  "description": "Retain historical artifacts; deny only their immutable and branch hostnames. Separate production approval required.",
+  "active": true,
+  "conditionGroup": [
+    {"conditions": [{"type": "host", "op": "eq", "value": "notification-server-68tstlpxw-aysar93s-projects.vercel.app"}]},
+    {"conditions": [{"type": "host", "op": "eq", "value": "notification-server-mnh6zdtym-aysar93s-projects.vercel.app"}]},
+    {"conditions": [{"type": "host", "op": "eq", "value": "notification-server-git-main-aysar93s-projects.vercel.app"}]}
+  ],
+  "action": {"mitigate": {"action": "deny"}}
+}

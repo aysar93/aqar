@@ -1,5 +1,18 @@
 # Prepared controls, not installed in production
 
+Current decision: retain both historical deployments and Git integration.
+The reversible strategy in `docs/fcm-reversible-retirement-final-2026-10-18-ar.md`
+supersedes the earlier Git-disconnect/deletion proposal below. Use the gate's
+`--reversible` mode for new retirement evidence. No approval for deletion exists.
+
+Current proposed controls are an Ignored Build Step (`exit 0`) and the exact-host
+deny rule in `legacy-host-deny.proposed.json`. Neither has been applied. Existing
+Firewall is disabled, so enabling the reviewed custom rule is a separately
+approved project change; do not enable bot challenges/managed rules or publish
+unrelated drafts. The current source and maintenance hostnames are excluded.
+
+Historical preparation, retained for context only (not execution authority):
+
 1. Under separate production approval, disconnect the Vercel project's Git
    integration to block automatic deployment of the legacy repository. Do not
    disconnect GitHub for the account/team or change the application repository.

@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-17T21:49:21.287Z",
+  "newTests": {
+    "reversibleGate": 2,
+    "sourceVisibilityAuthorization": 2,
+    "totalPass": 4,
+    "fail": 0
+  },
+  "priorTestsRepeated": false,
+  "sourceAdapterSyntaxCheck": true,
+  "realDeviceTestsRerun": false,
+  "providerCalls": 0,
+  "cloudWrites": 0,
+  "priorSuccessfulTestsRerun": false
+}

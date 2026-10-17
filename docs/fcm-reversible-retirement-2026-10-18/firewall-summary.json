@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-10-17T21:45:08.396Z",
+  "firewallEnabled": false,
+  "customRuleCount": 0,
+  "activeRuleCount": 0,
+  "inactiveRuleCount": 0,
+  "bypassUnavailable": {
+    "reason": "plan",
+    "message": "IP Bypass is unavailable for team aysar93s-projects. Pro and Enterprise plans include it."
+  },
+  "flow": [
+    {
+      "id": "system-rules",
+      "state": "active"
+    },
+    {
+      "id": "attack-mode",
+      "state": "inactive"
+    },
+    {
+      "id": "ip-blocking",
+      "state": "inactive",
+      "count": 0
+    },
+    {
+      "id": "custom-rules",
+      "state": "inactive",
+      "count": 0
+    },
+    {
+      "id": "bot-management",
+      "state": "inactive",
+      "action": null
+    },
+    {
+      "id": "managed-rulesets",
+      "state": "inactive",
+      "count": 0
+    },
+    {
+      "id": "deployment-routing",
+      "state": "terminal"
+    },
+    {
+      "id": "response-returned",
+      "state": "terminal"
+    }
+  ],
+  "draftChangesPresent": false
+}
