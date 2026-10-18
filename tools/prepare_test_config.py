@@ -6,5 +6,6 @@ k=os.environ.get('MEDIA_TEST_FIREBASE_API_KEY','')
 c['API_KEY']=k or 'media-test-build-only-no-auth'
 p.write_bytes(plistlib.dumps(c))
 pathlib.Path('build').mkdir(exist_ok=True)
+pathlib.Path('build/test-dart-defines.json').write_text(json.dumps({'MEDIA_TEST_FIREBASE_API_KEY':k or 'media-test-build-only-no-auth'}))
 pathlib.Path('build/cloud-config-status.json').write_text(json.dumps({'testProjectOnly':True,'runtimeCloudConfigured':bool(k),'cloudIntegrationTests':'NOT RUN; isolated cloud is closed'}))
 print('Isolated native configuration prepared; values omitted; cloud configured='+str(bool(k)))
