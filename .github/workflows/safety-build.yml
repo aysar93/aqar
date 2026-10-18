@@ -1,10 +1,12 @@
 name: Safety and iOS build
 on:
-  push:
-    branches: [main, 'codex/**']
-  pull_request:
   workflow_dispatch:
     inputs:
+      merge_safety_only:
+        description: 'Run only FCM merge-boundary and trusted inbox emulator checks; no native build'
+        required: false
+        type: boolean
+        default: false
       bridge_candidate:
         description: 'Compile unsigned production bridge candidates only; no deployment'
         required: false
@@ -23,8 +25,11 @@ on:
 permissions:
   contents: read
 jobs:
+  fcm-merge-safety-only:
+    if: github.event_name == 'workflow_dispatch' && inputs.merge_safety_only == true
+    uses: ./.github/workflows/fcm-merge-safety.yml
   ios:
-    if: github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true)
+    if: inputs.merge_safety_only != true && (github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true))
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -40,7 +45,7 @@ jobs:
       - run: flutter build ios --release --no-codesign
       - run: flutter build ios --release --no-codesign --dart-define=FCM_MIGRATION=true
   push-migration:
-    if: github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true)
+    if: inputs.merge_safety_only != true && (github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -64,7 +69,7 @@ jobs:
       - run: flutter pub get
       - run: flutter test test/push_migration_test.dart test/push_token_sync_test.dart test/navigation_return_test.dart test/office_subscription_gift_test.dart
   firestore:
-    if: github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true)
+    if: inputs.merge_safety_only != true && (github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

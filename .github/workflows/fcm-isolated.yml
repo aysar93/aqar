@@ -1,10 +1,6 @@
 name: FCM isolated emulators
 on:
   workflow_dispatch:
-  push:
-    branches: ['staging/fcm-isolated-2026-10-13', 'staging/fcm-complete-*']
-  pull_request:
-    paths: ['functions/**', 'firestore.rules', 'firebase.fcm-emulators.json', 'tools/run_fcm_emulators.cjs', '.github/workflows/fcm-isolated.yml']
 permissions:
   contents: read
 jobs:

@@ -24,7 +24,7 @@ const inst='a'.repeat(32),other='b'.repeat(32),token='synthetic-emulator-token-o
 const cohort=()=>({userIds:['owner'],installations:[{uid:'owner',id:inst}],legacyTargets:[{uid:'owner',key:'legacy:'+hash(legacy)}],providers:['fcm','onesignal']});
 const rollout=extra=>({mode:'fcm',percent:100,legacyIngressCoordinated:true,cohort:cohort(),...extra});
 let env;
-before(async()=>{const {initializeTestEnvironment}=require('../test/firestore/node_modules/@firebase/rules-unit-testing');env=await initializeTestEnvironment({projectId:'demo-aqar',firestore:{rules:fs.readFileSync('firestore.rules','utf8')}});});
+before(async()=>{const {initializeTestEnvironment}=require('../test/firestore/node_modules/@firebase/rules-unit-testing');env=await initializeTestEnvironment({projectId:'demo-aqar',firestore:{rules:fs.readFileSync('config/firestore/notifications-strict.deferred.rules','utf8')}});});
 after(async()=>{await env.cleanup();await db.terminate();});
 beforeEach(async()=>{
  await env.clearFirestore();sent.length=0;process.env.FUNCTIONS_EMULATOR='false';process.env.PUSH_BRIDGE_ENABLED='true';process.env.FCM_MIGRATION_ENABLED='true';process.env.BRIDGE_ONESIGNAL_APP_ID='isolated-emulator-only';

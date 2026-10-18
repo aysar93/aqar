@@ -1,9 +1,6 @@
 name: FCM iOS staging build (no signing or publishing)
 on:
   workflow_dispatch:
-  push:
-    branches: ['staging/fcm-complete-*']
-    paths: ['lib/**', 'ios/**', 'tools/prepare_ios_fcm_staging.py', 'config/fcm-ios.staging.json', 'config/staging/**', 'pubspec*', '.github/workflows/fcm-ios-staging.yml']
 permissions:
   contents: read
 jobs:

@@ -22,7 +22,7 @@ const { hash } = require('./push_policy');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('../test/firestore/node_modules/@firebase/rules-unit-testing');
 const { doc, setDoc, updateDoc, getDoc } = require('../test/firestore/node_modules/firebase/firestore');
 let env;
-before(async () => { env = await initializeTestEnvironment({ projectId: 'demo-aqar', firestore: { rules: fs.readFileSync(path.resolve(__dirname, '../firestore.rules'), 'utf8') } }); });
+before(async () => { env = await initializeTestEnvironment({ projectId: 'demo-aqar', firestore: { rules: fs.readFileSync(path.resolve(__dirname, '../config/firestore/notifications-strict.deferred.rules'), 'utf8') } }); });
 after(async () => { await env.cleanup(); await db.terminate(); });
 beforeEach(async () => {
   process.env.FCM_MIGRATION_ENABLED = 'true'; sends.length = 0; failure = null;

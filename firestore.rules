@@ -723,28 +723,8 @@ match /auth_rate_limits/{document=**} {
     // ==================================================
     match /notifications/{notificationId} {
 
-      function migrated(d) { return d.get('pushTransport', '') == 'fcm_v1'; }
-      function validPushSource(d) {
-        return activeUser() &&
-          d.get('createdBy', request.auth.uid) == request.auth.uid &&
-          (isAdmin() ||
-            (d.type == 'chat_message' && d.chatId == request.auth.uid &&
-              get(/databases/$(database)/documents/settings/app_settings).data.adminUid == d.userId &&
-              get(/databases/$(database)/documents/chats/$(d.chatId)/messages/$(d.messageId)).data.senderId == request.auth.uid &&
-              get(/databases/$(database)/documents/chats/$(d.chatId)/messages/$(d.messageId)).data.get('deletedAt', null) == null) ||
-            (d.type == 'comment' &&
-              get(/databases/$(database)/documents/properties/$(d.propertyId)).data.publisherUid == d.userId &&
-              get(/databases/$(database)/documents/properties/$(d.propertyId)/comments/$(d.commentId)).data.userId == request.auth.uid) ||
-            (d.type == 'reply' &&
-              get(/databases/$(database)/documents/properties/$(d.propertyId)/comments/$(d.commentId)).data.userId == d.userId &&
-              get(/databases/$(database)/documents/properties/$(d.propertyId)/comments/$(d.commentId)/replies/$(d.replyId)).data.userId == request.auth.uid));
-      }
-
       // الإنشاء للمستخدمين المسجلين والأدمن
-      // Legacy payloads are not an authorization bypass. Older senders without
-      // verifiable source IDs need the authenticated source-trigger path.
-      allow create: if isSignedIn() && validPushSource(request.resource.data) &&
-        (!migrated(request.resource.data) || request.resource.data.createdBy == request.auth.uid);
+      allow create: if isSignedIn();
 
       // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
 allow read: if isSignedIn() &&
@@ -754,14 +734,11 @@ allow read: if isSignedIn() &&
 );
 
       // التحديث لصاحب الإشعار أو الأدمن
-      allow update: if activeUser() &&
-        resource.data.userId == request.resource.data.userId && (
-          ((resource.data.userId == request.auth.uid || isAdmin()) &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy', 'isRead', 'unreadCount', 'updatedAt'])) ||
-          (request.resource.data.type == 'chat_message' &&
-            resource.data.chatId == request.resource.data.chatId &&
-            validPushSource(request.resource.data) &&
-            (!migrated(resource.data) || migrated(request.resource.data))));
+      allow update: if isSignedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
 
       // الحذف لصاحب الإشعار أو الأدمن
 allow delete: if isSignedIn() &&
@@ -771,7 +748,7 @@ allow delete: if isSignedIn() &&
 );
     }
 
-    // Tokens and delivery claims are managed through authenticated Functions.
+    // Server-managed push state: no client access.
     match /push_tokens/{id} { allow read, write: if false; }
     match /push_installations/{id} { allow read, write: if false; }
     match /push_deliveries/{id} { allow read, write: if false; }

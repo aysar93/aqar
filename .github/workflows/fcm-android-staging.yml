@@ -1,9 +1,6 @@
 name: FCM Android full-app staging APK
 on:
   workflow_dispatch:
-  push:
-    branches: ['staging/fcm-complete-*']
-    paths: ['lib/**', 'android/**', 'config/fcm-android.staging.json', 'config/staging/google-services.json', 'pubspec*', '.github/workflows/fcm-android-staging.yml']
 permissions:
   contents: read
 concurrency:
