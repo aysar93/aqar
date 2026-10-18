@@ -5,6 +5,8 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
+      groups:
+        - media_full_test
       flutter: 3.44.8
       xcode: latest
     scripts:
@@ -21,7 +23,7 @@ workflows:
       - name: Build isolated simulator
         script: flutter build ios --dart-define-from-file=build/test-dart-defines.json --simulator --debug --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
       - name: Build unsigned isolated device app
-        script: flutter build ios --dart-define-from-file=build/test-dart-defines.json --no-codesign --debug --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
+        script: flutter build ios --dart-define-from-file=build/test-dart-defines.json --no-codesign --release --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
       - name: Package artifacts
         script: |
           ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/Runner-simulator.zip
