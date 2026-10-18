@@ -1,0 +1,121 @@
+{
+  "checkedAt": "2026-10-17T19:20:11.006Z",
+  "productionWritesThisTurn": 0,
+  "productionVercel": {
+    "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+    "deploymentId": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "url": "notification-server-68tstlpxw-aysar93s-projects.vercel.app",
+    "unchanged": true,
+    "oidcTokenConfig": {
+      "enabled": true,
+      "issuerMode": "team"
+    },
+    "variables": [
+      {
+        "key": "ONESIGNAL_APP_ID",
+        "id": "OSG6S4ABXOWZBlPf",
+        "type": "sensitive",
+        "updatedAt": 1787255450330
+      },
+      {
+        "key": "ONESIGNAL_API_KEY",
+        "id": "5plLiQLO1EvcikP7",
+        "type": "sensitive",
+        "updatedAt": 1787255450330
+      },
+      {
+        "key": "FIREBASE_SERVICE_ACCOUNT",
+        "id": "mZdj1Btn5z4AWsDi",
+        "type": "sensitive",
+        "updatedAt": 1787506932942
+      }
+    ]
+  },
+  "productionEightFunctionsUnchanged": true,
+  "rollouts": [
+    {
+      "project": "aqar-9f3f9",
+      "rollout": {
+        "legacyRecoveryAllowlist": [],
+        "cohort": {
+          "legacyTargets": [],
+          "installations": [],
+          "providers": [
+            "fcm"
+          ],
+          "userIds": []
+        },
+        "percent": 0,
+        "legacyIngressCoordinated": false,
+        "mode": "paused",
+        "installationAllowlist": []
+      },
+      "existingDeliveryDocuments": 0,
+      "newDeliveryDocumentsThisTurn": 0,
+      "latestExistingCreationTime": null
+    },
+    {
+      "project": "aqar-fcm-test-20261014",
+      "rollout": {
+        "legacyIngressCoordinated": false,
+        "percent": 0,
+        "legacyRecoveryAllowlist": [],
+        "mode": "paused",
+        "installationAllowlist": [],
+        "cohort": {
+          "installations": [],
+          "userIds": [],
+          "legacyTargets": [],
+          "providers": [
+            "fcm"
+          ]
+        }
+      },
+      "existingDeliveryDocuments": 102,
+      "newDeliveryDocumentsThisTurn": 0,
+      "latestExistingCreationTime": "2026-10-17T10:02:40.617910Z"
+    }
+  ],
+  "isolatedIdentity": {
+    "email": "aqar-vercel-keyless-test@aqar-fcm-test-20261014.iam.gserviceaccount.com",
+    "jsonKeys": 0,
+    "projectBindings": [
+      {
+        "role": "projects/aqar-fcm-test-20261014/roles/aqarKeylessPreviewData",
+        "members": [
+          "serviceAccount:aqar-vercel-keyless-test@aqar-fcm-test-20261014.iam.gserviceaccount.com"
+        ]
+      }
+    ],
+    "permissions": [
+      "datastore.databases.get",
+      "datastore.entities.create",
+      "datastore.entities.delete",
+      "datastore.entities.get",
+      "datastore.entities.list",
+      "datastore.entities.update"
+    ],
+    "federationBindings": [
+      {
+        "role": "projects/aqar-fcm-test-20261014/roles/aqarKeylessFederatedToken",
+        "members": [
+          "principal://iam.googleapis.com/projects/371338154133/locations/global/workloadIdentityPools/aqar-vercel-paused/subject/owner:aysar93s-projects:project:aqar-fcm-bridge-isolated-20261017:environment:preview"
+        ]
+      }
+    ]
+  },
+  "productionFederationPoolAbsent": true,
+  "productionApis": [
+    {
+      "name": "iamcredentials.googleapis.com",
+      "state": "ENABLED"
+    },
+    {
+      "name": "sts.googleapis.com",
+      "state": "DISABLED"
+    }
+  ],
+  "noFcmSendPermissionAdded": true,
+  "oldKeysTouched": false,
+  "providerSendCalls": 0
+}

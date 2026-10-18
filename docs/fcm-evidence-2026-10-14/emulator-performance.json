@@ -1,0 +1,31 @@
+{
+  "environment": "local Firestore demo-aqar emulator, FCM send mocked, sequential production handler",
+  "realFcmNetwork": false,
+  "cloudBilling": false,
+  "measuredAt": "2026-10-14T12:02:53.974Z",
+  "samplesPerSize": 1,
+  "results": [
+    {
+      "deviceCount": 1,
+      "firstDeliveryMs": 601,
+      "concurrentDuplicateRunsMs": 144,
+      "mockAcceptedCount": 1,
+      "duplicateAdditionalSends": 0
+    },
+    {
+      "deviceCount": 10,
+      "firstDeliveryMs": 938,
+      "concurrentDuplicateRunsMs": 721,
+      "mockAcceptedCount": 10,
+      "duplicateAdditionalSends": 0
+    },
+    {
+      "deviceCount": 50,
+      "firstDeliveryMs": 3594,
+      "concurrentDuplicateRunsMs": 3132,
+      "mockAcceptedCount": 50,
+      "duplicateAdditionalSends": 0
+    }
+  ],
+  "productionCapacityConclusion": false
+}

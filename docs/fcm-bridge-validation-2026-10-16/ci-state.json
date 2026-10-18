@@ -1,0 +1,137 @@
+{
+  "sha": "9a7e741acde2732e78045014673402286b11514c",
+  "checkedAt": "2026-10-16T20:43:22.269Z",
+  "runs": [
+    {
+      "id": 38961584978,
+      "event": "pull_request",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38961584978",
+      "jobs": [
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38961584881,
+      "event": "pull_request",
+      "name": "Safety and iOS build",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38961584881",
+      "jobs": [
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ios",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "bridge-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 38961577711,
+      "event": "workflow_dispatch",
+      "name": "Safety and iOS build",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38961577711",
+      "jobs": [
+        {
+          "name": "bridge-candidate / android-bundle-candidate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "ios",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "bridge-candidate / ios-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "bridge-candidate / android-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 12073807664,
+          "name": "Push-bridge-Android-AAB-UNSIGNED-NOT-FOR-INSTALL",
+          "size": 108821827,
+          "digest": "sha256:77af9dad1f6ebf826d7b37bee8cbf65008c2ea86d925832a81118d87fab7aa15"
+        }
+      ]
+    },
+    {
+      "id": 38961577024,
+      "event": "push",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38961577024",
+      "jobs": [
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    }
+  ]
+}

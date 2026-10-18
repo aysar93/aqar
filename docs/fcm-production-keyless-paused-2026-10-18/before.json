@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-17T21:02:31.466Z",
+  "rollout": {
+    "mode": "paused",
+    "installationAllowlist": [],
+    "cohort": {
+      "installations": [],
+      "userIds": [],
+      "legacyTargets": [],
+      "providers": [
+        "fcm"
+      ]
+    },
+    "percent": 0,
+    "legacyIngressCoordinated": false,
+    "legacyRecoveryAllowlist": []
+  },
+  "deliveryDocuments": 0,
+  "eightFunctionsUnchanged": true,
+  "userManagedKeys": 0,
+  "serviceAccount": "aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com",
+  "projectRoles": [
+    "projects/aqar-9f3f9/roles/aqarPushDataRuntime"
+  ],
+  "dataPermissions": [
+    "datastore.databases.get",
+    "datastore.entities.create",
+    "datastore.entities.delete",
+    "datastore.entities.get",
+    "datastore.entities.list",
+    "datastore.entities.update"
+  ],
+  "vercel": {
+    "deployment": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "oidcTokenConfig": {
+      "enabled": true,
+      "issuerMode": "team"
+    },
+    "envs": [
+      {
+        "key": "ONESIGNAL_APP_ID",
+        "id": "OSG6S4ABXOWZBlPf",
+        "type": "sensitive",
+        "updatedAt": 1787255450330
+      },
+      {
+        "key": "ONESIGNAL_API_KEY",
+        "id": "5plLiQLO1EvcikP7",
+        "type": "sensitive",
+        "updatedAt": 1787255450330
+      },
+      {
+        "key": "FIREBASE_SERVICE_ACCOUNT",
+        "id": "mZdj1Btn5z4AWsDi",
+        "type": "sensitive",
+        "updatedAt": 1787506932942
+      }
+    ]
+  },
+  "alias": {
+    "alias": "notification-server-henna.vercel.app",
+    "deploymentId": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X"
+  }
+}

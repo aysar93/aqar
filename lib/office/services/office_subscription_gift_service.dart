@@ -1,9 +1,11 @@
+import '../../services/trusted_inbox.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/notification_service.dart';
+import '../../services/push_migration.dart';
 import '../../subscription/models/subscription_package_model.dart';
 import '../models/office_subscription_model.dart';
 
@@ -67,7 +69,8 @@ class OfficeSubscriptionGiftService {
     final history =
         await subscriptions.where('officeId', isEqualTo: officeId).get();
     final giftRef = subscriptions.doc();
-    final notificationRef = _firestore.collection('notifications').doc();
+    final notificationRef =
+        _firestore.collection(TrustedInbox.writeCollection).doc();
     String ownerId = '';
     String message = '';
     const title = 'باقة اشتراك هدية من الإدارة';
@@ -152,6 +155,7 @@ class OfficeSubscriptionGiftService {
       });
       transaction.set(notificationRef, {
         'notificationId': notificationRef.id,
+        ...PushMigration.fields,
         'title': title,
         'message': message,
         'type': 'office_notification',

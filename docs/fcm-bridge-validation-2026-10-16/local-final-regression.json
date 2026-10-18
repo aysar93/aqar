@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-16T20:17:49Z",
+  "firestoreProject": "demo-aqar",
+  "firestoreIntegrationTestsPassed": 18,
+  "bridgeProviderAndHttpTestsPassed": 16,
+  "rollbackRaceTest": {
+    "legacyRollbackAfterPlanning": "passed",
+    "cohortReducedAfterPlanning": "passed",
+    "ingressDisabledAfterPlanning": "passed",
+    "claimedOrSentAfterChange": 0
+  },
+  "realProviderContactedByLocalTests": false
+}

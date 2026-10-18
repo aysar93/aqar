@@ -1,0 +1,12 @@
+'use strict';
+const {setGlobalOptions}=require('firebase-functions/v2');
+const identity=process.env.TRUSTED_INBOX_SERVICE_ACCOUNT;
+if(!/^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/.test(identity||''))throw Error('EXPLICIT_TRUSTED_INBOX_IDENTITY_REQUIRED');
+setGlobalOptions({region:'us-central1',serviceAccount:identity,minInstances:0,maxInstances:2});
+const {initializeApp}=require('firebase-admin/app');initializeApp();
+const {onDocumentCreatedWithAuthContext,onDocumentWrittenWithAuthContext,onDocumentCreated,onDocumentWritten}=require('firebase-functions/v2/firestore');
+const h=require('./handlers');const options={retry:true,maxInstances:2};
+exports.acceptTrustedNotification=onDocumentCreatedWithAuthContext({...options,document:'notification_requests/{requestId}'},e=>h.requestCreated(e));
+exports.projectVerifiedNotification=onDocumentCreated({...options,document:'push_bridge_events/{eventId}'},e=>h.mirrorVerified(e));
+exports.queueTrustedOfficeFollowers=onDocumentWrittenWithAuthContext({...options,document:'properties/{propertyId}'},e=>h.propertyApproved(e));
+exports.processTrustedNotificationJob=onDocumentWritten({...options,document:'trusted_notification_jobs/{jobId}'},e=>h.fanoutJob(e));

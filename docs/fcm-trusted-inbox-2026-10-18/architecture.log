@@ -1,0 +1,12 @@
+✔ trust flag cannot transparently filter the legacy recipient-only inbox query (4503.0389ms)
+[2026-10-17T22:02:49.211Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x2b825df0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L1, false for 'update' @ L1
+✔ server-only existing inbox preserves legacy reads but cannot redirect old writes into an intake collection (1011.0367ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6369.9659

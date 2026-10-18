@@ -1,13 +1,35 @@
 name: Safety and iOS build
 on:
-  push:
-    branches: [main, 'codex/**']
-  pull_request:
   workflow_dispatch:
+    inputs:
+      merge_safety_only:
+        description: 'Run only FCM merge-boundary and trusted inbox emulator checks; no native build'
+        required: false
+        type: boolean
+        default: false
+      bridge_candidate:
+        description: 'Compile unsigned production bridge candidates only; no deployment'
+        required: false
+        type: boolean
+        default: false
+      android_bundle_only:
+        description: 'Compile only the unsigned Android production-config bundle'
+        required: false
+        type: boolean
+        default: false
+      staging_adhoc:
+        description: 'Build only the isolated signed Ad Hoc IPA (no store upload)'
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
+  fcm-merge-safety-only:
+    if: github.event_name == 'workflow_dispatch' && inputs.merge_safety_only == true
+    uses: ./.github/workflows/fcm-merge-safety.yml
   ios:
+    if: inputs.merge_safety_only != true && (github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true))
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -21,7 +43,33 @@ jobs:
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - run: flutter test test/safe_snapshots_lifecycle_test.dart test/home_auth_layout_test.dart test/content_policy_test.dart test/user_blocks_test.dart test/content_report_test.dart test/reel_model_test.dart test/iraqi_phone_service_test.dart test/services
       - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --release --no-codesign --dart-define=FCM_MIGRATION=true
+  push-migration:
+    if: inputs.merge_safety_only != true && (github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --ignore-scripts --prefix functions
+      - run: npm ci --ignore-scripts --prefix test/firestore
+      - run: node --test functions/push_policy.test.js
+      - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.push-test.json "node --test functions/push_functions.integration.test.js"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/push_migration_test.dart test/push_token_sync_test.dart test/navigation_return_test.dart test/office_subscription_gift_test.dart
   firestore:
+    if: inputs.merge_safety_only != true && (github.event_name != 'workflow_dispatch' || (inputs.staging_adhoc != true && inputs.bridge_candidate != true))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -38,3 +86,15 @@ jobs:
           python-version: '3.12'
       - run: npm ci --prefix test/firestore
       - run: npx -y firebase-tools@15.31.0 emulators:exec --only firestore --project demo-aqar --config firebase.reports-test.json "node --test test/firestore/featured_properties.test.cjs && python test/firestore_safety_rules_test.py"
+  signed-staging-adhoc:
+    if: github.event_name == 'workflow_dispatch' && inputs.staging_adhoc == true && startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    uses: ./.github/workflows/fcm-ios-adhoc.yml
+    secrets:
+      FCM_STAGING_P12_BASE64: ${{ secrets.FCM_STAGING_P12_BASE64 }}
+      FCM_STAGING_P12_PASSWORD: ${{ secrets.FCM_STAGING_P12_PASSWORD }}
+      FCM_STAGING_ADHOC_PROFILE_BASE64: ${{ secrets.FCM_STAGING_ADHOC_PROFILE_BASE64 }}
+  bridge-candidate:
+    if: github.event_name == 'workflow_dispatch' && inputs.bridge_candidate == true && startsWith(github.ref, 'refs/heads/staging/fcm-complete-')
+    uses: ./.github/workflows/push-bridge-rc.yml
+    with:
+      android_bundle_only: ${{ inputs.android_bundle_only || false }}

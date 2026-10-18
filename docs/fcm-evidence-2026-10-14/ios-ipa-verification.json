@@ -1,0 +1,23 @@
+{
+  "bundleId": "com.andalus.aqar.staging",
+  "displayName": "Aqar FCM staging",
+  "version": "1.0.5",
+  "build": "20",
+  "targetPlatform": "iPhoneOS",
+  "firebaseProject": "aqar-fcm-test-20261014",
+  "team": "H96JUT8PUM",
+  "apnsEnvironment": "production",
+  "debuggable": false,
+  "artifactHmacVerified": true,
+  "embeddedEntitlementsValidated": true,
+  "exportedProvisioningProfileValidated": true,
+  "approvedIphoneIncluded": true,
+  "deviceCount": 1,
+  "certificateId": "T8RL9ANSX6",
+  "sha256": "c7290786dd4ccd8d0b716e3c7393accd292b2453b3432b3bebc73983b9c38fb9",
+  "deviceInstallationVerified": true,
+  "fullSignatureEnforcement": "Xcode export and subsequent actual iOS installation; no claim of Windows codesign verification",
+  "privateDeviceIdPublished": false,
+  "sourceSha": "a2822d4aa2e7ca8ebabb7996b8fce63ab096ad70",
+  "ciRun": 38637856896
+}

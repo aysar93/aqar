@@ -1,3 +1,4 @@
+import '../services/trusted_inbox.dart';
 import 'dart:async';
 import '../core/data/paged_query.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +8,8 @@ import '../widgets/aqar_refresh_indicator.dart';
 import '../services/notification_navigation_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({super.key, this.history = false});
+  final bool history;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -127,24 +129,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text("التنبيهات"),
+        title: Text(widget.history ? "الإشعارات السابقة" : "التنبيهات"),
         centerTitle: true,
         backgroundColor: const Color(0xFF0F172A),
         actions: [
+          if (TrustedInbox.enabled && !widget.history)
+            IconButton(
+                tooltip: "الإشعارات السابقة",
+                icon: const Icon(Icons.history),
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) =>
+                            const NotificationsScreen(history: true)))),
           IconButton(
               tooltip: "حذف جميع التنبيهات",
               icon: const Icon(Icons.delete_sweep),
               onPressed: () async {
-                final snapshot = await FirebaseFirestore.instance
-                    .collection('notifications')
-                    .where(
-                      'userId',
-                      isEqualTo: uid,
-                    )
-                    .get();
+                final snapshot =
+                    await TrustedInbox.forUser(uid, history: widget.history)
+                        .get();
 
                 for (final doc in snapshot.docs) {
-                  await doc.reference.delete();
+                  await TrustedInbox.dismiss(doc.reference,
+                      history: widget.history);
                 }
 
                 if (context.mounted) {
@@ -163,16 +170,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         },
         child: PagedQueryBuilder<Map<String, dynamic>>(
           key: _pageKey,
-          query: FirebaseFirestore.instance
-              .collection('notifications')
-              .where(
-                'userId',
-                isEqualTo: uid,
-              )
-              .orderBy(
-                'createdAt',
-                descending: true,
-              ),
+          query: TrustedInbox.forUser(uid, history: widget.history).orderBy(
+            'createdAt',
+            descending: true,
+          ),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return Center(
@@ -279,10 +280,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   onDismissed: (_) async {
                     setState(() => _locallyDeleted.add(docs[index].id));
-                    await FirebaseFirestore.instance
-                        .collection('notifications')
-                        .doc(docs[index].id)
-                        .delete();
+                    await TrustedInbox.dismiss(docs[index].reference,
+                        history: widget.history);
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -295,8 +294,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: InkWell(
                     onTap: () async {
                       if (!isRead) {
-                        await FirebaseFirestore.instance
-                            .collection('notifications')
+                        await TrustedInbox.collection(history: widget.history)
                             .doc(docs[index].id)
                             .update({
                           'readBy': FieldValue.arrayUnion([uid]),

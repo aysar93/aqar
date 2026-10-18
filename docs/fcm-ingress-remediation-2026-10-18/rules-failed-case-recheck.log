@@ -1,0 +1,15 @@
+[2026-10-17T21:19:59.336Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x69be8496 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:19:59.452Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x69be8497 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:19:59.567Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x69be8498 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+✔ compat: old collapsed chat update stays inside sender-to-admin pair without source IDs (8972.6681ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9698.311

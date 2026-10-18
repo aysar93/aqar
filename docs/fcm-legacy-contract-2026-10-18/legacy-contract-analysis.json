@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-17T21:32:25.045Z",
+  "referenceCommit": "ae9207b6c33affb26b6872160848d5716f7ffb50",
+  "referencePath": "lib/screens/property_details.dart",
+  "storeBinaryIdentityProven": false,
+  "legacyShapes": [
+    {
+      "type": "comment",
+      "keys": [
+        "userId",
+        "title",
+        "message",
+        "propertyId",
+        "type",
+        "createdAt",
+        "isRead"
+      ],
+      "sha256": "f57107c303633fb2c0b74256bc6e62ef4340334c7b28f4f6ba2d287735ac9079"
+    },
+    {
+      "type": "reply",
+      "keys": [
+        "userId",
+        "title",
+        "message",
+        "propertyId",
+        "type",
+        "createdAt",
+        "isRead"
+      ],
+      "sha256": "49af6830bab96f3b98864ec0cedba54156ab60174a414d365da2b8a518c59ad9"
+    }
+  ],
+  "rulesConstraint": "Firestore Rules cannot query a collection to discover an unknown source document ID; an asynchronous source-trigger proof can arrive after the legacy notification write.",
+  "securityBoundary": "Accepting the same authenticated legacy shape without source proof also accepts a forged copy. After-write cleanup cannot prevent initial creation or guarantee no visible window.",
+  "compatibleStrictCreateSolutionWithinCurrentConstraints": false,
+  "existingSourceOnlyPushTestsAcceptedWithoutRerun": true
+}

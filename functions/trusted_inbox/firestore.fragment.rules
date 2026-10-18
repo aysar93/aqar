@@ -1,0 +1,38 @@
+    // Future opt-in inbox only. Existing /notifications rules are unchanged.
+    function trustedStateUpdate() {
+      let d = request.resource.data;
+      let old = resource.data;
+      let changed = d.diff(old).affectedKeys();
+      return activeUser() && (old.userId == request.auth.uid || isAdmin()) &&
+        changed.hasOnly(['readBy','isRead','unreadCount','isDismissed','updatedAt']) &&
+        d.readBy is list && d.readBy.size() <= 100 &&
+        d.readBy.toSet().hasAll(old.readBy.toSet()) &&
+        d.readBy.toSet().difference(old.readBy.toSet()).hasOnly([old.userId, request.auth.uid]) &&
+        d.isRead is bool && d.isDismissed is bool &&
+        (!changed.hasAny(['unreadCount']) || d.unreadCount == 0) &&
+        (!changed.hasAny(['updatedAt']) || d.updatedAt == request.time);
+    }
+    match /trusted_notifications/{id} {
+      allow read: if activeUser() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, delete: if false;
+      allow update: if trustedStateUpdate();
+    }
+    match /notification_history/{id} {
+      allow read: if activeUser() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, delete: if false;
+      allow update: if trustedStateUpdate();
+    }
+    match /notification_requests/{id} {
+      allow create: if activeUser() && isAdmin() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.requestVersion == 1 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.keys().size() <= 30 &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 120 &&
+        request.resource.data.message is string && request.resource.data.message.size() <= 2000 &&
+        request.resource.data.type is string && request.resource.data.type.size() <= 64 &&
+        request.resource.data.target in ['user','all'];
+      allow read, update, delete: if false;
+    }
+    match /trusted_notification_jobs/{id} { allow read, write: if false; }
+    match /notification_legacy_archive/{id} { allow read, write: if false; }

@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-17T21:06:21.420Z",
+  "url": "https://notification-server-henna.vercel.app",
+  "publicWithoutBypass": true,
+  "health": {
+    "http": 200,
+    "body": {
+      "service": "notification-server",
+      "status": "ready",
+      "mode": "paused",
+      "pushSent": false
+    }
+  },
+  "send": {
+    "http": 400,
+    "body": {
+      "success": false,
+      "error": "notification_id_required"
+    }
+  },
+  "noRecipientOrNotification": true
+}

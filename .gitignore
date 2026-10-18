@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+**/node_modules/
 
 # Symbolication related
 app.*.symbols
@@ -89,3 +90,7 @@ app.*.map.json
 /docs/firebase-optimization-security-run.cjs
 /docs/ios-push-review-*/*.cjs
 /docs/ios-push-review-*/apns-configuration-verification.json
+/config/*.local.json
+/functions/.env.local
+/work/fcm-staging/
+/work/ios-fcm-staging/

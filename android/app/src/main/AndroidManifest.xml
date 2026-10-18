@@ -31,7 +31,7 @@
 
 
     <application
-        android:label="عقارات الانبار"
+        android:label="${aqarAppLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Facebook SDK -->
@@ -42,10 +42,13 @@
 <meta-data
     android:name="com.facebook.sdk.ClientToken"
     android:value="@string/facebook_client_token" />
+<meta-data android:name="com.facebook.sdk.AutoInitEnabled" android:value="${facebookAutoInit}" />
+<meta-data android:name="com.facebook.sdk.AutoLogAppEventsEnabled" android:value="${facebookAutoInit}" />
+<meta-data android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled" android:value="${facebookAutoInit}" />
 
 <provider
     android:name="com.facebook.FacebookContentProvider"
-    android:authorities="com.facebook.app.FacebookContentProvider1745018726927685"
+    android:authorities="${facebookProviderAuthority}"
     android:exported="true" />
 
         <!-- Google Maps -->

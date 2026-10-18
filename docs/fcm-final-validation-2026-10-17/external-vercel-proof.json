@@ -1,0 +1,54 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "url": "https://aqar-fcm-bridge-isolated-20261017-mcfd297ll-aysar93s-projects.vercel.app",
+  "checkedAt": "2026-10-17T10:03:00.095Z",
+  "vercelEnvironment": "preview",
+  "actualExternalDeploymentTested": true,
+  "unauthenticatedPlatformStatus": 302,
+  "deploymentProtectionKeptEnabled": true,
+  "cases": [
+    {
+      "label": "FCM",
+      "notificationId": "fullapp-1792230441834-vercel-FCM-1792231330189",
+      "title": "BRIDGE-VERCEL-FCM",
+      "pausedReceipts": 0,
+      "responseStatus": 200,
+      "receipts": [
+        {
+          "id": "acb64e74fe55277f6d11ea02434260a3c58289b57ffe4cda41f4bc68869b31cb",
+          "status": "accepted",
+          "provider": "fcm",
+          "providerMessageId": "projects/aqar-fcm-test-20261014/messages/0:1792231344524593%a753dec9a753dec9",
+          "recipientMatched": true
+        }
+      ],
+      "replayStatus": 200,
+      "receiptPreserved": true,
+      "bodyForgedRecipientIgnored": true
+    },
+    {
+      "label": "OS",
+      "notificationId": "fullapp-1792230441834-vercel-OS-1792231350023",
+      "title": "BRIDGE-VERCEL-OS",
+      "pausedReceipts": 0,
+      "responseStatus": 200,
+      "receipts": [
+        {
+          "id": "d3787dd5681abfccbfd1196d8a94bc4c944d62483c0188ff80474d6a67a41b80",
+          "status": "accepted",
+          "provider": "onesignal",
+          "providerMessageId": "1caf770d-7ba3-4ba0-bd71-c689ffb403a7",
+          "recipientMatched": true
+        }
+      ],
+      "replayStatus": 200,
+      "receiptPreserved": true,
+      "bodyForgedRecipientIgnored": true
+    }
+  ],
+  "missingIdStatus": 400,
+  "unknownEventStatus": 202,
+  "unknownEventPushSent": false,
+  "privateValuesPrinted": false,
+  "productionChanged": false
+}

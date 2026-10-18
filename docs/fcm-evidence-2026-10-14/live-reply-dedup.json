@@ -1,0 +1,15 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "source": "same replyId and commentId, same recipient, distinct notification documents",
+  "firstNotification": "fullapp-1791971121055-reply-1791978448529",
+  "duplicateNotification": "fullapp-1791971121055-reply-1791978467075",
+  "deliveryReceipts": [
+    {
+      "notificationId": "fullapp-1791971121055-reply-1791978448529",
+      "status": "accepted"
+    }
+  ],
+  "acceptedCount": 1,
+  "checkedAt": "2026-10-14T11:51:09.811Z",
+  "exactlyOnceGuaranteed": false
+}

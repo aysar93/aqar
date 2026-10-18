@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-17T22:05:12.119Z",
+  "referenceCodeOnly": true,
+  "storeBinaryDisassemblyPerformed": false,
+  "files": [
+    {
+      "path": "lib/screens/notifications_screen.dart",
+      "referenceCommit": "ae9207b6c33affb26b6872160848d5716f7ffb50",
+      "sha256": "28529f5076b7cccde186e61cb67aa1c1fc1d803dc3d18cd43d700963b579f62e",
+      "collectionReferences": [
+        {
+          "line": 139,
+          "collection": "notifications"
+        },
+        {
+          "line": 167,
+          "collection": "notifications"
+        },
+        {
+          "line": 283,
+          "collection": "notifications"
+        },
+        {
+          "line": 299,
+          "collection": "notifications"
+        }
+      ],
+      "contractReviewed": "recipient-only query; no verified predicate or server-selected collection in the inbox/badge query"
+    },
+    {
+      "path": "lib/screens/home_screen.dart",
+      "referenceCommit": "ae9207b6c33affb26b6872160848d5716f7ffb50",
+      "sha256": "9de00a9a325d7dca42e5072453338839e35811192d8d163a2876d7e50c9a6c3c",
+      "collectionReferences": [
+        {
+          "line": 52,
+          "collection": "notifications"
+        }
+      ],
+      "contractReviewed": "recipient-only query; no verified predicate or server-selected collection in the inbox/badge query"
+    }
+  ]
+}

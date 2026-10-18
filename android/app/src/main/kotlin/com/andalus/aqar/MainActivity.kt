@@ -3,10 +3,27 @@
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.app.NotificationManager
+import android.content.Context
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "aqar/push_privacy")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "clearDeliveredNotifications") {
+                    (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancelAll()
+                    result.success(null)
+                } else {
+                    result.notImplemented()
+                }
+            }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         logNavigationBar("onCreate/afterSuper")

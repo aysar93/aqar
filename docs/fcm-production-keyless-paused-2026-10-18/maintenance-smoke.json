@@ -1,0 +1,25 @@
+{
+  "at": "2026-10-17T21:05:00.603Z",
+  "url": "https://notification-server-5ss2dr2rx-aysar93s-projects.vercel.app",
+  "health": {
+    "http": 200,
+    "body": {
+      "service": "notification-server",
+      "status": "maintenance",
+      "mode": "paused",
+      "pushSent": false
+    }
+  },
+  "send": {
+    "http": 202,
+    "body": {
+      "success": true,
+      "mode": "paused",
+      "pushSent": false,
+      "reason": "paused_maintenance"
+    }
+  },
+  "actualRecipient": null,
+  "notificationCreated": false,
+  "providerSendCalls": 0
+}

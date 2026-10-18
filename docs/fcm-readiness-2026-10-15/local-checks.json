@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-14T22:28:07.788Z",
+  "nodePolicyAndStagingGuardTests": {
+    "passed": 6,
+    "failed": 0
+  },
+  "flutterMigrationTokenAndRouteTests": {
+    "passed": 12,
+    "failed": 0
+  },
+  "gitDiffCheckPassed": true,
+  "sourceHead": "a75aef3ba7d5e708a05e9484867d3cef2dd2b1fc",
+  "sourceChangedThisPhase": false
+}

@@ -119,3 +119,37 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
+
+  ios-bridge-candidate-no-publish:
+    name: Aqar FCM bridge - signed production candidate - NO PUBLISH
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.44.8
+      xcode: 26.6
+      ios_signing:
+        provisioning_profiles:
+          - aqar_existing_app_store
+        certificates:
+          - rafcut_distribution
+    scripts:
+      - name: Require isolated review branch and validate production build inputs
+        script: |
+          case "$CM_BRANCH" in staging/fcm-complete-*) ;; *) echo 'Review branch required'; exit 1 ;; esac
+          python3 tools/prepare_push_bridge_rc.py --apply-ios
+      - name: Resolve packages
+        script: flutter pub get
+      - name: Use existing signing identities only
+        script: |
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build signed candidate without App Store upload
+        script: |
+          flutter build ipa --release --target lib/main_push_bridge_rc.dart --dart-define-from-file=config/push-bridge.rc.json --build-number=2026101701 --export-options-plist=/Users/builder/export_options.plist
+      - name: Verify production signing and Firebase configuration
+        script: |
+          python3 tools/verify_production_ipa.py build/ios/ipa/*.ipa
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/ipa/production-signing-evidence.json

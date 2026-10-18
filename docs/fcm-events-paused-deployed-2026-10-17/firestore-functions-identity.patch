@@ -1,0 +1,14 @@
+--- previous-paused-bundle/push_bridge_functions.js
++++ events-identity-bundle/push_bridge_functions.js
+@@ -59 +59 @@
+-exports.deliverBridgeNotification=onDocumentWrittenWithAuthContext({document:'notifications/{notificationId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
++exports.deliverBridgeNotification=onDocumentWrittenWithAuthContext({document:'notifications/{notificationId}',serviceAccount:'aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
+@@ -84 +84 @@
+-exports.bridgeCommentCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
++exports.bridgeCommentCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}',serviceAccount:'aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
+@@ -90 +90 @@
+-exports.bridgeReplyCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}/replies/{replyId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
++exports.bridgeReplyCreated=onDocumentCreatedWithAuthContext({document:'properties/{propertyId}/comments/{commentId}/replies/{replyId}',serviceAccount:'aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
+@@ -96 +96 @@
+-exports.bridgeChatMessageCreated=onDocumentCreatedWithAuthContext({document:'chats/{chatId}/messages/{messageId}',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{
++exports.bridgeChatMessageCreated=onDocumentCreatedWithAuthContext({document:'chats/{chatId}/messages/{messageId}',serviceAccount:'aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com',retry:true,maxInstances:2,...providerSecretOptions()},async event=>{

@@ -1,0 +1,49 @@
+{
+  "scope": "dedicated deployed bundle; not a merge of PR #3",
+  "files": [
+    {
+      "name": ".env.aqar-9f3f9",
+      "sha256": "68f3871e960611b9e5332ac3cd686dc09dc2bd4f273efbb41986f98807b2f1fb"
+    },
+    {
+      "name": "index.js",
+      "sha256": "a0c9bdbc57dac7e4a1cd20fd90d6818202b2b757239f2f84ec577214906e375e"
+    },
+    {
+      "name": "package-lock.json",
+      "sha256": "d848b8d00698b0b4233c5228c8671d469097ed8400dbf9492093e74e5f0855ce"
+    },
+    {
+      "name": "package.json",
+      "sha256": "ad0ef4e6ec53daa1bb13804e34588ed34339f2e609e0386dd4b5efb078a73dc0"
+    },
+    {
+      "name": "push_bridge_delivery.js",
+      "sha256": "0cd0cec91da5f8d1f587e2942ada37395e5cd090383817f32843c27fb8be85d7"
+    },
+    {
+      "name": "push_bridge_dispatch.js",
+      "sha256": "70a57e18dab91754cea2f9cc5a1c3301bbfdaabc1c710c47c80a677c7c20bce2"
+    },
+    {
+      "name": "push_bridge_functions.js",
+      "sha256": "c09f1082ad1dc5d34bf60e8746d12b12862ff67b618740ebe67ea4d1d1b464ce"
+    },
+    {
+      "name": "push_bridge_policy.js",
+      "sha256": "51d8f982c20f750f033a9e1076064a3f608eb8740de75969c0e066ac9adcfdeb"
+    },
+    {
+      "name": "push_functions.js",
+      "sha256": "11fe6f95c5d7ea07ea0e184239951738315ac4f34f9ac3e00df7bdd8d9b037a4"
+    },
+    {
+      "name": "push_onesignal.js",
+      "sha256": "3e1ea9d6145f721b5a286a1177e1d8e94bf5ba9f44ea2330e9acbc58ef1159c3"
+    },
+    {
+      "name": "push_policy.js",
+      "sha256": "d85add7c215df6f2d5157b12c5f5ed8513b9c4a236f183386002b65daa7ecad0"
+    }
+  ]
+}

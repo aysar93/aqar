@@ -1,0 +1,16 @@
+{
+  "runId": 38596439511,
+  "sourceCommit": "738165e4726683b520633f61777eada49993f7c1",
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/aysar93/aqar/actions/runs/38596439511",
+  "artifacts": [
+    {
+      "id": 11912775756,
+      "name": "Aqar-FCM-staging-AdHoc-encrypted",
+      "sizeBytes": 44926076,
+      "expired": false
+    }
+  ],
+  "checkedAt": "2026-10-14T16:28:47.909Z"
+}

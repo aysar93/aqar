@@ -1,0 +1,70 @@
+{
+  "startedAt": "2026-10-17T19:08:27.994Z",
+  "project": "aqar-fcm-test-20261014",
+  "productionChanges": false,
+  "longLivedKeysCreated": 0,
+  "changes": [
+    {
+      "action": "testApiEnabled",
+      "resource": "sts.googleapis.com",
+      "at": "2026-10-17T19:08:35.260Z"
+    },
+    {
+      "action": "testPoolCreated",
+      "resource": "aqar-vercel-paused",
+      "at": "2026-10-17T19:08:42.007Z"
+    },
+    {
+      "action": "testCustomRoleCreated",
+      "resource": "projects/aqar-fcm-test-20261014/roles/aqarKeylessPreviewData",
+      "at": "2026-10-17T19:09:11.212Z"
+    },
+    {
+      "action": "testCustomRoleCreated",
+      "resource": "projects/aqar-fcm-test-20261014/roles/aqarKeylessFederatedToken",
+      "at": "2026-10-17T19:09:12.878Z"
+    },
+    {
+      "action": "testServiceAccountCreated",
+      "resource": "aqar-vercel-keyless-test@aqar-fcm-test-20261014.iam.gserviceaccount.com",
+      "at": "2026-10-17T19:09:13.930Z"
+    },
+    {
+      "action": "testDataBindingAdded",
+      "resource": "aqar-vercel-keyless-test@aqar-fcm-test-20261014.iam.gserviceaccount.com",
+      "at": "2026-10-17T19:09:59.263Z"
+    },
+    {
+      "action": "testFederationBindingAdded",
+      "resource": "principal://iam.googleapis.com/projects/371338154133/locations/global/workloadIdentityPools/aqar-vercel-paused/subject/owner:aysar93s-projects:project:aqar-fcm-bridge-isolated-20261017:environment:preview",
+      "at": "2026-10-17T19:10:24.426Z"
+    },
+    {
+      "action": "testRolloutPaused",
+      "resource": "empty cohort; percent 0; no providers enabled for sending",
+      "at": "2026-10-17T19:10:27.869Z"
+    },
+    {
+      "action": "isolatedPreviewPublicConfigSet",
+      "resource": "prj_TsHXMhxKETjzIjUbjXcxEPQDaKxy",
+      "at": "2026-10-17T19:10:47.785Z"
+    }
+  ],
+  "projectNumber": "371338154133",
+  "completedAt": "2026-10-17T19:10:47.785Z",
+  "provider": {
+    "name": "projects/371338154133/locations/global/workloadIdentityPools/aqar-vercel-paused/providers/vercel-preview",
+    "attributeCondition": "assertion.owner_id == 'team_OuMMNqbA3ALsK4nAoBE7UxSe' && assertion.project_id == 'prj_TsHXMhxKETjzIjUbjXcxEPQDaKxy' && assertion.environment == 'preview' && assertion.sub == 'owner:aysar93s-projects:project:aqar-fcm-bridge-isolated-20261017:environment:preview'",
+    "issuer": "https://oidc.vercel.com/aysar93s-projects"
+  },
+  "serviceAccount": "aqar-vercel-keyless-test@aqar-fcm-test-20261014.iam.gserviceaccount.com",
+  "vercelProjectId": "prj_TsHXMhxKETjzIjUbjXcxEPQDaKxy",
+  "variables": [
+    "FCM_SERVER_PROFILE",
+    "GCLOUD_PROJECT",
+    "GCP_PROJECT_NUMBER",
+    "FCM_MIGRATION_ENABLED",
+    "PUSH_BRIDGE_ENABLED",
+    "BRIDGE_ONESIGNAL_ENABLED"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-17T15:15:33.063Z",
+  "scope": "new paused FCM-only deployment guard only",
+  "passed": true,
+  "exports": [
+    "bridgeChatMessageCreated",
+    "bridgeCommentCreated",
+    "bridgeReplyCreated",
+    "deliverBridgeNotification",
+    "monitorPushDeliveryHealth",
+    "registerPushDevice",
+    "reviewPushDeliveryHealth",
+    "unregisterPushDevice"
+  ],
+  "oneSignalSecretBindings": 0,
+  "oneSignalNetworkCalls": 0,
+  "productionMutations": 0,
+  "priorDeviceTestsRepeated": false,
+  "secretDeclarationGuardVerified": true,
+  "declaredSecretParams": [],
+  "secretGuardVerifiedAt": "2026-10-17T15:22:39.909Z"
+}

@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-17T15:13:54.000Z",
+  "project": "aqar-9f3f9",
+  "readOnlyPreflight": true,
+  "productionMutations": 0,
+  "permissionsGranted": [
+    "cloudfunctions.functions.create",
+    "cloudfunctions.functions.get",
+    "cloudfunctions.functions.update",
+    "cloudscheduler.jobs.create",
+    "firebaserules.releases.update",
+    "iam.roles.create",
+    "iam.serviceAccountKeys.create",
+    "iam.serviceAccounts.create",
+    "iam.serviceAccounts.get",
+    "monitoring.alertPolicies.create",
+    "monitoring.notificationChannels.create",
+    "resourcemanager.projects.getIamPolicy",
+    "resourcemanager.projects.setIamPolicy",
+    "serviceusage.services.enable"
+  ],
+  "permissionsMissing": [],
+  "gatePassed": true
+}

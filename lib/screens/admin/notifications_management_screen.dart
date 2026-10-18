@@ -1,6 +1,6 @@
+import '../../services/trusted_inbox.dart';
 import '../../core/data/paged_query.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../send_notification_screen.dart';
 
 class NotificationsManagementScreen extends StatefulWidget {
@@ -15,10 +15,7 @@ class _NotificationsManagementScreenState
     extends State<NotificationsManagementScreen> {
   final Set<String> _deleted = {};
   Future<void> deleteNotification(String id) async {
-    await FirebaseFirestore.instance
-        .collection("notifications")
-        .doc(id)
-        .delete();
+    await TrustedInbox.dismiss(TrustedInbox.collection().doc(id));
     if (mounted) setState(() => _deleted.add(id));
   }
 
@@ -59,9 +56,7 @@ class _NotificationsManagementScreenState
             children: [
               Expanded(
                 child: PagedQueryBuilder<Map<String, dynamic>>(
-                  query: FirebaseFirestore.instance
-                      .collection('notifications')
-                      .orderBy('createdAt', descending: true),
+                  query: TrustedInbox.managementQuery(),
                   pageSize: 30,
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {

@@ -1,0 +1,98 @@
+{
+  "recordedAt": "2026-10-17T19:24:57.421Z",
+  "files": [
+    {
+      "path": "server-candidates/fcm-paused/.gitignore",
+      "sha256": "e7a2eab4e2c46d4cf0bfca4ebf4d63aaa3a0d574b0f8891a9b928200e1960c1e"
+    },
+    {
+      "path": "server-candidates/fcm-paused/.vercelignore",
+      "sha256": "46f684f1d127a9013b5557f492d404d47f9f285ae2f264d13eef4a91fa324bea"
+    },
+    {
+      "path": "server-candidates/fcm-paused/api/index.js",
+      "sha256": "09e0b440ab2c8abbd3577674d64e45f00a935d8cdefb9589c3f34f68b68d1ecf"
+    },
+    {
+      "path": "server-candidates/fcm-paused/app.cjs",
+      "sha256": "ba168959ff931a771fadb22f8fd0fd7bf0b0c3693d78a960bbc3fdc7f7c5e880"
+    },
+    {
+      "path": "server-candidates/fcm-paused/keyless-auth.cjs",
+      "sha256": "33b777abe339b1669e4ea84d651e391b4fa3f83ac0620b1eec705294ab9ade72"
+    },
+    {
+      "path": "server-candidates/fcm-paused/keyless-server.test.cjs",
+      "sha256": "9ce6f6d4f86196a5c4fe233a9c3d9cc2dca3cba05b9feba7577c6c699fd2f094"
+    },
+    {
+      "path": "server-candidates/fcm-paused/legacy-ingress.cjs",
+      "sha256": "fb73c017d7ad283cb323aba87c4f5369efcff2878e9665e54613286efaf8ac44"
+    },
+    {
+      "path": "server-candidates/fcm-paused/package-lock.json",
+      "sha256": "7f8d10e53267911aee34e249f426fd39cdcd39f279e16ec0bc6a556d018a3653"
+    },
+    {
+      "path": "server-candidates/fcm-paused/package.json",
+      "sha256": "0e6cf9c3cc046676d3cb6ba71a3c02dfda5c482a0f5b9eb9b66dcfd1d9e17b8f"
+    },
+    {
+      "path": "server-candidates/fcm-paused/push_bridge_delivery.js",
+      "sha256": "0cd0cec91da5f8d1f587e2942ada37395e5cd090383817f32843c27fb8be85d7"
+    },
+    {
+      "path": "server-candidates/fcm-paused/push_bridge_dispatch.js",
+      "sha256": "70a57e18dab91754cea2f9cc5a1c3301bbfdaabc1c710c47c80a677c7c20bce2"
+    },
+    {
+      "path": "server-candidates/fcm-paused/push_bridge_policy.js",
+      "sha256": "51d8f982c20f750f033a9e1076064a3f608eb8740de75969c0e066ac9adcfdeb"
+    },
+    {
+      "path": "server-candidates/fcm-paused/push_onesignal.js",
+      "sha256": "3e1ea9d6145f721b5a286a1177e1d8e94bf5ba9f44ea2330e9acbc58ef1159c3"
+    },
+    {
+      "path": "server-candidates/fcm-paused/push_policy.js",
+      "sha256": "d85add7c215df6f2d5157b12c5f5ed8513b9c4a236f183386002b65daa7ecad0"
+    },
+    {
+      "path": "server-candidates/fcm-paused/README.md",
+      "sha256": "5d1aef2a8181ea43b475fd5f028eb4610b297f7cc03f71e0132a5d5e627cdf58"
+    },
+    {
+      "path": "server-candidates/fcm-paused/server.js",
+      "sha256": "96968343006c32611f63a204c6c1919bf57398a4a87db5275fecfa2b0916835a"
+    },
+    {
+      "path": "server-candidates/fcm-paused/vercel.json",
+      "sha256": "5f11dc66fcdf670b89bea83add18feaca9574bffd156a327f0ae832f58a38786"
+    },
+    {
+      "path": "server-candidates/fcm-paused-maintenance/.gitignore",
+      "sha256": "62d82598c3a61a1d6a279ae2fd6fb5be31fb010641b1fd3bdcd5fc559eb387c8"
+    },
+    {
+      "path": "server-candidates/fcm-paused-maintenance/.vercelignore",
+      "sha256": "fb1d6f61d8e40b11fe9735e3116ba614c65fbd708296d901f136777a2d585835"
+    },
+    {
+      "path": "server-candidates/fcm-paused-maintenance/api/index.js",
+      "sha256": "09e0b440ab2c8abbd3577674d64e45f00a935d8cdefb9589c3f34f68b68d1ecf"
+    },
+    {
+      "path": "server-candidates/fcm-paused-maintenance/package.json",
+      "sha256": "73e4051941d6343c6c189c9173e4fdb14d8420159adb126009ad5807a65e357a"
+    },
+    {
+      "path": "server-candidates/fcm-paused-maintenance/server.js",
+      "sha256": "6c0c033fe07673d3b63550f433c4b03273f937be57700b58b58289217c61611f"
+    },
+    {
+      "path": "server-candidates/fcm-paused-maintenance/vercel.json",
+      "sha256": "5516918e9015b0ada40aaded66958f440e706c8f1dbc49d7f7323548651b3e3f"
+    }
+  ],
+  "scope": "workspace source artifacts; trailing newline normalization has no runtime effect; not a downloaded Vercel archive checksum"
+}

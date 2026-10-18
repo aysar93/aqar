@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-10-17T14:14:22.239861+00:00",
+  "productionProject": "aqar-9f3f9",
+  "proposedFunctions": [
+    "registerPushDevice",
+    "unregisterPushDevice",
+    "deliverBridgeNotification",
+    "bridgeCommentCreated",
+    "bridgeReplyCreated",
+    "bridgeChatMessageCreated",
+    "reviewPushDeliveryHealth",
+    "monitorPushDeliveryHealth"
+  ],
+  "region": "us-central1",
+  "unchangedProductionPrefixAndSuffix": true,
+  "notificationBlockReplaced": true,
+  "newPrivateCollections": [
+    "push_tokens",
+    "push_installations",
+    "push_deliveries",
+    "push_registration_limits",
+    "push_bridge_events",
+    "push_bridge_inbox",
+    "push_ingress_limits",
+    "push_subscription_bindings",
+    "push_legacy_token_approvals",
+    "push_bridge_config"
+  ],
+  "changedStorageRules": false,
+  "changedMediaFieldsOrRoutes": false,
+  "notificationCompatibilityCaveat": "Old inbox writers without source IDs may be rejected by stricter create rules; source-trigger fallback does not prove old UI write success.",
+  "preparedOnly": true,
+  "testsRepeated": false,
+  "productionChanged": false,
+  "files": [
+    {
+      "name": "firestore.notifications-only.proposed.rules",
+      "sha256": "a069f6dd3c69c57548afa172ee10a78b92d800e43ca7cf6106be6735530728cc"
+    },
+    {
+      "name": "firestore.notifications-only.patch",
+      "sha256": "fc977ef3eecd59500552626e34d192004da8fa53d33522d0508bc84362aa3cc8"
+    },
+    {
+      "name": "rollout.paused.json",
+      "sha256": "05aadea413a17a4b7bfe8104e28e0af0feeefd93958b706fb0fe460a47423ae6"
+    },
+    {
+      "name": "firestore.paused-only.proposed.rules",
+      "sha256": "4888ad880691a48167ed755626751852e09c8f4753f168cd16473b703fa1998c"
+    },
+    {
+      "name": "firestore.paused-only.patch",
+      "sha256": "af6c50e827edc28493eb1e062b9e2af02463f818354388ec73b179a2cb2ec410"
+    }
+  ],
+  "pausedDeploymentRulesScope": "add ten server-only push matches; preserve all existing production rules including notifications",
+  "stricterNotificationPatchDeferred": true,
+  "pausedOnlyOutsideInsertionUnchanged": true
+}

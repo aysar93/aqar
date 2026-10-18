@@ -1,0 +1,74 @@
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-aqar", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
++  firestore: Firestore Emulator was started in standard edition.
++  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: "C:/Users/AL-NOOR/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe" --test test/firestore/notifications_ingress.test.cjs
+[2026-10-17T21:18:48.683Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d78 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:48.823Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d79 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:48.908Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d7a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:48.984Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d7b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:49.066Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d7c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:49.143Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d7d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+✔ compat: recipient read and delete contracts remain available; payload and recipient are immutable (19172.7799ms)
+[2026-10-17T21:18:49.846Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d80 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:49.887Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d81 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:49.989Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d82 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+✖ compat: old collapsed chat update stays inside sender-to-admin pair without source IDs (792.4884ms)
+[2026-10-17T21:18:50.450Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d85 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:50.625Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d86 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:50.741Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d87 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:50.864Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d88 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+[2026-10-17T21:18:50.985Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d89 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L765:24 for 'update' @ L765, false for 'update' @ L765
+✔ compat: malicious state types and forged read identities are rejected (896.1875ms)
+[2026-10-17T21:18:54.375Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d8e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L781:24 for 'create' @ L781, evaluation error at L792:24 for 'update' @ L792, false for 'create' @ L781
+[2026-10-17T21:18:54.460Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d8f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L781:24 for 'create' @ L781, evaluation error at L792:24 for 'update' @ L792, false for 'create' @ L781
+[2026-10-17T21:18:54.546Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d90 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L781, evaluation error at L792:24 for 'update' @ L792, false for 'create' @ L781
+[2026-10-17T21:18:54.633Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d91 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L781, evaluation error at L792:24 for 'update' @ L792, false for 'create' @ L781
+✔ strict: verified source writes remain recipient-visible; fabricated and server-reserved fields are rejected (5004.5114ms)
+[2026-10-17T21:18:57.344Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x895c6d95 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L781:24 for 'create' @ L781, evaluation error at L792:24 for 'update' @ L792, Property commentId is undefined on object. for 'create' @ L781
+✔ strict compatibility boundary: legacy comment without source ID is rejected, not silently treated as authorized (1931.5365ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 40364.7431
+
+✖ failing tests:
+
+test at test\firestore\notifications_ingress.test.cjs:25:1
+✖ compat: old collapsed chat update stays inside sender-to-admin pair without source IDs (792.4884ms)
+  TypeError: Cannot read properties of undefined (reading 'data')
+      at TestContext.<anonymous> (D:\Codex-task-work\fcm-complete-20261014\test\firestore\notifications_ingress.test.cjs:29:134)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+!  Script exited unsuccessfully (code 1)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+!  Firestore Emulator has exited upon receiving signal: SIGINT
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator
+
+Error: Script ""C:/Users/AL-NOOR/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe" --test test/firestore/notifications_ingress.test.cjs" exited with code 1

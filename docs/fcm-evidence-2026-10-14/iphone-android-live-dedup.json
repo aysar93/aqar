@@ -1,0 +1,12 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "original": "fullapp-1792009809883-chat_message-1792013116603",
+  "duplicate": "fullapp-1792009809883-chat_message-1792013116603-duplicate",
+  "originalAcceptedCount": 2,
+  "eventAcceptedCountAfterDuplicate": 2,
+  "duplicateDeliveryReceiptCount": 0,
+  "duplicateInboxProbeRemoved": true,
+  "observationSeconds": 12,
+  "exactlyOnceGuaranteed": false,
+  "checkedAt": "2026-10-14T21:27:40.349Z"
+}

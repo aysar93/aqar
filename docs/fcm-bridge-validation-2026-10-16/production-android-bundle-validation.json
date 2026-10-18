@@ -1,0 +1,12 @@
+{
+  "tool": "Google bundletool 1.18.3",
+  "officialToolSha256Verified": true,
+  "bundleValid": true,
+  "package": "com.andalus.aqar",
+  "versionCode": 2026101601,
+  "debuggable": false,
+  "nativeFirebaseResourcesMatched": true,
+  "firebaseProject": "aqar-9f3f9",
+  "storeUploadPerformed": false,
+  "productionContacted": false
+}

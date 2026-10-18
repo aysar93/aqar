@@ -1,0 +1,37 @@
+name: FCM Android full-app staging APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fcm-android-staging-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FCM_STAGING_BUILD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+      - name: Install validated isolated native config
+        run: |
+          cp config/staging/google-services.json android/app/google-services.json
+          node tools/validate_fcm_staging.cjs config/fcm-android.staging.json
+      - run: flutter pub get
+      - run: flutter build apk --debug --no-pub --target-platform android-arm64 --target lib/main_fcm_app_staging.dart --dart-define-from-file=config/fcm-android.staging.json
+      - run: sha256sum build/app/outputs/flutter-apk/app-debug.apk > build/app/outputs/flutter-apk/app-debug.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aqar-FCM-staging-Android-arm64-debug
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk.sha256

@@ -1,0 +1,20 @@
+{
+  "source": "D:/Projects/notification_server/server.js",
+  "readOnly": true,
+  "sha256": "c3c24d83160cf559e9281520f7a81cc57c59287e147ec32df9fd82acb0409c45",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "line": 38
+    },
+    {
+      "method": "POST",
+      "path": "/send",
+      "line": 47
+    }
+  ],
+  "usesOneSignal": true,
+  "supportsBroadcastSelector": false,
+  "note": "Local checkout is independently modified; not proof that every historical deployment contains exactly this source. No secrets captured."
+}

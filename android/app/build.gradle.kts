@@ -8,8 +8,20 @@ plugins {
 
 import java.util.Properties
 
+val fcmStaging = System.getenv("FCM_STAGING_BUILD") == "true"
+val unsignedBridgeCandidate = System.getenv("PUSH_BRIDGE_UNSIGNED_RC") == "true" && !fcmStaging
 val keystoreProperties = Properties().apply {
-    load(rootProject.file("key.properties").inputStream())
+    val keyFile = rootProject.file("key.properties")
+    if (!fcmStaging && keyFile.exists()) load(keyFile.inputStream())
+}
+if (fcmStaging) {
+    val config = file("google-services.json").readText()
+    require(!config.contains("aqar-9f3f9") && config.contains("aqar-fcm-test-") && config.contains("com.andalus.aqar.staging")) {
+        "Install isolated staging google-services.json before building"
+    }
+}
+require(fcmStaging || unsignedBridgeCandidate || keystoreProperties.containsKey("storeFile")) {
+    "Production signing configuration is required outside the isolated staging build"
 }
 
 android {
@@ -31,7 +43,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.andalus.aqar"
+        applicationId = if (fcmStaging) "com.andalus.aqar.staging" else "com.andalus.aqar"
+        manifestPlaceholders["aqarAppLabel"] = if (fcmStaging) "Aqar FCM staging" else "عقارات الانبار"
+        manifestPlaceholders["facebookProviderAuthority"] = if (fcmStaging) "com.andalus.aqar.staging.facebook.provider" else "com.facebook.app.FacebookContentProvider1745018726927685"
+        manifestPlaceholders["facebookAutoInit"] = (!fcmStaging).toString()
 
         minSdk = flutter.minSdkVersion
         targetSdk = 36
@@ -44,7 +59,7 @@ android {
 
 
     signingConfigs {
-    create("release") {
+    if (keystoreProperties.containsKey("storeFile")) create("release") {
         storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
         storePassword = keystoreProperties["storePassword"] as String
         keyAlias = keystoreProperties["keyAlias"] as String
@@ -54,7 +69,7 @@ android {
 
     buildTypes {
     release {
-        signingConfig = signingConfigs.getByName("release")
+        signingConfig = if (unsignedBridgeCandidate) null else if (fcmStaging) signingConfigs.getByName("debug") else signingConfigs.getByName("release")
 
         isMinifyEnabled = true
         isShrinkResources = true

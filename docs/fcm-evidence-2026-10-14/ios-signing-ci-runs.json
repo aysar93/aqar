@@ -1,0 +1,54 @@
+{
+  "sourceCommit": "738165e4726683b520633f61777eada49993f7c1",
+  "checkedAt": "2026-10-14T16:35:19.228Z",
+  "runs": [
+    {
+      "id": 38596439511,
+      "name": "Safety and iOS build",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38596439511"
+    },
+    {
+      "id": 38596283074,
+      "name": "Safety and iOS build",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38596283074"
+    },
+    {
+      "id": 38595836527,
+      "name": "Safety and iOS build",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38595836527"
+    },
+    {
+      "id": 38595774949,
+      "name": "FCM isolated emulators",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38595774949"
+    },
+    {
+      "id": 38595775257,
+      "name": "Safety and iOS build",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38595775257"
+    },
+    {
+      "id": 38595764270,
+      "name": "FCM isolated emulators",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/38595764270"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-17T21:03:08.681Z",
+  "provider": {
+    "name": "projects/1031621585901/locations/global/workloadIdentityPools/aqar-vercel-paused/providers/vercel-production",
+    "condition": "assertion.owner_id == 'team_OuMMNqbA3ALsK4nAoBE7UxSe' && assertion.project_id == 'prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X' && assertion.environment == 'production' && assertion.sub == 'owner:aysar93s-projects:project:notification-server:environment:production'",
+    "oidc": {
+      "issuerUri": "https://oidc.vercel.com/aysar93s-projects",
+      "allowedAudiences": [
+        "https://vercel.com/aysar93s-projects"
+      ]
+    }
+  },
+  "role": {
+    "name": "projects/aqar-9f3f9/roles/aqarPushFederatedToken",
+    "permissions": [
+      "iam.serviceAccounts.getAccessToken"
+    ]
+  },
+  "serviceAccount": "aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com"
+}

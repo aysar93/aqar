@@ -1,0 +1,16 @@
+{
+  "scope": "new inbox namespaces only; not a certification of legacy notifications",
+  "productionDeployed": false,
+  "findings": [],
+  "checks": {
+    "serverOnlyTrustedCreatesAndDeletes": "PASS",
+    "recipientOrActiveAdministratorReads": "PASS",
+    "recipientAndSourceImmutableOnClientUpdates": "PASS",
+    "readStateUpdatesBoundedAndMonotonicMembership": "PASS",
+    "intakeAuthenticatedAdministratorAndImmutable": "PASS",
+    "jobsAndOriginalArchiveDenyAllClientAccess": "PASS",
+    "legacyRulesUnchanged": "PASS"
+  },
+  "knownBoundary": "Existing clients retain their existing notifications namespace. Unproven history is retained but not promoted into the trusted view.",
+  "approvalRequiredBeforeProduction": true
+}

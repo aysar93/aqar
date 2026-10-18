@@ -1,0 +1,24 @@
+diff --git a/functions/push_bridge_functions.js b/server-candidates/legacy-source-validation/push_bridge_functions.js
+index 55a36e4..740f138 100644
+--- a/functions/push_bridge_functions.js
++++ b/server-candidates/legacy-source-validation/push_bridge_functions.js
+@@ -9,6 +9,7 @@ const {hash,validId}=require('./push_policy');
+ const {canonicalEvent}=require('./push_bridge_policy');
+ const {dispatchBridge}=require('./push_bridge_dispatch');
+ const {providerSecretOptions}=require('./push_onesignal');
++const {authorize:authorizeSource}=require('./source-authorization.cjs');
+ const bridgeEnabled=()=>process.env.PUSH_BRIDGE_ENABLED==='true' && process.env.FCM_MIGRATION_ENABLED==='true';
+ 
+ async function verifiedEvent(event,db) {
+@@ -47,8 +48,9 @@ async function verifiedEvent(event,db) {
+  if(!authorized && ['comment','reply'].includes(data.type) && validId(data.propertyId) && validId(data.commentId)) {
+   const property=await db.doc('properties/'+data.propertyId).get();
+   const parent=await db.doc(`properties/${data.propertyId}/comments/${data.commentId}`).get();
+-  if(data.type==='comment')authorized=property.data()?.publisherUid===data.userId && parent.data()?.userId===actor;
+-  else if(validId(data.replyId)) {const reply=await parent.ref.collection('replies').doc(data.replyId).get();authorized=parent.data()?.userId===data.userId && reply.data()?.userId===actor;}
++  const reply=data.type==='reply' && validId(data.replyId)?await parent.ref.collection('replies').doc(data.replyId).get():null;
++  const sourceAuthorization=authorizeSource({actor,type:data.type,declaredRecipient:data.userId,property:property.data(),parent:parent.data(),reply:reply?.data()});
++  authorized=sourceAuthorization.authorized;
+   if(authorized){data.title=data.type==='comment'?'تعليق جديد':'رد جديد';data.message=data.title;}
+  }
+  if(!authorized)return null;

@@ -1,0 +1,12 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "wifiDisabledDuringLogout": true,
+  "loginScreenReachedOffline": true,
+  "elapsedSecondsToObservation": 8.92,
+  "revocationQueuePersisted": true,
+  "generationBefore": "1",
+  "generationAfter": "2",
+  "rawCapabilitiesOrTokensPrinted": false,
+  "serverRevocationAfterReconnectVerified": true,
+  "serverObservationAt": "2026-10-15T13:03:29.202Z"
+}

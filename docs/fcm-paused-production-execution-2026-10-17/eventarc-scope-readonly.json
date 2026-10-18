@@ -1,0 +1,87 @@
+{
+  "checkedAt": "2026-10-17T18:48:23.812Z",
+  "project": "aqar-9f3f9",
+  "readOnly": true,
+  "productionMutations": 0,
+  "predefinedRole": {
+    "name": "roles/eventarc.eventReceiver",
+    "permissions": [
+      "eventarc.events.receiveAuditLogWritten",
+      "eventarc.events.receiveEvent"
+    ]
+  },
+  "requestedPermissionMetadata": {
+    "name": "eventarc.events.receiveEvent",
+    "customRolesSupportLevel": "SUPPORTED",
+    "onlyInPredefinedRoles": false,
+    "apiDisabled": false
+  },
+  "currentFunctions": [
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:10.985309468Z"
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:03.058973786Z"
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:09.694445777Z"
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE",
+      "serviceAccount": "aqar-push-runtime@aqar-9f3f9.iam.gserviceaccount.com",
+      "updateTime": "2026-10-17T15:23:09.454361623Z"
+    }
+  ],
+  "rolloutFields": {
+    "legacyRecoveryAllowlist": {
+      "arrayValue": {}
+    },
+    "percent": {
+      "integerValue": "0"
+    },
+    "cohort": {
+      "mapValue": {
+        "fields": {
+          "installations": {
+            "arrayValue": {}
+          },
+          "userIds": {
+            "arrayValue": {}
+          },
+          "providers": {
+            "arrayValue": {
+              "values": [
+                {
+                  "stringValue": "fcm"
+                }
+              ]
+            }
+          },
+          "legacyTargets": {
+            "arrayValue": {}
+          }
+        }
+      }
+    },
+    "legacyIngressCoordinated": {
+      "booleanValue": false
+    },
+    "mode": {
+      "stringValue": "paused"
+    },
+    "installationAllowlist": {
+      "arrayValue": {}
+    }
+  },
+  "scopeConclusion": "Project is documented minimum scope. Existing runtime identity shared with four already active non-Firestore functions; a grant to it is not exclusive to the four requested Firestore functions."
+}

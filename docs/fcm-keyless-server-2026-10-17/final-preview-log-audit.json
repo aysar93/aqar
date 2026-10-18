@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-17T19:20:20.744Z",
+  "deploymentId": "dpl_739FTV1sJwFeD8snNRqCA3i9rmPY",
+  "since": "2026-10-17T19:20:05.325Z",
+  "recordTypes": [
+    "summary"
+  ],
+  "recordCountExcludingSummary": 0,
+  "summary": {
+    "type": "summary",
+    "recordsReturned": 0,
+    "timeRange": {
+      "start": "2026-10-17T19:20:05.325Z",
+      "end": "2026-10-17T19:20:18.500Z"
+    },
+    "pagination": {
+      "hasMore": false,
+      "next": null
+    },
+    "excludedIntervals": []
+  },
+  "rawMessagesSaved": false
+}

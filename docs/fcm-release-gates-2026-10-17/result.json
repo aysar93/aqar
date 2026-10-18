@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-10-17T13:58:04.950Z",
+  "environment": {
+    "project": "demo-aqar",
+    "firestore": "127.0.0.1:8185",
+    "realProviderCalls": 0,
+    "productionWrites": 0
+  },
+  "result": "PASS",
+  "visibleInboxGate": "PASS",
+  "cohortAllProvidersGate": "PASS",
+  "finalPolicyTests": {
+    "passed": 8,
+    "failed": 0
+  },
+  "finalGateIntegrationTests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "earlierAffectedBridgeRegressions": {
+    "passed": 3,
+    "failed": 0,
+    "note": "Ran with first cohort implementation; final seven gate cases cover strengthened account/device pairs."
+  },
+  "checks": [
+    "inbox before provider call",
+    "correct recipient read, other account denied",
+    "all three source triggers create visible inbox",
+    "late and concurrent source/client events fold to one item/claim",
+    "pause and preference off preserve inbox",
+    "deleted/wrong-recipient item and persistence failure suppress sends",
+    "missing/empty cohort denies every provider",
+    "account-device pairs and explicit provider/legacy target required",
+    "excluded second device and fallback subscription never sent",
+    "cohort removal between planning and claim suppresses FCM and OneSignal",
+    "old sender exits when bridge enabled"
+  ],
+  "notRepeated": [
+    "physical Android/iPhone",
+    "real Vercel Preview",
+    "load",
+    "full CI",
+    "native builds"
+  ],
+  "deployedToTestCloud": false,
+  "productionChanged": false,
+  "sources": [
+    {
+      "path": "functions/index.js",
+      "sha256": "ae3d7f5b6380b6265ba248cf7c181f53a31e44b87b3cc687a9b7ce27eb10f9c4"
+    },
+    {
+      "path": "functions/push_bridge_policy.js",
+      "sha256": "51d8f982c20f750f033a9e1076064a3f608eb8740de75969c0e066ac9adcfdeb"
+    },
+    {
+      "path": "functions/push_bridge_dispatch.js",
+      "sha256": "70a57e18dab91754cea2f9cc5a1c3301bbfdaabc1c710c47c80a677c7c20bce2"
+    },
+    {
+      "path": "functions/push_bridge_release_gates.integration.test.js",
+      "sha256": "06d97d42716b13ad10ad027eba5563fda52fb19a26da3c01fbd6b4c88023cf98"
+    },
+    {
+      "path": "functions/push_bridge.test.js",
+      "sha256": "ee3e6e5e766bec0fca4c73345a9774512258f01b6850212e95cb1110f31cd18c"
+    },
+    {
+      "path": "functions/push_functions.integration.test.js",
+      "sha256": "3b3a43948873cad692687024dce1294ae7616479b575d581a7df8542475c0775"
+    }
+  ]
+}

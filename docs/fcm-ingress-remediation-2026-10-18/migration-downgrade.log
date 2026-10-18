@@ -1,0 +1,11 @@
+[2026-10-17T21:27:00.675Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x1b206341 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L792:24 for 'update' @ L792, false for 'update' @ L792
+✔ strict migration identity cannot be downgraded through a valid chat source update (11960.5095ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13008.2573

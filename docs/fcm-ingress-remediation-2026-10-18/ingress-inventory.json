@@ -1,0 +1,103 @@
+{
+  "checkedAt": "2026-10-17T21:17:32.221Z",
+  "productionChanges": false,
+  "canonical": {
+    "domain": "notification-server-henna.vercel.app",
+    "deploymentId": "dpl_DYZa5Drina73ujWgZdiUnCoKHqCm"
+  },
+  "functions": [
+    {
+      "name": "bridgeCommentCreated",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "bridgeChatMessageCreated",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "authorizePresenceDashboard",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "refreshOfficeFollowerMetrics",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "refreshOfficePropertyMetrics",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "syncPresenceAdminRole",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "monitorPushDeliveryHealth",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "refreshOfficeReviewMetrics",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "reviewPushDeliveryHealth",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "deliverBridgeNotification",
+      "state": "ACTIVE"
+    },
+    {
+      "name": "bridgeReplyCreated",
+      "state": "ACTIVE"
+    }
+  ],
+  "legacyDirectExportsDeployed": [],
+  "deployments": [
+    {
+      "id": "dpl_DYZa5Drina73ujWgZdiUnCoKHqCm",
+      "url": "notification-server-hvfh08cal-aysar93s-projects.vercel.app",
+      "state": "READY",
+      "created": 1792271106971,
+      "target": "production"
+    },
+    {
+      "id": "dpl_BJ7BcrBbLzNFPywfjzRamajXyKYw",
+      "url": "notification-server-5ss2dr2rx-aysar93s-projects.vercel.app",
+      "state": "READY",
+      "created": 1792271048332,
+      "target": "production"
+    },
+    {
+      "id": "dpl_6AvDKvLybVugqqxxSsXs3Dp2hTep",
+      "url": "notification-server-eg3oqkdgd-aysar93s-projects.vercel.app",
+      "state": "ERROR",
+      "created": 1792271009711,
+      "target": "production"
+    },
+    {
+      "id": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+      "url": "notification-server-68tstlpxw-aysar93s-projects.vercel.app",
+      "state": "READY",
+      "created": 1787507023912,
+      "target": "production"
+    },
+    {
+      "id": "dpl_EwEDSV3vYPb3wbgQA9mzXXq1tDf7",
+      "url": "notification-server-mnh6zdtym-aysar93s-projects.vercel.app",
+      "state": "READY",
+      "created": 1787255452540,
+      "target": "production"
+    }
+  ],
+  "historicalReadyDeploymentCount": 2,
+  "oldEndpointsInvoked": false,
+  "oldDeploymentProviderBehavior": "not tested; old URLs are an unclosed coordination surface, not proof of an accepted send"
+}

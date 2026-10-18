@@ -1,0 +1,33 @@
+{
+  "createdAt": "2026-10-17T18:58:49.554Z",
+  "project": "aqar-9f3f9",
+  "scope": "one inert Firestore event per new function; no recipient UID, transport token, text or provider send",
+  "paths": [
+    {
+      "function": "deliverBridgeNotification",
+      "path": "notifications/fcm_paused_transport_1792263529554",
+      "created": true,
+      "deleted": true
+    },
+    {
+      "function": "bridgeCommentCreated",
+      "path": "properties/fcm_paused_transport_1792263529554/comments/probe",
+      "created": true,
+      "deleted": true
+    },
+    {
+      "function": "bridgeReplyCreated",
+      "path": "properties/fcm_paused_transport_1792263529554/comments/absent_parent/replies/probe",
+      "created": true,
+      "deleted": true
+    },
+    {
+      "function": "bridgeChatMessageCreated",
+      "path": "chats/fcm_paused_transport_1792263529554/messages/probe",
+      "created": true,
+      "deleted": true
+    }
+  ],
+  "allCreatedAt": "2026-10-17T18:58:51.266Z",
+  "cleanupVerifiedAt": "2026-10-17T18:59:34.634Z"
+}

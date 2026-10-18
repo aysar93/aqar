@@ -1,0 +1,28 @@
+{
+  "dateBaghdad": "2026-10-18",
+  "scope": "trusted inbox separation feasibility and history preservation planning",
+  "productionChanges": false,
+  "productionModeChanged": false,
+  "recipientListsChanged": false,
+  "fcmSendPermissionGranted": false,
+  "previousTestsRerun": false,
+  "newTests": {"environment":"local demo-aqar Firestore emulator","pass":2,"fail":0},
+  "findings": {
+    "legacyQuery": "notifications.where(userId == currentUid).orderBy(createdAt desc); home badge also queries by userId alone",
+    "verifiedReadRuleFiltersLegacyQuery": false,
+    "verifiedReadRuleRejectsLegacyQuery": true,
+    "serverOnlyOriginalCollectionPreservesLegacyReads": true,
+    "serverOnlyOriginalCollectionAcceptsLegacyNotificationWrites": false,
+    "rulesCanRedirectLegacyWriteIntoIntake": false,
+    "newTrustedCollectionAutomaticallyUsedByLegacyApp": false,
+    "afterWriteCleanupGuaranteesNoInitialDisplay": false
+  },
+  "decision": "Full inbox protection plus unchanged successful legacy writes cannot be guaranteed under the observed client contract without changing a constraint.",
+  "referenceCodeIsStoreBinaryAttestation": false,
+  "preferredCompleteArchitecture": "Keep notifications as a server-only trusted projection to preserve read shape; move supported client intents to authenticated intake or rely on real source events. A limited app writer update is required to avoid old notification-write errors.",
+  "historyPlan": "Preserve every original document, ID, version and read-state in an access-restricted archive before any move; independently validate provenance; retain unverifiable items without silently certifying or destroying them.",
+  "retirementPlan": "Retain both Vercel deployments and Git; use the previously prepared reversible controls only under separate production approval.",
+  "productionRuleDeployApproved": false,
+  "firewallOrGitChangeApproved": false,
+  "storePublishApproved": false
+}

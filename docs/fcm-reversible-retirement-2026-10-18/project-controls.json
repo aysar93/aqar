@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-17T21:44:12.745Z",
+  "id": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+  "git": {
+    "type": "github",
+    "org": "aysar93",
+    "repo": "notification_server",
+    "productionBranch": "main"
+  },
+  "ignoredBuildStep": null,
+  "deployHooksCount": 0,
+  "ssoProtection": {
+    "deploymentType": "all_except_custom_domains"
+  },
+  "canonicalDeploymentId": "dpl_DYZa5Drina73ujWgZdiUnCoKHqCm"
+}

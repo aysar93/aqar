@@ -1,0 +1,63 @@
+{
+  "startedAt": "2026-10-17T21:02:31.467Z",
+  "production": true,
+  "changes": [
+    {
+      "action": "enabled",
+      "resource": "sts.googleapis.com",
+      "at": "2026-10-17T21:02:35.571Z"
+    },
+    {
+      "action": "createdPool",
+      "resource": "aqar-vercel-paused",
+      "at": "2026-10-17T21:02:41.474Z"
+    },
+    {
+      "action": "createdProvider",
+      "resource": "vercel-production",
+      "at": "2026-10-17T21:02:47.109Z"
+    },
+    {
+      "action": "createdRole",
+      "resource": "projects/aqar-9f3f9/roles/aqarPushFederatedToken",
+      "at": "2026-10-17T21:02:49.799Z"
+    },
+    {
+      "action": "boundExactPrincipalOnServiceAccount",
+      "resource": "aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com",
+      "at": "2026-10-17T21:02:50.829Z"
+    },
+    {
+      "action": "addedProductionPublicVariable",
+      "resource": "FCM_SERVER_PROFILE",
+      "at": "2026-10-17T21:02:55.512Z"
+    },
+    {
+      "action": "addedProductionPublicVariable",
+      "resource": "GCLOUD_PROJECT",
+      "at": "2026-10-17T21:02:58.227Z"
+    },
+    {
+      "action": "addedProductionPublicVariable",
+      "resource": "GCP_PROJECT_NUMBER",
+      "at": "2026-10-17T21:03:01.744Z"
+    },
+    {
+      "action": "addedProductionPublicVariable",
+      "resource": "FCM_MIGRATION_ENABLED",
+      "at": "2026-10-17T21:03:04.059Z"
+    },
+    {
+      "action": "addedProductionPublicVariable",
+      "resource": "PUSH_BRIDGE_ENABLED",
+      "at": "2026-10-17T21:03:06.358Z"
+    },
+    {
+      "action": "addedProductionPublicVariable",
+      "resource": "BRIDGE_ONESIGNAL_ENABLED",
+      "at": "2026-10-17T21:03:08.681Z"
+    }
+  ],
+  "jsonKeysCreated": 0,
+  "fcmSendPermissionAdded": false
+}

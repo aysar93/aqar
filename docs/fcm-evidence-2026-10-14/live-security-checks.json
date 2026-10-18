@@ -1,0 +1,37 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-14T11:37:00.394Z",
+  "checks": [
+    {
+      "name": "protected-token-read",
+      "status": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "name": "protected-token-write",
+      "status": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "name": "other-account-inbox-read",
+      "status": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "name": "non-admin-general-spoof",
+      "status": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "name": "unauthenticated-device-call",
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    }
+  ],
+  "publicProfileRawTokenAbsent": true
+}

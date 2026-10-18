@@ -1,8 +1,10 @@
+import './trusted_inbox.dart';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'push_migration.dart';
 
 class NotificationService {
   NotificationService._();
@@ -27,6 +29,21 @@ class NotificationService {
     String deliveryType = 'external',
     Map<String, dynamic>? extraData,
   }) async {
+    if (TrustedInbox.enabled) {
+      await TrustedInbox.submit({
+        'title': title,
+        'message': message,
+        'type': type,
+        'target': target,
+        'userId': userId,
+        'propertyId': propertyId,
+        'officeId': officeId,
+        'chatId': chatId,
+        'deliveryType': deliveryType,
+        if (extraData != null) ...extraData,
+      });
+      return;
+    }
     final normalizedDeliveryType =
         deliveryType.trim().toLowerCase() == 'internal'
             ? 'internal'
@@ -43,6 +60,7 @@ class NotificationService {
       if (officeId.isNotEmpty) 'officeId': officeId,
       if (chatId.isNotEmpty) 'chatId': chatId,
       if (extraData != null) ...extraData,
+      ...PushMigration.fields,
     };
 
     // =======================================================
@@ -150,6 +168,7 @@ class NotificationService {
     required String propertyTitle,
     String officeName = '',
   }) async {
+    if (TrustedInbox.enabled) return 0; // Approved property source owns fanout.
     final normalizedOfficeId = officeId.trim();
     final normalizedPropertyId = propertyId.trim();
 
@@ -243,6 +262,7 @@ class NotificationService {
     required String message,
     required int unreadCount,
   }) async {
+    if (TrustedInbox.enabled) return; // Message source owns publication.
     if (userId.trim().isEmpty || chatId.trim().isEmpty) {
       debugPrint(
         'NotificationService: '
@@ -266,6 +286,8 @@ class NotificationService {
       'userId': userId,
       'chatId': chatId,
       'unreadCount': unreadCount,
+      'deliveryType': 'external',
+      ...PushMigration.fields,
       if (messageId.isNotEmpty) 'messageId': messageId,
       'readBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
@@ -302,7 +324,7 @@ class NotificationService {
 
     // Includes both the collapsed human-message notification and daily away replies.
     final snapshot = await _firestore
-        .collection('notifications')
+        .collection(TrustedInbox.visibleCollection)
         .where('userId', isEqualTo: userId)
         .where('chatId', isEqualTo: chatId)
         .where('type', isEqualTo: 'chat_message')
@@ -344,6 +366,13 @@ class NotificationService {
     Map<String, dynamic>? extraData,
   }) async {
     try {
+      // The committed Firestore document owns delivery in migration builds.
+      // Never invoke both providers for the same event.
+      if (TrustedInbox.enabled ||
+          PushMigration.enabled ||
+          deliveryType == 'internal') {
+        return;
+      }
       final data = <String, dynamic>{
         'type': type,
         'deliveryType': deliveryType,
@@ -424,12 +453,7 @@ class NotificationService {
   static Stream<QuerySnapshot<Map<String, dynamic>>> userNotifications(
     String uid,
   ) {
-    return _firestore
-        .collection('notifications')
-        .where(
-          'userId',
-          isEqualTo: uid,
-        )
+    return TrustedInbox.forUser(uid)
         .orderBy(
           'createdAt',
           descending: true,

@@ -95,6 +95,6 @@ exports.chatAwayReply = onDocumentCreated("chats/{chatId}/messages/{messageId}",
     // Avoid replacing the preview of a newer human message when a trigger is delayed.
     if (chat.data().lastMessageId === event.params.messageId) Object.assign(update, { lastMessage: text, lastMessageId: replyReference.id, lastSender: "admin", updatedAt: FieldValue.serverTimestamp() });
     transaction.update(chatReference, update);
-    transaction.set(notificationReference, { title: "عقارات الأنبار", message: text, type: "chat_message", userId: event.params.chatId, chatId: event.params.chatId, target: "user", readBy: [], createdAt: FieldValue.serverTimestamp() });
+    transaction.set(notificationReference, { ...(process.env.FCM_MIGRATION_ENABLED === 'true' ? { pushTransport: 'fcm_v1' } : {}), messageId: replyReference.id, title: "عقارات الأنبار", message: text, type: "chat_message", userId: event.params.chatId, chatId: event.params.chatId, target: "user", readBy: [], createdAt: FieldValue.serverTimestamp() });
   });
 });

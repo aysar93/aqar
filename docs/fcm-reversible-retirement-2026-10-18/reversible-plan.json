@@ -1,0 +1,49 @@
+{
+  "preparedAt": "2026-10-17T21:49:21.218Z",
+  "approved": false,
+  "executed": false,
+  "supersedes": "deletion/Git-disconnect proposals in prior reports; historical artifacts will be retained",
+  "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+  "git": {
+    "disconnect": false,
+    "proposedProjectPatch": {
+      "commandForIgnoringBuildStep": "exit 0"
+    },
+    "previousValue": null,
+    "manualRedeployCanBypass": true
+  },
+  "firewall": {
+    "baselineEnabled": false,
+    "baselineCustomRules": 0,
+    "baselineDraftChanges": false,
+    "proposal": "server-candidates/notification-retirement-controls/legacy-host-deny.proposed.json",
+    "enableOnlyReviewedCustomRule": true,
+    "logFirstThenDeny": true,
+    "existingProtectionRemains": true,
+    "rollback": "disable only this custom rule and publish reviewed diff; restore enabled=false only if no intervening changes depend on it"
+  },
+  "retainedDeploymentIds": [
+    "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "dpl_EwEDSV3vYPb3wbgQA9mzXXq1tDf7"
+  ],
+  "unchangedActiveAndMaintenance": [
+    "dpl_DYZa5Drina73ujWgZdiUnCoKHqCm",
+    "dpl_BJ7BcrBbLzNFPywfjzRamajXyKYw"
+  ],
+  "dnsOrAliasChanges": false,
+  "sourceHardening": {
+    "candidate": "server-candidates/legacy-source-validation",
+    "affectedFunctions": [
+      "deliverBridgeNotification",
+      "bridgeCommentCreated",
+      "bridgeReplyCreated"
+    ],
+    "deployNow": false,
+    "noRulesChange": true,
+    "newIamOrSendPermission": false
+  },
+  "mode": "paused",
+  "cohort": [],
+  "sendFcmPermission": false,
+  "productionApprovalRequired": true
+}

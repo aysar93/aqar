@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-10-17T18:59:09.152Z",
+  "from": "2026-10-17T18:58:49.554Z",
+  "through": "2026-10-17T18:59:09.152Z",
+  "eventProbeSentOnce": true,
+  "requests": [
+    {
+      "timestamp": "2026-10-17T18:58:51.003857Z",
+      "service": "deliverbridgenotification",
+      "status": 204,
+      "trace": "projects/aqar-9f3f9/traces/efe461fd0412317b65a1aa417f78a3e7",
+      "userAgent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)",
+      "latency": "0.045520715s"
+    },
+    {
+      "timestamp": "2026-10-17T18:58:51.254510Z",
+      "service": "bridgecommentcreated",
+      "status": 204,
+      "trace": "projects/aqar-9f3f9/traces/615dd44ba23fbe28a1923cb22b105379",
+      "userAgent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)",
+      "latency": "0.834966787s"
+    },
+    {
+      "timestamp": "2026-10-17T18:58:51.775444Z",
+      "service": "bridgereplycreated",
+      "status": 204,
+      "trace": "projects/aqar-9f3f9/traces/7be541a31459b95a542425c826f36001",
+      "userAgent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)",
+      "latency": "0.813156050s"
+    },
+    {
+      "timestamp": "2026-10-17T18:58:52.125835Z",
+      "service": "bridgechatmessagecreated",
+      "status": 204,
+      "trace": "projects/aqar-9f3f9/traces/d636be1478901f9fc0757082a1e44b95",
+      "userAgent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)",
+      "latency": "0.045595712s"
+    }
+  ],
+  "successfulServices": [
+    "bridgecommentcreated",
+    "bridgechatmessagecreated",
+    "deliverbridgenotification",
+    "bridgereplycreated"
+  ],
+  "expectedServices": [
+    "bridgecommentcreated",
+    "bridgechatmessagecreated",
+    "deliverbridgenotification",
+    "bridgereplycreated"
+  ],
+  "allFourServicesAcknowledged": true,
+  "permissionErrors": [],
+  "deliveryDocuments": 0,
+  "paginationRemaining": false,
+  "rollout": {
+    "legacyRecoveryAllowlist": [],
+    "legacyIngressCoordinated": false,
+    "cohort": {
+      "installations": [],
+      "providers": [
+        "fcm"
+      ],
+      "legacyTargets": [],
+      "userIds": []
+    },
+    "mode": "paused",
+    "installationAllowlist": [],
+    "percent": 0
+  },
+  "scope": "Cloud Run request acknowledgements after four inert source writes; no assertion of user notification receipt"
+}

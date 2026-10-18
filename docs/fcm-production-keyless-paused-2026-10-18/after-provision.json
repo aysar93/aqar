@@ -1,0 +1,101 @@
+{
+  "checkedAt": "2026-10-17T21:03:21.239Z",
+  "rollout": {
+    "legacyRecoveryAllowlist": [],
+    "legacyIngressCoordinated": false,
+    "mode": "paused",
+    "percent": 0,
+    "installationAllowlist": [],
+    "cohort": {
+      "installations": [],
+      "providers": [
+        "fcm"
+      ],
+      "userIds": [],
+      "legacyTargets": []
+    }
+  },
+  "deliveryDocuments": 0,
+  "eightFunctionsUnchanged": true,
+  "userManagedKeys": 0,
+  "serviceAccount": "aqar-push-vercel@aqar-9f3f9.iam.gserviceaccount.com",
+  "projectRoles": [
+    "projects/aqar-9f3f9/roles/aqarPushDataRuntime"
+  ],
+  "dataPermissions": [
+    "datastore.databases.get",
+    "datastore.entities.create",
+    "datastore.entities.delete",
+    "datastore.entities.get",
+    "datastore.entities.list",
+    "datastore.entities.update"
+  ],
+  "vercel": {
+    "deployment": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "oidcTokenConfig": {
+      "enabled": true,
+      "issuerMode": "team"
+    },
+    "envs": [
+      {
+        "key": "BRIDGE_ONESIGNAL_ENABLED",
+        "id": "6xwFdqPMEsXyVcTs",
+        "type": "plain",
+        "updatedAt": 1792270988678
+      },
+      {
+        "key": "PUSH_BRIDGE_ENABLED",
+        "id": "BFbbdT8PwU1aG5nf",
+        "type": "plain",
+        "updatedAt": 1792270986383
+      },
+      {
+        "key": "FCM_MIGRATION_ENABLED",
+        "id": "JEEQaqeDsGhjqvOM",
+        "type": "plain",
+        "updatedAt": 1792270984049
+      },
+      {
+        "key": "GCP_PROJECT_NUMBER",
+        "id": "QQJSGxueKdWCvxa7",
+        "type": "plain",
+        "updatedAt": 1792270981739
+      },
+      {
+        "key": "GCLOUD_PROJECT",
+        "id": "dC7cjzBxY72bNt7q",
+        "type": "plain",
+        "updatedAt": 1792270978228
+      },
+      {
+        "key": "FCM_SERVER_PROFILE",
+        "id": "GeMzFEAnGajAjFM9",
+        "type": "plain",
+        "updatedAt": 1792270975519
+      },
+      {
+        "key": "ONESIGNAL_APP_ID",
+        "id": "OSG6S4ABXOWZBlPf",
+        "type": "sensitive",
+        "updatedAt": 1787255450330
+      },
+      {
+        "key": "ONESIGNAL_API_KEY",
+        "id": "5plLiQLO1EvcikP7",
+        "type": "sensitive",
+        "updatedAt": 1787255450330
+      },
+      {
+        "key": "FIREBASE_SERVICE_ACCOUNT",
+        "id": "mZdj1Btn5z4AWsDi",
+        "type": "sensitive",
+        "updatedAt": 1787506932942
+      }
+    ]
+  },
+  "alias": {
+    "alias": "notification-server-henna.vercel.app",
+    "deploymentId": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+    "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X"
+  }
+}

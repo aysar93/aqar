@@ -1,0 +1,14 @@
+{
+  "status": "local-preparation-only",
+  "requiresIndependentProductionApproval": true,
+  "clientDefines": {"TRUSTED_INBOX": true, "FCM_MIGRATION": true},
+  "serverEnvironment": {"TRUSTED_INBOX_ENABLED": "true", "TRUSTED_INBOX_SERVICE_ACCOUNT": "EXPLICIT_DEDICATED_IDENTITY_REQUIRED"},
+  "futureCodebase": "trusted-inbox-next",
+  "futureFunctions": ["acceptTrustedNotification", "projectVerifiedNotification", "queueTrustedOfficeFollowers", "processTrustedNotificationJob"],
+  "defaultConfigRegistered": false,
+  "productionRolloutRequirement": {"mode": "paused", "percent": 0, "allRecipientLists": "empty", "fcmSendIamPermission": false},
+  "rules": "firestore.next.rules",
+  "indexes": "firestore.next.indexes.json",
+  "historyMigration": "offline-plan-only; no deletions; independent source proofs required",
+  "excluded": ["OneSignal", "Cloudinary", "Storage", "reels", "Vercel", "store-publishing", "PR-merge"]
+}

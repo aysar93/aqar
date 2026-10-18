@@ -1,0 +1,25 @@
+name: FCM iOS staging build (no signing or publishing)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios-staging:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+      - name: Apply isolated native configuration in disposable CI checkout
+        run: python3 tools/prepare_ios_fcm_staging.py config/fcm-ios.staging.json config/staging/GoogleService-Info.plist --apply
+      - run: flutter pub get
+      - run: flutter build ios --debug --simulator --target lib/main_fcm_app_staging.dart --dart-define-from-file=config/fcm-ios.staging.json
+      - name: Archive simulator app
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/Aqar-FCM-staging-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aqar-FCM-staging-iOS-simulator
+          path: build/ios/Aqar-FCM-staging-simulator.zip

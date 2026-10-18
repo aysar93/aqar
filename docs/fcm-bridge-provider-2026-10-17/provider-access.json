@@ -1,0 +1,22 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "createdAt": "2026-10-16T21:00:06.958Z",
+  "serviceAccountId": "aqar-onesignal-test-sender",
+  "customRole": "projects/aqar-fcm-test-20261014/roles/aqarTestPushSender",
+  "permissions": [
+    "cloudmessaging.messages.create",
+    "firebase.projects.get"
+  ],
+  "privateKeyCreated": false,
+  "privateContentsPrinted": false,
+  "uploadedToOneSignal": true,
+  "productionChanged": false,
+  "verifiedAt": "2026-10-17T08:29:01.963Z",
+  "androidConfigurationAccepted": true,
+  "oneSignalAppId": "2ef06b79-ae17-4ae0-afd1-3c2a766de0f4",
+  "oneSignalApiKeyAuthenticated": true,
+  "firebaseSecretVersion": 2,
+  "iosOneSignalConfigured": false,
+  "apnsUploadedToOneSignal": false,
+  "liveDeliveryVerified": false
+}

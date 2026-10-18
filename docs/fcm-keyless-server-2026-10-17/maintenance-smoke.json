@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-17T19:16:14.820Z",
+  "status": 202,
+  "body": {
+    "success": true,
+    "mode": "paused",
+    "pushSent": false,
+    "reason": "paused_maintenance"
+  },
+  "scope": "local recovery artifact only; no Firebase initialization or outbound provider calls"
+}

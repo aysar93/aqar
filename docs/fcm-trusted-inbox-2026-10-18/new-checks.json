@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-17T22:05:12.138Z",
+  "command": "node --test test/firestore/trusted_inbox_architecture.test.cjs",
+  "project": "demo-aqar",
+  "host": "127.0.0.1:8186",
+  "newTests": 2,
+  "pass": 2,
+  "fail": 0,
+  "previousTestsRepeated": false,
+  "providerCalls": 0,
+  "productionChanges": 0,
+  "fixtures": "synthetic only",
+  "rulesAreDeploymentCandidate": false,
+  "historyExportExecuted": false
+}

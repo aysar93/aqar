@@ -1,0 +1,119 @@
+{
+  "sha": "1749e863aa56f018c94eb844abda049807ad504d",
+  "checkedAt": "2026-10-17T09:20:42.048Z",
+  "runs": [
+    {
+      "id": 39020359787,
+      "event": "pull_request",
+      "name": "Safety and iOS build",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/aysar93/aqar/actions/runs/39020359787",
+      "jobs": [
+        {
+          "name": "ios",
+          "status": "in_progress",
+          "conclusion": null,
+          "currentStep": "Run flutter build ios --release --no-codesign"
+        },
+        {
+          "name": "push-migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "firestore",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "signed-staging-adhoc",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "bridge-candidate",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 39020359745,
+      "event": "pull_request",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/39020359745",
+      "jobs": [
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 39020357168,
+      "event": "push",
+      "name": "FCM Android full-app staging APK",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/aysar93/aqar/actions/runs/39020357168",
+      "jobs": [
+        {
+          "name": "android-staging",
+          "status": "in_progress",
+          "conclusion": null,
+          "currentStep": "Run flutter build apk --debug --no-pub --target-platform android-arm64 --target lib/main_fcm_app_staging.dart --dart-define-from-file=config/fcm-android.staging.json"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 39020357133,
+      "event": "push",
+      "name": "FCM iOS staging build (no signing or publishing)",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/aysar93/aqar/actions/runs/39020357133",
+      "jobs": [
+        {
+          "name": "ios-staging",
+          "status": "in_progress",
+          "conclusion": null,
+          "currentStep": "Run flutter build ios --debug --simulator --target lib/main_fcm_app_staging.dart --dart-define-from-file=config/fcm-ios.staging.json"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": 39020357137,
+      "event": "push",
+      "name": "FCM isolated emulators",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/aysar93/aqar/actions/runs/39020357137",
+      "jobs": [
+        {
+          "name": "emulators",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "flutter",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "artifacts": []
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-17T21:23:31.039Z",
+  "environment": "local demo-aqar Firestore emulator only",
+  "productionWrites": 0,
+  "providerCalls": 0,
+  "previousPassedTestsRerun": false,
+  "newRuleCases": 6,
+  "initial": {
+    "pass": 4,
+    "fail": 1,
+    "reason": "test harness incorrectly expected withSecurityRulesDisabled to return a callback result"
+  },
+  "failedCaseOnlyRerun": {
+    "pass": 1,
+    "fail": 0
+  },
+  "newRetiredHandlerChecks": {
+    "pass": 2,
+    "fail": 0,
+    "actualExportsInvokedWithProviderMock": true
+  },
+  "scopedStrictCandidateCompiled": true,
+  "strictLegacySourceIdBoundary": "expected rejection observed; compatibility blocker intentionally not masked",
+  "hashes": {
+    "firestore.compat-update-only.rules": "760af312d37aff5b311a9815a1ca492bb8eeed6de0d8113510eb2b059e1aa7fb",
+    "firestore.strict-source-candidate.rules": "6a9e9f544c4c0f35dc5c742042597be06c6169ae1ad1c5f057c72a36d3a89c06"
+  },
+  "newMigrationDowngradeCase": {
+    "pass": 1,
+    "fail": 0,
+    "priorPassedCasesRepeated": false
+  },
+  "historicalProtectionReads": {
+    "deploymentUrls": 2,
+    "branchAliases": 1,
+    "allRedirectToVercelLogin": true,
+    "withoutBypass": true
+  }
+}

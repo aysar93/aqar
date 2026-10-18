@@ -1,0 +1,53 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "checkedAt": "2026-10-17T09:21:22.336Z",
+  "deviceModel": "HONOR JMS-W09",
+  "androidVersion": "15",
+  "deliveryCodeSource": "d9b0eb429a04b94e019dd4a05fadd2faef339a4c",
+  "logoutFixSource": "1749e863aa56f018c94eb844abda049807ad504d",
+  "testMode": "Original CI debug APK with Dart fixes loaded by Flutter attach; final standalone candidate not tested",
+  "pairs": [
+    {
+      "label": "OS",
+      "eventIdentityPreserved": true,
+      "receiptIdentityPreserved": true,
+      "acceptedBefore": 1,
+      "acceptedAfter": 1,
+      "provider": "onesignal"
+    },
+    {
+      "label": "FCM",
+      "eventIdentityPreserved": true,
+      "receiptIdentityPreserved": true,
+      "acceptedBefore": 1,
+      "acceptedAfter": 1,
+      "provider": "fcm"
+    }
+  ],
+  "systemNotificationObserved": {
+    "fcm": true,
+    "oneSignal": true,
+    "oneSignalRollback": true
+  },
+  "externalTapOpenedExpectedProperty": {
+    "fcm": true,
+    "oneSignal": true
+  },
+  "registrationWindowAfterStableBinding": {
+    "attempts": 6,
+    "providerAttempts": 4,
+    "unchangedAcrossDeliveryPhases": true
+  },
+  "logout": {
+    "project": "aqar-fcm-test-20261014",
+    "checkedAt": "2026-10-17T09:20:13.438Z",
+    "sdkPushOptedOut": true,
+    "providerSubscriptionEnabled": false,
+    "inactiveSyntheticBindingsRemoved": 0,
+    "loginScreenObserved": true,
+    "productionChanged": false
+  },
+  "productionChanged": false,
+  "publishedLegacyBinaryTested": false,
+  "iosMixedProvidersTested": false
+}

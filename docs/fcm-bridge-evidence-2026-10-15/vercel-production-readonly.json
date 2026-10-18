@@ -1,0 +1,13 @@
+{
+  "provider": "OneSignal only",
+  "sourceInspected": "server.js",
+  "authenticatedPostSend": false,
+  "commit": "f2a311f5dd8518c0c2720690012de21d4e2217ef",
+  "canonicalDedup": false,
+  "envFileListedButNotOpened": true,
+  "readOnly": true,
+  "project": "notification-server",
+  "productionChanged": false,
+  "domain": "notification-server-henna.vercel.app",
+  "deploymentId": "G7NLNBc8zX539QN46FnNJhss8EJN"
+}

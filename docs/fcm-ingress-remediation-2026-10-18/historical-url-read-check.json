@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-17T21:24:30.916Z",
+  "withoutCredentials": true,
+  "bypassUsed": false,
+  "sendRouteInvoked": false,
+  "results": [
+    {
+      "id": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+      "url": "notification-server-68tstlpxw-aysar93s-projects.vercel.app",
+      "method": "GET",
+      "path": "/",
+      "http": 302,
+      "locationHost": "vercel.com",
+      "vercelError": null,
+      "protectedResponse": true
+    },
+    {
+      "id": "dpl_EwEDSV3vYPb3wbgQA9mzXXq1tDf7",
+      "url": "notification-server-mnh6zdtym-aysar93s-projects.vercel.app",
+      "method": "GET",
+      "path": "/",
+      "http": 302,
+      "locationHost": "vercel.com",
+      "vercelError": null,
+      "protectedResponse": true
+    }
+  ]
+}

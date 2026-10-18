@@ -254,7 +254,10 @@ exports.sendNotificationToUser = onDocumentCreated(
   "notifications/{notificationId}",
   async (event) => {
 
+    // The coordinated bridge owns all delivery while enabled, including pause.
+    if (process.env.PUSH_BRIDGE_ENABLED === 'true') return null;
     const data = event.data.data();
+    if (data.pushTransport === 'fcm_v1' || data.deliveryType === 'internal') return null;
 
     const userId = data.userId;
     const title = data.title;

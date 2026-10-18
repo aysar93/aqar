@@ -1,0 +1,16 @@
+✔ old/new sender share canonical identity across duplicate inbox documents and transports (43.7171ms)
+✔ old + new recipient installations are routed individually; rollback keeps old subscriptions (26.3224ms)
+✔ mapped old profile subscription does not duplicate or survive detach (0.9019ms)
+✔ OneSignal uses a stable UUID idempotency key per event/device and no broad audience (2.6633ms)
+✔ legacy direct FCM recovery requires explicit UID cohort and unexpired, verified token approval (6.7832ms)
+✔ concurrent old/new ingress, provider rollback, ambiguous failures never double-send (5.4311ms)
+✔ accepted send with failed receipt write stays claimed and is not sent again (5.4919ms)
+✔ unmapped legacy subscription blocks dual delivery when optional binding fails (1.0812ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 503.0313

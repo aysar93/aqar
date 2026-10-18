@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-17T21:24:45.650Z",
+  "results": [
+    {
+      "deploymentId": "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+      "aliases": [
+        {
+          "alias": "notification-server-git-main-aysar93s-projects.vercel.app",
+          "uid": "d32d7ae19d91137ee7a3059cf3b8df1b07a72b837de39c9e018e1e2b0bfdeb5a85e6839413842e55f957b4b9fb655567de071340fb80716158d97e3545c275b0"
+        }
+      ]
+    },
+    {
+      "deploymentId": "dpl_EwEDSV3vYPb3wbgQA9mzXXq1tDf7",
+      "aliases": []
+    }
+  ]
+}

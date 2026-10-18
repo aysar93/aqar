@@ -1,5 +1,7 @@
 {
-  "storage": { "rules": "storage.rules" },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "firestore": {
     "database": "(default)",
     "location": "nam5",
@@ -7,8 +9,8 @@
     "indexes": "firestore.indexes.json"
   },
   "database": {
-  "rules": "database.rules.json"
-},
+    "rules": "database.rules.json"
+  },
   "flutter": {
     "platforms": {
       "android": {
@@ -39,7 +41,12 @@
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
-        "*.local"
+        "*.local",
+        "push_*.js",
+        "source-authorization.cjs",
+        "trusted_inbox/**",
+        "staging/**",
+        "*.test.js"
       ]
     }
   ]

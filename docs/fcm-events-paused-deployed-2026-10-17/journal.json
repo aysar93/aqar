@@ -1,0 +1,42 @@
+[
+  {
+    "at": "2026-10-17T18:54:00.006Z",
+    "action": "serviceAccountCreated",
+    "resource": "aqar-push-events@aqar-9f3f9.iam.gserviceaccount.com"
+  },
+  {
+    "at": "2026-10-17T18:54:00.805Z",
+    "action": "singlePermissionRoleCreated",
+    "resource": "projects/aqar-9f3f9/roles/aqarPushEventReceive"
+  },
+  {
+    "at": "2026-10-17T18:54:01.428Z",
+    "action": "singlePermissionRoleCreated",
+    "resource": "projects/aqar-9f3f9/roles/aqarPushServiceInvoke"
+  },
+  {
+    "at": "2026-10-17T18:54:44.674Z",
+    "action": "projectBindingsAdded",
+    "resource": "existing data/auth roles plus single Eventarc permission; no project invocation grant"
+  },
+  {
+    "at": "2026-10-17T18:57:15.379Z",
+    "action": "serviceScopedInvokeBinding",
+    "resource": "projects/aqar-9f3f9/locations/us-central1/services/bridgecommentcreated"
+  },
+  {
+    "at": "2026-10-17T18:57:16.672Z",
+    "action": "serviceScopedInvokeBinding",
+    "resource": "projects/aqar-9f3f9/locations/us-central1/services/bridgechatmessagecreated"
+  },
+  {
+    "at": "2026-10-17T18:57:18.534Z",
+    "action": "serviceScopedInvokeBinding",
+    "resource": "projects/aqar-9f3f9/locations/us-central1/services/deliverbridgenotification"
+  },
+  {
+    "at": "2026-10-17T18:57:19.768Z",
+    "action": "serviceScopedInvokeBinding",
+    "resource": "projects/aqar-9f3f9/locations/us-central1/services/bridgereplycreated"
+  }
+]

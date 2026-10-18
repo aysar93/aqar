@@ -1,0 +1,29 @@
+{
+  "decision": "NO-GO for activation under all current constraints",
+  "productionChanges": false,
+  "readyPreparation": "Vercel retirement plan and fail-closed offline readiness guard",
+  "unresolved": "Strict authorization of legacy inbox creates without rejecting legitimate old writes cannot be guaranteed by the available contract.",
+  "requiredIndependentApproval": {
+    "projectId": "prj_DfyjRjfnIZFb7SKyN1EHD4HZfv1X",
+    "disconnectGitLink": {
+      "org": "aysar93",
+      "repo": "notification_server"
+    },
+    "deploymentHooksToDisable": [],
+    "retireDeployments": [
+      "dpl_G7NLNBc8zX539QN46FnNJhss8EJN",
+      "dpl_EwEDSV3vYPb3wbgQA9mzXXq1tDf7"
+    ],
+    "removeAlias": "notification-server-git-main-aysar93s-projects.vercel.app",
+    "keepDeployments": [
+      "dpl_DYZa5Drina73ujWgZdiUnCoKHqCm",
+      "dpl_BJ7BcrBbLzNFPywfjzRamajXyKYw"
+    ],
+    "deleteReversible": false
+  },
+  "noRulesOrSendApprovalIncluded": true,
+  "pausedPreserved": true,
+  "recipientListsRemainEmpty": true,
+  "fcmPermissionGranted": false,
+  "jsonKeysCreated": 0
+}

@@ -1,0 +1,13 @@
+{
+  "checkedOn": "2026-10-16",
+  "bundle": "com.andalus.aqar",
+  "source": "Google Play Console > App signing > Upload key certificate; read-only",
+  "playUploadCertificateSha256": "71504105ea3b229354e2a8fa942c882e1e090842229d07b00b5b552f0909228e",
+  "localSigningCertificateSha256": "71504105ea3b229354e2a8fa942c882e1e090842229d07b00b5b552f0909228e",
+  "uploadCertificateMatches": true,
+  "playAppSigningCertificateSha256": "cd8fd6299ec6b3f27f697a5c78d7ec92a4ec13e750f140db1d1b8fde9689f576",
+  "publishedApkCertificateMatchesPlayAppSigning": true,
+  "credentialsReset": false,
+  "playSettingsChanged": false,
+  "storeUploadPerformed": false
+}

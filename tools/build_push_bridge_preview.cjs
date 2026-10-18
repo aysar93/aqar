@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),output=path.join(root,'work','bridge-vercel-preview-20261015');
+fs.mkdirSync(path.join(output,'api'),{recursive:true});
+const obsoleteWrapper=path.join(output,'push_bridge_functions.js');
+if(fs.existsSync(obsoleteWrapper))fs.unlinkSync(obsoleteWrapper);
+const modules=['push_policy.js','push_bridge_policy.js','push_bridge_delivery.js','push_bridge_dispatch.js','push_onesignal.js'];
+for(const name of modules)fs.copyFileSync(path.join(root,'functions',name),path.join(output,name));
+for(const name of ['legacy-ingress.cjs','preview-entry.cjs'])fs.copyFileSync(path.join(root,'integrations','vercel',name),path.join(output,name));
+for(const name of ['package.json','package-lock.json'])fs.copyFileSync(path.join(root,'functions',name),path.join(output,name));
+fs.writeFileSync(path.join(output,'api','index.js'),"module.exports = require('../preview-entry.cjs').handler;\n");
+fs.writeFileSync(path.join(output,'vercel.json'),JSON.stringify({rewrites:[{source:'/(.*)',destination:'/api/index'}],functions:{'api/index.js':{maxDuration:30}}},null,2));
+fs.writeFileSync(path.join(output,'.vercelignore'),'.env*\nnode_modules\n');
+console.log(JSON.stringify({prepared:output,productionDeployPerformed:false,credentialsIncluded:false,envFilesIncluded:false}));

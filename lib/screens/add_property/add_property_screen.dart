@@ -1,3 +1,4 @@
+import '../../services/trusted_inbox.dart';
 import '../../moderation/content_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -41,6 +42,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     required String propertyTitle,
     required String publisherUid,
   }) async {
+    if (TrustedInbox.enabled) return; // Server owns office follower fanout.
     try {
       final followersSnapshot = await FirebaseFirestore.instance
           .collection('office_followers')

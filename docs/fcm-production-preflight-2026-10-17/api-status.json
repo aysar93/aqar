@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-17T14:17:34.211Z",
+  "project": "aqar-9f3f9",
+  "readOnly": true,
+  "states": [
+    {
+      "service": "cloudscheduler.googleapis.com",
+      "state": "DISABLED"
+    },
+    {
+      "service": "secretmanager.googleapis.com",
+      "state": "DISABLED"
+    },
+    {
+      "service": "eventarc.googleapis.com",
+      "state": "ENABLED"
+    },
+    {
+      "service": "run.googleapis.com",
+      "state": "ENABLED"
+    },
+    {
+      "service": "cloudbuild.googleapis.com",
+      "state": "ENABLED"
+    },
+    {
+      "service": "artifactregistry.googleapis.com",
+      "state": "ENABLED"
+    }
+  ],
+  "productionChanged": false
+}

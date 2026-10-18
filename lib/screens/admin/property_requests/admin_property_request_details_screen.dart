@@ -1,6 +1,8 @@
+import '../../../services/trusted_inbox.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../../services/push_migration.dart';
 
 class AdminPropertyRequestDetailsScreen extends StatefulWidget {
   final String requestId;
@@ -212,10 +214,13 @@ class _AdminPropertyRequestDetailsScreenState
 
       final requestType = (data['requestType'] ?? '').toString();
 
-      await FirebaseFirestore.instance.collection('notifications').add({
+      await FirebaseFirestore.instance
+          .collection(TrustedInbox.writeCollection)
+          .add({
+        ...PushMigration.fields,
         'userId': userId,
         'title': approved ? 'تمت الموافقة على طلبك' : 'تم رفض طلبك',
-        'body': approved
+        'message': approved
             ? 'تمت الموافقة على طلب $propertyType ${_requestTypeText(requestType)} ونشره.'
             : 'تم رفض طلب $propertyType ${_requestTypeText(requestType)}',
         'type': approved

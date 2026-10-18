@@ -1,0 +1,1250 @@
+{
+  "project": "aqar-fcm-test-20261014",
+  "run": "readiness-1792015402595",
+  "startedAt": "2026-10-14T22:03:22.595Z",
+  "checkedAt": "2026-10-14T22:17:18.083Z",
+  "functions": [
+    {
+      "name": "unregisterPushDevice",
+      "state": "ACTIVE",
+      "maxInstances": 2,
+      "minInstances": 0
+    },
+    {
+      "name": "registerPushDevice",
+      "state": "ACTIVE",
+      "maxInstances": 2,
+      "minInstances": 0
+    },
+    {
+      "name": "deliverFcmNotification",
+      "state": "ACTIVE",
+      "maxInstances": 2,
+      "minInstances": 0
+    }
+  ],
+  "realDeviceSends": 0,
+  "deliveryThroughputMeasured": false,
+  "waves": [
+    {
+      "writes": 5,
+      "concurrencyCap": 5,
+      "firestoreWriteAckMs": 1015
+    },
+    {
+      "writes": 10,
+      "concurrencyCap": 5,
+      "firestoreWriteAckMs": 1667
+    },
+    {
+      "writes": 15,
+      "concurrencyCap": 5,
+      "firestoreWriteAckMs": 1843
+    }
+  ],
+  "unauthenticatedProbe": {
+    "requests": 10,
+    "statusCodes": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401
+    ],
+    "elapsedMs": 3653,
+    "allRejected": true
+  },
+  "unexpectedDeliveryClaims": 0,
+  "fixtureDocuments": 32,
+  "cleanupVerified": true,
+  "finishedAt": "2026-10-14T22:04:11.642Z",
+  "errors": {
+    "count": 0,
+    "hasMore": false,
+    "metadata": []
+  },
+  "metrics": {
+    "run.googleapis.com/request_count": {
+      "series": [
+        {
+          "labels": {
+            "location": "us-central1",
+            "service_name": "deliverfcmnotification",
+            "revision_name": "deliverfcmnotification-00002-pep",
+            "project_id": "aqar-fcm-test-20261014",
+            "configuration_name": "deliverfcmnotification"
+          },
+          "metricLabels": {
+            "response_code": "204",
+            "route": "",
+            "response_code_class": "2xx"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:15:19.782Z",
+                "endTime": "2026-10-14T22:16:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:14:19.782Z",
+                "endTime": "2026-10-14T22:15:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:19.782Z",
+                "endTime": "2026-10-14T22:14:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:19.782Z",
+                "endTime": "2026-10-14T22:13:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:19.782Z",
+                "endTime": "2026-10-14T22:12:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:19.782Z",
+                "endTime": "2026-10-14T22:11:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:19.782Z",
+                "endTime": "2026-10-14T22:10:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:19.782Z",
+                "endTime": "2026-10-14T22:09:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:19.782Z",
+                "endTime": "2026-10-14T22:08:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:19.782Z",
+                "endTime": "2026-10-14T22:07:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:19.782Z",
+                "endTime": "2026-10-14T22:06:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:19.782Z",
+                "endTime": "2026-10-14T22:05:19.782Z"
+              },
+              "value": {
+                "int64Value": "15"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:19.782Z",
+                "endTime": "2026-10-14T22:04:19.782Z"
+              },
+              "value": {
+                "int64Value": "45"
+              }
+            }
+          ]
+        },
+        {
+          "labels": {
+            "location": "us-central1",
+            "project_id": "aqar-fcm-test-20261014",
+            "revision_name": "registerpushdevice-00002-fit",
+            "configuration_name": "registerpushdevice",
+            "service_name": "registerpushdevice"
+          },
+          "metricLabels": {
+            "response_code": "401",
+            "response_code_class": "4xx",
+            "route": ""
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:15:19.782Z",
+                "endTime": "2026-10-14T22:16:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:14:19.782Z",
+                "endTime": "2026-10-14T22:15:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:19.782Z",
+                "endTime": "2026-10-14T22:14:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:19.782Z",
+                "endTime": "2026-10-14T22:13:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:19.782Z",
+                "endTime": "2026-10-14T22:12:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:19.782Z",
+                "endTime": "2026-10-14T22:11:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:19.782Z",
+                "endTime": "2026-10-14T22:10:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:19.782Z",
+                "endTime": "2026-10-14T22:09:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:19.782Z",
+                "endTime": "2026-10-14T22:08:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:19.782Z",
+                "endTime": "2026-10-14T22:07:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:19.782Z",
+                "endTime": "2026-10-14T22:06:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:19.782Z",
+                "endTime": "2026-10-14T22:05:19.782Z"
+              },
+              "value": {
+                "int64Value": "2"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:19.782Z",
+                "endTime": "2026-10-14T22:04:19.782Z"
+              },
+              "value": {
+                "int64Value": "8"
+              }
+            }
+          ]
+        },
+        {
+          "labels": {
+            "location": "us-central1",
+            "service_name": "unregisterpushdevice",
+            "revision_name": "unregisterpushdevice-00002-vip",
+            "project_id": "aqar-fcm-test-20261014",
+            "configuration_name": "unregisterpushdevice"
+          },
+          "metricLabels": {
+            "response_code": "200",
+            "route": "",
+            "response_code_class": "2xx"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:19.782Z",
+                "endTime": "2026-10-14T22:08:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:19.782Z",
+                "endTime": "2026-10-14T22:07:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:19.782Z",
+                "endTime": "2026-10-14T22:06:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:19.782Z",
+                "endTime": "2026-10-14T22:05:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:19.782Z",
+                "endTime": "2026-10-14T22:04:19.782Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            }
+          ]
+        }
+      ],
+      "hasMore": false
+    },
+    "firestore.googleapis.com/document/write_count": {
+      "series": [
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "module": "__unknown__",
+            "op": "CREATE",
+            "version": "__unknown__"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:14:20.682Z",
+                "endTime": "2026-10-14T22:15:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:20.682Z",
+                "endTime": "2026-10-14T22:14:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:20.682Z",
+                "endTime": "2026-10-14T22:13:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:20.682Z",
+                "endTime": "2026-10-14T22:12:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:20.682Z",
+                "endTime": "2026-10-14T22:11:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:20.682Z",
+                "endTime": "2026-10-14T22:10:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:20.682Z",
+                "endTime": "2026-10-14T22:09:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:20.682Z",
+                "endTime": "2026-10-14T22:08:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:20.682Z",
+                "endTime": "2026-10-14T22:07:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:20.682Z",
+                "endTime": "2026-10-14T22:06:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:20.682Z",
+                "endTime": "2026-10-14T22:05:20.682Z"
+              },
+              "value": {
+                "int64Value": "1"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:20.682Z",
+                "endTime": "2026-10-14T22:04:20.682Z"
+              },
+              "value": {
+                "int64Value": "31"
+              }
+            }
+          ]
+        },
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "op": "UPDATE",
+            "module": "__unknown__",
+            "version": "__unknown__"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:14:20.682Z",
+                "endTime": "2026-10-14T22:15:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:20.682Z",
+                "endTime": "2026-10-14T22:14:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:20.682Z",
+                "endTime": "2026-10-14T22:13:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:20.682Z",
+                "endTime": "2026-10-14T22:12:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:20.682Z",
+                "endTime": "2026-10-14T22:11:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:20.682Z",
+                "endTime": "2026-10-14T22:10:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:20.682Z",
+                "endTime": "2026-10-14T22:09:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:20.682Z",
+                "endTime": "2026-10-14T22:08:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:20.682Z",
+                "endTime": "2026-10-14T22:07:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:20.682Z",
+                "endTime": "2026-10-14T22:06:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:20.682Z",
+                "endTime": "2026-10-14T22:05:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:20.682Z",
+                "endTime": "2026-10-14T22:04:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            }
+          ]
+        },
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "version": "__unknown__",
+            "module": "__unknown__",
+            "op": "UPDATE_NOOP"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:14:20.682Z",
+                "endTime": "2026-10-14T22:15:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:20.682Z",
+                "endTime": "2026-10-14T22:14:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:20.682Z",
+                "endTime": "2026-10-14T22:13:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:20.682Z",
+                "endTime": "2026-10-14T22:12:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:20.682Z",
+                "endTime": "2026-10-14T22:11:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:20.682Z",
+                "endTime": "2026-10-14T22:10:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:20.682Z",
+                "endTime": "2026-10-14T22:09:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:20.682Z",
+                "endTime": "2026-10-14T22:08:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:20.682Z",
+                "endTime": "2026-10-14T22:07:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:20.682Z",
+                "endTime": "2026-10-14T22:06:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:20.682Z",
+                "endTime": "2026-10-14T22:05:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:20.682Z",
+                "endTime": "2026-10-14T22:04:20.682Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            }
+          ]
+        }
+      ],
+      "hasMore": false
+    },
+    "firestore.googleapis.com/document/read_count": {
+      "series": [
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "module": "__unknown__",
+            "version": "__unknown__",
+            "type": "LOOKUP"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:21.163Z",
+                "endTime": "2026-10-14T22:14:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:21.163Z",
+                "endTime": "2026-10-14T22:13:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:21.163Z",
+                "endTime": "2026-10-14T22:12:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:21.163Z",
+                "endTime": "2026-10-14T22:11:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:21.163Z",
+                "endTime": "2026-10-14T22:10:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:21.163Z",
+                "endTime": "2026-10-14T22:09:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:21.163Z",
+                "endTime": "2026-10-14T22:08:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:21.163Z",
+                "endTime": "2026-10-14T22:07:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:21.163Z",
+                "endTime": "2026-10-14T22:06:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:21.163Z",
+                "endTime": "2026-10-14T22:05:21.163Z"
+              },
+              "value": {
+                "int64Value": "17"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:21.163Z",
+                "endTime": "2026-10-14T22:04:21.163Z"
+              },
+              "value": {
+                "int64Value": "69"
+              }
+            }
+          ]
+        },
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "version": "__unknown__",
+            "module": "__unknown__",
+            "type": "NOT_FOUND"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:21.163Z",
+                "endTime": "2026-10-14T22:14:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:21.163Z",
+                "endTime": "2026-10-14T22:13:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:21.163Z",
+                "endTime": "2026-10-14T22:12:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:21.163Z",
+                "endTime": "2026-10-14T22:11:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:21.163Z",
+                "endTime": "2026-10-14T22:10:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:21.163Z",
+                "endTime": "2026-10-14T22:09:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:21.163Z",
+                "endTime": "2026-10-14T22:08:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:21.163Z",
+                "endTime": "2026-10-14T22:07:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:21.163Z",
+                "endTime": "2026-10-14T22:06:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:21.163Z",
+                "endTime": "2026-10-14T22:05:21.163Z"
+              },
+              "value": {
+                "int64Value": "36"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:21.163Z",
+                "endTime": "2026-10-14T22:04:21.163Z"
+              },
+              "value": {
+                "int64Value": "54"
+              }
+            }
+          ]
+        },
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "module": "__unknown__",
+            "type": "QUERY",
+            "version": "__unknown__"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:21.163Z",
+                "endTime": "2026-10-14T22:14:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:21.163Z",
+                "endTime": "2026-10-14T22:13:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:21.163Z",
+                "endTime": "2026-10-14T22:12:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:21.163Z",
+                "endTime": "2026-10-14T22:11:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:21.163Z",
+                "endTime": "2026-10-14T22:10:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:21.163Z",
+                "endTime": "2026-10-14T22:09:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:21.163Z",
+                "endTime": "2026-10-14T22:08:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:21.163Z",
+                "endTime": "2026-10-14T22:07:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:21.163Z",
+                "endTime": "2026-10-14T22:06:21.163Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:21.163Z",
+                "endTime": "2026-10-14T22:05:21.163Z"
+              },
+              "value": {
+                "int64Value": "3"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:21.163Z",
+                "endTime": "2026-10-14T22:04:21.163Z"
+              },
+              "value": {
+                "int64Value": "27"
+              }
+            }
+          ]
+        }
+      ],
+      "hasMore": false
+    },
+    "firestore.googleapis.com/document/delete_count": {
+      "series": [
+        {
+          "labels": {
+            "project_id": "aqar-fcm-test-20261014"
+          },
+          "metricLabels": {
+            "module": "__unknown__",
+            "version": "__unknown__"
+          },
+          "points": [
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:14:21.661Z",
+                "endTime": "2026-10-14T22:15:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:13:21.661Z",
+                "endTime": "2026-10-14T22:14:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:12:21.661Z",
+                "endTime": "2026-10-14T22:13:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:11:21.661Z",
+                "endTime": "2026-10-14T22:12:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:10:21.661Z",
+                "endTime": "2026-10-14T22:11:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:09:21.661Z",
+                "endTime": "2026-10-14T22:10:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:08:21.661Z",
+                "endTime": "2026-10-14T22:09:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:07:21.661Z",
+                "endTime": "2026-10-14T22:08:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:06:21.661Z",
+                "endTime": "2026-10-14T22:07:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:05:21.661Z",
+                "endTime": "2026-10-14T22:06:21.661Z"
+              },
+              "value": {
+                "int64Value": "0"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:04:21.661Z",
+                "endTime": "2026-10-14T22:05:21.661Z"
+              },
+              "value": {
+                "int64Value": "24"
+              }
+            },
+            {
+              "interval": {
+                "startTime": "2026-10-14T22:03:21.661Z",
+                "endTime": "2026-10-14T22:04:21.661Z"
+              },
+              "value": {
+                "int64Value": "8"
+              }
+            }
+          ]
+        }
+      ],
+      "hasMore": false
+    }
+  },
+  "billing": {
+    "enabled": true,
+    "actualCostVerified": false,
+    "billingAccountIdOmitted": true
+  },
+  "limits": {
+    "notificationWrites": 30,
+    "fixtureWrites": 2,
+    "fixtureDeletes": 32,
+    "callableRequests": 10,
+    "maxConcurrentFirestoreWrites": 5,
+    "physicalDeviceTokensUsed": 0
+  },
+  "notes": [
+    "Cloud suppression path only; write acknowledgement is not notification delivery latency.",
+    "Monitoring may lag and is project-wide; no attribution of all background usage to this run.",
+    "Budget alerts are not spending caps; actual billed cost requires billing report/export."
+  ]
+}
