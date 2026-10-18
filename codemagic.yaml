@@ -1,0 +1,36 @@
+# Manual isolated test only. No triggers, credentials groups, signing or publishing.
+workflows:
+  ios-media-isolated-no-publish:
+    name: AQAR media isolated iOS - NO PUBLISH
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.44.8
+      xcode: latest
+    scripts:
+      - name: Assert isolated source
+        script: |
+          test "$CM_BRANCH" = media-full-app-test-20261018
+          test -f lib/main_full_test.dart
+          ! grep -R -E 'AIza[0-9A-Za-z_-]{30,}|BEGIN PRIVATE KEY|cloudinary://' lib ios tools
+          python3 tools/prepare_test_config.py
+      - name: Resolve packages
+        script: flutter pub get
+      - name: Media safety unit tests
+        script: flutter test test/services/media_migration_test.dart test/services/private_media_image_test.dart test/services/media_broker_http_test.dart test/services/media_public_manifest_test.dart --reporter expanded --dart-define=MEDIA_UPLOAD_URL=http://127.0.0.1:9396/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=http://127.0.0.1:9396/readPrivateMedia
+      - name: Build isolated simulator
+        script: flutter build ios --simulator --debug --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
+      - name: Simulator installation and process smoke test
+        script: python3 tools/ios_simulator_smoke.py
+      - name: Build unsigned isolated device app
+        script: flutter build ios --no-codesign --debug --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
+      - name: Package artifacts
+        script: |
+          ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/Runner-simulator.zip
+          ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app build/ios/Runner-unsigned-device.zip
+    artifacts:
+      - build/ios/Runner-simulator.zip
+      - build/ios/Runner-unsigned-device.zip
+      - build/ios-test-evidence/*
+      - build/cloud-config-status.json
+      - /tmp/xcodebuild_logs/*.log

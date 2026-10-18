@@ -1,0 +1,13 @@
+.dart_tool/
+build/
+.flutter-plugins*
+*.env
+*.dpapi
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Runner/GoogleService-Info.plist

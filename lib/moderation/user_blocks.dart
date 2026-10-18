@@ -1,0 +1,204 @@
+import 'content_policy.dart';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+/// Per-viewer blocks. The original snapshots are retained so an unblock restores
+/// content without another network request. An account switch clears all state.
+class UserBlocks extends ChangeNotifier {
+  UserBlocks._();
+  static final instance = UserBlocks._();
+  StreamSubscription<User?>? _auth;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
+  Set<String> _users = {}, _offices = {};
+  bool ready = false;
+  String? _uid;
+  void initialize() {
+    _auth ??= FirebaseAuth.instance.authStateChanges().listen((user) {
+      _subscription?.cancel();
+      _uid = user?.uid;
+      _users = {};
+      _offices = {};
+      ready = user == null;
+      notifyListeners();
+      if (user == null) return;
+      final uid = user.uid;
+      _subscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('blockedUsers')
+          .snapshots()
+          .listen((snapshot) {
+        if (_uid != uid) return;
+        _users = snapshot.docs.map((d) => d.id).toSet();
+        _offices = snapshot.docs
+            .map((d) => d.data()['officeId']?.toString() ?? '')
+            .where((id) => id.isNotEmpty)
+            .toSet();
+        ready = true;
+        notifyListeners();
+      }, onError: (Object error) {
+        // Fail closed: never expose a blocked publisher when loading fails.
+        ready = false;
+        notifyListeners();
+      });
+    });
+  }
+
+  final Map<String, Map<String, dynamic>> _targets = {};
+  void rememberTarget(String path, Map<String, dynamic> data) {
+    _targets[path] = data;
+  }
+
+  bool hides(Map<String, dynamic> data) {
+    if (!ready || isBlockedContent(data, _users, _offices)) return true;
+    for (final entry in {
+      'properties': data['propertyId'],
+      'offices': data['officeId']
+    }.entries) {
+      final target = _targets['${entry.key}/${entry.value}'];
+      if (target != null && isBlockedContent(target, _users, _offices))
+        return true;
+    }
+    return false;
+  }
+
+  Future<void> block(String targetUid,
+      {String targetPath = '',
+      String officeId = '',
+      String reason = 'حظر مستخدم مسيء',
+      String details = ''}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || targetUid.isEmpty || uid == targetUid) {
+      throw StateError('سجّل الدخول لحظر مستخدم آخر.');
+    }
+    final db = FirebaseFirestore.instance;
+    final report = db.collection('user_reports').doc();
+    final batch = db.batch();
+    batch.set(
+        db
+            .collection('users')
+            .doc(uid)
+            .collection('blockedUsers')
+            .doc(targetUid),
+        {
+          'targetUid': targetUid,
+          'officeId': officeId,
+          'reportId': report.id,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+    batch.set(report, {
+      'userId': uid,
+      'targetUid': targetUid,
+      'targetPath': targetPath,
+      'reason': reason,
+      'details': details,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    // Optimistic hiding is immediate; a rejected write restores the old state.
+    final oldUsers = Set<String>.from(_users),
+        oldOffices = Set<String>.from(_offices);
+    _users.add(targetUid);
+    if (officeId.isNotEmpty) _offices.add(officeId);
+    notifyListeners();
+    try {
+      await batch.commit();
+    } catch (_) {
+      if (_uid == uid) {
+        _users = oldUsers;
+        _offices = oldOffices;
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+}
+
+/// Re-emits cached query results on a block, including already mounted feeds.
+extension SafeQuery<T extends Object?> on Query<T> {
+  Stream<QuerySnapshot<T>> safeSnapshots() {
+    // Firestore streams can be listened to again after a lazy list/tab disposes
+    // its StreamBuilder. Each listener owns and cleans up its subscription.
+    return Stream<QuerySnapshot<T>>.multi((controller) {
+      QuerySnapshot<T>? latest;
+      var cancelled = false;
+      void emit() {
+        if (!cancelled && latest != null) {
+          controller.add(_VisibleSnapshot(latest!));
+        }
+      }
+
+      UserBlocks.instance.addListener(emit);
+      final subscription = snapshots().listen(
+          (snapshot) {
+            latest = snapshot;
+            emit();
+          },
+          onError: controller.addError,
+          onDone: () {
+            UserBlocks.instance.removeListener(emit);
+            controller.close();
+          });
+      controller.onPause = subscription.pause;
+      controller.onResume = subscription.resume;
+      controller.onCancel = () {
+        cancelled = true;
+        UserBlocks.instance.removeListener(emit);
+        return subscription.cancel();
+      };
+    }, isBroadcast: true);
+  }
+}
+
+class _VisibleSnapshot<T extends Object?> implements QuerySnapshot<T> {
+  _VisibleSnapshot(this.source);
+  final QuerySnapshot<T> source;
+  @override
+  List<QueryDocumentSnapshot<T>> get docs => source.docs.where((doc) {
+        final data = doc.data();
+        return data is! Map ||
+            !UserBlocks.instance.hides(Map<String, dynamic>.from(data));
+      }).toList();
+  @override
+  int get size => docs.length;
+  @override
+  SnapshotMetadata get metadata => source.metadata;
+  @override
+  List<DocumentChange<T>> get docChanges => []; // Consumers use full snapshots.
+}
+
+bool hiddenForViewer(BuildContext context, Map<String, dynamic> data) {
+  // InheritedNotifier subscribes even when a detail page holds static route data.
+  context.dependOnInheritedWidgetOfExactType<BlockScope>();
+  return UserBlocks.instance.hides(data);
+}
+
+class BlockScope extends InheritedNotifier<UserBlocks> {
+  BlockScope({super.key, required super.child})
+      : super(notifier: UserBlocks.instance);
+}
+
+Widget blockedContentPage() => Scaffold(
+    appBar: AppBar(title: const Text('المحتوى غير متاح')),
+    body: const Center(
+        child: Text('هذا المحتوى مخفي وفق إعدادات الحظر أو المراجعة.')));
+
+/// Pure policy shared by all feeds, nested reel snapshots and detail pages.
+bool isBlockedContent(
+    Map<String, dynamic> data, Set<String> users, Set<String> offices) {
+  if (data['isHidden'] == true) return true;
+  if (['title', 'description', 'text', 'comment', 'ownerReply']
+      .any((key) => data[key] is String && ContentPolicy.rejects(data[key])))
+    return true;
+  if (['userId', 'publisherUid', 'ownerId', 'authorId']
+      .any((key) => users.contains(data[key]))) return true;
+  if (offices.contains(data['officeId'])) return true;
+  for (final key in ['propertySnapshot', 'officeSnapshot']) {
+    if (data[key] is Map &&
+        isBlockedContent(Map<String, dynamic>.from(data[key]), users, offices))
+      return true;
+  }
+  return false;
+}
