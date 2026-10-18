@@ -25,6 +25,7 @@ def redact(text):
  if key:text=text.replace(key,'<CLIENT KEY REDACTED>')
  text=re.sub(r'AIza[0-9A-Za-z_-]{25,}','<CLIENT KEY REDACTED>',text)
  text=re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+','<JWT REDACTED>',text)
+ text=re.sub(r'https?://(?:127\.0\.0\.1|localhost):\d+/[^\s]+','<LOCAL DEBUG URI REDACTED>',text)
  return text
 text=redact(raw.read_text(errors='replace'));(D/'console-redacted.log').write_text(text);raw.unlink()
 for report in pathlib.Path.home().joinpath('Library/Logs/DiagnosticReports').glob('Runner*'):
