@@ -1,3 +1,4 @@
+import '../services/trusted_inbox.dart';
 import '../core/data/shared_stream.dart';
 import '../moderation/content_policy.dart';
 import 'package:provider/provider.dart';
@@ -1273,7 +1274,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
     // إرسال إشعار لصاحب العقار فقط إذا كان المعلّق شخصًا آخر
 
-    if (widget.publisherUid.isNotEmpty && widget.publisherUid != user.uid) {
+    if (!TrustedInbox.enabled &&
+        widget.publisherUid.isNotEmpty &&
+        widget.publisherUid != user.uid) {
       await FirebaseFirestore.instance.collection("notifications").add({
         ...PushMigration.fields,
         'commentId': commentRef.id,
@@ -1363,7 +1366,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
       "createdAt": FieldValue.serverTimestamp(),
     });
 
-    if (commentData != null && commentData["userId"] != user.uid) {
+    if (!TrustedInbox.enabled &&
+        commentData != null &&
+        commentData["userId"] != user.uid) {
       await FirebaseFirestore.instance.collection("notifications").add({
         ...PushMigration.fields,
         'commentId': commentId,

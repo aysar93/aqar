@@ -1,3 +1,4 @@
+import '../../../services/trusted_inbox.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -213,7 +214,9 @@ class _AdminPropertyRequestDetailsScreenState
 
       final requestType = (data['requestType'] ?? '').toString();
 
-      await FirebaseFirestore.instance.collection('notifications').add({
+      await FirebaseFirestore.instance
+          .collection(TrustedInbox.writeCollection)
+          .add({
         ...PushMigration.fields,
         'userId': userId,
         'title': approved ? 'تمت الموافقة على طلبك' : 'تم رفض طلبك',

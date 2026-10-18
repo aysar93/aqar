@@ -1,3 +1,4 @@
+import '../services/trusted_inbox.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,8 +20,9 @@ class NotificationBadge extends StatelessWidget {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance.collection('notifications').snapshots(),
+      stream: TrustedInbox.enabled
+          ? TrustedInbox.forUser(uid).snapshots()
+          : FirebaseFirestore.instance.collection('notifications').snapshots(),
       builder: (context, snapshot) {
         int count = 0;
 

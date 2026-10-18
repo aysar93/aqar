@@ -1,3 +1,4 @@
+import '../../services/trusted_inbox.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -68,7 +69,8 @@ class OfficeSubscriptionGiftService {
     final history =
         await subscriptions.where('officeId', isEqualTo: officeId).get();
     final giftRef = subscriptions.doc();
-    final notificationRef = _firestore.collection('notifications').doc();
+    final notificationRef =
+        _firestore.collection(TrustedInbox.writeCollection).doc();
     String ownerId = '';
     String message = '';
     const title = 'باقة اشتراك هدية من الإدارة';

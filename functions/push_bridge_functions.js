@@ -1,4 +1,5 @@
 'use strict';
+const {authorize:authorizeSource}=require('./source-authorization.cjs');
 const {onDocumentWrittenWithAuthContext,onDocumentCreatedWithAuthContext}=require('firebase-functions/v2/firestore');
 const {onCall,HttpsError}=require('firebase-functions/v2/https');
 const {onSchedule}=require('firebase-functions/v2/scheduler');
@@ -47,8 +48,8 @@ async function verifiedEvent(event,db) {
  if(!authorized && ['comment','reply'].includes(data.type) && validId(data.propertyId) && validId(data.commentId)) {
   const property=await db.doc('properties/'+data.propertyId).get();
   const parent=await db.doc(`properties/${data.propertyId}/comments/${data.commentId}`).get();
-  if(data.type==='comment')authorized=property.data()?.publisherUid===data.userId && parent.data()?.userId===actor;
-  else if(validId(data.replyId)) {const reply=await parent.ref.collection('replies').doc(data.replyId).get();authorized=parent.data()?.userId===data.userId && reply.data()?.userId===actor;}
+  const reply=data.type==='reply'&&validId(data.replyId)?await parent.ref.collection('replies').doc(data.replyId).get():null;
+  authorized=authorizeSource({actor,type:data.type,declaredRecipient:data.userId,property:property.data(),parent:parent.data(),reply:reply?.data()}).authorized;
   if(authorized){data.title=data.type==='comment'?'تعليق جديد':'رد جديد';data.message=data.title;}
  }
  if(!authorized)return null;
@@ -67,6 +68,9 @@ exports.deliverBridgeNotification=onDocumentWrittenWithAuthContext({document:'no
 async function publishVerified(push,db) {
  const ref=db.doc('push_bridge_events/'+push.key);
  await db.runTransaction(async tx=>{if(!(await tx.get(ref)).exists)tx.create(ref,{...push,verifiedAt:FieldValue.serverTimestamp()});});
+ // Next-version readers receive only the server-owned projection. Off by default.
+ const trusted=require('./trusted_inbox/core');
+ if(trusted.enabled())await trusted.persistTrusted(push,db);
  await db.doc('push_bridge_inbox/'+hash(push.notificationId)).set({eventKey:push.key,notificationId:push.notificationId,updatedAt:FieldValue.serverTimestamp()});
  await dispatchBridge(push,db);
 }

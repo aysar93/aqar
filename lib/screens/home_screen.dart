@@ -1,3 +1,4 @@
+import '../services/trusted_inbox.dart';
 import '../widgets/home/keep_alive_section.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -46,12 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _headerUser = uid == null
         ? null
         : FirebaseFirestore.instance.collection('users').doc(uid).snapshots();
-    _notifications = uid == null
-        ? null
-        : FirebaseFirestore.instance
-            .collection('notifications')
-            .where('userId', isEqualTo: uid)
-            .snapshots();
+    _notifications = uid == null ? null : TrustedInbox.forUser(uid).snapshots();
   }
 
   @override

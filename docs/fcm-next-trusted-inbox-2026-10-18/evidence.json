@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-18",
+  "scope": "local only",
+  "productionOperations": [],
+  "providerNetworkSends": 0,
+  "cloudBillingCostFromTheseTests": 0,
+  "syntaxChecked": 13,
+  "sharedCoreByteIdentical": [
+    "push_policy.js",
+    "push_bridge_policy.js",
+    "push_bridge_dispatch.js",
+    "push_bridge_delivery.js"
+  ],
+  "rulesBaselineSha256": "93cf4156528b70fb56494550715f04ac1658d0a71b1375103784656512a0f7ad",
+  "newBehaviorCasesPassedAcrossTargetedRuns": 9,
+  "testCases": [
+    "administrator request authentication + malformed request rejection",
+    "server-only recipient rules + state replay + reviewed history + legacy write compatibility",
+    "actual comment source and hidden-parent rejection",
+    "office fanout 101 local recipients with cursor and idempotency",
+    "paused empty cohort with no delivery claims",
+    "actual reply/chat and admin broadcast with legacy projection",
+    "lossless export and original read meaning",
+    "ownership/version/checksum mismatch rejection",
+    "large shared read state and duplicate-proof rejection"
+  ],
+  "testFailureResolved": "Test fixture converted Admin Timestamp to client Timestamp; rules rejection then passed. No production defect or retry of prior device tests.",
+  "hashes": {
+    "functions/trusted_inbox/core.js": "13f4027f16f11f8e01b06c7d3d281b0fd7393834970497b01066085d76b2cab1",
+    "functions/trusted_inbox/firestore.fragment.rules": "f15bfc5be527a2d4f7def03de93b27b0bbbfd1fd81abc77c3ca8f959de9995c8",
+    "functions/trusted_inbox/firestore.next.indexes.json": "9b8b1412cfb135bce07113811059e064013a7f7bc109b179fcab1f1de6be027b",
+    "functions/trusted_inbox/firestore.next.rules": "0ed33948a2f1710fca9cb78fc6ab346fc72201e20954a807e43173aa28f570e2",
+    "functions/trusted_inbox/handlers.js": "d573bbb07aa97996b0fb957ddf85155a414080d4ebbcdfe5db7ae79cb0d50d69",
+    "functions/trusted_inbox/index.js": "9abc8b0c1504e326d8202dfc89d7c83c6384418c31c5804781df2f1f1465e85f",
+    "functions/trusted_inbox/package-lock.json": "d5fedd6860876e0833f875ac0262e0113bb02d1d4ceba3719b4bfa3eb5689a2c",
+    "functions/trusted_inbox/package.json": "5adcbd199bbcdc95fa8b5381d879aa77078283e1f0223f442dce3b05362fa486",
+    "functions/trusted_inbox/release-plan.json": "22d12e8f406df4b13cf7fcc513d4409599d2fa752b1e4cb67387bfb5c6f6c2cc",
+    "functions/trusted_inbox/shared/push_bridge_delivery.js": "0cd0cec91da5f8d1f587e2942ada37395e5cd090383817f32843c27fb8be85d7",
+    "functions/trusted_inbox/shared/push_bridge_dispatch.js": "70a57e18dab91754cea2f9cc5a1c3301bbfdaabc1c710c47c80a677c7c20bce2",
+    "functions/trusted_inbox/shared/push_bridge_policy.js": "51d8f982c20f750f033a9e1076064a3f608eb8740de75969c0e066ac9adcfdeb",
+    "functions/trusted_inbox/shared/push_onesignal.js": "1309a9ab5f54c872e56a7044dc6044e4126e107963e9e232b48523ad01e0059b",
+    "functions/trusted_inbox/shared/push_policy.js": "d85add7c215df6f2d5157b12c5f5ed8513b9c4a236f183386002b65daa7ecad0",
+    "functions/source-authorization.cjs": "565293ab8cbf12a54bb284da8a34c82995679ea7126dc3d57eca9d83f752376d",
+    "functions/push_bridge_functions.js": "b9167775f6d6c12c6b41dd710aaa216c93e55b121cdd86bb76337b2f3d2a3fae",
+    "tools/trusted_inbox_history_plan.cjs": "cfc33703e9a3ec0bcaac71afb35964e0953d51314fc4313c3c54b04b50dc4493",
+    "lib/services/trusted_inbox.dart": "6654ddc1bcc1a265f7bd70bee99e42d7c88b6f0d202156eb11eeb485df65d75e"
+  },
+  "dartAnalysis": {
+    "initialWarnings": 2,
+    "initialErrors": 0,
+    "initialFiles": 12,
+    "correctedFiles": 4,
+    "newDeviceBuildPerformed": false,
+    "introducedFindingsFixed": true,
+    "correctedResult": "No issues found!",
+    "fullCiRepeated": false
+  },
+  "legacyRulesSemanticallyUnchanged": true,
+  "inheritedRuleTrailingWhitespaceNormalized": true,
+  "evidenceFiles": [
+    "office-verification.txt",
+    "new-source-verification.txt",
+    "history-owner-state.txt",
+    "dart-analysis.txt",
+    "dart-fixed-analysis.txt"
+  ]
+}

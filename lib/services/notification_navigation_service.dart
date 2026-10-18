@@ -1,3 +1,4 @@
+import 'trusted_inbox.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'notification_route_coordinator.dart';
@@ -80,7 +81,7 @@ class NotificationNavigationService {
     Map<String, dynamic> data,
   ) async {
     final normalized = _normalizePayload(data);
-    if (PushMigration.enabled &&
+    if ((PushMigration.enabled || TrustedInbox.enabled) &&
         FirebaseAuth.instance.currentUser != null &&
         normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
       return;
@@ -97,10 +98,12 @@ class NotificationNavigationService {
     // External taps open the existing notifications inbox. Its items retain
     // their normal property/office/chat destinations.
     await routes.open((context) async {
-      if (PushMigration.enabled) {
+      if ((PushMigration.enabled || TrustedInbox.enabled)) {
         if (normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
           return;
         }
+        await TrustedInbox.markEventRead(normalized);
+        if (!context.mounted) return;
         await _navigate(context: context, data: normalized);
         if (normalized['type'] == 'general' ||
             ![

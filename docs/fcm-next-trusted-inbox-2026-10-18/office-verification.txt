@@ -1,0 +1,15 @@
+▶ new trusted inbox: authorization, projection, rules, replay, history and bounded fanout
+  ﹣ only authenticated administrator requests create trusted recipient items; invalid requests stop permanently (2.606ms) # SKIP
+  ﹣ clients cannot forge, retarget, erase, read others or mutate source fields; owner state survives replay (0.3427ms) # SKIP
+  ﹣ actual comment source projects a trusted item; hidden parent never projects a reply (0.2917ms) # SKIP
+  ✔ office followers page beyond 100 safely; repeated jobs do not reset read state or duplicate (16381.3919ms)
+  ﹣ pause and empty cohorts remain authoritative, with zero provider calls or delivery claims (0.4904ms) # SKIP
+✔ new trusted inbox: authorization, projection, rules, replay, history and bounded fanout (22196.215ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 4
+ℹ todo 0
+ℹ duration_ms 26955.3077

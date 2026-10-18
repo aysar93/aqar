@@ -1,3 +1,4 @@
+import 'trusted_inbox.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// Enable only in an approved test build after deploying to a test project.
@@ -9,9 +10,10 @@ class PushMigration {
   static const enabled = isolated || bridgeEnabled;
   static const oneSignalEnabled = !enabled || bridgeEnabled;
 
-  static Map<String, dynamic> get fields => enabled
+  static Map<String, dynamic> get fields => (enabled || TrustedInbox.enabled)
       ? {
-          'pushTransport': 'fcm_v1',
+          if (enabled) 'pushTransport': 'fcm_v1',
+          ...TrustedInbox.requestFields,
           'createdBy': FirebaseAuth.instance.currentUser?.uid
         }
       : {};
