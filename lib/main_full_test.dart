@@ -28,9 +28,11 @@ Future<void> main() async {
  SemanticsBinding.instance.ensureSemantics();
  HttpOverrides.global=TestNetwork();
  await Firebase.initializeApp(options:fullTestOptions);
+ if(Firebase.app().options.projectId!='aqar-media-test-20261018' || Firebase.app().options.storageBucket!='aqar-media-test-20261018-media') throw StateError('Unexpected isolated Firebase options');
  UserBlocks.instance.initialize();
  final prefs=await SharedPreferences.getInstance();
  await prefs.setBool('onboarding_seen',true);
  await prefs.setBool('notification_permission_postponed',true);
+ WidgetsBinding.instance.addPostFrameCallback((_) => debugPrint('MEDIA_TEST_FIRST_FRAME'));
  runApp(MultiProvider(providers:[ChangeNotifierProvider(create:(_)=>AppSettingsProvider()..loadSettings()),ChangeNotifierProvider(create:(_)=>UserProvider())],child:const AqarApp()));
 }

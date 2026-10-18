@@ -8,10 +8,11 @@ d=candidates[0];uid=d['udid']
 if d['state']!='Booted':run('xcrun','simctl','boot',uid)
 run('xcrun','simctl','bootstatus',uid,'-b');run('xcrun','simctl','install',uid,str(app))
 raw=D/'console.raw';handle=raw.open('w')
-proc=subprocess.Popen(['flutter','run','--no-pub','--debug','--no-resident','--target=lib/main_full_test.dart','--use-application-binary='+str(app),'-d',uid],stdout=handle,stderr=subprocess.STDOUT,text=True)
+proc=subprocess.Popen(['flutter','run','--no-pub','--debug','--target=lib/main_full_test.dart','--use-application-binary='+str(app),'-d',uid],stdout=handle,stderr=subprocess.STDOUT,text=True,stdin=subprocess.PIPE)
 for attempt in range(18):
  time.sleep(5)
  if proc.poll() is not None:break
+ if 'MEDIA_TEST_FIRST_FRAME' in raw.read_text(errors='replace'):break
 time.sleep(15)
 processes=run('ps','-axo','pid=,command=');matches=[x.strip() for x in processes.splitlines() if 'Runner.app/Runner' in x and '/CoreSimulator/' in x]
 alive=bool(matches)
@@ -27,9 +28,9 @@ def redact(text):
  text=re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+','<JWT REDACTED>',text)
  text=re.sub(r'https?://(?:127\.0\.0\.1|localhost):\d+/[^\s]+','<LOCAL DEBUG URI REDACTED>',text)
  return text
-text=redact(raw.read_text(errors='replace'));(D/'console-redacted.log').write_text(text);raw.unlink()
+text=redact(raw.read_text(errors='replace'));errors=re.findall(r'Unhandled Exception|FATAL EXCEPTION|terminating.*uncaught|core/duplicate-app',text,re.I);firstFrame='MEDIA_TEST_FIRST_FRAME' in text;(D/'console-redacted.log').write_text(text);raw.unlink()
 for report in pathlib.Path.home().joinpath('Library/Logs/DiagnosticReports').glob('Runner*'):
  if report.is_file() and time.time()-report.stat().st_mtime<600:
   (D/report.name).write_text(redact(report.read_text(errors='replace')))
-r={'simulator':d['name'],'bundle':bundle,'processAliveAfterFlutterDebugLaunch':alive,'processEvidence':matches,'physicalDeviceTest':False,'cloudCRUD':'NOT RUN','note':'Startup smoke only; screenshot and diagnostics must be reviewed'}
-(D/'simulator-smoke.json').write_text(json.dumps(r,indent=2));print(json.dumps({'simulator':d['name'],'processAlive':alive,'diagnosticsCaptured':True}));assert alive,'Test process did not remain alive; inspect redacted console/crash reports'
+r={'simulator':d['name'],'bundle':bundle,'processAliveAfterFlutterDebugLaunch':alive,'processEvidence':matches,'firstFlutterFrameObserved':firstFrame,'unhandledOrFatalCount':len(errors),'physicalDeviceTest':False,'cloudCRUD':'NOT RUN','note':'Startup smoke only; screenshot and diagnostics must be reviewed'}
+(D/'simulator-smoke.json').write_text(json.dumps(r,indent=2));print(json.dumps({'simulator':d['name'],'processAlive':alive,'diagnosticsCaptured':True}));assert alive and firstFrame and not errors,'Startup validation failed; inspect redacted console/crash reports and first-frame evidence'

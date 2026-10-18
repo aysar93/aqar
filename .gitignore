@@ -11,3 +11,6 @@ ios/Pods/
 ios/.symlinks/
 ios/Flutter/ephemeral/
 ios/Runner/GoogleService-Info.plist
+
+__pycache__/
+*.pyc
