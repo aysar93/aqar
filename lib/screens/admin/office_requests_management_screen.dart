@@ -916,14 +916,14 @@ class _OfficeRequestsManagementScreenState
         );
       });
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
         'تم قبول الطلب وإنشاء المكتب بنجاح',
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
@@ -1009,14 +1009,14 @@ class _OfficeRequestsManagementScreenState
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
         'تم رفض طلب المكتب',
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
@@ -1035,6 +1035,7 @@ class _OfficeRequestsManagementScreenState
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) async {
     final data = doc.data();
+    final licenseImageUrl = _readString(data['licenseImageUrl']);
 
     final officeName = _readString(
       data['officeName'] ?? data['name'],
@@ -1102,6 +1103,24 @@ class _OfficeRequestsManagementScreenState
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (licenseImageUrl.isNotEmpty) ...[
+                  const Text('صورة الترخيص',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  MediaImage(
+                    licenseImageUrl,
+                    key: const ValueKey('office-request-license-preview'),
+                    height: 220,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                          'تعذر عرض المستند. تحقق من صلاحياتك أو أعد تسجيل الدخول.'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 _buildDetailRow(
                   context,
                   label: 'صاحب المكتب',
