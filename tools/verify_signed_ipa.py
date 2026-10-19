@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert not actual.get('get-task-allow', False)
     assert 'aps-environment' not in actual
     prefix = str(root / 'leaf')
-    run('codesign', '-d', '--extract-certificates', prefix, str(app))
+    run('codesign', '-d', '--extract-certificates=' + prefix, str(app))
     leaf = pathlib.Path(prefix + '0').read_bytes()
     assert leaf in profile['DeveloperCertificates'], 'Signing certificate not allowed by profile'
     result = {
