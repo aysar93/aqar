@@ -163,8 +163,16 @@ class MediaStore {
         uri.path == '/uploadMedia' &&
         !uri.hasQuery &&
         uri.userInfo.isEmpty;
-    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' && auth.app.options.projectId == 'aqar-media-test-20261018' && uri != null && uri.scheme == 'https' && uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' && uri.path == '/mediaBrokerTest/uploadMedia' && !uri.hasQuery && uri.userInfo.isEmpty;
-    if (!sandbox && !isolatedCloud &&
+    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' &&
+        auth.app.options.projectId == 'aqar-media-test-20261018' &&
+        uri != null &&
+        uri.scheme == 'https' &&
+        uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' &&
+        uri.path == '/mediaBrokerTest/uploadMedia' &&
+        !uri.hasQuery &&
+        uri.userInfo.isEmpty;
+    if (!sandbox &&
+        !isolatedCloud &&
         (uri == null ||
             uri.scheme != 'https' ||
             uri.host != 'us-central1-aqar-9f3f9.cloudfunctions.net' ||
@@ -261,8 +269,16 @@ class MediaStore {
         uri.path == '/readPrivateMedia' &&
         !uri.hasQuery &&
         uri.userInfo.isEmpty;
-    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' && auth.app.options.projectId == 'aqar-media-test-20261018' && uri != null && uri.scheme == 'https' && uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' && uri.path == '/mediaBrokerTest/readPrivateMedia' && !uri.hasQuery && uri.userInfo.isEmpty;
-    if (!sandbox && !isolatedCloud &&
+    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' &&
+        auth.app.options.projectId == 'aqar-media-test-20261018' &&
+        uri != null &&
+        uri.scheme == 'https' &&
+        uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' &&
+        uri.path == '/mediaBrokerTest/readPrivateMedia' &&
+        !uri.hasQuery &&
+        uri.userInfo.isEmpty;
+    if (!sandbox &&
+        !isolatedCloud &&
         (uri == null ||
             uri.scheme != 'https' ||
             uri.host != 'us-central1-aqar-9f3f9.cloudfunctions.net' ||
@@ -339,12 +355,10 @@ class MediaStore {
         path.contains('://')) {
       throw StateError('Only newly uploaded media can be removed');
     }
-    if (path.startsWith('uploads/private/')) {
-      return;
-    } // Retained until server reference-aware cleanup.
-    await storage
-        .ref(path)
-        .delete(); // Rules enforce owner/admin; archived 469 are immutable.
+    // Removing a UI reference does not prove that another document stopped
+    // using the same object. Retain every object until an audited server job
+    // checks references, preserves a recovery copy and pins its generation.
+    return;
   }
 }
 
