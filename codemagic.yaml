@@ -19,7 +19,7 @@ workflows:
       - name: Resolve packages
         script: flutter pub get
       - name: Media safety unit tests
-        script: flutter test test/services/app_settings_startup_test.dart test/services/media_migration_test.dart test/services/private_media_image_test.dart test/services/media_broker_http_test.dart test/services/media_public_manifest_test.dart --reporter expanded --dart-define=MEDIA_UPLOAD_URL=http://127.0.0.1:9396/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=http://127.0.0.1:9396/readPrivateMedia
+        script: flutter test test/services/splash_startup_test.dart test/services/app_settings_startup_test.dart test/services/media_migration_test.dart test/services/private_media_image_test.dart test/services/media_broker_http_test.dart test/services/media_public_manifest_test.dart --reporter expanded --dart-define=MEDIA_UPLOAD_URL=http://127.0.0.1:9396/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=http://127.0.0.1:9396/readPrivateMedia
       - name: Build isolated simulator
         script: flutter build ios --dart-define-from-file=build/test-dart-defines.json --simulator --debug --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
       - name: Build unsigned isolated device app

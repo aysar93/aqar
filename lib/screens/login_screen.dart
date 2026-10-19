@@ -43,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('MEDIA_TEST_LOGIN_READY');
     _restoreRememberedIdentifier();
   }
 
