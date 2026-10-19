@@ -1,4 +1,4 @@
-# Manual isolated test only. No triggers, credentials groups, signing or publishing.
+# Manual isolated workflows only. No automatic triggers or store publishing.
 workflows:
   ios-media-isolated-no-publish:
     name: AQAR media isolated iOS - NO PUBLISH
@@ -36,3 +36,37 @@ workflows:
       - build/ios-test-evidence/*
       - build/cloud-config-status.json
       - /tmp/xcodebuild_logs/*.log
+
+  ios-media-adhoc-no-publish:
+    name: AQAR media single-device Ad Hoc - NO PUBLISH
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      groups:
+        - media_full_test
+      flutter: 3.44.8
+      xcode: latest
+      ios_signing:
+        provisioning_profiles:
+          - aqar_media_test_adhoc_20261019
+        certificates:
+          - rafcut_distribution
+    scripts:
+      - name: Assert isolated source and configuration
+        script: |
+          test "$CM_BRANCH" = media-full-app-test-20261018
+          ! grep -R -E 'AIza[0-9A-Za-z_-]{30,}|BEGIN PRIVATE KEY|cloudinary://' lib ios tools
+          python3 tools/prepare_test_config.py
+      - name: Resolve packages
+        script: flutter pub get
+      - name: Apply only the isolated signing profile
+        script: xcode-project use-profiles
+      - name: Build signed isolated Ad Hoc IPA
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --dart-define-from-file=build/test-dart-defines.json --target lib/main_full_test.dart --dart-define=MEDIA_STORAGE_BUCKET=aqar-media-test-20261018-media --dart-define=MEDIA_UPLOAD_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia --dart-define=MEDIA_PRIVATE_READ_URL=https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia
+      - name: Verify actual IPA signature and isolation
+        script: python3 tools/verify_signed_ipa.py
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios-signing-evidence/*.json
+      - build/ios-test-evidence/native-config-parity.json
+      - build/cloud-config-status.json
