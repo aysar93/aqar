@@ -8,7 +8,7 @@ c['STORAGE_BUCKET']='aqar-media-test-20261018-media'
 p.write_bytes(plistlib.dumps(c))
 pathlib.Path('build').mkdir(exist_ok=True)
 pathlib.Path('build/test-dart-defines.json').write_text(json.dumps({'MEDIA_TEST_FIREBASE_API_KEY':k or 'media-test-build-only-no-auth'}))
-pathlib.Path('build/cloud-config-status.json').write_text(json.dumps({'testProjectOnly':True,'runtimeCloudConfigured':bool(k),'cloudIntegrationTests':'NOT RUN; isolated cloud is closed'}))
+pathlib.Path('build/cloud-config-status.json').write_text(json.dumps({'testProjectOnly':True,'runtimeCloudConfigured':bool(k),'cloudIntegrationTests':'NOT RUN by CI; live cloud state is not asserted'}))
 print('Isolated native configuration prepared; values omitted; cloud configured='+str(bool(k)))
 
 # Firebase Core compares native/default and explicit Dart options. A different
