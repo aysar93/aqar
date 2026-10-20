@@ -23,7 +23,12 @@ class MediaStore {
   final FirebaseStorage storage;
   final FirebaseAuth auth;
   final String bucket;
-  MediaStore({required this.storage, required this.auth, required this.bucket});
+  final Duration responseTimeout;
+  MediaStore(
+      {required this.storage,
+      required this.auth,
+      required this.bucket,
+      this.responseTimeout = const Duration(seconds: 30)});
   static MediaStore get instance {
     const bucket = MediaLocation.defaultBucket;
     if (bucket.isEmpty) {
@@ -212,7 +217,8 @@ class MediaStore {
         }
         throw StateError('Media upload rejected');
       }
-      final text = await utf8.decoder.bind(response).join();
+      final text =
+          await utf8.decoder.bind(response).join().timeout(responseTimeout);
       if (text.length > 4096) {
         throw StateError('Unexpected broker response');
       }
@@ -335,7 +341,7 @@ class MediaStore {
       final response = await _privateReadRequest(path, 'GET', client);
       final bytes = BytesBuilder(copy: false);
       var size = 0;
-      await for (final chunk in response) {
+      await for (final chunk in response.timeout(responseTimeout)) {
         size += chunk.length;
         if (size > 10 * 1024 * 1024) {
           throw StateError('Private object too large');
@@ -387,8 +393,9 @@ class MediaStore {
       final response =
           await request.close().timeout(const Duration(seconds: 30));
       await response.drain();
-      if (response.statusCode != 202)
+      if (response.statusCode != 202) {
         throw StateError('Cleanup request rejected');
+      }
     } finally {
       client.close(force: true);
     }

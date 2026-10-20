@@ -9,6 +9,7 @@ import 'package:aqar/widgets/media_image.dart';
 class DiskFixtureCache extends Fake implements BaseCacheManager {
   final File file;
   bool online = false;
+  bool forbidden = false;
   int reads = 0;
   DiskFixtureCache(this.file);
   @override
@@ -17,6 +18,7 @@ class DiskFixtureCache extends Fake implements BaseCacheManager {
       Map<String, String>? headers,
       bool withProgress = false}) async* {
     reads++;
+    if (forbidden) throw const HttpExceptionWithStatus(403, 'synthetic denied');
     if (!online) throw const SocketException('synthetic offline');
     yield FileInfo(const LocalFileSystem().file(file.path), FileSource.Cache,
         DateTime.now().add(const Duration(days: 1)), url);
@@ -24,6 +26,20 @@ class DiskFixtureCache extends Fake implements BaseCacheManager {
 }
 
 void main() {
+  testWidgets('permanent permission errors do not produce a retry loop',
+      (tester) async {
+    final cache = DiskFixtureCache(
+        File('${Directory.systemTemp.path}/not-created-aqar.png'))
+      ..forbidden = true;
+    await tester.pumpWidget(MaterialApp(
+        home: MediaImage('https://synthetic.invalid/denied.png',
+            publicCacheManager: cache,
+            errorBuilder: (_, __, ___) => const Text('denied'))));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(seconds: 65));
+    expect(cache.reads, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets(
       'public image retries after a failed request without a metadata event',
       (tester) async {

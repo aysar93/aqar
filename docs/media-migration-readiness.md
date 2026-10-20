@@ -25,8 +25,9 @@ The 475 candidate cloud rule cases passed; those are tests, not a rules deployme
 - Public widgets use CachedNetworkImage / CachedNetworkImageProvider. Gallery,
   avatars, cards and banners share persistent public caching.
 - Banner metadata is no longer discarded when an image prefetch fails offline.
-  Failed public widgets retry every five seconds while mounted and refresh on
-  resume. Closing the widget cancels retries. Private viewers reload on resume.
+  Transient failures retry with 5/10/20/40/60-second backoff while mounted and
+  refresh on resume; permanent HTTP 4xx/decode errors do not poll repeatedly.
+  Closing the widget cancels retries. Private viewers reload on resume.
 - Startup no longer waits indefinitely on optional branding or splash audio.
 - Reels/R2 and FCM services, configuration and workflows are unchanged from main.
   Media uploads remain disabled in the existing FCM staging mode.
@@ -72,6 +73,14 @@ existing workflow source is unchanged. Do not dispatch any workflow.
   owner upload with an old migration mapping. Cloudinary quota risk remains.
 
 ## Verification boundaries
+
+Local verification: 17 Flutter tests passed, followed by three affected cache/
+permission/private-reader checks (including the newly added permanent-403 case)
+and a real loopback HTTP stream-stall timeout/recovery check. Node reported 10/10
+passing top-level tests, including the broker, error classification, retention,
+cleanup races and deduplicated cleanup requests. The 475 cloud Storage cases test
+the unpublished candidate. Full Dart analysis reported zero errors and retained
+existing warnings/infos; the final changed core files were analyzed separately.
 
 Existing real Android/iPhone private access, session expiry, revocation, restore,
 legacy upload and public reader tests remain historical evidence. They were not

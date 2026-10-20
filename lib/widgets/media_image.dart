@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'dart:typed_data';
@@ -54,13 +55,30 @@ class _MediaImageState extends State<MediaImage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void _scheduleRetry() {
-    if (_retry?.isActive ?? false) return;
-    _retry = Timer(const Duration(seconds: 5), () {
-      if (mounted)
+  void _scheduleRetry(Object error) {
+    final status = error is HttpExceptionWithStatus
+        ? error.statusCode
+        : error is NetworkImageLoadException
+            ? error.statusCode
+            : null;
+    if (status != null && status != 408 && status != 429 && status < 500) {
+      return;
+    }
+    if (status == null &&
+        error is! SocketException &&
+        error is! TimeoutException) {
+      return;
+    }
+    if (_retry?.isActive ?? false) {
+      return;
+    }
+    const seconds = [5, 10, 20, 40, 60];
+    _retry = Timer(Duration(seconds: seconds[_attempt < 4 ? _attempt : 4]), () {
+      if (mounted) {
         setState(() {
           _attempt++;
         });
+      }
     });
   }
 
@@ -111,7 +129,7 @@ class _MediaImageState extends State<MediaImage> with WidgetsBindingObserver {
                   fit: widget.fit,
                   filterQuality: widget.filterQuality),
           errorWidget: (context, url, error) {
-            _scheduleRetry();
+            _scheduleRetry(error);
             return _error(error);
           },
           placeholder: (context, url) => SizedBox(
