@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -905,7 +906,7 @@ class _OfficeSubscriptionsManagementScreenState
                   child: InteractiveViewer(
                     minScale: 0.8,
                     maxScale: 4,
-                    child: Image.network(
+                    child: MediaImage(
                       receiptUrl,
                       fit: BoxFit.contain,
                       loadingBuilder: (
@@ -1112,7 +1113,7 @@ class _OfficeAvatar extends StatelessWidget {
         alignment: Alignment.center,
         child: imageUrl.isEmpty
             ? fallback
-            : Image.network(
+            : MediaImage(
                 imageUrl,
                 width: size,
                 height: size,

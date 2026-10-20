@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../analytics/services/app_activity_service.dart';
 
-import '../../../services/cloudinary_service.dart';
+import '../../../services/media_store.dart';
 import '../models/edit_property_data.dart';
 
 class EditPropertyService {
@@ -27,7 +27,7 @@ class EditPropertyService {
         // =========================
 
         for (final image in property.newImages) {
-          final uploadedUrl = await uploadToCloudinary(image);
+          final uploadedUrl = await uploadMediaImage(image, purpose: MediaPurpose.property);
 
           if (uploadedUrl == null || uploadedUrl.isEmpty) {
             throw Exception(

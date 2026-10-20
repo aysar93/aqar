@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,28 +31,13 @@ class _BannerSliderState extends State<BannerSlider>
   void initState() {
     super.initState();
 
-    _bannersStream = (widget.stream ?? BannerService.activeBanners())
-        .asyncMap((banners) async {
-      final valid = await Future.wait(banners.map((banner) async {
-        final uri = Uri.tryParse(banner.imageUrl.trim());
-        if (uri == null ||
-            !['http', 'https'].contains(uri.scheme) ||
-            uri.host.isEmpty ||
-            !mounted) {
-          return false;
-        }
-        var loaded = true;
-        await precacheImage(NetworkImage(banner.imageUrl.trim()), context,
-            onError: (_, __) {
-          loaded = false;
-        });
-        return loaded;
-      }));
-      return [
-        for (var i = 0; i < banners.length; i++)
-          if (valid[i]) banners[i]
-      ];
-    });
+    // Retain metadata offline; public image widgets persist bytes and retry.
+    _bannersStream = (widget.stream ?? BannerService.activeBanners()).map(
+      (banners) => banners.where((b) {
+        final uri = Uri.tryParse(b.imageUrl.trim());
+        return uri != null && ['https', 'http'].contains(uri.scheme) && uri.host.isNotEmpty;
+      }).toList(),
+    );
   }
 
   Future<void> _openBanner(BannerModel banner) async {
@@ -411,7 +397,7 @@ class _BannerImage extends StatelessWidget {
       );
     }
 
-    return Image.network(
+    return MediaImage(
       imageUrl,
       fit: BoxFit.cover,
       filterQuality: FilterQuality.high,

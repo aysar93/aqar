@@ -38,6 +38,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int currentIndex;
   Route<dynamic>? _mainRoute;
+  bool _accessRevocationHandled = false;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
       _accountModeSubscription;
 
@@ -78,13 +79,39 @@ class _MainShellState extends State<MainShell> {
       final data = snapshot.data() ?? {};
       if (data['isBlocked'] == true) {
         AppActivityService.instance.signOut();
-        if (mounted)
+        if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const LoginScreen()),
               (_) => false);
+        }
         return;
       }
+    }, onError: (Object error) {
+      unawaited(_handleAccountAccessError(error, user.uid));
     });
+  }
+
+  Future<void> _handleAccountAccessError(Object error, String monitoredUid) async {
+    if (error is! FirebaseException ||
+        !['permission-denied', 'unauthenticated'].contains(error.code)) {
+      debugPrint('Account status temporarily unavailable');
+      return;
+    }
+    if (_accessRevocationHandled ||
+        FirebaseAuth.instance.currentUser?.uid != monitoredUid) {
+      return;
+    }
+    _accessRevocationHandled = true;
+    try {
+      await AppActivityService.instance.signOut();
+    } catch (_) {
+      debugPrint('Account access sign-out could not finish');
+    }
+    if (!mounted) return;
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid != null && currentUid != monitoredUid) return;
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
   }
 
   @override

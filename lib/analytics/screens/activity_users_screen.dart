@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
@@ -225,7 +226,7 @@ class _UserAvatar extends StatelessWidget {
         ),
         child: user.photoUrl.trim().isEmpty
             ? _fallback()
-            : Image.network(user.photoUrl,
+            : MediaImage(user.photoUrl,
                 fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback()),
       );
 

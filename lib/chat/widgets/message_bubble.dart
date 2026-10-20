@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../screens/image_viewer_screen.dart';
@@ -91,7 +92,7 @@ class MessageBubble extends StatelessWidget {
                   },
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.network(
+                    child: MediaImage(
                       imageUrl,
                       width: 220,
                       fit: BoxFit.cover,

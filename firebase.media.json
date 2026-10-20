@@ -1,0 +1,11 @@
+{
+  "functions": [
+    {
+      "source": "media-server",
+      "codebase": "media"
+    }
+  ],
+  "storage": {
+    "rules": "storage.media-next.rules"
+  }
+}

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import '../analytics/services/app_activity_service.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -157,7 +158,7 @@ class _AppDrawerState extends State<AppDrawer> {
             radius: 32,
             backgroundColor: const Color(0xffD4AF37),
             backgroundImage:
-                photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                photoUrl.isNotEmpty ? CachedNetworkImageProvider(photoUrl) : null,
             child: photoUrl.isEmpty
                 ? const Icon(Icons.person, color: Colors.black, size: 34)
                 : null,
@@ -244,7 +245,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 radius: 32,
                 backgroundColor: const Color(0xffD4AF37),
                 backgroundImage:
-                    displayPhoto.isNotEmpty ? NetworkImage(displayPhoto) : null,
+                    displayPhoto.isNotEmpty ? CachedNetworkImageProvider(displayPhoto) : null,
                 child: displayPhoto.isEmpty
                     ? Icon(
                         showOfficeIdentity

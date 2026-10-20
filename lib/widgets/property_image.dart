@@ -24,7 +24,7 @@ class PropertyImage extends StatelessWidget {
     if (_isAsset) {
       image = _buildAssetImage();
     } else {
-      image = _buildNetworkImage();
+      image = _buildCachedNetworkImageProvider();
     }
 
     if (borderRadius == null) {
@@ -53,7 +53,7 @@ class PropertyImage extends StatelessWidget {
     );
   }
 
-  Widget _buildNetworkImage() {
+  Widget _buildCachedNetworkImageProvider() {
     return CachedNetworkImage(
       imageUrl: imagePath,
       width: width,

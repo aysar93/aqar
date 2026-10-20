@@ -1,3 +1,4 @@
+import '../../../widgets/media_image.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../models/office_model.dart';
 import '../../services/office_service.dart';
-import '../../../services/cloudinary_service.dart';
+import '../../../services/media_store.dart';
 import '../../../features/property_map/screens/location_picker_screen.dart';
 import '../../../features/property_map/models/property_location.dart';
 
@@ -591,9 +592,8 @@ class _EditOfficeScreenState extends State<EditOfficeScreen> {
 
       for (final selected in selectedImages) {
         try {
-          final url = await uploadToCloudinary(
-            File(selected.path),
-          );
+          final url = await uploadMediaImage(
+            File(selected.path), purpose: MediaPurpose.office);
 
           if (url != null && url.trim().isNotEmpty) {
             _galleryImages.add(url.trim());
@@ -657,7 +657,7 @@ class _EditOfficeScreenState extends State<EditOfficeScreen> {
         imageQuality: 85,
       );
       if (selected == null) return null;
-      final url = await uploadToCloudinary(File(selected.path));
+      final url = await uploadMediaImage(File(selected.path), purpose: MediaPurpose.office);
       if (url == null || url.trim().isEmpty)
         throw StateError('تعذر رفع الصورة.');
       return url;
@@ -954,7 +954,7 @@ class _EditOfficeScreenState extends State<EditOfficeScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(13),
-                        child: Image.network(
+                        child: MediaImage(
                           imageUrl,
                           width: 125,
                           height: 105,
@@ -1114,7 +1114,7 @@ class _EditOfficeScreenState extends State<EditOfficeScreen> {
           fit: StackFit.expand,
           children: [
             if (hasImage)
-              Image.network(
+              MediaImage(
                 imageUrl,
                 fit: BoxFit.cover,
                 opacity: const AlwaysStoppedAnimation(0.58),

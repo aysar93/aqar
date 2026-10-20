@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -66,7 +67,7 @@ class ChatMessageTile extends StatelessWidget {
                       ImageViewerScreen(imageUrl: data['imageUrl'] ?? ''))),
           child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(data['imageUrl'] ?? '',
+              child: MediaImage(data['imageUrl'] ?? '',
                   width: 240,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Padding(

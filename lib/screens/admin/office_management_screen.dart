@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -949,7 +950,7 @@ class _OfficeManagementScreenState extends State<OfficeManagementScreen> {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
-      child: Image.network(
+      child: MediaImage(
         imageUrl,
         width: 66,
         height: 66,
