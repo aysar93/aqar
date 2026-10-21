@@ -1,3 +1,4 @@
+import 'booking_workspace.dart';
 import 'booking_extras.dart';
 import 'booking_ledger_access.dart';
 import 'package:flutter/material.dart';
@@ -18,10 +19,10 @@ class BookingReviewInbox extends StatelessWidget {
               .where('status', isEqualTo: 'pending')
               .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
-            if (!s.hasData ||
-                s.hasError ||
-                s.data!.metadata.isFromCache ||
-                s.data!.metadata.hasPendingWrites) {
+            if (s.hasError ||
+                (s.hasData &&
+                    (s.data!.metadata.isFromCache ||
+                        s.data!.metadata.hasPendingWrites))) {
               return const BookingStateView(
                   title: 'يلزم اتصال للتحقق من الصلاحية',
                   detail:
@@ -77,10 +78,10 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
                     .orderBy('createdAt')
                     .snapshots(includeMetadataChanges: true),
                 builder: (context, s) {
-                  if (!s.hasData ||
-                      s.hasError ||
-                      s.data!.metadata.isFromCache ||
-                      s.data!.metadata.hasPendingWrites) {
+                  if (s.hasError ||
+                      (s.hasData &&
+                          (s.data!.metadata.isFromCache ||
+                              s.data!.metadata.hasPendingWrites))) {
                     return const Center(
                         child:
                             Text('يلزم اتصال للتحقق من صلاحية عرض البيانات'));
@@ -143,10 +144,10 @@ class BookingMediaInbox extends StatelessWidget {
               .where('status', isEqualTo: 'pending')
               .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
-            if (!s.hasData ||
-                s.hasError ||
-                s.data!.metadata.isFromCache ||
-                s.data!.metadata.hasPendingWrites) {
+            if (s.hasError ||
+                (s.hasData &&
+                    (s.data!.metadata.isFromCache ||
+                        s.data!.metadata.hasPendingWrites))) {
               return const BookingStateView(
                   title: 'يلزم اتصال للتحقق من الصلاحية',
                   detail:
@@ -198,10 +199,10 @@ class BookingProofInbox extends StatelessWidget {
               .where('status', isEqualTo: 'pending')
               .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
-            if (!s.hasData ||
-                s.hasError ||
-                s.data!.metadata.isFromCache ||
-                s.data!.metadata.hasPendingWrites) {
+            if (s.hasError ||
+                (s.hasData &&
+                    (s.data!.metadata.isFromCache ||
+                        s.data!.metadata.hasPendingWrites))) {
               return const BookingStateView(
                   title: 'يلزم اتصال للتحقق من الصلاحية',
                   detail:
@@ -341,10 +342,10 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                 .where('active', isEqualTo: true)
                 .snapshots(includeMetadataChanges: true),
             builder: (context, s) {
-              if (!s.hasData ||
-                  s.hasError ||
-                  s.data!.metadata.isFromCache ||
-                  s.data!.metadata.hasPendingWrites) {
+              if (s.hasError ||
+                  (s.hasData &&
+                      (s.data!.metadata.isFromCache ||
+                          s.data!.metadata.hasPendingWrites))) {
                 return const BookingStateView(
                     title: 'يلزم اتصال للتحقق من الصلاحية',
                     detail:
@@ -544,10 +545,10 @@ class BookingTransferInbox extends StatelessWidget {
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: query.snapshots(includeMetadataChanges: true),
             builder: (context, s) {
-              if (!s.hasData ||
-                  s.hasError ||
-                  s.data!.metadata.isFromCache ||
-                  s.data!.metadata.hasPendingWrites) {
+              if (s.hasError ||
+                  (s.hasData &&
+                      (s.data!.metadata.isFromCache ||
+                          s.data!.metadata.hasPendingWrites))) {
                 return const BookingStateView(
                     title: 'يلزم اتصال للتحقق من الصلاحية',
                     detail:
@@ -598,59 +599,31 @@ class BookingLedgerScreen extends StatelessWidget {
                         (user['isAdmin'] == true ||
                             user['canReviewBookingPayments'] == true));
               }),
-          builder: (context) => StreamBuilder<
-                  QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('booking_ledger')
-                  .snapshots(includeMetadataChanges: true),
-              builder: (context, s) {
-                if (!s.hasData ||
-                    s.hasError ||
-                    s.data!.metadata.isFromCache ||
-                    s.data!.metadata.hasPendingWrites) {
-                  return const BookingStateView(
-                      title: 'يلزم اتصال للتحقق من الصلاحية',
-                      detail:
-                          'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-                }
-                if (s.hasError)
-                  return const Center(
-                      child: Text('التقرير للإدارة والمالية المخولين فقط'));
-                if (!s.hasData)
-                  return const Center(child: CircularProgressIndicator());
-                if (s.data!.metadata.isFromCache ||
-                    s.data!.metadata.hasPendingWrites)
-                  return const Center(
-                      child: Text('اتصل بالإنترنت لتحديث دفتر المالية'));
-                int sum(String k) => s.data!.docs.fold(
-                    0,
-                    (total, d) =>
-                        total + ((d.data()[k] as num?)?.toInt() ?? 0));
-                return ListView(padding: const EdgeInsets.all(20), children: [
-                  const Text(
-                      'الحسابات تخص العربون المحصّل يدويًا فقط. المتبقي من ثمن الحجز لا يعد مبلغًا محصّلًا.'),
-                  BookingMetricCard(
-                      title: 'العربون المحصّل',
-                      value: "${sum('depositCollected')} د.ع",
-                      icon: Icons.account_balance_wallet_outlined),
-                  BookingMetricCard(
-                      title: 'الاستردادات المدفوعة',
-                      value: "${sum('refundPaid')} د.ع",
-                      icon: Icons.undo),
-                  BookingMetricCard(
-                      title: 'تسويات المالكين المدفوعة',
-                      value: "${sum('ownerPaid')} د.ع",
-                      icon: Icons.account_balance_outlined),
-                  BookingMetricCard(
-                      title: 'العمولات المسجلة',
-                      value: "${sum('platformCommission')} د.ع",
-                      icon: Icons.receipt_long),
-                  const Divider(),
-                  for (final d in s.data!.docs)
-                    ListTile(
-                        title: Text(
-                            '${d.data()['bookingId']} — ${d.data()['action']}'),
-                        subtitle: Text('مرجع ${d.data()['reference']}')),
-                ]);
-              })));
+          builder: (context) =>
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('booking_ledger')
+                      .snapshots(includeMetadataChanges: true),
+                  builder: (context, s) {
+                    if (s.hasError ||
+                        (s.hasData &&
+                            (s.data!.metadata.isFromCache ||
+                                s.data!.metadata.hasPendingWrites))) {
+                      return const BookingStateView(
+                          title: 'يلزم اتصال للتحقق من الصلاحية',
+                          detail:
+                              'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+                    }
+                    if (s.hasError)
+                      return const Center(
+                          child: Text('التقرير للإدارة والمالية المخولين فقط'));
+                    if (!s.hasData)
+                      return const Center(child: CircularProgressIndicator());
+                    if (s.data!.metadata.isFromCache ||
+                        s.data!.metadata.hasPendingWrites)
+                      return const Center(
+                          child: Text('اتصل بالإنترنت لتحديث دفتر المالية'));
+                    return BookingLedgerContent(
+                        entries: s.data!.docs.map((d) => d.data()).toList());
+                  })));
 }

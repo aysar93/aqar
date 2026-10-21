@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart' show NumberFormat;
 export 'booking_state_view.dart';
 import 'booking_media_image.dart';
 import 'dart:io';
@@ -8,43 +9,114 @@ import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:video_player/video_player.dart';
 
-class BookingMediaGallery extends StatelessWidget {
+class BookingMediaGallery extends StatefulWidget {
   const BookingMediaGallery({super.key, required this.paths});
   final List<String> paths;
   @override
-  Widget build(BuildContext context) => Column(children: [
-        for (final path in paths)
-          if (path.endsWith('.mp4'))
-            TextButton.icon(
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => _BookingVideo(path: path))),
-                icon: const Icon(Icons.play_circle),
-                label: const Text('مشاهدة فيديو المكان'))
-          else if (path.startsWith('https://') ||
-              path.startsWith('booking_media_v3/') ||
-              path.startsWith('booking_media/'))
-            Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: BookingMediaImage(url: path)))
-          else
-            FutureBuilder(
-                future: FirebaseStorage.instance
-                    .ref(path)
-                    .getData(10 * 1024 * 1024),
-                builder: (context, s) {
-                  if (s.hasError) return const Text('تعذر تحميل الصورة');
-                  if (!s.hasData) return const LinearProgressIndicator();
-                  return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.memory(s.data!, fit: BoxFit.cover)));
-                }),
-      ]);
+  State<BookingMediaGallery> createState() => _BookingMediaGalleryState();
+}
+
+class _BookingMediaGalleryState extends State<BookingMediaGallery> {
+  final controller = PageController();
+  int page = 0;
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  Widget media(String path) {
+    if (path.endsWith('.mp4'))
+      return ColoredBox(
+          color: bookingNavy,
+          child: Center(
+              child: OutlinedButton.icon(
+                  style:
+                      OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => _BookingVideo(path: path))),
+                  icon: const Icon(Icons.play_circle_outline, size: 32),
+                  label: const Text('مشاهدة فيديو المكان'))));
+    if (path.startsWith('https://') ||
+        path.startsWith('booking_media_v3/') ||
+        path.startsWith('booking_media/')) return BookingMediaImage(url: path);
+    return FutureBuilder(
+        future: FirebaseStorage.instance.ref(path).getData(10 * 1024 * 1024),
+        builder: (context, s) {
+          if (s.hasError) return const Center(child: Text('تعذر تحميل الصورة'));
+          if (!s.hasData)
+            return const Center(child: CircularProgressIndicator());
+          return Image.memory(s.data!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  const Center(child: Text('تعذر عرض الصورة')));
+        });
+  }
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: AspectRatio(
+          aspectRatio: 16 / 10,
+          child: widget.paths.isEmpty
+              ? const ColoredBox(
+                  color: bookingNavy,
+                  child: Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.holiday_village_outlined,
+                        size: 58, color: bookingGold),
+                    SizedBox(height: 12),
+                    Text('صور المكان غير متاحة حاليًا',
+                        style: TextStyle(color: Colors.white70)),
+                  ])))
+              : Stack(fit: StackFit.expand, children: [
+                  PageView.builder(
+                      controller: controller,
+                      itemCount: widget.paths.length,
+                      onPageChanged: (v) => setState(() => page = v),
+                      itemBuilder: (_, i) => Semantics(
+                          label:
+                              'وسائط المكان، العنصر ${i + 1} من ${widget.paths.length}',
+                          child: media(widget.paths[i]))),
+                  Positioned(
+                      bottom: 12,
+                      left: 12,
+                      child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: bookingNavy,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Text('${page + 1} / ${widget.paths.length}',
+                              style: const TextStyle(color: Colors.white)))),
+                  if (widget.paths.length > 1)
+                    Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Row(children: [
+                          IconButton.filled(
+                              tooltip: 'الوسيط السابق',
+                              onPressed: page > 0
+                                  ? () => controller.previousPage(
+                                      duration:
+                                          const Duration(milliseconds: 220),
+                                      curve: Curves.easeOut)
+                                  : null,
+                              icon: const Icon(Icons.chevron_right)),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                              tooltip: 'الوسيط التالي',
+                              onPressed: page < widget.paths.length - 1
+                                  ? () => controller.nextPage(
+                                      duration:
+                                          const Duration(milliseconds: 220),
+                                      curve: Curves.easeOut)
+                                  : null,
+                              icon: const Icon(Icons.chevron_left)),
+                        ])),
+                ])));
 }
 
 class _BookingVideo extends StatefulWidget {
@@ -140,6 +212,27 @@ class _BookingVideoState extends State<_BookingVideo> {
                     ])));
 }
 
+String bookingMoney(dynamic value) => value is num && value.isFinite
+    ? '${NumberFormat('#,##0.########', 'en').format(value)} د.ع'
+    : 'غير متوفر';
+String bookingVisitTime(DateTime? value) => value == null
+    ? 'لم يحدد'
+    : '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year} · ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+const bookingStatusNames = {
+  'requested': 'بانتظار المالك',
+  'held': 'حجز مؤقت — بانتظار العربون',
+  'payment_review': 'الإيصال قيد مراجعة الإدارة',
+  'confirmed': 'حجز مؤكد',
+  'arrived': 'تم الوصول',
+  'completed': 'مكتمل',
+  'cancel_requested': 'إلغاء بانتظار مراجعة الإيصال',
+  'rejected': 'مرفوض',
+  'cancelled': 'ملغي',
+  'expired': 'انتهت المهلة',
+  'payment_rejected': 'إيصال مرفوض'
+};
+
 const bookingNavy = Color(0xFF0F172A);
 const bookingGold = Color(0xFFB8943B);
 
@@ -148,21 +241,26 @@ class BookingSummary extends StatelessWidget {
       {super.key, required this.booking, required this.status});
   final Map<String, dynamic> booking;
   final String status;
-  String money(dynamic value) =>
-      value is num && value.isFinite ? '$value د.ع' : 'غير متوفر';
-  String time(dynamic value) => value is num
-      ? DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true)
-          .add(const Duration(hours: 3))
-          .toString()
-          .substring(0, 16)
-      : '—';
+  String money(dynamic value) => bookingMoney(value);
+  String time(dynamic value) {
+    if (value is! num || !value.isFinite) return 'غير متوفر';
+    try {
+      return bookingVisitTime(
+          DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true)
+              .add(const Duration(hours: 3)));
+    } on RangeError {
+      return 'غير متوفر';
+    }
+  }
+
   @override
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('${booking['venueName']}',
             style: const TextStyle(
                 fontSize: 24, fontWeight: FontWeight.w700, color: bookingNavy)),
-        Text('${venueCategory(booking['category'])} · ${booking['location']}',
+        Text(
+            '${venueCategory(booking['category'])} · ${booking['location'] ?? 'غير متوفر'}',
             style: const TextStyle(height: 1.7)),
         Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -179,13 +277,13 @@ class BookingSummary extends StatelessWidget {
             'المتبقي': money(booking['remaining'])
           },
           {
-            'الزبون': '${booking['customerName']}',
-            'رقم الزبون': '${booking['customerPhone']}',
-            'المالك': '${booking['ownerName']}',
-            'رقم المالك': '${booking['ownerPhone']}'
+            'الزبون': '${booking['customerName'] ?? 'غير متوفر'}',
+            'رقم الزبون': '${booking['customerPhone'] ?? 'غير متوفر'}',
+            'المالك': '${booking['ownerName'] ?? 'غير متوفر'}',
+            'رقم المالك': '${booking['ownerPhone'] ?? 'غير متوفر'}'
           },
           {
-            'الشروط': '${booking['terms']}',
+            'الشروط': '${booking['terms'] ?? 'غير متوفر'}',
             'الملاحظات': '${booking['notes'] ?? "—"}'
           },
         ])
@@ -290,11 +388,11 @@ class BookingVenueCard extends StatelessWidget {
                             ]),
                             const Divider(height: 30),
                             Text(
-                                '${venue['pricingMode'] == 'shifts' ? 'يبدأ من ' : ''}${bookingStartingPrice(venue)} د.ع',
+                                '${venue['pricingMode'] == 'shifts' ? 'يبدأ من ' : ''}${bookingMoney(bookingStartingPrice(venue))}',
                                 style: const TextStyle(
                                     fontSize: 24, fontWeight: FontWeight.w700)),
                             Text(
-                                '${venue['pricingMode'] == 'shifts' ? 'للشفت' : venue['pricingMode'] == 'hourly' ? 'للساعة' : 'للحجز'} · العربون ${venue['deposit']} د.ع',
+                                '${venue['pricingMode'] == 'shifts' ? 'للشفت' : venue['pricingMode'] == 'hourly' ? 'للساعة' : 'للحجز'} · العربون ${bookingMoney(venue['deposit'])}',
                                 style: const TextStyle(
                                     color: Color(0xFF64748B), height: 1.7)),
                             const SizedBox(height: 14),
@@ -354,8 +452,10 @@ class BookingCalendar extends StatelessWidget {
       required this.month,
       required this.slots,
       required this.onSelect,
-      required this.intervalForDay});
+      required this.intervalForDay,
+      this.selectedDay});
   final DateTime month;
+  final DateTime? selectedDay;
   final List<Map<String, dynamic>> slots;
   final List<DateTime> Function(DateTime) intervalForDay;
   final void Function(DateTime) onSelect;
@@ -444,8 +544,12 @@ class BookingCalendar extends StatelessWidget {
                 child: Builder(builder: (context) {
                   final day = DateTime(month.year, month.month, n);
                   final value = state(day), range = intervalForDay(day);
+                  final selected = day.year == selectedDay?.year &&
+                      day.month == selectedDay?.month &&
+                      day.day == selectedDay?.day;
                   final future = range[0].isAfter(DateTime.now());
                   return Semantics(
+                      selected: selected,
                       label: '$n ${names[value]}',
                       child: Tooltip(
                           message: names[value]!,
@@ -455,7 +559,14 @@ class BookingCalendar extends StatelessWidget {
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14)),
                                   disabledForegroundColor: bookingNavy,
-                                  backgroundColor: colors[value],
+                                  side: BorderSide(
+                                      color: selected
+                                          ? bookingGold
+                                          : const Color(0xFFCBD5E1),
+                                      width: selected ? 2 : 1),
+                                  backgroundColor: selected
+                                      ? const Color(0xFFF4EAD0)
+                                      : colors[value],
                                   foregroundColor: bookingNavy),
                               onPressed: future &&
                                       !['confirmed', 'unavailable']
@@ -476,8 +587,10 @@ class BookingCalendar extends StatelessWidget {
 }
 
 class BookingScaffold extends StatelessWidget {
-  const BookingScaffold({super.key, this.appBar, this.body});
+  const BookingScaffold(
+      {super.key, this.appBar, this.body, this.bottomNavigationBar});
   final PreferredSizeWidget? appBar;
+  final Widget? bottomNavigationBar;
   final Widget? body;
   @override
   Widget build(BuildContext context) {
@@ -485,10 +598,33 @@ class BookingScaffold extends StatelessWidget {
     return Theme(
       data: base.copyWith(
         colorScheme: ColorScheme.fromSeed(
-            seedColor: bookingNavy,
-            primary: bookingNavy,
-            secondary: bookingGold),
+                seedColor: bookingNavy,
+                primary: bookingNavy,
+                secondary: bookingGold)
+            .copyWith(
+                secondaryContainer: const Color(0xFFF4EAD0),
+                onSecondaryContainer: bookingNavy),
+        filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+                minimumSize: const Size(48, 52),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                textStyle: const TextStyle(
+                    fontFamily: 'SplashTajawal', fontWeight: FontWeight.w700))),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 52),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)))),
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        chipTheme: base.chipTheme.copyWith(
+            backgroundColor: Colors.white,
+            selectedColor: const Color(0xFFF4EAD0),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+            labelStyle: const TextStyle(
+                fontFamily: 'SplashTajawal', color: bookingNavy)),
         textTheme: base.textTheme.apply(
             fontFamily: 'SplashTajawal',
             bodyColor: bookingNavy,
@@ -510,6 +646,9 @@ class BookingScaffold extends StatelessWidget {
       child: Directionality(
           textDirection: TextDirection.rtl,
           child: Scaffold(
+              bottomNavigationBar: bottomNavigationBar == null
+                  ? null
+                  : SafeArea(top: false, child: bottomNavigationBar!),
               appBar: appBar,
               body: SafeArea(child: body ?? const SizedBox.shrink()))),
     );
@@ -555,7 +694,7 @@ class BookingVenueOverview extends StatelessWidget {
                                 runSpacing: 6,
                                 children: [
                                   Text(entry.key),
-                                  Text('${entry.value} د.ع',
+                                  Text(bookingMoney(entry.value),
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w700))
                                 ])),

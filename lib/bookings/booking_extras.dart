@@ -7,14 +7,15 @@ import 'booking_screen.dart';
 import 'booking_widgets.dart';
 
 class BookingPublishedReviews extends StatefulWidget {
-  const BookingPublishedReviews({super.key, required this.venueId});
+  const BookingPublishedReviews({super.key, required this.venueId, this.load});
   final String venueId;
+  final Future<Map<String, dynamic>> Function()? load;
   @override
   State<BookingPublishedReviews> createState() => _PublishedReviewsState();
 }
 
 class _PublishedReviewsState extends State<BookingPublishedReviews> {
-  late final reviews =
+  late final reviews = widget.load?.call() ??
       bookingCall('getPublishedBookingReviews', {'venueId': widget.venueId});
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
@@ -23,8 +24,9 @@ class _PublishedReviewsState extends State<BookingPublishedReviews> {
         if (s.hasError) return const Text('تعذر تحميل التقييمات');
         if (!s.hasData) return const LinearProgressIndicator();
         return ExpansionTile(
-            title: Text(
-                'تقييمات حجوزات مكتملة: ${s.data!['count']} — ${(s.data!['average'] as num).toStringAsFixed(1)} / 5'),
+            title: Text(s.data!['count'] == 0
+                ? 'لا توجد تقييمات منشورة بعد'
+                : 'تقييمات حجوزات مكتملة: ${s.data!['count']} — ${(s.data!['average'] as num).toStringAsFixed(1)} / 5'),
             children: [
               if (s.data!['count'] == 0)
                 const ListTile(title: Text('لا توجد تقييمات منشورة بعد')),
@@ -191,10 +193,10 @@ class _SupportState extends State<BookingSupportScreen> {
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: query.snapshots(includeMetadataChanges: true),
               builder: (context, s) {
-                if (!s.hasData ||
-                    s.hasError ||
-                    s.data!.metadata.isFromCache ||
-                    s.data!.metadata.hasPendingWrites) {
+                if (s.hasError ||
+                    (s.hasData &&
+                        (s.data!.metadata.isFromCache ||
+                            s.data!.metadata.hasPendingWrites))) {
                   return const BookingStateView(
                       title: 'يلزم اتصال للتحقق من الصلاحية',
                       detail:

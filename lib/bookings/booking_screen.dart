@@ -1,3 +1,5 @@
+import 'booking_workspace.dart';
+import 'booking_experience.dart';
 import 'booking_location.dart';
 import 'booking_directions_button.dart';
 import 'booking_media_service.dart';
@@ -25,6 +27,20 @@ import 'booking_finance_query.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+
+DateTime bookingBaghdadDate([DateTime? instant]) {
+  final date =
+      (instant ?? DateTime.now()).toUtc().add(const Duration(hours: 3));
+  return DateTime(date.year, date.month, date.day);
+}
+
+DateTime bookingBaghdadInput(DateTime date, TimeOfDay time) =>
+    DateTime.utc(date.year, date.month, date.day, time.hour, time.minute)
+        .subtract(const Duration(hours: 3));
+DateTime bookingBaghdadMonth() {
+  final date = bookingBaghdadDate();
+  return DateTime(date.year, date.month);
+}
 
 List<DateTime> bookingShiftDates(DateTime date, Map<String, dynamic> shift) {
   final minute = shift['checkInMinute'] as int;
@@ -67,19 +83,7 @@ String bookingActionLabel(dynamic action) =>
       'settleOwner': 'تسجيل تسوية المالك',
     }[action] ??
     'تحديث الحجز';
-const bookingStatuses = {
-  'requested': 'بانتظار المالك',
-  'held': 'حجز مؤقت — بانتظار العربون',
-  'payment_review': 'الإيصال قيد مراجعة الإدارة',
-  'confirmed': 'حجز مؤكد',
-  'arrived': 'تم الوصول',
-  'completed': 'مكتمل',
-  'cancel_requested': 'إلغاء بانتظار مراجعة الإيصال',
-  'rejected': 'مرفوض',
-  'cancelled': 'ملغي',
-  'expired': 'انتهت المهلة',
-  'payment_rejected': 'إيصال مرفوض'
-};
+const bookingStatuses = bookingStatusNames;
 Future<Map<String, dynamic>> bookingCall(
     String name, Map<String, dynamic> data) async {
   if (appFlavor == 'bookingsTest') {
@@ -191,8 +195,15 @@ class _BookingScreenState extends State<BookingScreen> {
             appBar: AppBar(
                 backgroundColor: bookingNavy,
                 foregroundColor: Colors.white,
-                title: Text(
-                    widget.admin ? 'إدارة الحجوزات' : 'الشاليهات والقاعات'),
+                title: Text(widget.admin
+                    ? 'إدارة الحجوزات'
+                    : tab == 2
+                        ? 'لوحة المالك'
+                        : tab == 1
+                            ? 'حجوزاتي'
+                            : tab == 4
+                                ? 'المراجعة المالية'
+                                : 'حجوزات الأنبار'),
                 actions: widget.admin
                     ? [
                         IconButton(
@@ -224,50 +235,70 @@ class _BookingScreenState extends State<BookingScreen> {
                       ]
                     : null),
             body: ListView(children: [
-              Wrap(children: [
-                if (widget.admin)
-                  TextButton(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const BookingReviewInbox())),
-                      child: const Text('مراجعة التقييمات')),
-                if (widget.admin)
-                  TextButton(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const BookingMediaInbox())),
-                      child: const Text('مراجعة الوسائط')),
-                TextButton(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                BookingTransferInbox(admin: widget.admin))),
-                    child: const Text('نقل الملكية')),
-                if (widget.admin || finance)
-                  TextButton(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const BookingLedgerScreen())),
-                      child: const Text('التقرير المالي')),
-                TextButton(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => BookingVenueEditor(
-                                ownerMode: true, data: {'ownerId': uid}))),
-                    child: const Text('إضافة مكان للتوثيق')),
-                if (widget.admin)
-                  TextButton(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const BookingProofInbox())),
-                      child: const Text('توثيق الملكية')),
-              ]),
+              if (tab != 2)
+                Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: BookingWorkspaceHeader(
+                        title: widget.admin
+                            ? 'مركز إدارة الحجوزات'
+                            : tab == 2
+                                ? 'لوحة المالك'
+                                : 'مكان يليق بيومك',
+                        subtitle: widget.admin
+                            ? 'راجع الأماكن والطلبات والتوثيق من مساحة واحدة.'
+                            : 'شاليهات ومزارع وقاعات · اختر المكان والموعد المناسبين لك.')),
+              ExpansionTile(
+                  title:
+                      Text(widget.admin ? 'أدوات الإدارة' : 'أدوات الحجوزات'),
+                  children: [
+                    Wrap(spacing: 12, runSpacing: 12, children: [
+                      if (widget.admin)
+                        BookingWorkspaceAction(
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const BookingReviewInbox())),
+                            child: const Text('مراجعة التقييمات')),
+                      if (widget.admin)
+                        BookingWorkspaceAction(
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const BookingMediaInbox())),
+                            child: const Text('مراجعة الوسائط')),
+                      BookingWorkspaceAction(
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => BookingTransferInbox(
+                                      admin: widget.admin))),
+                          child: const Text('نقل الملكية')),
+                      if (widget.admin || finance)
+                        BookingWorkspaceAction(
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const BookingLedgerScreen())),
+                            child: const Text('التقرير المالي')),
+                      BookingWorkspaceAction(
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => BookingVenueEditor(
+                                      ownerMode: true,
+                                      data: {'ownerId': uid}))),
+                          child: const Text('إضافة مكان للتوثيق')),
+                      if (widget.admin)
+                        BookingWorkspaceAction(
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const BookingProofInbox())),
+                            child: const Text('توثيق الملكية')),
+                    ])
+                  ]),
               TextButton.icon(
                   onPressed: () => Navigator.push(
                       context,
@@ -337,10 +368,10 @@ class _BookingScreenState extends State<BookingScreen> {
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: query.snapshots(includeMetadataChanges: true),
                     builder: (context, s) {
-                      if (!s.hasData ||
-                          s.hasError ||
-                          s.data!.metadata.isFromCache ||
-                          s.data!.metadata.hasPendingWrites) {
+                      if (s.hasError ||
+                          (s.hasData &&
+                              (s.data!.metadata.isFromCache ||
+                                  s.data!.metadata.hasPendingWrites))) {
                         return const BookingStateView(
                             title: 'يلزم اتصال للتحقق من الصلاحية',
                             detail:
@@ -369,25 +400,18 @@ class _BookingScreenState extends State<BookingScreen> {
                             padding: EdgeInsets.all(24),
                             child: Text(
                                 'لا توجد أماكن تطابق الفلاتر؛ جرّب تخفيفها'));
+                      if (tab == 2)
+                        return BookingOwnerPanel(
+                            bookings: docs
+                                .map((d) =>
+                                    <String, dynamic>{...d.data(), 'id': d.id})
+                                .toList(),
+                            onOpen: (id) => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        BookingDetailsScreen(bookingId: id))));
                       return Column(children: [
-                        if (tab == 2) ...[
-                          const Padding(
-                              padding: EdgeInsets.all(20),
-                              child: Text('نظرة على حجوزاتك',
-                                  style: TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.w700))),
-                          BookingMetricCard(
-                              title: 'طلبات بانتظار الموافقة',
-                              value:
-                                  '${docs.where((d) => d.data()['status'] == 'requested').length}',
-                              icon: Icons.inbox_outlined),
-                          BookingMetricCard(
-                              title: 'حجوزات مؤكدة',
-                              value:
-                                  '${docs.where((d) => d.data()['status'] == 'confirmed').length}',
-                              icon: Icons.event_available),
-                        ],
                         ...docs.map((doc) {
                           final d = doc.data();
                           if (tab == 6)
@@ -458,22 +482,57 @@ class BookingRequestScreen extends StatefulWidget {
   final String venueId;
   final Map<String, dynamic> venue;
   const BookingRequestScreen(
-      {super.key, required this.venueId, required this.venue});
+      {super.key,
+      required this.venueId,
+      required this.venue,
+      this.call = bookingCall,
+      this.onRequested,
+      this.currentUserId});
+  final BookingMediaCall call;
+  final ValueChanged<String>? onRequested;
+
+  /// For scoped data adapters; normal routes observe Firebase Auth directly.
+  final String? Function()? currentUserId;
   @override
   State<BookingRequestScreen> createState() => _BookingRequestScreenState();
 }
 
 class _BookingRequestScreenState extends State<BookingRequestScreen> {
   DateTime? start, end;
+  int step = 0;
+  Map<String, dynamic>? submittedIntent;
+  String? submittedUid;
+  bool identityChanged = false;
+  StreamSubscription<User?>? requestSession;
+  String? currentUid() => widget.currentUserId == null
+      ? FirebaseAuth.instance.currentUser?.uid
+      : widget.currentUserId!();
+  void invalidateIdentity() {
+    if (!mounted) return;
+    notes.clear();
+    if (mounted) setState(() => identityChanged = true);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.currentUserId == null) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      requestSession = FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (mounted && user?.uid != uid) invalidateIdentity();
+      });
+    }
+  }
+
   bool accepted = false, busy = false;
   String? shiftId;
-  DateTime calendarMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime calendarMonth = bookingBaghdadMonth();
   late Future<Map<String, dynamic>> availability = loadAvailability();
   Future<Map<String, dynamic>> loadAvailability() {
     final first = DateTime.utc(calendarMonth.year, calendarMonth.month, 1, -3)
         .millisecondsSinceEpoch;
     final now = DateTime.now().millisecondsSinceEpoch + 1000;
-    return bookingCall('getBookingAvailability', {
+    return widget.call('getBookingAvailability', {
       'venueId': widget.venueId,
       'start': first > now ? first : now,
       'end': DateTime.utc(calendarMonth.year, calendarMonth.month + 1, 1, -3)
@@ -520,6 +579,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   late final requestId = '${DateTime.now().microsecondsSinceEpoch}';
   @override
   void dispose() {
+    requestSession?.cancel();
     notes.dispose();
     super.dispose();
   }
@@ -527,178 +587,400 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   Future<DateTime?> pick() async {
     final date = await showDatePicker(
         context: context,
-        firstDate: DateTime.now(),
-        lastDate: DateTime.now().add(const Duration(days: 365)));
+        firstDate: bookingBaghdadDate(),
+        lastDate: bookingBaghdadDate().add(const Duration(days: 365)));
     if (date == null || !mounted) return null;
-    final time =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
-    return time == null
-        ? null
-        : DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(
+            DateTime.now().toUtc().add(const Duration(hours: 3))));
+    return time == null ? null : bookingBaghdadInput(date, time);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (identityChanged)
+      return BookingScaffold(
+          appBar: AppBar(title: const Text('تغيّر الحساب')),
+          body: const BookingStateView(
+              title: 'تغيّر الحساب أثناء الطلب',
+              detail:
+                  'أُخفيت بيانات النموذج. ارجع إلى الحجوزات وأعد فتح المكان بالحساب الحالي.',
+              icon: Icons.lock_outline));
     final v = widget.venue;
+    final validRange = start != null &&
+        end != null &&
+        start!.isBefore(end!) &&
+        start!.isAfter(DateTime.now());
     return BookingScaffold(
-        appBar: AppBar(title: Text('${v['name']}')),
-        body: ListView(padding: const EdgeInsets.all(20), children: [
-          BookingPublishedReviews(venueId: widget.venueId),
-          BookingMediaGallery(paths: List<String>.from(v['mediaPaths'] ?? [])),
-          if (v['pricingMode'] == 'shifts' && shiftId != null)
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              IconButton(
-                  tooltip: 'الشهر السابق',
-                  onPressed: calendarMonth.isAfter(
-                          DateTime(DateTime.now().year, DateTime.now().month))
-                      ? () => setState(() {
-                            calendarMonth = DateTime(
-                                calendarMonth.year, calendarMonth.month - 1);
-                            availability = loadAvailability();
-                          })
-                      : null,
-                  icon: const Icon(Icons.chevron_right)),
-              const Text('تقويم التوافر'),
-              IconButton(
-                  tooltip: 'الشهر التالي',
-                  onPressed: () => setState(() {
-                        calendarMonth = DateTime(
-                            calendarMonth.year, calendarMonth.month + 1);
-                        availability = loadAvailability();
-                      }),
-                  icon: const Icon(Icons.chevron_left)),
-            ]),
-          if (v['pricingMode'] == 'shifts' && shiftId != null)
-            FutureBuilder<Map<String, dynamic>>(
-                future: availability,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError)
-                    return TextButton(
-                        onPressed: () =>
-                            setState(() => availability = loadAvailability()),
-                        child:
-                            const Text('تعذر تحميل التوافر — إعادة المحاولة'));
-                  if (!snapshot.hasData) return const LinearProgressIndicator();
-                  return BookingCalendar(
-                      month: calendarMonth,
-                      slots: (snapshot.data!['slots'] as List)
-                          .map((e) => Map<String, dynamic>.from(e))
-                          .toList(),
-                      intervalForDay: (day) => bookingShiftDates(
-                          day,
-                          Map<String, dynamic>.from((v['shifts'] as List)
-                              .firstWhere((s) => s['id'] == shiftId))),
-                      onSelect: (day) => setState(() {
-                            setShiftDate(day);
-                            accepted = false;
-                          }));
-                }),
-          BookingVenueOverview(venue: v, total: total),
-          BookingDirectionsButton(venue: v),
-          if (v['pricingMode'] == 'hourly')
-            Text('سعر الساعة: ${v['hourlyPrice']} د.ع — اختر ساعات كاملة'),
-          if (v['pricingMode'] == 'shifts') ...[
-            DropdownButtonFormField<String>(
-                isExpanded: true,
-                initialValue: shiftId,
-                decoration:
-                    const InputDecoration(labelText: 'الشفت (توقيت بغداد)'),
-                items: [
-                  for (final shift in v['shifts'] as List)
-                    DropdownMenuItem(
-                        value: shift['id'] as String,
-                        child: Text(
-                            '${shift['name']} — ${bookingTime(shift['checkInMinute'])} إلى ${bookingTime(shift['checkOutMinute'])} — ${shift['price']} د.ع',
-                            overflow: TextOverflow.ellipsis))
-                ],
-                onChanged: (value) => setState(() {
-                      shiftId = value;
-                      start = null;
-                      end = null;
-                      accepted = false;
-                    })),
-            TextButton(
-                onPressed: shiftId == null
-                    ? null
-                    : () async {
-                        final date = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime.now(),
-                            lastDate:
-                                DateTime.now().add(const Duration(days: 365)));
-                        if (mounted && date != null) {
-                          setState(() {
-                            setShiftDate(date);
-                            accepted = false;
-                          });
-                        }
-                      },
-                child: const Text('اختر تاريخ دخول الشفت')),
-            if (start != null)
-              Text(
-                  'الدخول: ${start!.add(const Duration(hours: 3)).toString().replaceAll("Z", "")}\nالخروج: ${end!.add(const Duration(hours: 3)).toString().replaceAll("Z", "")} — توقيت بغداد'),
-          ] else ...[
-            TextButton(
-                onPressed: () async {
-                  final d = await pick();
-                  if (mounted && d != null) {
-                    setState(() {
-                      start = d;
-                      accepted = false;
-                    });
-                  }
-                },
-                child: Text('البداية: ${start ?? "اختر"}')),
-            TextButton(
-                onPressed: () async {
-                  final d = await pick();
-                  if (mounted && d != null) {
-                    setState(() {
-                      end = d;
-                      accepted = false;
-                    });
-                  }
-                },
-                child: Text('النهاية: ${end ?? "اختر"}')),
-          ],
-          Text(bookingCancellationText(v['cancellationPolicy'])),
-          TextField(
-              controller: notes,
-              decoration: const InputDecoration(labelText: 'ملاحظات')),
-          CheckboxListTile(
-              value: accepted,
-              onChanged: (v) => setState(() => accepted = v ?? false),
-              title: const Text('أوافق على السعر والشروط وسياسة الإلغاء')),
-          FilledButton(
-              onPressed: busy || !accepted || start == null || end == null
-                  ? null
-                  : () async {
-                      setState(() => busy = true);
-                      await bookingRun(context, () async {
-                        final r = await bookingCall('requestBooking', {
-                          'venueId': widget.venueId,
-                          'requestId': requestId,
-                          'start': start!.millisecondsSinceEpoch,
-                          'end': end!.millisecondsSinceEpoch,
-                          'acceptedTerms': v['terms'],
-                          'price': total,
-                          'shiftId': shiftId,
-                          'cancellationPolicy': v['cancellationPolicy'],
-                          'deposit': v['deposit'],
-                          'notes': notes.text
-                        });
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => BookingDetailsScreen(
-                                      bookingId: r['id'])));
-                        }
-                      });
-                      if (mounted) setState(() => busy = false);
-                    },
-              child: const Text('طلب الحجز'))
-        ]));
+      appBar: AppBar(
+          title: Text(step == 0
+              ? '${v['name']}'
+              : step == 1
+                  ? 'اختيار الموعد'
+                  : 'مراجعة الطلب'),
+          leading: step == 0
+              ? null
+              : IconButton(
+                  tooltip: 'الخطوة السابقة',
+                  icon: const Icon(Icons.arrow_forward,
+                      textDirection: TextDirection.ltr),
+                  onPressed: busy || submittedIntent != null
+                      ? null
+                      : () => setState(() => step--))),
+      bottomNavigationBar: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (step == 0)
+                          Text(
+                              'يبدأ من ${bookingMoney(bookingStartingPrice(v))} · العربون ${bookingMoney(v['deposit'])}',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        if (step < 2)
+                          FilledButton.icon(
+                              key: const ValueKey('booking-next'),
+                              icon: const Icon(Icons.arrow_back,
+                                  textDirection: TextDirection.ltr),
+                              onPressed: busy || (step == 1 && !validRange)
+                                  ? null
+                                  : () => setState(() => step++),
+                              label: Text(step == 0
+                                  ? 'اختيار الموعد'
+                                  : 'مراجعة السعر والطلب')),
+                        if (step == 2)
+                          FilledButton(
+                              onPressed: busy ||
+                                      !accepted ||
+                                      start == null ||
+                                      end == null
+                                  ? null
+                                  : () async {
+                                      if (busy) return;
+                                      setState(() => busy = true);
+                                      await bookingRun(context, () async {
+                                        final uid = currentUid();
+                                        if (uid == null)
+                                          throw FirebaseFunctionsException(
+                                              code: 'unauthenticated',
+                                              message:
+                                                  'سجل الدخول لإرسال الطلب.');
+                                        if (submittedUid != null &&
+                                            submittedUid != uid) {
+                                          invalidateIdentity();
+                                          return;
+                                        }
+                                        submittedUid = uid;
+                                        final retrying =
+                                            submittedIntent != null;
+                                        final payload = submittedIntent ??=
+                                            Map<String, dynamic>.unmodifiable({
+                                          'venueId': widget.venueId,
+                                          'requestId': requestId,
+                                          'start':
+                                              start!.millisecondsSinceEpoch,
+                                          'end': end!.millisecondsSinceEpoch,
+                                          'acceptedTerms': v['terms'],
+                                          'price': total,
+                                          'shiftId': shiftId,
+                                          'cancellationPolicy':
+                                              v['cancellationPolicy'],
+                                          'deposit': v['deposit'],
+                                          'notes': notes.text
+                                        });
+                                        Map<String, dynamic> r;
+                                        try {
+                                          r = await widget.call(
+                                              'requestBooking', payload);
+                                        } on FirebaseFunctionsException catch (e) {
+                                          if (!retrying &&
+                                              [
+                                                'invalid-argument',
+                                                'failed-precondition',
+                                                'permission-denied',
+                                                'unauthenticated',
+                                                'not-found'
+                                              ].contains(e.code))
+                                            submittedIntent = null;
+                                          rethrow;
+                                        }
+                                        if (!mounted) return;
+                                        if (currentUid() != uid) {
+                                          invalidateIdentity();
+                                          return;
+                                        }
+                                        if (context.mounted &&
+                                            widget.onRequested != null) {
+                                          widget
+                                              .onRequested!(r['id'] as String);
+                                          return;
+                                        }
+                                        if (context.mounted) {
+                                          Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      BookingDetailsScreen(
+                                                          bookingId: r['id'])));
+                                        }
+                                      });
+                                      if (mounted) setState(() => busy = false);
+                                    },
+                              child: Text(busy
+                                  ? 'جار إرسال الطلب…'
+                                  : submittedIntent != null
+                                      ? 'إعادة المحاولة بنفس الطلب'
+                                      : 'إرسال طلب الحجز')),
+                        if (step == 2 && submittedIntent != null)
+                          TextButton(
+                              onPressed: busy
+                                  ? null
+                                  : () => Navigator.maybePop(context),
+                              child: const Text('العودة للتحقق من حجوزاتي')),
+                      ])))),
+      body: Center(
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: ListView(
+                  key: ValueKey('booking-step-$step'),
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    BookingCheckoutHeader(step: step),
+                    if (step == 0) ...[
+                      BookingMediaGallery(
+                          paths: List<String>.from(v['mediaPaths'] ?? [])),
+                      const SizedBox(height: 20),
+                      BookingVenueIdentity(venue: v),
+                      if ((v['description'] ?? '').toString().trim().isNotEmpty)
+                        BookingSection(
+                            title: 'عن المكان',
+                            child: Text('${v['description']}',
+                                style: const TextStyle(height: 1.9))),
+                      BookingSection(
+                          title: 'الموقع والاستضافة',
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text('${v['location']}',
+                                    style: const TextStyle(height: 1.8)),
+                                Text('المالك: ${v['ownerName']}',
+                                    style: const TextStyle(height: 1.8)),
+                                BookingDirectionsButton(venue: v),
+                              ])),
+                      BookingSection(
+                          title: 'تجارب الضيوف',
+                          child: BookingPublishedReviews(
+                              venueId: widget.venueId,
+                              load: () => widget.call(
+                                  'getPublishedBookingReviews',
+                                  {'venueId': widget.venueId}))),
+                    ],
+                    if (step == 1) ...[
+                      BookingSection(
+                          title: 'رتّب يومك',
+                          subtitle:
+                              'اختر الفترة ثم اليوم. التوافر النهائي يتحقق منه الخادم عند إرسال الطلب.',
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (v['pricingMode'] == 'hourly')
+                                  Text(
+                                      'سعر الساعة: ${v['hourlyPrice']} د.ع — اختر ساعات كاملة'),
+                                if (v['pricingMode'] == 'shifts') ...[
+                                  DropdownButtonFormField<String>(
+                                      isExpanded: true,
+                                      initialValue: shiftId,
+                                      decoration: const InputDecoration(
+                                          labelText: 'الشفت (توقيت بغداد)'),
+                                      items: [
+                                        for (final shift in v['shifts'] as List)
+                                          DropdownMenuItem(
+                                              value: shift['id'] as String,
+                                              child: Text(
+                                                  '${shift['name']} — ${bookingTime(shift['checkInMinute'])} إلى ${bookingTime(shift['checkOutMinute'])} — ${shift['price']} د.ع',
+                                                  overflow:
+                                                      TextOverflow.ellipsis))
+                                      ],
+                                      onChanged: busy
+                                          ? null
+                                          : (value) => setState(() {
+                                                shiftId = value;
+                                                start = null;
+                                                end = null;
+                                                accepted = false;
+                                              })),
+                                  TextButton(
+                                      onPressed: busy || shiftId == null
+                                          ? null
+                                          : () async {
+                                              final date = await showDatePicker(
+                                                  context: context,
+                                                  firstDate:
+                                                      bookingBaghdadDate(),
+                                                  lastDate: bookingBaghdadDate()
+                                                      .add(const Duration(
+                                                          days: 365)));
+                                              if (mounted && date != null) {
+                                                setState(() {
+                                                  setShiftDate(date);
+                                                  accepted = false;
+                                                });
+                                              }
+                                            },
+                                      child:
+                                          const Text('اختر تاريخ دخول الشفت')),
+                                  if (start != null)
+                                    Text(
+                                        'الدخول: ${bookingVisitTime(start?.add(const Duration(hours: 3)))}\nالخروج: ${bookingVisitTime(end?.add(const Duration(hours: 3)))} — توقيت بغداد'),
+                                ] else ...[
+                                  TextButton(
+                                      onPressed: busy
+                                          ? null
+                                          : () async {
+                                              final d = await pick();
+                                              if (mounted && d != null) {
+                                                setState(() {
+                                                  start = d;
+                                                  accepted = false;
+                                                });
+                                              }
+                                            },
+                                      child: Text(
+                                          'البداية: ${bookingVisitTime(start?.add(const Duration(hours: 3)))}')),
+                                  TextButton(
+                                      onPressed: busy
+                                          ? null
+                                          : () async {
+                                              final d = await pick();
+                                              if (mounted && d != null) {
+                                                setState(() {
+                                                  end = d;
+                                                  accepted = false;
+                                                });
+                                              }
+                                            },
+                                      child: Text(
+                                          'النهاية: ${bookingVisitTime(end?.add(const Duration(hours: 3)))}')),
+                                ],
+                              ])),
+                      BookingSection(
+                          key: const ValueKey('booking-calendar-section'),
+                          title: 'تقويم التوافر',
+                          subtitle: 'توقيت بغداد · اختر يومًا متاحًا',
+                          child: Column(children: [
+                            if (v['pricingMode'] == 'shifts' && shiftId != null)
+                              Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    IconButton(
+                                        tooltip: 'الشهر السابق',
+                                        onPressed: calendarMonth
+                                                .isAfter(bookingBaghdadMonth())
+                                            ? () => setState(() {
+                                                  calendarMonth = DateTime(
+                                                      calendarMonth.year,
+                                                      calendarMonth.month - 1);
+                                                  availability =
+                                                      loadAvailability();
+                                                })
+                                            : null,
+                                        icon: const Icon(Icons.chevron_right)),
+                                    const Text('تقويم التوافر'),
+                                    IconButton(
+                                        tooltip: 'الشهر التالي',
+                                        onPressed: () => setState(() {
+                                              calendarMonth = DateTime(
+                                                  calendarMonth.year,
+                                                  calendarMonth.month + 1);
+                                              availability = loadAvailability();
+                                            }),
+                                        icon: const Icon(Icons.chevron_left)),
+                                  ]),
+                            if (v['pricingMode'] == 'shifts' && shiftId != null)
+                              FutureBuilder<Map<String, dynamic>>(
+                                  future: availability,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasError)
+                                      return TextButton(
+                                          onPressed: () => setState(() =>
+                                              availability =
+                                                  loadAvailability()),
+                                          child: const Text(
+                                              'تعذر تحميل التوافر — إعادة المحاولة'));
+                                    if (!snapshot.hasData)
+                                      return const LinearProgressIndicator();
+                                    return BookingCalendar(
+                                        selectedDay: start
+                                            ?.add(const Duration(hours: 3)),
+                                        month: calendarMonth,
+                                        slots: (snapshot.data!['slots'] as List)
+                                            .map((e) =>
+                                                Map<String, dynamic>.from(e))
+                                            .toList(),
+                                        intervalForDay: (day) =>
+                                            bookingShiftDates(
+                                                day,
+                                                Map<String, dynamic>.from(
+                                                    (v['shifts'] as List)
+                                                        .firstWhere((s) =>
+                                                            s['id'] ==
+                                                            shiftId))),
+                                        onSelect: (day) => setState(() {
+                                              setShiftDate(day);
+                                              accepted = false;
+                                            }));
+                                  }),
+                            if (v['pricingMode'] != 'shifts')
+                              const Text(
+                                  'حدد البداية والنهاية من منتقي التاريخ والوقت أعلاه.'),
+                            if (v['pricingMode'] == 'shifts' && shiftId == null)
+                              const Text('اختر الفترة أولًا ليظهر التقويم.'),
+                          ])),
+                    ],
+                    if (step == 2) ...[
+                      if (submittedIntent != null)
+                        const BookingStateView(
+                            title: 'إعادة التحقق من الطلب',
+                            detail:
+                                'عند انقطاع الرد، تعاد المحاولة بنفس البيانات ومعرّف الطلب لمنع إنشاء طلب آخر.'),
+                      BookingVenueOverview(venue: v, total: total),
+                      BookingSection(
+                          title: 'موعد الزيارة',
+                          child: Text(
+                              'الدخول: ${bookingVisitTime(start?.add(const Duration(hours: 3)))}\nالخروج: ${bookingVisitTime(end?.add(const Duration(hours: 3)))} — توقيت بغداد',
+                              style: const TextStyle(height: 1.8))),
+                      BookingSection(
+                          title: 'الشروط والتأكيد',
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(bookingCancellationText(
+                                    v['cancellationPolicy'])),
+                                TextField(
+                                    controller: notes,
+                                    enabled: !busy && submittedIntent == null,
+                                    decoration: const InputDecoration(
+                                        labelText: 'ملاحظات')),
+                                CheckboxListTile(
+                                    value: accepted,
+                                    onChanged: busy || submittedIntent != null
+                                        ? null
+                                        : (v) => setState(
+                                            () => accepted = v ?? false),
+                                    title: const Text(
+                                        'أوافق على السعر والشروط وسياسة الإلغاء')),
+                              ])),
+                    ],
+                  ]))),
+    );
   }
 }
 
@@ -791,6 +1073,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Future<void> act(String action,
       [Map<String, dynamic> extra = const {}]) async {
+    if (busy) return;
     setState(() => busy = true);
     await bookingRun(context, () async {
       await bookingCall('actOnBooking', {
@@ -811,10 +1094,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               .doc('bookings/${widget.bookingId}')
               .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
-            if (!s.hasData ||
-                s.hasError ||
-                s.data!.metadata.isFromCache ||
-                s.data!.metadata.hasPendingWrites) {
+            if (s.hasError ||
+                (s.hasData &&
+                    (s.data!.metadata.isFromCache ||
+                        s.data!.metadata.hasPendingWrites))) {
               return const BookingStateView(
                   title: 'يلزم اتصال للتحقق من الصلاحية',
                   detail:
@@ -839,328 +1122,341 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 privilegedUid: privilegedUid)) {
               return const Center(child: Text('لا تملك صلاحية عرض هذا الحجز'));
             }
+            final holdDeadline = bookingHoldDeadline(b['holdUntil']);
             final held = b['status'] == 'held' &&
-                (b['holdUntil'] as num) > DateTime.now().millisecondsSinceEpoch;
+                holdDeadline != null &&
+                holdDeadline.isAfter(DateTime.now());
             Widget button(String label, String action) => FilledButton(
                 onPressed: busy ? null : () => act(action), child: Text(label));
-            return ListView(padding: const EdgeInsets.all(20), children: [
-              Semantics(
-                  liveRegion: true,
-                  child: Text(bookingStatuses[b['status']] ?? b['status'],
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700))),
-              BookingProgress(status: b['status']),
-              if (customer && b['status'] == 'completed') ...[
-                DropdownButtonFormField<int>(
-                    initialValue: rating,
-                    decoration:
-                        const InputDecoration(labelText: 'تقييم تجربة الحجز'),
-                    items: [
-                      for (var i = 1; i <= 5; i++)
-                        DropdownMenuItem(value: i, child: Text('$i / 5'))
-                    ],
-                    onChanged:
-                        busy ? null : (v) => setState(() => rating = v ?? 5)),
-                TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => bookingRun(context, () async {
-                              await bookingCall('reviewCompletedBooking', {
-                                'bookingId': widget.bookingId,
-                                'rating': rating,
-                                'comment': reason.text
-                              });
-                            }),
-                    child: const Text(
-                        'إرسال التقييم — اكتب تعليقك في حقل الملاحظات')),
-              ],
-              if (owner || customer)
-                TextButton.icon(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => BookingChatScreen(
-                                bookingId: widget.bookingId))),
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('محادثة الحجز')),
-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('booking_action_audit')
-                      .where('bookingId', isEqualTo: widget.bookingId)
-                      .snapshots(includeMetadataChanges: true),
-                  builder: (context, events) {
-                    if (!events.hasData ||
-                        events.hasError ||
-                        events.data!.metadata.isFromCache ||
-                        events.data!.metadata.hasPendingWrites) {
-                      return const Center(
-                          child:
-                              Text('يلزم اتصال للتحقق من صلاحية عرض البيانات'));
-                    }
-                    if (!events.hasData) return const SizedBox.shrink();
-                    final docs = events.data!.docs.toList()
-                      ..sort((a, b) => ((a.data()['version'] as num?) ?? 0)
-                          .compareTo((b.data()['version'] as num?) ?? 0));
-                    return Column(children: [
-                      for (final event in docs)
-                        ListTile(
-                            dense: true,
-                            title: Text(
-                                bookingActionLabel(event.data()['action'])),
-                            subtitle: Text(
-                                '${event.data()['createdAt'] is Timestamp ? (event.data()['createdAt'] as Timestamp).toDate().toUtc().add(const Duration(hours: 3)).toString().replaceAll('Z', '') : ""} — بغداد'))
-                    ]);
-                  }),
-              if (finance &&
-                  !owner &&
-                  !customer &&
-                  b['status'] == 'completed' &&
-                  b['ownerSettlementStatus'] != 'settled')
-                TextField(
-                    controller: refundReference,
-                    decoration: const InputDecoration(
-                        labelText:
-                            'مرجع تحويل مستحقات المالك بعد التحويل الفعلي')),
-              if (finance &&
-                  !owner &&
-                  !customer &&
-                  b['status'] == 'completed' &&
-                  b['ownerSettlementStatus'] != 'settled')
-                FilledButton(
-                    onPressed: busy
-                        ? null
-                        : () => act('settleOwner',
-                            {'settlementReference': refundReference.text}),
-                    child: const Text('تسجيل تسوية مستحقات المالك يدويًا')),
-              if (customer && b['status'] == 'confirmed')
-                FilledButton.icon(
-                    icon: const Icon(Icons.qr_code),
-                    label: const Text('رمز الوصول — صالح 10 دقائق'),
-                    onPressed: busy
-                        ? null
-                        : () => bookingRun(context, () async {
-                              final result = await bookingCall(
-                                  'issueBookingCheckInCode',
-                                  {'bookingId': widget.bookingId});
-                              if (context.mounted)
-                                await showDialog(
-                                    context: context,
-                                    builder: (_) => Dialog(
-                                        child: Padding(
-                                            padding: const EdgeInsets.all(24),
-                                            child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Text(
-                                                      'اعرض الرمز للمالك عند الوصول'),
-                                                  QrImageView(
-                                                      data: result['code'],
-                                                      size: 240),
-                                                  SelectableText(
-                                                      result['code']),
-                                                ]))));
-                            })),
-              TextButton.icon(
-                  icon: const Icon(Icons.support_agent),
-                  label: const Text('طلب دعم لهذا الحجز'),
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => BookingSupportScreen(
-                              bookingId: widget.bookingId)))),
-              if (owner && ['confirmed', 'arrived'].contains(b['status']))
-                TextButton.icon(
-                    icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('مسح رمز الوصول بالكاميرا'),
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => BookingScannerScreen(
-                                bookingId: widget.bookingId)))),
-              if (owner && b['status'] == 'confirmed')
-                button('تسجيل الوصول', 'arrive'),
-              if (owner && b['status'] == 'confirmed')
-                TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => bookingRun(context, () async {
-                              await bookingCall('verifyBookingCheckInCode',
-                                  {'code': reason.text.trim()});
-                            }),
-                    child: const Text(
-                        'تحقق من رمز الوصول الملصق في حقل الملاحظات')),
-              if (owner && ['confirmed', 'arrived'].contains(b['status']))
-                button('إنهاء الحجز بعد موعد الخروج', 'complete'),
-              BookingSummary(
-                  booking: b,
-                  status: bookingStatuses[b['status']] ?? b['status']),
-              Text(bookingCancellationText(b['cancellationPolicy'])),
-              if (b['pricing'] != null)
-                Text(
-                    'التسعير: ${b['pricing']['name'] ?? b['pricing']['mode']}'),
-              if (b['refundDue'] != null)
-                Text(
-                    'الاسترداد المستحق: ${b['refundDue']} د.ع — المعاد: ${b['refunded'] ?? 0} — الحالة: ${b['refundStatus'] == 'settled' ? 'تمت التسوية' : b['refundStatus'] == 'pending' ? 'بانتظار التسوية المالية' : 'لا يوجد مبلغ مستحق'}'),
-              if (b['reviewedBy'] != null)
-                Text('مراجع العربون: ${b['reviewedBy']}'),
-              if (b['cancelledBy'] != null)
-                Text(
-                    'ألغاه: ${b['cancelledBy']} — السبب: ${b['cancellationReason'] ?? b['reason']}'),
-              if (b['refundReference'] != null)
-                Text(
-                    'مرجع الاسترداد: ${b['refundReference']}\nالمراجع: ${b['refundSettledBy']}\nوقت التسوية: ${DateTime.fromMillisecondsSinceEpoch(b['refundSettledAt'])}'),
-              if (finance &&
-                  !owner &&
-                  !customer &&
-                  b['refundStatus'] == 'pending') ...[
-                TextField(
-                    controller: refundReference,
-                    decoration: const InputDecoration(
-                        labelText:
-                            'مرجع تحويل الاسترداد بعد إعادة المبلغ فعلياً')),
-                FilledButton(
-                    onPressed: busy
-                        ? null
-                        : () => act('settleRefund',
-                            {'refundReference': refundReference.text}),
-                    child: const Text('تسجيل إعادة المبلغ يدوياً')),
-              ],
-              if (b['receiptPath'] != null)
-                TextButton(
-                    onPressed: () => bookingRun(context, () async {
-                          final bytes = await FirebaseStorage.instance
-                              .ref(b['receiptPath'])
-                              .getData(10 * 1024 * 1024);
-                          if (context.mounted && bytes != null) {
-                            showDialog(
-                                context: context,
-                                builder: (_) => Dialog(
-                                    child: InteractiveViewer(
-                                        child: Image.memory(bytes,
-                                            errorBuilder: (_, __, ___) =>
-                                                const Padding(
-                                                    padding: EdgeInsets.all(24),
-                                                    child: Text(
-                                                        'تعذر عرض الإيصال؛ الملف غير صالح'))))));
-                          }
-                        }),
-                    child: const Text('عرض الإيصال')),
-              TextField(
-                  controller: reason,
-                  decoration: const InputDecoration(
-                      labelText: 'سبب الرفض أو الإلغاء أو البلاغ')),
-              if (owner && b['status'] == 'requested') ...[
-                button('موافقة وحجز مؤقت', 'approve'),
-                button('رفض الطلب', 'reject')
-              ],
-              if (customer && held) ...[
-                if (accounts.isEmpty) const Text('لا تتوفر وسيلة دفع حاليًا'),
-                for (final entry in accounts.entries)
-                  RadioListTile<String>(
-                      value: entry.key,
-                      groupValue: method,
-                      title: Text(
-                          '${entry.key == 'qicard' ? 'كي' : 'زين كاش'}: ${entry.value['number']}'),
-                      onChanged: busy
+            return Column(children: [
+              if (b['status'] == 'held' && holdDeadline == null)
+                const BookingStateView(
+                    title: 'تعذر التحقق من مهلة العربون',
+                    detail: 'حدّث الحجز أو تواصل مع الدعم قبل إرسال أي دفعة.',
+                    icon: Icons.info_outline),
+              if (b['status'] == 'held' && holdDeadline != null)
+                BookingHoldNotice(
+                    compact: true,
+                    until: holdDeadline,
+                    onExpired: () {
+                      if (mounted) setState(() {});
+                    }),
+              Expanded(
+                  child: ListView(padding: const EdgeInsets.all(20), children: [
+                Semantics(
+                    liveRegion: true,
+                    child: Text(bookingStatuses[b['status']] ?? b['status'],
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700))),
+                BookingSummary(
+                    booking: b,
+                    status: bookingStatuses[b['status']] ?? b['status']),
+                ExpansionTile(
+                    title: const Text('مراحل الحجز'),
+                    children: [BookingProgress(status: b['status'])]),
+                if (customer && b['status'] == 'completed') ...[
+                  DropdownButtonFormField<int>(
+                      initialValue: rating,
+                      decoration:
+                          const InputDecoration(labelText: 'تقييم تجربة الحجز'),
+                      items: [
+                        for (var i = 1; i <= 5; i++)
+                          DropdownMenuItem(value: i, child: Text('$i / 5'))
+                      ],
+                      onChanged:
+                          busy ? null : (v) => setState(() => rating = v ?? 5)),
+                  TextButton(
+                      onPressed: busy
                           ? null
-                          : (v) => setState(() {
-                                method = v!;
-                                displayedNumber = accounts[method]['number'];
-                              })),
-                TextField(
-                    controller: transaction,
-                    decoration:
-                        const InputDecoration(labelText: 'رقم التحويل')),
-                FilledButton(
-                    onPressed: busy || displayedNumber == null
-                        ? null
-                        : () async {
-                            final expectedNumber = displayedNumber;
-                            final selectedMethod = method;
-                            setState(() => busy = true);
-                            await bookingRun(context, () async {
-                              final image = await ImagePicker().pickImage(
-                                  source: ImageSource.gallery,
-                                  maxWidth: 1600,
-                                  imageQuality: 85);
-                              if (image == null) return;
-                              final bytes =
-                                  await FlutterImageCompress.compressWithList(
-                                      await image.readAsBytes(),
-                                      format: CompressFormat.jpeg,
-                                      quality: 85);
-                              final path =
-                                  'booking_receipts/${widget.bookingId}/$uid/${BookingMediaService.receiptFileName(bytes)}';
-                              final receipt =
-                                  FirebaseStorage.instance.ref(path);
-                              await BookingMediaService.uploadVerifiedReceipt(
-                                  bytes,
-                                  reuseExisting: true, upload: (data) async {
-                                await receipt.putData(
-                                    data,
-                                    SettableMetadata(
-                                        contentType: 'image/jpeg'));
-                              }, read: () async {
-                                try {
-                                  return await receipt
-                                      .getData(10 * 1024 * 1024);
-                                } on FirebaseException catch (e) {
-                                  if (e.code == 'object-not-found') return null;
-                                  rethrow;
-                                }
-                              }, discardInvalid: () async {
-                                await bookingCall(
-                                    'discardInvalidBookingReceipt', {
+                          : () => bookingRun(context, () async {
+                                await bookingCall('reviewCompletedBooking', {
                                   'bookingId': widget.bookingId,
-                                  'path': path,
+                                  'rating': rating,
+                                  'comment': reason.text
+                                });
+                              }),
+                      child: const Text(
+                          'إرسال التقييم — اكتب تعليقك في حقل الملاحظات')),
+                ],
+                if (owner || customer)
+                  TextButton.icon(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => BookingChatScreen(
+                                  bookingId: widget.bookingId))),
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text('محادثة الحجز')),
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('booking_action_audit')
+                        .where('bookingId', isEqualTo: widget.bookingId)
+                        .snapshots(includeMetadataChanges: true),
+                    builder: (context, events) {
+                      if (events.hasError ||
+                          (events.hasData &&
+                              (events.data!.metadata.isFromCache ||
+                                  events.data!.metadata.hasPendingWrites))) {
+                        return const Center(
+                            child: Text(
+                                'يلزم اتصال للتحقق من صلاحية عرض البيانات'));
+                      }
+                      if (!events.hasData) return const SizedBox.shrink();
+                      final docs = events.data!.docs.toList()
+                        ..sort((a, b) => ((a.data()['version'] as num?) ?? 0)
+                            .compareTo((b.data()['version'] as num?) ?? 0));
+                      return Column(children: [
+                        for (final event in docs)
+                          ListTile(
+                              dense: true,
+                              title: Text(
+                                  bookingActionLabel(event.data()['action'])),
+                              subtitle: Text(
+                                  '${event.data()['createdAt'] is Timestamp ? (event.data()['createdAt'] as Timestamp).toDate().toUtc().add(const Duration(hours: 3)).toString().replaceAll('Z', '') : ""} — بغداد'))
+                      ]);
+                    }),
+                if (finance &&
+                    !owner &&
+                    !customer &&
+                    b['status'] == 'completed' &&
+                    b['ownerSettlementStatus'] != 'settled')
+                  TextField(
+                      controller: refundReference,
+                      decoration: const InputDecoration(
+                          labelText:
+                              'مرجع تحويل مستحقات المالك بعد التحويل الفعلي')),
+                if (finance &&
+                    !owner &&
+                    !customer &&
+                    b['status'] == 'completed' &&
+                    b['ownerSettlementStatus'] != 'settled')
+                  FilledButton(
+                      onPressed: busy
+                          ? null
+                          : () => act('settleOwner',
+                              {'settlementReference': refundReference.text}),
+                      child: const Text('تسجيل تسوية مستحقات المالك يدويًا')),
+                if (customer && b['status'] == 'confirmed')
+                  FilledButton.icon(
+                      icon: const Icon(Icons.qr_code),
+                      label: const Text('رمز الوصول — صالح 10 دقائق'),
+                      onPressed: busy
+                          ? null
+                          : () => bookingRun(context, () async {
+                                final result = await bookingCall(
+                                    'issueBookingCheckInCode',
+                                    {'bookingId': widget.bookingId});
+                                if (context.mounted)
+                                  await showDialog(
+                                      context: context,
+                                      builder: (_) => Dialog(
+                                          child: Padding(
+                                              padding: const EdgeInsets.all(24),
+                                              child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                        'اعرض الرمز للمالك عند الوصول'),
+                                                    QrImageView(
+                                                        data: result['code'],
+                                                        size: 240),
+                                                    SelectableText(
+                                                        result['code']),
+                                                  ]))));
+                              })),
+                TextButton.icon(
+                    icon: const Icon(Icons.support_agent),
+                    label: const Text('طلب دعم لهذا الحجز'),
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => BookingSupportScreen(
+                                bookingId: widget.bookingId)))),
+                if (owner && ['confirmed', 'arrived'].contains(b['status']))
+                  TextButton.icon(
+                      icon: const Icon(Icons.qr_code_scanner),
+                      label: const Text('مسح رمز الوصول بالكاميرا'),
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => BookingScannerScreen(
+                                  bookingId: widget.bookingId)))),
+                if (owner && b['status'] == 'confirmed')
+                  button('تسجيل الوصول', 'arrive'),
+                if (owner && b['status'] == 'confirmed')
+                  TextButton(
+                      onPressed: busy
+                          ? null
+                          : () => bookingRun(context, () async {
+                                await bookingCall('verifyBookingCheckInCode',
+                                    {'code': reason.text.trim()});
+                              }),
+                      child: const Text(
+                          'تحقق من رمز الوصول الملصق في حقل الملاحظات')),
+                if (owner && ['confirmed', 'arrived'].contains(b['status']))
+                  button('إنهاء الحجز بعد موعد الخروج', 'complete'),
+                Text(bookingCancellationText(b['cancellationPolicy'])),
+                if (b['pricing'] != null)
+                  Text(
+                      'التسعير: ${b['pricing']['name'] ?? b['pricing']['mode']}'),
+                if (b['refundDue'] != null)
+                  Text(
+                      'الاسترداد المستحق: ${b['refundDue']} د.ع — المعاد: ${b['refunded'] ?? 0} — الحالة: ${b['refundStatus'] == 'settled' ? 'تمت التسوية' : b['refundStatus'] == 'pending' ? 'بانتظار التسوية المالية' : 'لا يوجد مبلغ مستحق'}'),
+                if (b['reviewedBy'] != null)
+                  Text('مراجع العربون: ${b['reviewedBy']}'),
+                if (b['cancelledBy'] != null)
+                  Text(
+                      'ألغاه: ${b['cancelledBy']} — السبب: ${b['cancellationReason'] ?? b['reason']}'),
+                if (b['refundReference'] != null)
+                  Text(
+                      'مرجع الاسترداد: ${b['refundReference']}\nالمراجع: ${b['refundSettledBy']}\nوقت التسوية: ${DateTime.fromMillisecondsSinceEpoch(b['refundSettledAt'])}'),
+                if (finance &&
+                    !owner &&
+                    !customer &&
+                    b['refundStatus'] == 'pending') ...[
+                  TextField(
+                      controller: refundReference,
+                      decoration: const InputDecoration(
+                          labelText:
+                              'مرجع تحويل الاسترداد بعد إعادة المبلغ فعلياً')),
+                  FilledButton(
+                      onPressed: busy
+                          ? null
+                          : () => act('settleRefund',
+                              {'refundReference': refundReference.text}),
+                      child: const Text('تسجيل إعادة المبلغ يدوياً')),
+                ],
+                if (b['receiptPath'] != null)
+                  TextButton(
+                      onPressed: () => bookingRun(context, () async {
+                            final bytes = await FirebaseStorage.instance
+                                .ref(b['receiptPath'])
+                                .getData(10 * 1024 * 1024);
+                            if (context.mounted && bytes != null) {
+                              showDialog(
+                                  context: context,
+                                  builder: (_) => Dialog(
+                                      child: InteractiveViewer(
+                                          child: Image.memory(bytes,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const Padding(
+                                                      padding:
+                                                          EdgeInsets.all(24),
+                                                      child: Text(
+                                                          'تعذر عرض الإيصال؛ الملف غير صالح'))))));
+                            }
+                          }),
+                      child: const Text('عرض الإيصال')),
+                TextField(
+                    controller: reason,
+                    decoration: const InputDecoration(
+                        labelText: 'سبب الرفض أو الإلغاء أو البلاغ')),
+                if (owner && b['status'] == 'requested') ...[
+                  button('موافقة وحجز مؤقت', 'approve'),
+                  button('رفض الطلب', 'reject')
+                ],
+                if (customer && held)
+                  BookingPaymentPanel(
+                      deposit: b['deposit'],
+                      accounts: accounts,
+                      method: method,
+                      transaction: transaction,
+                      busy: busy,
+                      onMethod: (value) => setState(() {
+                            method = value;
+                            displayedNumber = accounts[method]['number'];
+                          }),
+                      onSubmit: busy || displayedNumber == null
+                          ? null
+                          : () async {
+                              if (busy) return;
+                              final expectedNumber = displayedNumber;
+                              final selectedMethod = method;
+                              setState(() => busy = true);
+                              await bookingRun(context, () async {
+                                final image = await ImagePicker().pickImage(
+                                    source: ImageSource.gallery,
+                                    maxWidth: 1600,
+                                    imageQuality: 85);
+                                if (image == null) return;
+                                final bytes =
+                                    await FlutterImageCompress.compressWithList(
+                                        await image.readAsBytes(),
+                                        format: CompressFormat.jpeg,
+                                        quality: 85);
+                                final path =
+                                    'booking_receipts/${widget.bookingId}/$uid/${BookingMediaService.receiptFileName(bytes)}';
+                                final receipt =
+                                    FirebaseStorage.instance.ref(path);
+                                await BookingMediaService.uploadVerifiedReceipt(
+                                    bytes,
+                                    reuseExisting: true, upload: (data) async {
+                                  await receipt.putData(
+                                      data,
+                                      SettableMetadata(
+                                          contentType: 'image/jpeg'));
+                                }, read: () async {
+                                  try {
+                                    return await receipt
+                                        .getData(10 * 1024 * 1024);
+                                  } on FirebaseException catch (e) {
+                                    if (e.code == 'object-not-found')
+                                      return null;
+                                    rethrow;
+                                  }
+                                }, discardInvalid: () async {
+                                  await bookingCall(
+                                      'discardInvalidBookingReceipt', {
+                                    'bookingId': widget.bookingId,
+                                    'path': path,
+                                  });
+                                });
+
+                                await bookingCall('actOnBooking', {
+                                  'bookingId': widget.bookingId,
+                                  'action': 'submitPayment',
+                                  'method': selectedMethod,
+                                  'expectedNumber': expectedNumber,
+                                  'transactionNumber': transaction.text,
+                                  'receiptPath': path
                                 });
                               });
-
-                              await bookingCall('actOnBooking', {
-                                'bookingId': widget.bookingId,
-                                'action': 'submitPayment',
-                                'method': selectedMethod,
-                                'expectedNumber': expectedNumber,
-                                'transactionNumber': transaction.text,
-                                'receiptPath': path
-                              });
-                            });
-                            if (mounted) setState(() => busy = false);
-                          },
-                    child: const Text('رفع إيصال وإرسال للمراجعة'))
-              ],
-              if (finance &&
-                  !owner &&
-                  !customer &&
-                  ['payment_review', 'cancel_requested']
-                      .contains(b['status'])) ...[
-                button(
-                    b['status'] == 'cancel_requested'
-                        ? 'اعتماد المبلغ وفتح تسوية الاسترداد'
-                        : 'اعتماد العربون وتأكيد الحجز',
-                    'confirmPayment'),
-                button('رفض الإيصال', 'rejectPayment')
-              ],
-              if ((owner || customer || admin) &&
-                  ['requested', 'held', 'confirmed', 'payment_review']
-                      .contains(b['status']))
-                button('إلغاء الحجز', 'cancel'),
-              if (owner || customer)
-                OutlinedButton(
-                    onPressed: busy
-                        ? null
-                        : () => bookingRun(context, () async {
-                              await bookingCall('reportBooking', {
-                                'bookingId': widget.bookingId,
-                                'reason': reason.text
-                              });
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('تم إرسال البلاغ')));
-                              }
+                              if (mounted) setState(() => busy = false);
                             }),
-                    child: const Text('إرسال بلاغ للإدارة')),
+                if (finance &&
+                    !owner &&
+                    !customer &&
+                    ['payment_review', 'cancel_requested']
+                        .contains(b['status'])) ...[
+                  button(
+                      b['status'] == 'cancel_requested'
+                          ? 'اعتماد المبلغ وفتح تسوية الاسترداد'
+                          : 'اعتماد العربون وتأكيد الحجز',
+                      'confirmPayment'),
+                  button('رفض الإيصال', 'rejectPayment')
+                ],
+                if ((owner || customer || admin) &&
+                    ['requested', 'held', 'confirmed', 'payment_review']
+                        .contains(b['status']))
+                  button('إلغاء الحجز', 'cancel'),
+                if (owner || customer)
+                  OutlinedButton(
+                      onPressed: busy
+                          ? null
+                          : () => bookingRun(context, () async {
+                                await bookingCall('reportBooking', {
+                                  'bookingId': widget.bookingId,
+                                  'reason': reason.text
+                                });
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('تم إرسال البلاغ')));
+                                }
+                              }),
+                      child: const Text('إرسال بلاغ للإدارة')),
+              ]))
             ]);
           }));
 }

@@ -16,7 +16,12 @@ void main() {
       'remaining': 100001,
     }, status: 'حجز مؤقت')))));
     expect(find.text('0 د.ع'), findsOneWidget);
-    expect(find.text('غير متوفر'), findsNothing);
+    expect(
+        find.descendant(
+            of: find.ancestor(
+                of: find.text('المدفوع المعتمد'), matching: find.byType(Card)),
+            matching: find.text('غير متوفر')),
+        findsNothing);
   });
   testWidgets(
       'legacy missing money is unavailable, never a null amount or zero',
@@ -30,9 +35,14 @@ void main() {
       'deposit': 1001,
       'paid': null,
     }, status: 'ملغي')))));
-    expect(find.text('100001 د.ع'), findsOneWidget);
-    expect(find.text('1001 د.ع'), findsOneWidget);
-    expect(find.text('غير متوفر'), findsNWidgets(2));
+    expect(find.text('100,001 د.ع'), findsOneWidget);
+    expect(find.text('1,001 د.ع'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.ancestor(
+                of: find.text('المدفوع المعتمد'), matching: find.byType(Card)),
+            matching: find.text('غير متوفر')),
+        findsNWidgets(2));
     expect(find.text('null د.ع'), findsNothing);
     expect(find.text('0 د.ع'), findsNothing);
   });

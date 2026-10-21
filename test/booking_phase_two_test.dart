@@ -53,33 +53,50 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
-        home: BookingRequestScreen(venueId: 'test', venue: {
-      'name': 'مزرعة',
-      'ownerName': 'المالك',
-      'location': 'بغداد',
-      'price': 100000,
-      'deposit': 20000,
-      'terms': 'شروط',
-      'pricingMode': 'shifts',
-      'shifts': [
-        {
-          'id': 'night',
-          'name': 'الشفت الليلي',
-          'price': 200000,
-          'checkInMinute': 1200,
-          'checkOutMinute': 480
-        }
-      ],
-      'cancellationPolicy': {
-        'freeCancellationHours': 24,
-        'lateRefundPercent': 25
-      },
-    })));
-    expect(find.textContaining('استرداد كامل العربون'), findsOneWidget);
+        home: BookingRequestScreen(
+            venueId: 'test',
+            currentUserId: () => 'synthetic-customer',
+            call: (name, data) async => name == 'getPublishedBookingReviews'
+                ? {'count': 0, 'average': 0, 'reviews': []}
+                : {'slots': []},
+            venue: {
+          'name': 'مزرعة',
+          'ownerName': 'المالك',
+          'location': 'بغداد',
+          'price': 100000,
+          'deposit': 20000,
+          'terms': 'شروط',
+          'pricingMode': 'shifts',
+          'shifts': [
+            {
+              'id': 'night',
+              'name': 'الشفت الليلي',
+              'price': 200000,
+              'checkInMinute': 1200,
+              'checkOutMinute': 480
+            }
+          ],
+          'cancellationPolicy': {
+            'freeCancellationHours': 24,
+            'lateRefundPercent': 25
+          },
+        })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-next')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('الشفت الليلي').last);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('الشهر التالي'));
+    await tester.tap(find.byTooltip('الشهر التالي'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('22'));
+    await tester.tap(find.text('22'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-next')));
+    await tester.pumpAndSettle();
+
     expect(
         find.descendant(
             of: find.byType(BookingVenueOverview),
@@ -88,13 +105,16 @@ void main() {
     expect(
         find.descendant(
             of: find.byType(BookingVenueOverview),
-            matching: find.text('200000 د.ع')),
+            matching: find.text('200,000 د.ع')),
         findsOneWidget);
     expect(
         find.descendant(
             of: find.byType(BookingVenueOverview),
-            matching: find.text('180000 د.ع')),
+            matching: find.text('180,000 د.ع')),
         findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('استرداد كامل العربون'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
