@@ -1,3 +1,5 @@
+import 'booking_experience.dart';
+import 'booking_operations.dart';
 import 'booking_workspace.dart';
 import 'booking_extras.dart';
 import 'booking_ledger_access.dart';
@@ -32,21 +34,21 @@ class BookingReviewInbox extends StatelessWidget {
               return const Center(child: Text('تعذر تحميل التقييمات'));
             if (!s.hasData)
               return const Center(child: CircularProgressIndicator());
-            return ListView(children: [
+            return ListView(padding: const EdgeInsets.all(20), children: [
               for (final d in s.data!.docs)
-                Card(
-                    child: Column(children: [
-                  ListTile(
-                      title: Text('${d.data()['rating']} / 5'),
-                      subtitle: Text('${d.data()['comment']}')),
-                  for (final approved in [true, false])
-                    TextButton(
-                        onPressed: () => bookingRun(context, () async {
-                              await bookingCall('moderateBookingReview',
-                                  {'reviewId': d.id, 'approved': approved});
-                            }),
-                        child: Text(approved ? 'نشر التقييم' : 'رفض التقييم')),
-                ]))
+                BookingReviewCard(
+                    rating: d.data()['rating'],
+                    comment: '${d.data()['comment']}',
+                    actions: [
+                      for (final approved in [true, false])
+                        TextButton(
+                            onPressed: () => bookingRun(context, () async {
+                                  await bookingCall('moderateBookingReview',
+                                      {'reviewId': d.id, 'approved': approved});
+                                }),
+                            child:
+                                Text(approved ? 'نشر التقييم' : 'رفض التقييم')),
+                    ])
             ]);
           }));
 }
@@ -134,15 +136,19 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
 }
 
 class BookingMediaInbox extends StatelessWidget {
-  const BookingMediaInbox({super.key});
+  const BookingMediaInbox({super.key, this.reviews, this.call = bookingCall});
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? reviews;
+  final Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)
+      call;
   @override
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('مراجعة صور وفيديوهات الأماكن')),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('booking_media_reviews')
-              .where('status', isEqualTo: 'pending')
-              .snapshots(includeMetadataChanges: true),
+          stream: reviews ??
+              FirebaseFirestore.instance
+                  .collection('booking_media_reviews')
+                  .where('status', isEqualTo: 'pending')
+                  .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
             if (s.hasError ||
                 (s.hasData &&
@@ -157,33 +163,23 @@ class BookingMediaInbox extends StatelessWidget {
               return const Center(child: Text('تعذر تحميل الملفات'));
             if (!s.hasData)
               return const Center(child: CircularProgressIndicator());
+            if (s.data!.docs.isEmpty)
+              return const BookingStateView(
+                  title: 'كل الملفات تمت مراجعتها',
+                  detail:
+                      'ستظهر هنا الصور والفيديوهات الجديدة التي تنتظر قرار الإدارة.');
             return ListView(padding: const EdgeInsets.all(16), children: [
               for (final d in s.data!.docs)
-                Card(
-                    child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(children: [
-                          Text('المكان ${d.data()['venueId']}'),
-                          BookingMediaGallery(paths: [d.data()['path']]),
-                          for (final approved in [true, false])
-                            TextButton(
-                                onPressed: () => bookingRun(context, () async {
-                                      await bookingCall(
-                                          [
-                                            2,
-                                            3
-                                          ].contains(d.data()['schemaVersion'])
-                                              ? 'reviewBookingExternalMedia'
-                                              : 'reviewBookingMedia',
-                                          {
-                                            'mediaId': d.id,
-                                            'approved': approved
-                                          });
-                                    }),
-                                child: Text(approved
-                                    ? 'اعتماد وعرض الملف'
-                                    : 'رفض الملف')),
-                        ])))
+                BookingMediaReviewCard(
+                    venueId: '${d.data()['venueId']}',
+                    preview: BookingMediaGallery(paths: [d.data()['path']]),
+                    onReview: (approved) => bookingRun(context, () async {
+                          await call(
+                              [2, 3].contains(d.data()['schemaVersion'])
+                                  ? 'reviewBookingExternalMedia'
+                                  : 'reviewBookingMedia',
+                              {'mediaId': d.id, 'approved': approved});
+                        }))
             ]);
           }));
 }
@@ -297,6 +293,7 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
   }
 
   Future<void> run(String name, Map<String, dynamic> data) async {
+    if (busy) return;
     setState(() => busy = true);
     await bookingRun(context, () async {
       await bookingCall(name, data);
@@ -311,131 +308,136 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('جدول المكان ونقل الملكية')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
-        const Text('إغلاق موعد أو تسجيل حجز خارجي دون بيانات العملاء'),
-        TextButton(
-            onPressed: busy ? null : () => pick(true),
-            child: Text(
-                'البداية بتوقيت بغداد: ${start?.add(const Duration(hours: 3)) ?? "اختر"}')),
-        TextButton(
-            onPressed: busy ? null : () => pick(false),
-            child: Text(
-                'النهاية بتوقيت بغداد: ${end?.add(const Duration(hours: 3)) ?? "اختر"}')),
-        TextField(
-            controller: reason,
-            decoration:
-                const InputDecoration(labelText: 'سبب الإغلاق أو نقل الملكية')),
-        FilledButton(
-            onPressed: busy || start == null || end == null
-                ? null
-                : () => run('saveBookingClosure', {
-                      'venueId': widget.venueId,
-                      'requestId': '${DateTime.now().microsecondsSinceEpoch}',
-                      'start': start!.millisecondsSinceEpoch,
-                      'end': end!.millisecondsSinceEpoch,
-                      'reason': reason.text
-                    }),
-            child: const Text('حفظ موعد غير متاح')),
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('booking_closures')
-                .where('venueId', isEqualTo: widget.venueId)
-                .where('active', isEqualTo: true)
-                .snapshots(includeMetadataChanges: true),
-            builder: (context, s) {
-              if (s.hasError ||
-                  (s.hasData &&
-                      (s.data!.metadata.isFromCache ||
-                          s.data!.metadata.hasPendingWrites))) {
-                return const BookingStateView(
-                    title: 'يلزم اتصال للتحقق من الصلاحية',
-                    detail:
-                        'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-              }
-              if (s.hasError)
-                return const Text('لا تتوفر صلاحية قراءة الإغلاقات');
-              return Column(children: [
-                for (final d in s.data?.docs ??
-                    <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-                  ListTile(
-                      title: Text('${d.data()['reason']}'),
-                      subtitle: Text(
-                          '${DateTime.fromMillisecondsSinceEpoch(d.data()['start'], isUtc: true).add(const Duration(hours: 3))} — بغداد'),
-                      trailing: TextButton(
-                          onPressed: busy
-                              ? null
-                              : () => run(
-                                  'reopenBookingClosure', {'closureId': d.id}),
-                          child: const Text('إعادة الإتاحة')))
-              ]);
-            }),
+        BookingSection(
+            title: 'إدارة إتاحة المكان',
+            subtitle: 'إغلاق موعد أو تسجيل حجز خارجي دون بيانات العملاء',
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextButton(
+                      onPressed: busy ? null : () => pick(true),
+                      child: Text(
+                          'البداية بتوقيت بغداد: ${start?.add(const Duration(hours: 3)) ?? "اختر"}')),
+                  TextButton(
+                      onPressed: busy ? null : () => pick(false),
+                      child: Text(
+                          'النهاية بتوقيت بغداد: ${end?.add(const Duration(hours: 3)) ?? "اختر"}')),
+                  TextField(
+                      controller: reason,
+                      decoration: const InputDecoration(
+                          labelText: 'سبب الإغلاق أو نقل الملكية')),
+                  FilledButton(
+                      onPressed: busy || start == null || end == null
+                          ? null
+                          : () => run('saveBookingClosure', {
+                                'venueId': widget.venueId,
+                                'requestId':
+                                    '${DateTime.now().microsecondsSinceEpoch}',
+                                'start': start!.millisecondsSinceEpoch,
+                                'end': end!.millisecondsSinceEpoch,
+                                'reason': reason.text
+                              }),
+                      child: const Text('حفظ موعد غير متاح')),
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('booking_closures')
+                          .where('venueId', isEqualTo: widget.venueId)
+                          .where('active', isEqualTo: true)
+                          .snapshots(includeMetadataChanges: true),
+                      builder: (context, s) {
+                        if (s.hasError ||
+                            (s.hasData &&
+                                (s.data!.metadata.isFromCache ||
+                                    s.data!.metadata.hasPendingWrites))) {
+                          return const BookingStateView(
+                              title: 'يلزم اتصال للتحقق من الصلاحية',
+                              detail:
+                                  'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+                        }
+                        if (s.hasError)
+                          return const Text('لا تتوفر صلاحية قراءة الإغلاقات');
+                        return Column(children: [
+                          for (final d in s.data?.docs ??
+                              <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                            ListTile(
+                                title: Text('${d.data()['reason']}'),
+                                subtitle: Text(
+                                    '${DateTime.fromMillisecondsSinceEpoch(d.data()['start'], isUtc: true).add(const Duration(hours: 3))} — بغداد'),
+                                trailing: TextButton(
+                                    onPressed: busy
+                                        ? null
+                                        : () => run('reopenBookingClosure',
+                                            {'closureId': d.id}),
+                                    child: const Text('إعادة الإتاحة')))
+                        ]);
+                      }),
+                ])),
         if (widget.ownerControls) ...[
+          BookingSection(
+              title: 'عرض لفترة محدودة',
+              subtitle: 'خصم واضح لمدة سبعة أيام؛ لا يغيّر سياسة العربون.',
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                        controller: discount,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'خصم مؤقت 0–50٪ لمدة 7 أيام')),
+                    FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () => run('saveBookingOffer', {
+                                  'venueId': widget.venueId,
+                                  'percent': int.tryParse(discount.text),
+                                  'until': DateTime.now()
+                                      .add(const Duration(days: 7))
+                                      .millisecondsSinceEpoch
+                                }),
+                        child: const Text('حفظ العرض — الصفر يلغي الخصم')),
+                  ])),
           const Divider(height: 32),
-          TextField(
-              controller: discount,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'خصم مؤقت 0–50٪ لمدة 7 أيام')),
-          FilledButton(
-              onPressed: busy
-                  ? null
-                  : () => run('saveBookingOffer', {
-                        'venueId': widget.venueId,
-                        'percent': int.tryParse(discount.text),
-                        'until': DateTime.now()
-                            .add(const Duration(days: 7))
-                            .millisecondsSinceEpoch
-                      }),
-              child: const Text('حفظ العرض — الصفر يلغي الخصم')),
-          const Divider(height: 32),
-          const Text('صلاحيات الموظفين — لا تشمل المالية'),
-          TextField(
+          BookingStaffPermissions(
               controller: staff,
-              decoration: const InputDecoration(labelText: 'UID حساب الموظف'),
-              textDirection: TextDirection.ltr),
-          for (final entry in const {
-            'calendar': 'إدارة الإغلاقات',
-            'bookings': 'قبول ورفض الطلبات',
-            'checkin': 'تسجيل الوصول والانتهاء'
-          }.entries)
-            CheckboxListTile(
-                value: scopes.contains(entry.key),
-                title: Text(entry.value),
-                onChanged: busy
-                    ? null
-                    : (v) => setState(() {
-                          if (v == true) {
-                            scopes.add(entry.key);
-                          } else {
-                            scopes.remove(entry.key);
-                          }
-                        })),
-          FilledButton(
-              onPressed: busy
-                  ? null
-                  : () => run('setBookingVenueStaff', {
-                        'venueId': widget.venueId,
-                        'userId': staff.text.trim(),
-                        'scopes': scopes.toList()
-                      }),
-              child:
-                  const Text('حفظ الصلاحيات — إلغاء جميع الاختيارات يسحبها')),
+              scopes: scopes,
+              busy: busy,
+              onChanged: (key, yes) => setState(() {
+                    if (yes) {
+                      scopes.add(key);
+                    } else {
+                      scopes.remove(key);
+                    }
+                  }),
+              onSave: () => run('setBookingVenueStaff', {
+                    'venueId': widget.venueId,
+                    'userId': staff.text.trim(),
+                    'scopes': scopes.toList()
+                  })),
           const Divider(height: 32),
-          const Text(
-              'نقل الملكية يحتاج قبول المالك الجديد وموافقة إدارة مستقلة وتسوية الحجوزات القائمة.'),
-          TextField(
-              controller: owner,
-              decoration: const InputDecoration(labelText: 'UID المالك الجديد'),
-              textDirection: TextDirection.ltr),
-          FilledButton(
-              onPressed: busy
-                  ? null
-                  : () => run('requestBookingOwnershipTransfer', {
-                        'venueId': widget.venueId,
-                        'newOwnerId': owner.text.trim(),
-                        'requestId': '${DateTime.now().microsecondsSinceEpoch}',
-                        'reason': reason.text
-                      }),
-              child: const Text('تقديم طلب نقل ملكية')),
+          BookingSection(
+              title: 'نقل الملكية',
+              subtitle:
+                  'يحتاج قبول المالك الجديد وموافقة إدارة مستقلة وتسوية الحجوزات القائمة.',
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                        controller: owner,
+                        decoration: const InputDecoration(
+                            labelText: 'UID المالك الجديد'),
+                        textDirection: TextDirection.ltr),
+                    FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () => run('requestBookingOwnershipTransfer', {
+                                  'venueId': widget.venueId,
+                                  'newOwnerId': owner.text.trim(),
+                                  'requestId':
+                                      '${DateTime.now().microsecondsSinceEpoch}',
+                                  'reason': reason.text
+                                }),
+                        child: const Text('تقديم طلب نقل ملكية')),
+                  ])),
         ],
       ]));
 }
@@ -455,6 +457,7 @@ class _BookingStaffScreenState extends State<BookingStaffScreen> {
       bookingCall('getBookingStaffRequests', {'venueId': widget.venueId});
   bool busy = false;
   Future<void> act(String id, String action) async {
+    if (busy) return;
     setState(() => busy = true);
     await bookingRun(context, () async {
       await bookingCall('actOnBooking',

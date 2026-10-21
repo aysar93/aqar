@@ -1,3 +1,4 @@
+import 'booking_operations.dart';
 import 'booking_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -78,6 +79,10 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
     showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
+        showDragHandle: true,
+        backgroundColor: const Color(0xFFF8FAFC),
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         builder: (sheetContext) => Directionality(
             textDirection: TextDirection.rtl,
             child: SafeArea(
@@ -89,12 +94,28 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Text('${venue['name']}',
-                                  style:
-                                      Theme.of(context).textTheme.titleLarge),
+                                  style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: bookingNavy)),
+                              const SizedBox(height: 8),
                               Text(
-                                  '${venueCategory(venue['category'])} · ${venue['location'] ?? ''}'),
-                              Text(
-                                  'السعر يبدأ من ${bookingStartingPrice(venue)} د.ع'),
+                                  '${venueCategory(venue['category'])} · ${venue['location'] ?? ''}',
+                                  style: const TextStyle(
+                                      color: Color(0xFF64748B))),
+                              const SizedBox(height: 16),
+                              Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                      color: bookingNavy,
+                                      borderRadius: BorderRadius.circular(20)),
+                                  child: Text(
+                                      'السعر يبدأ من ${bookingStartingPrice(venue)} د.ع',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold))),
+                              const SizedBox(height: 12),
                               if (userPoint != null)
                                 Text(
                                     'المسافة التقريبية: ${bookingDistanceKm(userPoint!, bookingCoordinates(venue)!).toStringAsFixed(1)} كم'),
@@ -148,11 +169,20 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                           maxHeight: MediaQuery.sizeOf(context).height * .45),
                       child: SingleChildScrollView(
                           child: Column(children: [
+                        BookingMapSearchHeader(count: docs.length),
                         Padding(
                             padding: const EdgeInsets.all(12),
-                            child: BookingFilterBar(
-                                filters: filters,
-                                onChanged: () => setState(() {}))),
+                            child: Card(
+                                child: ExpansionTile(
+                                    title: const Text('تخصيص البحث'),
+                                    leading: const Icon(Icons.tune),
+                                    children: [
+                                  Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: BookingFilterBar(
+                                          filters: filters,
+                                          onChanged: () => setState(() {})))
+                                ]))),
                         Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Wrap(spacing: 8, children: [

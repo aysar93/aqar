@@ -1,3 +1,4 @@
+import 'booking_operations.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -31,10 +32,10 @@ class _PublishedReviewsState extends State<BookingPublishedReviews> {
               if (s.data!['count'] == 0)
                 const ListTile(title: Text('لا توجد تقييمات منشورة بعد')),
               for (final r in s.data!['reviews'] as List)
-                ListTile(
-                    leading: const Icon(Icons.verified),
-                    title: Text('${r['rating']} / 5 — حجز مكتمل موثوق'),
-                    subtitle: Text('${r['comment']}'))
+                BookingReviewCard(
+                    rating: r['rating'],
+                    comment: '${r['comment']}',
+                    verified: true)
             ]);
       });
 }
@@ -160,36 +161,25 @@ class _SupportState extends State<BookingSupportScreen> {
     return BookingScaffold(
         appBar: AppBar(title: const Text('دعم الحجوزات')),
         body: ListView(padding: const EdgeInsets.all(16), children: [
-          if (widget.bookingId != null) ...[
-            TextField(
-                controller: subject,
-                maxLength: 200,
-                decoration: const InputDecoration(labelText: 'موضوع الطلب')),
-            TextField(
-                controller: message,
-                maxLength: 2000,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                    labelText:
-                        'اشرح المشكلة دون مشاركة كلمة مرور أو معلومات بطاقة')),
-            FilledButton(
-                onPressed: busy
-                    ? null
-                    : () async {
-                        setState(() => busy = true);
-                        await bookingRun(context, () async {
-                          await bookingCall('openBookingSupportTicket', {
-                            'bookingId': widget.bookingId,
-                            'requestId': requestId,
-                            'subject': subject.text,
-                            'message': message.text
-                          });
-                          if (mounted) Navigator.pop(context);
-                        });
-                        if (mounted) setState(() => busy = false);
-                      },
-                child: const Text('فتح تذكرة دعم'))
-          ],
+          if (widget.bookingId != null)
+            BookingSupportForm(
+                subject: subject,
+                message: message,
+                busy: busy,
+                onSubmit: () async {
+                  if (busy) return;
+                  setState(() => busy = true);
+                  await bookingRun(context, () async {
+                    await bookingCall('openBookingSupportTicket', {
+                      'bookingId': widget.bookingId,
+                      'requestId': requestId,
+                      'subject': subject.text,
+                      'message': message.text
+                    });
+                    if (mounted) Navigator.pop(context);
+                  });
+                  if (mounted) setState(() => busy = false);
+                }),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: query.snapshots(includeMetadataChanges: true),
               builder: (context, s) {
@@ -216,33 +206,16 @@ class _SupportState extends State<BookingSupportScreen> {
                       'لا توجد تذاكر. افتح تفاصيل الحجز لطلب الدعم.');
                 return Column(children: [
                   for (final d in docs)
-                    Card(
-                        child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${d.data()['subject']} — ${{
-                                    'open': 'مفتوحة',
-                                    'in_progress': 'قيد المتابعة',
-                                    'resolved': 'تم الحل'
-                                  }[d.data()['status']]}'),
-                                  Text('${d.data()['message']}'),
-                                  if (d.data()['response'] != null)
-                                    Text('رد الدعم: ${d.data()['response']}'),
-                                  if (widget.admin)
-                                    Wrap(children: [
-                                      TextButton(
-                                          onPressed: () =>
-                                              respond(d.id, 'in_progress'),
-                                          child:
-                                              const Text('تولي التذكرة والرد')),
-                                      TextButton(
-                                          onPressed: () =>
-                                              respond(d.id, 'resolved'),
-                                          child: const Text('حل وإغلاق'))
-                                    ])
-                                ])))
+                    BookingSupportTicket(data: d.data(), actions: [
+                      if (widget.admin) ...[
+                        TextButton(
+                            onPressed: () => respond(d.id, 'in_progress'),
+                            child: const Text('تولي التذكرة والرد')),
+                        TextButton(
+                            onPressed: () => respond(d.id, 'resolved'),
+                            child: const Text('حل وإغلاق')),
+                      ]
+                    ])
                 ]);
               })
         ]));
