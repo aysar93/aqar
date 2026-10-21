@@ -1,3 +1,6 @@
+import 'booking_admin_tasks.dart';
+import 'dart:typed_data';
+import 'booking_decision_ui.dart';
 import 'booking_services_ui.dart';
 import 'booking_operations.dart';
 import 'booking_workspace.dart';
@@ -249,7 +252,24 @@ class _BookingScreenState extends State<BookingScreen> {
                       ]
                     : null),
             body: ListView(children: [
-              if (tab != 2)
+              if (widget.admin && tab == 0)
+                BookingAdminTasks(
+                    records: widget.records == null ? null : const {},
+                    onOpen: (task) {
+                      if (task == 'requests' || task == 'reports') {
+                        setState(() => tab = task == 'requests' ? 1 : 3);
+                        return;
+                      }
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => task == 'media'
+                                  ? const BookingMediaInbox()
+                                  : task == 'proofs'
+                                      ? const BookingProofInbox()
+                                      : const BookingReviewInbox()));
+                    }),
+              if (tab != 2 && !(widget.admin && tab == 0))
                 Padding(
                     padding: const EdgeInsets.all(16),
                     child: BookingWorkspaceHeader(
@@ -325,8 +345,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   0: 'الأماكن',
                   1: widget.admin ? 'جميع الحجوزات' : 'حجوزاتي',
                   if (!widget.admin) 2: 'لوحة المالك',
-                  if (!widget.admin) 5: 'أماكني وأسعاري',
-                  if (!widget.admin) 6: 'مهام الموظف',
+                  if (!widget.admin && tab != 0) 5: 'أماكني وأسعاري',
+                  if (!widget.admin && tab != 0) 6: 'مهام الموظف',
                   if (widget.admin) 3: 'البلاغات',
                   if (finance) 4: 'المراجعة المالية'
                 }.entries)
@@ -335,6 +355,20 @@ class _BookingScreenState extends State<BookingScreen> {
                       selected: tab == entry.key,
                       onSelected: (_) => setState(() => tab = entry.key))
               ]),
+              if (!widget.admin && tab == 0)
+                ExpansionTile(
+                    title: const Text('إدارة أماكني وفريقي'),
+                    children: [
+                      Wrap(spacing: 8, children: [
+                        for (final item in const {
+                          5: 'أماكني وأسعاري',
+                          6: 'مهام الموظف'
+                        }.entries)
+                          TextButton(
+                              onPressed: () => setState(() => tab = item.key),
+                              child: Text(item.value))
+                      ])
+                    ]),
               if (tab == 0)
                 Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -667,6 +701,17 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (busy)
+                          const BookingActionReason(
+                              reason: 'الإجراء معطل أثناء إرسال الطلب السابق.')
+                        else if (step == 1 && !validRange)
+                          const BookingActionReason(
+                              reason:
+                                  'اختر الفترة ثم يوم الزيارة، أو حدد الدخول والخروج، لتفعيل مراجعة الطلب.')
+                        else if (step == 2 && !accepted)
+                          const BookingActionReason(
+                              reason:
+                                  'راجع الشروط وحدد الموافقة عليها لتفعيل إرسال الطلب.'),
                         if (step == 0)
                           Text(
                               'يبدأ من ${bookingMoney(bookingStartingPrice(v))} · العربون ${bookingMoney(v['deposit'])}',
@@ -1037,6 +1082,8 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+  Uint8List? receiptBytes;
+  String? receiptUid;
   int rating = 5;
   bool busy = false, admin = false, finance = false;
   String method = 'qicard';
@@ -1079,6 +1126,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             FirebaseAuth.instance.authStateChanges().map((u) => u?.uid))
         .listen((uid) {
       roleListener?.cancel();
+      if (uid != receiptUid) receiptBytes = null;
       if (!mounted) return;
       setState(() {
         admin = false;
@@ -1121,6 +1169,27 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     transaction.dispose();
     reason.dispose();
     super.dispose();
+  }
+
+  Future<void> pickReceipt() async {
+    final expectedUid = currentUid();
+    if (busy || expectedUid == null) return;
+    await guarded(() async {
+      final image = await ImagePicker().pickImage(
+          source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
+      if (image == null) return;
+      final bytes = await FlutterImageCompress.compressWithList(
+          await image.readAsBytes(),
+          format: CompressFormat.jpeg,
+          quality: 85);
+      if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024)
+        throw StateError('حجم الإيصال غير صالح');
+      if (mounted && currentUid() == expectedUid)
+        setState(() {
+          receiptBytes = bytes;
+          receiptUid = expectedUid;
+        });
+    });
   }
 
   Future<void> guarded(Future<void> Function() task) async {
@@ -1285,6 +1354,16 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     b['status'] == 'completed' &&
                     b['ownerSettlementStatus'] != 'settled')
                   BookingManualSettlement(
+                      key:
+                          ValueKey('owner-${widget.bookingId}-${b['version']}'),
+                      bookingId: widget.bookingId,
+                      action: 'settleOwner',
+                      version: b['version'] is int ? b['version'] : null,
+                      loadPreview: () => widget.call(
+                              'getBookingFinancePreview', {
+                            'bookingId': widget.bookingId,
+                            'action': 'settleOwner'
+                          }),
                       title: 'تسوية مستحقات المالك',
                       reference: refundReference,
                       busy: busy,
@@ -1360,13 +1439,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           'تحقق من رمز الوصول الملصق في حقل الملاحظات')),
                 if (owner && ['confirmed', 'arrived'].contains(b['status']))
                   button('إنهاء الحجز بعد موعد الخروج', 'complete'),
-                Text(bookingCancellationText(b['cancellationPolicy'])),
+                BookingAgreedPolicy(booking: b),
                 if (b['pricing'] != null)
                   Text(
                       'التسعير: ${b['pricing']['name'] ?? b['pricing']['mode']}'),
-                if (b['refundDue'] != null)
-                  Text(
-                      'الاسترداد المستحق: ${b['refundDue']} د.ع — المعاد: ${b['refunded'] ?? 0} — الحالة: ${b['refundStatus'] == 'settled' ? 'تمت التسوية' : b['refundStatus'] == 'pending' ? 'بانتظار التسوية المالية' : 'لا يوجد مبلغ مستحق'}'),
+                BookingRecordedMoney(booking: b),
                 if (b['reviewedBy'] != null)
                   Text('مراجع العربون: ${b['reviewedBy']}'),
                 if (b['cancelledBy'] != null)
@@ -1380,6 +1457,16 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     !customer &&
                     b['refundStatus'] == 'pending')
                   BookingManualSettlement(
+                      key: ValueKey(
+                          'refund-${widget.bookingId}-${b['version']}'),
+                      bookingId: widget.bookingId,
+                      action: 'settleRefund',
+                      version: b['version'] is int ? b['version'] : null,
+                      loadPreview: () => widget.call(
+                              'getBookingFinancePreview', {
+                            'bookingId': widget.bookingId,
+                            'action': 'settleRefund'
+                          }),
                       title: 'إعادة العربون المستحق',
                       reference: refundReference,
                       busy: busy,
@@ -1418,6 +1505,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 if (customer && held)
                   BookingPaymentPanel(
                       deposit: b['deposit'],
+                      receiptBytes: receiptBytes,
+                      onPickReceipt: pickReceipt,
                       accounts: accounts,
                       method: method,
                       transaction: transaction,
@@ -1426,7 +1515,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             method = value;
                             displayedNumber = accounts[method]['number'];
                           }),
-                      onSubmit: busy || displayedNumber == null
+                      onSubmit: busy ||
+                              displayedNumber == null ||
+                              receiptBytes == null
                           ? null
                           : () async {
                               if (busy) return;
@@ -1434,16 +1525,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               final selectedMethod = method;
                               setState(() => busy = true);
                               await bookingRun(context, () async {
-                                final image = await ImagePicker().pickImage(
-                                    source: ImageSource.gallery,
-                                    maxWidth: 1600,
-                                    imageQuality: 85);
-                                if (image == null) return;
-                                final bytes =
-                                    await FlutterImageCompress.compressWithList(
-                                        await image.readAsBytes(),
-                                        format: CompressFormat.jpeg,
-                                        quality: 85);
+                                final bytes = receiptBytes!;
                                 final path =
                                     'booking_receipts/${widget.bookingId}/$uid/${BookingMediaService.receiptFileName(bytes)}';
                                 final receipt =
@@ -1635,7 +1717,18 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
           'freeCancellationHours': 'الإلغاء المجاني قبل الدخول (ساعة)',
           'lateRefundPercent': 'استرداد العربون بعد المهلة (٪)'
         }[e.key]),
-        keyboardType: ['latitude', 'longitude'].contains(e.key)
+        keyboardType: [
+          'latitude',
+          'longitude',
+          'capacity',
+          'bedrooms',
+          'commissionPercent',
+          'price',
+          'deposit',
+          'hourlyPrice',
+          'freeCancellationHours',
+          'lateRefundPercent'
+        ].contains(e.key)
             ? const TextInputType.numberWithOptions(decimal: true, signed: true)
             : null,
         textDirection: ['latitude', 'longitude'].contains(e.key)
@@ -1645,6 +1738,78 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
         readOnly: widget.ownerMode && e.key == 'commissionPercent',
         maxLines: e.key == 'terms' ? 4 : 1);
   }
+
+  Widget saveButton() => FilledButton(
+      onPressed: busy
+          ? null
+          : () async {
+              if (busy) return;
+              setState(() => busy = true);
+              await bookingRun(context, () async {
+                final coordinateError = bookingCoordinateError(
+                    fields['latitude']!.text, fields['longitude']!.text);
+                if (coordinateError != null) throw StateError(coordinateError);
+                for (final key in ['capacity', 'bedrooms']) {
+                  if (fields[key]!.text.isNotEmpty &&
+                      (int.tryParse(fields[key]!.text) == null ||
+                          int.parse(fields[key]!.text) < 0))
+                    throw StateError('سعة أو عدد غرف غير صالح');
+                }
+                await widget.call('saveBookingVenue', {
+                  'id': widget.venueId,
+                  for (final e in fields.entries)
+                    e.key: [
+                      'price',
+                      'deposit',
+                      'hourlyPrice',
+                      'freeCancellationHours',
+                      'lateRefundPercent'
+                    ].contains(e.key)
+                        ? int.tryParse(e.value.text)
+                        : e.value.text,
+                  'capacity': int.tryParse(fields['capacity']!.text) ?? 0,
+                  'bedrooms': int.tryParse(fields['bedrooms']!.text) ?? 0,
+                  'amenities': amenities.toList(),
+                  'pricingMode': pricingMode,
+                  'shifts': [
+                    for (final shift in shifts)
+                      {
+                        for (final entry in shift.entries)
+                          entry.key: ['checkInMinute', 'checkOutMinute']
+                                  .contains(entry.key)
+                              ? bookingMinute(entry.value.text)
+                              : entry.key == 'price'
+                                  ? int.tryParse(entry.value.text)
+                                  : entry.value.text
+                      }
+                  ],
+                  'cancellationPolicy': {
+                    'freeCancellationHours':
+                        int.tryParse(fields['freeCancellationHours']!.text),
+                    'lateRefundPercent':
+                        int.tryParse(fields['lateRefundPercent']!.text)
+                  },
+                  'category': category,
+                  'active': active,
+                  'commissionBps':
+                      ((double.tryParse(fields['commissionPercent']!.text) ??
+                                  0) *
+                              100)
+                          .round(),
+                  'latitude': double.tryParse(fields['latitude']!.text),
+                  'longitude': double.tryParse(fields['longitude']!.text),
+                });
+                if (context.mounted) {
+                  if (widget.onSaved != null) {
+                    widget.onSaved!();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                }
+              });
+              if (mounted) setState(() => busy = false);
+            },
+      child: const Text('حفظ بيانات المكان'));
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
@@ -1664,6 +1829,21 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                     Tab(text: 'الوسائط'),
                     Tab(text: 'المراجعة والحفظ')
                   ])),
+          bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                            busy
+                                ? 'الحفظ معطل أثناء تنفيذ الطلب.'
+                                : 'يحفظ جميع التبويبات؛ لا تحتاج للانتقال إلى المراجعة للحفظ.',
+                            style: const TextStyle(fontSize: 12, height: 1.6)),
+                        saveButton()
+                      ]))),
           body: TabBarView(children: [
             BookingEditorPage(
                 title: 'هوية المكان',
@@ -2070,90 +2250,6 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                       onChanged: widget.ownerMode
                           ? null
                           : (v) => setState(() => active = v)),
-                  FilledButton(
-                      onPressed: busy
-                          ? null
-                          : () async {
-                              if (busy) return;
-                              setState(() => busy = true);
-                              await bookingRun(context, () async {
-                                final coordinateError = bookingCoordinateError(
-                                    fields['latitude']!.text,
-                                    fields['longitude']!.text);
-                                if (coordinateError != null)
-                                  throw StateError(coordinateError);
-                                for (final key in ['capacity', 'bedrooms']) {
-                                  if (fields[key]!.text.isNotEmpty &&
-                                      (int.tryParse(fields[key]!.text) ==
-                                              null ||
-                                          int.parse(fields[key]!.text) < 0))
-                                    throw StateError('سعة أو عدد غرف غير صالح');
-                                }
-                                await widget.call('saveBookingVenue', {
-                                  'id': widget.venueId,
-                                  for (final e in fields.entries)
-                                    e.key: [
-                                      'price',
-                                      'deposit',
-                                      'hourlyPrice',
-                                      'freeCancellationHours',
-                                      'lateRefundPercent'
-                                    ].contains(e.key)
-                                        ? int.tryParse(e.value.text)
-                                        : e.value.text,
-                                  'capacity':
-                                      int.tryParse(fields['capacity']!.text) ??
-                                          0,
-                                  'bedrooms':
-                                      int.tryParse(fields['bedrooms']!.text) ??
-                                          0,
-                                  'amenities': amenities.toList(),
-                                  'pricingMode': pricingMode,
-                                  'shifts': [
-                                    for (final shift in shifts)
-                                      {
-                                        for (final entry in shift.entries)
-                                          entry.key: [
-                                            'checkInMinute',
-                                            'checkOutMinute'
-                                          ].contains(entry.key)
-                                              ? bookingMinute(entry.value.text)
-                                              : entry.key == 'price'
-                                                  ? int.tryParse(
-                                                      entry.value.text)
-                                                  : entry.value.text
-                                      }
-                                  ],
-                                  'cancellationPolicy': {
-                                    'freeCancellationHours': int.tryParse(
-                                        fields['freeCancellationHours']!.text),
-                                    'lateRefundPercent': int.tryParse(
-                                        fields['lateRefundPercent']!.text)
-                                  },
-                                  'category': category,
-                                  'active': active,
-                                  'commissionBps': ((double.tryParse(
-                                                  fields['commissionPercent']!
-                                                      .text) ??
-                                              0) *
-                                          100)
-                                      .round(),
-                                  'latitude':
-                                      double.tryParse(fields['latitude']!.text),
-                                  'longitude': double.tryParse(
-                                      fields['longitude']!.text),
-                                });
-                                if (context.mounted) {
-                                  if (widget.onSaved != null) {
-                                    widget.onSaved!();
-                                  } else {
-                                    Navigator.pop(context);
-                                  }
-                                }
-                              });
-                              if (mounted) setState(() => busy = false);
-                            },
-                      child: const Text('حفظ بيانات المكان'))
                 ]),
           ])));
 }

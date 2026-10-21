@@ -255,6 +255,17 @@ void main() {
             body: ListView(padding: const EdgeInsets.all(20), children: [
               BookingManualSettlement(
                   title: 'إعادة العربون المستحق',
+                  bookingId: 'synthetic',
+                  action: 'settleRefund',
+                  loadPreview: () async => {
+                        'bookingId': 'synthetic',
+                        'action': 'settleRefund',
+                        'amount': 50000,
+                        'currency': 'IQD',
+                        'version': 1,
+                        'beneficiary': {'id': 'synthetic-customer'},
+                        'reason': 'cancelled_booking_refund'
+                      },
                   reference: ref,
                   busy: true,
                   label: 'تسجيل إعادة المبلغ يدوياً',

@@ -1,3 +1,4 @@
+import 'booking_decision_ui.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -369,35 +370,169 @@ class BookingScannerPanel extends StatelessWidget {
       ]);
 }
 
-class BookingManualSettlement extends StatelessWidget {
+class BookingManualSettlement extends StatefulWidget {
   const BookingManualSettlement(
       {super.key,
       required this.title,
       required this.reference,
       required this.busy,
       required this.onSubmit,
-      required this.label});
+      required this.label,
+      this.bookingId,
+      this.action,
+      this.version,
+      this.loadPreview});
   final String title, label;
+  final String? bookingId, action;
+  final int? version;
+  final Future<Map<String, dynamic>> Function()? loadPreview;
   final TextEditingController reference;
   final bool busy;
   final VoidCallback? onSubmit;
   @override
+  State<BookingManualSettlement> createState() => _ManualSettlementState();
+}
+
+class _ManualSettlementState extends State<BookingManualSettlement> {
+  late Future<Map<String, dynamic>> preview = load();
+  bool checking = false;
+  Future<Map<String, dynamic>> load() async {
+    if (widget.loadPreview == null ||
+        widget.bookingId == null ||
+        widget.action == null) throw StateError('لا توجد معاينة خادمية');
+    return bookingVerifiedFinancePreview(await widget.loadPreview!(),
+        widget.bookingId!, widget.action!, widget.version);
+  }
+
+  Future<void> review(Map<String, dynamic> shown) async {
+    if (checking ||
+        widget.busy ||
+        widget.onSubmit == null ||
+        widget.reference.text.trim().isEmpty) return;
+    setState(() => checking = true);
+    try {
+      final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+                  title: const Text('مراجعة التسجيل المالي'),
+                  content: SingleChildScrollView(
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                        BookingFinanceContext(preview: shown),
+                        const SizedBox(height: 16),
+                        Text('مرجع التحويل: ${widget.reference.text.trim()}'),
+                        const BookingActionReason(
+                            reason:
+                                'هذا تسجيل لتحويل منفذ فعليًا، وليس أمرًا لإرسال أموال.')
+                      ])),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('رجوع')),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('تأكيد التسجيل'))
+                  ]));
+      if (confirmed != true || !mounted) return;
+      final fresh = await load();
+      if (!mounted) return;
+      if (fresh['version'] != shown['version'] ||
+          fresh['amount'] != shown['amount'] ||
+          (fresh['beneficiary'] as Map)['id'] !=
+              (shown['beneficiary'] as Map)['id']) {
+        setState(() {
+          preview = Future.value(fresh);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'تغيرت بيانات الاستحقاق. راجع المعاينة الجديدة قبل التسجيل.')));
+        return;
+      }
+      widget.onSubmit!();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          preview = load();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('تعذر التحقق من التسوية. لم يُرسل تسجيل مالي.')));
+      }
+    } finally {
+      if (mounted) setState(() => checking = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => BookingSection(
-      title: title,
-      subtitle:
-          'سجّل العملية بعد إجراء التحويل فعليًا. هذا الإجراء يوثّق التسوية ولا ينفذ تحويلًا ماليًا.',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        TextField(
-            controller: reference,
-            enabled: !busy,
-            maxLength: 200,
-            decoration: const InputDecoration(
-                labelText: 'مرجع التحويل الفعلي',
-                prefixIcon: Icon(Icons.receipt_long_outlined))),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-            onPressed: busy ? null : onSubmit,
-            icon: const Icon(Icons.fact_check_outlined),
-            label: Text(label)),
-      ]));
+      title: widget.title,
+      subtitle: 'معاينة من الخادم قبل تسجيل التحويل الفعلي.',
+      child: FutureBuilder<Map<String, dynamic>>(
+          future: preview,
+          builder: (context, s) {
+            if (s.hasError)
+              return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const BookingActionReason(
+                        reason:
+                            'التسجيل معطل: مبلغ الاستحقاق أو المستفيد غير متحقق منه. أعد الاتصال؛ البيانات القديمة لا تُستكمل افتراضيًا.'),
+                    OutlinedButton(
+                        onPressed: widget.loadPreview == null
+                            ? null
+                            : () => setState(() {
+                                  preview = load();
+                                }),
+                        child: const Text('تحديث بيانات الاستحقاق'))
+                  ]);
+            if (!s.hasData)
+              return const Column(children: [
+                LinearProgressIndicator(),
+                BookingActionReason(
+                    reason:
+                        'التسجيل معطل أثناء التحقق من المبلغ والمستفيد في الخادم.')
+              ]);
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BookingFinanceContext(preview: s.data!),
+                  const SizedBox(height: 16),
+                  TextField(
+                      controller: widget.reference,
+                      enabled: !widget.busy && !checking,
+                      maxLength: 200,
+                      decoration: const InputDecoration(
+                          labelText: 'مرجع التحويل الفعلي',
+                          prefixIcon: Icon(Icons.receipt_long_outlined))),
+                  const SizedBox(height: 12),
+                  ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: widget.reference,
+                      builder: (context, value, _) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (widget.busy || checking)
+                                  const BookingActionReason(
+                                      reason:
+                                          'الإجراء معطل أثناء التحقق أو تنفيذ تسجيل سابق.')
+                                else if (value.text.trim().isEmpty)
+                                  const BookingActionReason(
+                                      reason:
+                                          'أدخل مرجع التحويل الفعلي لتفعيل مراجعة التسجيل.')
+                                else if (widget.onSubmit == null)
+                                  const BookingActionReason(
+                                      reason:
+                                          'التسجيل غير متاح في هذه الحالة.'),
+                                FilledButton.icon(
+                                    onPressed: widget.busy ||
+                                            checking ||
+                                            widget.onSubmit == null ||
+                                            value.text.trim().isEmpty
+                                        ? null
+                                        : () => review(s.data!),
+                                    icon: const Icon(Icons.fact_check_outlined),
+                                    label: Text(widget.label)),
+                              ])),
+                ]);
+          }));
 }

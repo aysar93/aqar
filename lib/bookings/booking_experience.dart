@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'booking_decision_ui.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'booking_widgets.dart';
@@ -227,82 +230,167 @@ class BookingPaymentPanel extends StatelessWidget {
       required this.transaction,
       required this.busy,
       required this.onMethod,
-      required this.onSubmit});
+      required this.onSubmit,
+      this.receiptBytes,
+      this.onPickReceipt});
   final dynamic deposit;
   final Map<String, dynamic> accounts;
   final String method;
   final TextEditingController transaction;
   final bool busy;
   final ValueChanged<String> onMethod;
-  final VoidCallback? onSubmit;
+  final VoidCallback? onSubmit, onPickReceipt;
+  final Uint8List? receiptBytes;
   @override
-  Widget build(BuildContext context) => BookingSection(
-      title: 'إكمال عربون الحجز',
-      subtitle: 'تحويل يدوي عبر Ki / Qi أو Zain Cash، ثم رفع الإيصال للمراجعة.',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-                color: bookingNavy, borderRadius: BorderRadius.circular(18)),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('العربون المطلوب',
-                  style: TextStyle(color: Colors.white70)),
-              const SizedBox(height: 8),
-              Text(bookingMoney(deposit),
-                  style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white))
-            ])),
-        const SizedBox(height: 20),
-        if (accounts.isEmpty)
-          const BookingStateView(
-              title: 'الدفع غير متاح الآن',
-              detail: 'لا توجد بيانات مستلم معتمدة. أعد المحاولة لاحقًا.',
-              icon: Icons.account_balance_wallet_outlined),
-        for (final entry in accounts.entries)
-          Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: RadioListTile<String>(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                          color: entry.key == method
-                              ? bookingGold
-                              : const Color(0xFFE2E8F0))),
-                  value: entry.key,
-                  groupValue: method,
-                  title: Text(entry.key == 'qicard' ? 'Ki / Qi' : 'Zain Cash',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('${entry.value['number']}',
-                      textDirection: TextDirection.ltr),
-                  onChanged: busy
-                      ? null
-                      : (v) {
-                          if (v != null) onMethod(v);
-                        })),
-        const SizedBox(height: 8),
-        TextField(
-            controller: transaction,
-            enabled: !busy,
-            decoration: const InputDecoration(
-                labelText: 'رقم التحويل',
-                prefixIcon: Icon(Icons.receipt_long_outlined))),
-        const SizedBox(height: 16),
-        const Text(
-            '١. حوّل العربون إلى المستلم المحدد.\n٢. أدخل رقم التحويل وأرفق إيصالًا واضحًا.\n٣. انتظر اعتماد المراجع المالي قبل اعتبار الحجز مؤكدًا.',
-            style: TextStyle(height: 1.9)),
-        const SizedBox(height: 20),
-        FilledButton.icon(
-            onPressed: busy ? null : onSubmit,
-            icon: busy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.upload_file_outlined),
-            label: Text(
-                busy ? 'جار التحقق من الإيصال…' : 'رفع إيصال وإرسال للمراجعة')),
-      ]));
+  Widget build(BuildContext context) {
+    final selected = accounts[method];
+    final number = selected is Map &&
+            selected['number'] is String &&
+            (selected['number'] as String).trim().isNotEmpty
+        ? selected['number'] as String
+        : null;
+    return BookingSection(
+        title: 'دفع عربون الحجز',
+        subtitle:
+            'راجع المستلم، ثم حوّل العربون وأرفق الإيصال قبل إرساله للمراجعة.',
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  color: bookingNavy, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('العربون المطلوب',
+                        style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 8),
+                    Text(bookingMoney(deposit),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold))
+                  ])),
+          const SizedBox(height: 20),
+          const Text('١ · اختر وسيلة التحويل',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          for (final entry in accounts.entries)
+            RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: entry.key,
+                groupValue: method,
+                title: Text(entry.key == 'qicard' ? 'Ki / Qi' : 'Zain Cash'),
+                subtitle: Text('${entry.value['number'] ?? 'رقم غير متاح'}',
+                    textDirection: TextDirection.ltr),
+                onChanged: busy
+                    ? null
+                    : (value) {
+                        if (value != null) onMethod(value);
+                      }),
+          if (number != null)
+            Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('بيانات المستلم المعتمدة',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SelectableText(number,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(
+                              fontSize: 23, fontWeight: FontWeight.bold)),
+                      const Text(
+                          'اسم صاحب الحساب غير محفوظ في إعدادات الدفع؛ تحقق من الاسم الظاهر في تطبيق التحويل.',
+                          style: TextStyle(height: 1.7)),
+                      OutlinedButton.icon(
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  await Clipboard.setData(
+                                      ClipboardData(text: number));
+                                  if (context.mounted)
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content:
+                                                Text('تم نسخ رقم المستلم')));
+                                },
+                          icon: const Icon(Icons.copy_outlined),
+                          label: const Text('نسخ رقم المستلم')),
+                    ])),
+          const SizedBox(height: 20),
+          const Text('٢ · بيانات التحويل والإيصال',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          TextField(
+              controller: transaction,
+              enabled: !busy,
+              maxLength: 200,
+              decoration: const InputDecoration(
+                  labelText: 'رقم التحويل',
+                  prefixIcon: Icon(Icons.receipt_long_outlined))),
+          OutlinedButton.icon(
+              onPressed: busy ? null : onPickReceipt,
+              icon: const Icon(Icons.attach_file_outlined),
+              label: Text(receiptBytes == null
+                  ? 'اختيار إيصال للمعاينة'
+                  : 'تغيير الإيصال')),
+          if (receiptBytes != null) ...[
+            const SizedBox(height: 12),
+            const Text('معاينة الإيصال قبل الإرسال'),
+            const SizedBox(height: 8),
+            ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.memory(receiptBytes!,
+                    height: 200,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) =>
+                        const Text('تعذر عرض الإيصال. اختر صورة واضحة أخرى.'))),
+            TextButton(
+                onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                        child: InteractiveViewer(
+                            child: Image.memory(receiptBytes!)))),
+                child: const Text('تكبير الإيصال')),
+          ],
+          const SizedBox(height: 16),
+          ValueListenableBuilder<TextEditingValue>(
+              valueListenable: transaction,
+              builder: (context, value, _) {
+                final reason = busy
+                    ? 'الإرسال معطل أثناء التحقق من عملية سابقة.'
+                    : !bookingKnownMoney(deposit) || deposit <= 0
+                        ? 'الإرسال معطل: العربون غير متحقق منه.'
+                        : number == null
+                            ? 'الإرسال معطل: لا توجد بيانات مستلم معتمدة.'
+                            : value.text.trim().isEmpty
+                                ? 'أدخل رقم التحويل لتفعيل الإرسال.'
+                                : receiptBytes == null
+                                    ? 'اختر الإيصال وراجع صورته قبل إرسال الطلب.'
+                                    : onSubmit == null
+                                        ? 'الإرسال غير متاح الآن؛ تحقق من المهلة والاتصال.'
+                                        : null;
+                return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (reason != null) BookingActionReason(reason: reason),
+                      FilledButton.icon(
+                          onPressed: reason == null ? onSubmit : null,
+                          icon: const Icon(Icons.upload_file_outlined),
+                          label: Text(busy
+                              ? 'جارٍ التحقق من الإيصال…'
+                              : 'إرسال الإيصال للمراجعة'))
+                    ]);
+              }),
+          const SizedBox(height: 8),
+          const Text(
+              'إرسال الإيصال لا يؤكد الحجز. انتظر اعتماد المراجع المالي.',
+              style: TextStyle(height: 1.8, color: Color(0xFF64748B))),
+        ]));
+  }
 }

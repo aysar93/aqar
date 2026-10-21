@@ -1,3 +1,5 @@
+import 'booking_experience.dart';
+import 'booking_decision_ui.dart';
 import 'booking_services_ui.dart';
 import 'booking_operations.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -267,9 +269,9 @@ class _AvailabilitySearchState extends State<BookingAvailabilitySearchScreen> {
   Future<DateTime?> pick() async {
     final date = await showDatePicker(
         context: context,
-        firstDate: DateTime.now(),
-        lastDate: DateTime.now().add(const Duration(days: 365)),
-        initialDate: DateTime.now().add(const Duration(days: 1)));
+        firstDate: bookingBaghdadDate(),
+        lastDate: bookingBaghdadDate().add(const Duration(days: 365)),
+        initialDate: bookingBaghdadDate().add(const Duration(days: 1)));
     if (date == null || !mounted) return null;
     final time = await showTimePicker(
         context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
@@ -286,24 +288,41 @@ class _AvailabilitySearchState extends State<BookingAvailabilitySearchScreen> {
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('البحث عن موعد متاح')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        const Text(
-            'حدد فترة الدخول والخروج بتوقيت بغداد. النتائج لقطة توافر؛ يراجع الخادم الموعد مجددًا عند الحجز. يجب اختيار شفت المكان المطابق أو مدته المعتمدة.'),
-        TextButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    final value = await pick();
-                    if (value != null && mounted) setState(() => start = value);
-                  },
-            child: Text('الدخول: ${label(start)}')),
-        TextButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    final value = await pick();
-                    if (value != null && mounted) setState(() => end = value);
-                  },
-            child: Text('الخروج: ${label(end)}')),
+        BookingSection(
+            title: 'متى تخطط للزيارة؟',
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const BookingActionReason(
+                      reason:
+                          'اختر الدخول والخروج بتوقيت بغداد. يؤكد الخادم التوافر مجددًا عند إنشاء الحجز.'),
+                  OutlinedButton(
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              final value = await pick();
+                              if (value != null && mounted)
+                                setState(() {
+                                  start = value;
+                                  results = [];
+                                  searched = false;
+                                });
+                            },
+                      child: Text('الدخول: ${label(start)}')),
+                  OutlinedButton(
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              final value = await pick();
+                              if (value != null && mounted)
+                                setState(() {
+                                  end = value;
+                                  results = [];
+                                  searched = false;
+                                });
+                            },
+                      child: Text('الخروج: ${label(end)}')),
+                ])),
         FilledButton(
             onPressed: busy
                 ? null
@@ -318,12 +337,17 @@ class _AvailabilitySearchState extends State<BookingAvailabilitySearchScreen> {
                               'حدد موعدًا مستقبليًا وخروجًا بعد الدخول خلال 31 يومًا')));
                       return;
                     }
-                    setState(() => busy = true);
+                    if (busy) return;
+                    setState(() {
+                      busy = true;
+                      results = [];
+                      searched = false;
+                    });
                     await bookingRun(context, () async {
                       final venues = await FirebaseFirestore.instance
                           .collection('booking_venues')
                           .where('active', isEqualTo: true)
-                          .get();
+                          .get(const GetOptions(source: Source.server));
                       final free = <String>{};
                       for (var offset = 0;
                           offset < venues.docs.length;

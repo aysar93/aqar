@@ -1,3 +1,5 @@
+import '../../bookings/booking_widgets.dart';
+import '../../bookings/booking_experience.dart';
 import '../../bookings/booking_media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -8,15 +10,16 @@ import 'add_banner_screen.dart';
 
 class BannerManagementScreen extends StatelessWidget {
   const BannerManagementScreen(
-      {super.key, this.placement = BannerPlacement.home});
+      {super.key, this.placement = BannerPlacement.home, this.banners});
 
+  final Stream<List<BannerModel>>? banners;
   final BannerPlacement placement;
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
+      child: BookingScaffold(
         appBar: AppBar(
           title: Text(placement == BannerPlacement.bookings
               ? 'إدارة بنرات الحجوزات'
@@ -24,7 +27,7 @@ class BannerManagementScreen extends StatelessWidget {
           centerTitle: true,
         ),
         body: StreamBuilder<List<BannerModel>>(
-          stream: BannerService.banners(placement: placement),
+          stream: banners ?? BannerService.banners(placement: placement),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -50,35 +53,49 @@ class BannerManagementScreen extends StatelessWidget {
               );
             }
 
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                100,
-              ),
-              itemCount: banners.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                return _BannerManagementCard(
-                  banner: banners[index],
-                  placement: placement,
-                );
-              },
-            );
+            return Column(children: [
+              BookingSection(
+                  title:
+                      'بنرات ${placement == BannerPlacement.bookings ? 'الحجوزات' : 'الرئيسية'}',
+                  subtitle:
+                      '${banners.length} بنر · حدد المحتوى والوجهة وحالة الظهور.',
+                  child: const Text(
+                      'إيقاف البنر يخفيه، والتعديل والحذف يمران بالإجراء الأصلي المعتمد.')),
+              Expanded(
+                  child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  100,
+                ),
+                itemCount: banners.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  return _BannerManagementCard(
+                    banner: banners[index],
+                    placement: placement,
+                  );
+                },
+              ))
+            ]);
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AddBannerScreen(placement: placement),
-              ),
-            );
-          },
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('إضافة بنر'),
-        ),
+        bottomNavigationBar: SafeArea(
+            top: false,
+            child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AddBannerScreen(placement: placement),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('إضافة بنر'),
+                ))),
       ),
     );
   }
@@ -100,7 +117,14 @@ class _BannerManagementCard extends StatelessWidget {
   }
 
   String _typeLabel() {
-    if (placement == BannerPlacement.bookings) return const {'chalet': 'شاليه', 'hall': 'قاعة', 'farm': 'مزرعة', 'external': 'رابط خارجي'}[banner.type] ?? 'مكان';
+    if (placement == BannerPlacement.bookings)
+      return const {
+            'chalet': 'شاليه',
+            'hall': 'قاعة',
+            'farm': 'مزرعة',
+            'external': 'رابط خارجي'
+          }[banner.type] ??
+          'مكان';
     switch (banner.type) {
       case 'office':
         return 'مكتب';
@@ -113,7 +137,14 @@ class _BannerManagementCard extends StatelessWidget {
   }
 
   IconData _typeIcon() {
-    if (placement == BannerPlacement.bookings) return const {'chalet': Icons.pool_outlined, 'hall': Icons.celebration_outlined, 'farm': Icons.park_outlined, 'external': Icons.open_in_new_rounded}[banner.type] ?? Icons.place_outlined;
+    if (placement == BannerPlacement.bookings)
+      return const {
+            'chalet': Icons.pool_outlined,
+            'hall': Icons.celebration_outlined,
+            'farm': Icons.park_outlined,
+            'external': Icons.open_in_new_rounded
+          }[banner.type] ??
+          Icons.place_outlined;
     switch (banner.type) {
       case 'office':
         return Icons.business_outlined;
@@ -138,26 +169,29 @@ class _BannerManagementCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: placement == BannerPlacement.bookings && banner.mediaId != null
-                  ? BookingMediaImage(url: banner.imageUrl, width: 96, height: 76)
+              child: placement == BannerPlacement.bookings &&
+                      banner.mediaId != null
+                  ? BookingMediaImage(
+                      url: banner.imageUrl, width: 96, height: 76)
                   : Image.network(
-                banner.imageUrl,
-                width: 96,
-                height: 76,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
-                  return Container(
-                    width: 96,
-                    height: 76,
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.broken_image_outlined,
+                      banner.imageUrl,
+                      width: 96,
+                      height: 76,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return Container(
+                          width: 96,
+                          height: 76,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.broken_image_outlined,
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -208,7 +242,12 @@ class _BannerManagementCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 7),
-                  if (banner.type == 'property' || banner.type == 'office')
+                  if (['chalet', 'hall', 'farm'].contains(banner.type))
+                    _TargetLine(
+                        icon: Icons.place_outlined,
+                        text: 'معرف المكان: ${banner.targetId}',
+                        muted: false)
+                  else if (banner.type == 'property' || banner.type == 'office')
                     _TargetName(
                       type: banner.type,
                       targetId: banner.targetId,

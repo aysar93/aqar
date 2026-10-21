@@ -1,3 +1,5 @@
+import '../../bookings/booking_widgets.dart';
+
 import '../../bookings/booking_media_image.dart';
 import 'dart:io';
 
@@ -13,12 +15,14 @@ import '../../banners/banner_service.dart';
 import '../../services/cloudinary_service.dart';
 
 class AddBannerScreen extends StatefulWidget {
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? venues;
   final BannerModel? banner;
   final BannerPlacement placement;
 
   const AddBannerScreen({
     super.key,
     this.banner,
+    this.venues,
     this.placement = BannerPlacement.home,
   });
 
@@ -71,11 +75,13 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
     );
 
     _selectedType = banner?.type ?? (bookings ? 'chalet' : 'property');
-    if (bookings && !['chalet', 'hall', 'farm', 'external'].contains(_selectedType)) {
+    if (bookings &&
+        !['chalet', 'hall', 'farm', 'external'].contains(_selectedType)) {
       _selectedType = 'chalet';
     }
-    _selectedVenueId =
-        ['chalet', 'hall', 'farm'].contains(banner?.type) ? banner?.targetId : null;
+    _selectedVenueId = ['chalet', 'hall', 'farm'].contains(banner?.type)
+        ? banner?.targetId
+        : null;
     _isActive = banner?.isActive ?? true;
 
     if (_selectedType == 'property') {
@@ -136,6 +142,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
   }
 
   Future<void> _saveBanner() async {
+    if (_isSaving) return;
     final existingImage = widget.banner?.imageUrl;
 
     if (_selectedImage == null &&
@@ -194,7 +201,10 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
               quality: 90);
           if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024)
             throw StateError('حجم الصورة غير صالح');
-          final media = await BookingMediaService.uploadImage(bytes, bookingCall, banner: true, venueId: _selectedType == 'external' ? null : _targetId);
+          final media = await BookingMediaService.uploadImage(
+              bytes, bookingCall,
+              banner: true,
+              venueId: _selectedType == 'external' ? null : _targetId);
           bookingMediaId = media['mediaId'] as String;
           imageUrl = media['path'] as String;
         } else {
@@ -226,9 +236,12 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
           if (widget.isEdit) 'bannerId': banner.id,
           if (bookingMediaId != null) 'mediaId': bookingMediaId,
           'banner': {
-            'title': banner.title, 'subtitle': banner.subtitle,
-            'type': banner.type, 'targetId': banner.targetId,
-            'isActive': banner.isActive, 'order': banner.order,
+            'title': banner.title,
+            'subtitle': banner.subtitle,
+            'type': banner.type,
+            'targetId': banner.targetId,
+            'isActive': banner.isActive,
+            'order': banner.order,
           },
         });
       } else if (widget.isEdit) {
@@ -271,7 +284,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
+      child: BookingScaffold(
         appBar: AppBar(
           title: Text(
             widget.isEdit ? 'تعديل البنر' : 'إضافة بنر جديد',
@@ -313,11 +326,12 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
                 ),
               ),
               const SizedBox(height: 22),
-              const _SectionTitle(
+              _SectionTitle(
                 icon: Icons.touch_app_outlined,
                 title: 'وجهة البنر',
-                subtitle:
-                    'بدل كتابة المعرّف يدويًا، اختر العقار أو المكتب من القائمة',
+                subtitle: bookings
+                    ? 'اختر المكان المرتبط بالبنر من القائمة؛ الوجهة محفوظة بمعرفها.'
+                    : 'اختر العقار أو المكتب المرتبط بالبنر من القائمة',
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -365,10 +379,11 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
               const SizedBox(height: 12),
               if (['chalet', 'hall', 'farm'].contains(_selectedType))
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance
-                        .collection('booking_venues')
-                        .where('category', isEqualTo: _selectedType)
-                        .snapshots(),
+                    stream: widget.venues ??
+                        FirebaseFirestore.instance
+                            .collection('booking_venues')
+                            .where('category', isEqualTo: _selectedType)
+                            .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.hasError)
                         return const Text('تعذر تحميل الأماكن');
@@ -1032,9 +1047,11 @@ class _ImagePickerCard extends StatelessWidget {
                       : protectedMedia
                           ? BookingMediaImage(url: imageUrl!)
                           : Image.network(
-                          imageUrl!,
-                          fit: BoxFit.cover,
-                        )
+                              imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const Center(child: Text('الصورة غير متاحة')),
+                            )
                   : const Icon(
                       Icons.add_photo_alternate_outlined,
                     ),

@@ -35,6 +35,34 @@ function policy(fn) { try { return fn(); } catch(e) { fail(e.message); } }
 function finance(u) { return u.canReviewBookingPayments === true; }
 function nextVersion(b) { return Number.isSafeInteger(b.version) && b.version >= 0 ? b.version + 1 : 1; }
 exports.getBookingPaymentAccounts = onCall(async r => { await actor(r); return available((await db.doc(CONFIG).get()).data()); });
+// Read-only projection. Uses the same authorization, state guards and money
+// helpers as actOnBooking; it never settles or repairs historical records.
+exports.getBookingFinancePreview = onCall(async r => {
+  const bookingId=id(r.data.bookingId), action=r.data.action;
+  if(!['settleOwner','settleRefund'].includes(action)) fail('إجراء غير صالح');
+  return db.runTransaction(async tx=>{
+    const u=await actor(r,tx), b=(await tx.get(db.doc(`bookings/${bookingId}`))).data();
+    if(!b) fail('الحجز غير موجود');
+    const venue=(await tx.get(db.doc(`booking_venues/${b.venueId}`))).data();
+    const staff=(await tx.get(db.doc(`booking_venue_staff/${b.venueId}_${u.uid}`))).data();
+    const staffActive=staff?.ownerId===venue?.ownerId && staff?.scopes?.length>0;
+    if(!finance(u) || staffActive || [b.ownerId,b.customerId].includes(u.uid)) fail('مراجع مالي مستقل مطلوب');
+    let amount, beneficiaryId, reason;
+    if(action==='settleOwner'){
+      if(b.status!=='completed' || b.ownerSettlementStatus==='settled' || b.refundStatus==='pending') fail('تسوية مستقلة لحجز مكتمل فقط');
+      amount=policy(()=>ownerSettlement(b)).ownerSettled;
+      beneficiaryId=b.ownerId; reason='completed_booking';
+    }else{
+      if(b.status!=='cancelled' || b.refundStatus!=='pending') fail('تسوية مالية مستقلة مطلوبة');
+      amount=policy(()=>refundSettlement(b));
+      beneficiaryId=b.customerId; reason='cancelled_booking_refund';
+    }
+    if(typeof beneficiaryId!=='string' || !beneficiaryId.trim()) fail('بيانات المستفيد غير مكتملة');
+    const beneficiaryName=action==='settleOwner'?b.ownerName:b.customerName;
+    return {bookingId,action,amount,currency:'IQD',version:Number.isSafeInteger(b.version)?b.version:0,
+      beneficiary:{id:beneficiaryId,name:typeof beneficiaryName==='string' && beneficiaryName.trim()?beneficiaryName:null},reason};
+  });
+});
 exports.setBookingPaymentReviewer = onCall(async r => {
   const uid = id(r.data.userId), ref = db.doc(`users/${uid}`);
   await db.runTransaction(async tx => {
