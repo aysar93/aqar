@@ -4,7 +4,7 @@ const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getStorage} = require('firebase-admin/storage');
 const {createHash, randomBytes} = require('node:crypto');
-const {overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund} = require('./booking_policy');
+const {overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement} = require('./booking_policy');
 const db = getFirestore();
 const discovery = require('./booking_discovery');
 const {CONFIG, available, recipient} = require('./payment_accounts');
@@ -388,6 +388,7 @@ exports.actOnBooking = onCall({memory:'512MiB',timeoutSeconds:120},async r => {
       Object.assign(patch,{status:'payment_review',receiptPath:receipt,paymentMethod:d.method,transactionNumber:text(d.transactionNumber,200),paymentAccount:snapshot.number,paymentAccountSnapshot:snapshot,submittedAt:FieldValue.serverTimestamp()});
     } else if (d.action === 'confirmPayment' || d.action === 'rejectPayment') {
       if (!finance(u) || staffActive || [b.ownerId,b.customerId].includes(u.uid) || !['payment_review','cancel_requested'].includes(b.status)) fail('مراجع مالي مستقل مطلوب');
+      if (d.action==='confirmPayment' && !money(b.total,b.deposit)) fail('الحجز القديم يحتاج مبالغ معتمدة قبل اعتماد العربون');
       Object.assign(patch,d.action==='confirmPayment' ? {status:'confirmed',paid:b.deposit,remaining:b.total-b.deposit} : {status:'payment_rejected',reason:text(d.reason)});
       if (b.status === 'cancel_requested') {
         const refundDue = d.action==='confirmPayment' ? policy(()=>refund({...b,paid:b.deposit},b.cancelledAt,b.cancellationByVenue)) : 0;
@@ -402,12 +403,12 @@ exports.actOnBooking = onCall({memory:'512MiB',timeoutSeconds:120},async r => {
       Object.assign(patch,{status:b.status==='payment_review'?'cancel_requested':'cancelled',remaining:b.status==='payment_review'?b.remaining:0,contractRemaining:b.remaining,cancellationByVenue:cancelledByVenue,reason:text(d.reason),cancellationReason:text(d.reason),cancelledBy:u.uid,cancelledAt:now,refundDue,refundStatus:refundDue>0?'pending':'none',refunded:0});
     } else if (d.action === 'settleRefund') {
       if (!finance(u) || staffActive || [b.ownerId,b.customerId].includes(u.uid) || b.status !== 'cancelled' || b.refundStatus !== 'pending') fail('تسوية مالية مستقلة مطلوبة');
-      Object.assign(patch,{refundStatus:'settled',refunded:b.refundDue,refundReference:text(d.refundReference,200),refundSettledBy:u.uid,refundSettledAt:now});
+      const refunded=policy(()=>refundSettlement(b));
+      Object.assign(patch,{refundStatus:'settled',refunded,refundReference:text(d.refundReference,200),refundSettledBy:u.uid,refundSettledAt:now});
     } else if (d.action === 'settleOwner') {
       if (!finance(u) || staffActive || [b.ownerId,b.customerId].includes(u.uid) || b.status!=='completed' || b.ownerSettlementStatus==='settled' || b.refundStatus==='pending') fail('تسوية مستقلة لحجز مكتمل فقط');
-      const collected=Math.max(0,(b.paid || 0)-(b.refunded || 0));
-      const commission=Number(BigInt(collected)*BigInt(b.commissionBps || 0)/10000n);
-      Object.assign(patch,{ownerSettlementStatus:'settled',ownerSettled:collected-commission,platformCommission:commission,ownerSettlementReference:text(d.settlementReference,200),ownerSettledBy:u.uid,ownerSettledAt:now});
+      const amounts=policy(()=>ownerSettlement(b));
+      Object.assign(patch,{ownerSettlementStatus:'settled',...amounts,ownerSettlementReference:text(d.settlementReference,200),ownerSettledBy:u.uid,ownerSettledAt:now});
     } else if (d.action === 'arrive') {
       if (!checksIn || b.status !== 'confirmed' || now < b.start || now >= b.end) fail('لا يمكن تسجيل الوصول');
       Object.assign(patch,{status:'arrived',arrivedAt:now});

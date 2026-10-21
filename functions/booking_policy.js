@@ -42,9 +42,25 @@ function quote(v, d) {
   return {total,pricing};
 }
 function refund(b, now, cancelledByOwner) {
-  const p = b.cancellationPolicy;
-  if (!p) throw Error('الحجز القديم يحتاج سياسة تسوية معتمدة');
+  const p = cancellationPolicy(b.cancellationPolicy);
+  if (!Number.isSafeInteger(b.paid) || b.paid < 0 || !Number.isSafeInteger(b.start) || !Number.isSafeInteger(now)) throw Error('الحجز القديم يحتاج بيانات مالية معتمدة');
   const percent = cancelledByOwner || now <= b.start-p.freeCancellationHours*3600000 ? 100 : p.lateRefundPercent;
   return Number(BigInt(b.paid)*BigInt(percent)/100n);
 }
-module.exports = { overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund };
+// Never infer an unknown historical payment or commission as zero. Current
+// bookings omit refunded until cancellation; only that no-refund shape defaults.
+function ownerSettlement(b) {
+  const refunded = b.refunded === undefined && (b.refundStatus === undefined || b.refundStatus === 'none') ? 0 : b.refunded;
+  if (!Number.isSafeInteger(b.paid) || b.paid < 0 ||
+      !Number.isSafeInteger(refunded) || refunded < 0 || refunded > b.paid ||
+      !Number.isInteger(b.commissionBps) || b.commissionBps < 0 || b.commissionBps > 10000 ||
+      b.commissionBasis !== 'deposit') throw Error('الحجز القديم يحتاج بيانات مالية وعمولة معتمدة قبل التسوية');
+  const collected = b.paid - refunded;
+  const platformCommission = Number(BigInt(collected) * BigInt(b.commissionBps) / 10000n);
+  return {ownerSettled:collected-platformCommission,platformCommission};
+}
+function refundSettlement(b) {
+  if (!Number.isSafeInteger(b.paid) || b.paid < 0 || !Number.isSafeInteger(b.refundDue) || b.refundDue <= 0 || b.refundDue > b.paid || b.refunded !== 0) throw Error('الحجز القديم يحتاج بيانات استرداد معتمدة قبل التسوية');
+  return b.refundDue;
+}
+module.exports = { overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement };

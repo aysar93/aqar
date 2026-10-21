@@ -67,7 +67,7 @@ test('owner management, closures, private availability, transfer, QR and complet
   await call('actOnBooking','xnew',{bookingId:'xqr',action:'complete'});
   await call('reviewCompletedBooking','xcustomer',{bookingId:'xqr',rating:5,comment:'great'});
   await assert.rejects(call('reviewCompletedBooking','xcustomer',{bookingId:'xqr',rating:5,comment:'duplicate'}));
-  await bookingRef.update({paid:20000,commissionBps:500});
+  await bookingRef.update({paid:20000,commissionBps:500,commissionBasis:'deposit'});
   await db.doc('users/xreviewer').set({name:'reviewer',phone:'07700000000',isBlocked:false,canReviewBookingPayments:true});
   await call('setBookingVenueStaff','xnew',{venueId:venue.id,userId:'xreviewer',scopes:['bookings']});
   await assert.rejects(call('actOnBooking','xreviewer',{bookingId:'xqr',action:'settleOwner',settlementReference:'r'}));
@@ -147,7 +147,13 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   const snap=await db.doc(`bookings/${chosen.id}`).get();
   const event={data:{after:snap,before:{data:()=>({status:'payment_review'})}},params:{bookingId:chosen.id}};
   await Promise.all([f.bookingNotifications.run(event),f.bookingNotifications.run(event)]);
-  const notices=await db.collection('notifications').where('bookingId','==',chosen.id).get();assert.equal(notices.size,4);
+  const notices=await db.collection('notifications').where('bookingId','==',chosen.id).get();
+  // Other suites seed independent administrators/reviewers in this emulator.
+  // Verify this fixture's recipients and retry deduplication, not a global count.
+  const noticeUsers=notices.docs.map(s=>s.data().userId);
+  for(const recipient of [uid,'owner','admin','reviewer']) assert.equal(noticeUsers.filter(u=>u===recipient).length,1);
+  assert.equal(new Set(noticeUsers).size,noticeUsers.length);
+  assert.equal(noticeUsers.includes('stranger'),false);
   await call('actOnBooking',uid,{bookingId:chosen.id,action:'cancel',reason:'cancel'});
   const cancelled=(await db.doc(`bookings/${chosen.id}`).get()).data();
   assert.equal(cancelled.refundDue,5000);
