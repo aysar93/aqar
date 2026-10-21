@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import '../analytics/services/app_activity_service.dart';
 import '../moderation/blocked_users_screen.dart';
 import 'dart:io';
@@ -10,7 +11,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
-import '../services/cloudinary_service.dart';
+import '../services/media_store.dart';
 import '../services/fcm_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -286,7 +287,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           uploadingImage = true;
         });
 
-        final uploadedUrl = await uploadToCloudinary(selectedImage!);
+        final uploadedUrl = await uploadMediaImage(selectedImage!, purpose: MediaPurpose.avatar);
 
         if (uploadedUrl != null) {
           imageUrl = uploadedUrl;
@@ -554,7 +555,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ? FileImage(selectedImage!)
                                   as ImageProvider<Object>
                               : photoUrl.isNotEmpty
-                                  ? NetworkImage(photoUrl)
+                                  ? CachedNetworkImageProvider(photoUrl)
                                   : null,
                           child: selectedImage == null && photoUrl.isEmpty
                               ? const Icon(

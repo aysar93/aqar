@@ -1,15 +1,13 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { getStorage } = require("firebase-admin/storage");
 const { canDeleteMessage, isOfficeOpen } = require("./chat_policy");
 
 async function removeAttachments(chatId, paths) {
-  for (const path of paths.filter(Boolean)) {
-    const parts = path.split('/');
-    if (parts.length !== 4 || !['chat_audio', 'chat_images'].includes(parts[0]) || parts[1] !== chatId || !/^[0-9]+\.(m4a|jpg|png)$/.test(parts[3])) continue;
-    await getStorage().bucket().file(path).delete({ ignoreNotFound: true });
-  }
+  // A per-chat query is not an authoritative global reference registry and
+  // cannot exclude concurrent legacy writes. Retain bytes until the separate
+  // recovery-backed, generation-pinned cleanup protocol is deployed.
+  return { retained: true, reason: 'awaiting_reference_registry' };
 }
 
 exports.deleteChatMessage = onCall(async (request) => {

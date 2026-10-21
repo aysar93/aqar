@@ -1,8 +1,8 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import '../../services/media_store.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_chat_list_screen.dart';
 
@@ -70,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> saveSettings() async {
     if (selectedLogo != null) {
-      final uploadedUrl = await uploadLogoToCloudinary(
+      final uploadedUrl = await uploadAppLogo(
         selectedLogo!,
       );
 
@@ -121,41 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<String?> uploadLogoToCloudinary(File image) async {
-    if (const bool.fromEnvironment('FCM_MIGRATION')) throw StateError('Media upload unavailable in FCM staging');
-    const cloudName = "hwxcrlcj";
-    const uploadPreset = "pmlhhqdd";
-
-    final url = Uri.parse(
-      "https://api.cloudinary.com/v1_1/$cloudName/image/upload",
-    );
-
-    final request = http.MultipartRequest(
-      "POST",
-      url,
-    );
-
-    request.fields["upload_preset"] = uploadPreset;
-
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        "file",
-        image.path,
-      ),
-    );
-
-    final response = await request.send();
-
-    if (response.statusCode == 200) {
-      final responseData = await response.stream.bytesToString();
-
-      final data = json.decode(responseData);
-
-      return data["secure_url"];
-    }
-
-    return null;
-  }
+  Future<String?> uploadAppLogo(File image) =>
+      uploadMediaImage(image, purpose: MediaPurpose.appLogo);
 
   @override
   void initState() {
@@ -236,7 +203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   fit: BoxFit.cover,
                                 )
                               : logoUrl.isNotEmpty
-                                  ? Image.network(
+                                  ? MediaImage(
                                       logoUrl,
                                       width: 120,
                                       height: 120,

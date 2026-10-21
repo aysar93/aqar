@@ -1,3 +1,4 @@
+import '../../../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -515,7 +516,7 @@ class _FollowerAvatar extends StatelessWidget {
                       size: 24,
                       color: colorScheme.onSurfaceVariant,
                     )
-                  : Image.network(
+                  : MediaImage(
                       resolvedUrl,
                       width: 46,
                       height: 46,

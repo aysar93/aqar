@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -126,7 +127,7 @@ class _SafetyReviewState extends State<_SafetyReview> {
                           ...((data!['images'] as List)
                               .whereType<String>()
                               .take(12)
-                              .map((url) => Image.network(url,
+                              .map((url) => MediaImage(url,
                                   height: 140,
                                   errorBuilder: (_, __, ___) =>
                                       const Text('تعذر تحميل الصورة')))),

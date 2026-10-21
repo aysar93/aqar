@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 
 import '../models/office_model.dart';
@@ -185,7 +186,7 @@ class OfficeHeader extends StatelessWidget {
           ),
           child: ClipOval(
             child: imageUrl.isNotEmpty
-                ? Image.network(
+                ? MediaImage(
                     imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (

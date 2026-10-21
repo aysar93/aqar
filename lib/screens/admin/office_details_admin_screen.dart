@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -76,8 +77,6 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
     BuildContext context,
     Map<String, dynamic> data,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final officeName = _readString(
       data['name'] ?? data['officeName'],
       fallback: 'مكتب عقاري',
@@ -150,6 +149,26 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
             isVerified: isVerified,
             status: status,
           ),
+          if (_readString(data['licenseImageUrl']).isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildSection(
+              context,
+              title: 'صورة الترخيص',
+              icon: Icons.description_outlined,
+              child: MediaImage(
+                _readString(data['licenseImageUrl']),
+                key: const ValueKey('office-license-preview'),
+                height: 220,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                      'تعذر عرض المستند. تحقق من صلاحياتك أو أعد تسجيل الدخول.'),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _buildActionButtons(
             context,
@@ -399,7 +418,7 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
-      child: Image.network(
+      child: MediaImage(
         imageUrl,
         width: 96,
         height: 96,
@@ -541,14 +560,14 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
         currentlyActive ? 'تم تعطيل المكتب.' : 'تم تفعيل المكتب',
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
@@ -580,14 +599,14 @@ class _OfficeDetailsAdminScreenState extends State<OfficeDetailsAdminScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,
         current ? 'تم إلغاء توثيق المكتب.' : 'تم توثيق المكتب',
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       _showMessage(
         context,

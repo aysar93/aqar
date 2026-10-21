@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 
 /// معرض صور المكتب.
@@ -204,7 +205,7 @@ class _OfficeGalleryState extends State<OfficeGallery> {
     BuildContext context,
     String imageUrl,
   ) {
-    return Image.network(
+    return MediaImage(
       imageUrl,
       width: double.infinity,
       height: double.infinity,
@@ -456,7 +457,7 @@ class _OfficeGalleryState extends State<OfficeGallery> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(9),
-                child: Image.network(
+                child: MediaImage(
                   images[index],
                   fit: BoxFit.cover,
                   errorBuilder: (
@@ -687,7 +688,7 @@ class _FullScreenOfficeGalleryState extends State<_FullScreenOfficeGallery> {
             minScale: 1,
             maxScale: 4,
             child: Center(
-              child: Image.network(
+              child: MediaImage(
                 widget.images[index],
                 fit: BoxFit.contain,
                 errorBuilder: (

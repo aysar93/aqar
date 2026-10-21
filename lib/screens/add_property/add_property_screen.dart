@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../analytics/services/app_activity_service.dart';
 
 import '../../models/add_property_data.dart';
-import '../../services/cloudinary_service.dart';
+import '../../services/media_store.dart';
 import '../../utils/property_default_images.dart';
 
 import 'step1_ad_type.dart';
@@ -551,7 +551,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
       if (property.selectedImages.isNotEmpty) {
         for (final image in property.selectedImages) {
-          final url = await uploadToCloudinary(image);
+          final url = await uploadMediaImage(image, purpose: MediaPurpose.property);
           if (url != null) {
             imageUrls.add(url);
           }

@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import '../core/data/paged_query.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -138,7 +139,7 @@ class _PendingPropertiesState extends State<PendingProperties> {
                               );
                             }
 
-                            return Image.network(
+                            return MediaImage(
                               displayImage,
                               height: 180,
                               width: double.infinity,

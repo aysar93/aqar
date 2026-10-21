@@ -1,3 +1,4 @@
+import '../../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -344,7 +345,7 @@ class PropertyCard extends StatelessWidget {
                                 errorBuilder: (_, __, ___) =>
                                     _imageFallback(propertyType),
                               )
-                            : Image.network(
+                            : MediaImage(
                                 displayImage,
                                 fit: BoxFit.cover,
                                 filterQuality: FilterQuality.low,

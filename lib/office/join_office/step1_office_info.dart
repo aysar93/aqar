@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -379,7 +380,7 @@ class _Step1OfficeInfoState extends State<Step1OfficeInfo> {
           else if (hasRemoteImage)
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.network(
+              child: MediaImage(
                 imagePath,
                 height: 190,
                 width: double.infinity,
