@@ -7,10 +7,12 @@ class BookingStateView extends StatelessWidget {
       required this.title,
       required this.detail,
       this.icon = Icons.cloud_off_outlined,
+      this.action,
       this.busy = false});
   final String title, detail;
   final IconData icon;
   final bool busy;
+  final Widget? action;
   @override
   Widget build(BuildContext context) => Center(
       child: Padding(
@@ -31,5 +33,6 @@ class BookingStateView extends StatelessWidget {
             Text(detail,
                 textAlign: TextAlign.center,
                 style: const TextStyle(height: 1.8)),
+            if (action != null) ...[const SizedBox(height: 16), action!],
           ])));
 }

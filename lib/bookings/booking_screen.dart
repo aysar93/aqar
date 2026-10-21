@@ -1,3 +1,4 @@
+import 'booking_services_ui.dart';
 import 'booking_operations.dart';
 import 'booking_workspace.dart';
 import 'booking_experience.dart';
@@ -16,7 +17,6 @@ import 'dart:async';
 import 'booking_widgets.dart';
 import 'booking_map.dart';
 import 'booking_management.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../subscription/payment_accounts.dart';
 import '../screens/admin/payment_account_settings_screen.dart';
 import 'package:flutter/material.dart';
@@ -135,13 +135,21 @@ Future<void> bookingRun(
 
 class BookingScreen extends StatefulWidget {
   final bool admin;
-  const BookingScreen({super.key, this.admin = false});
+  const BookingScreen(
+      {super.key,
+      this.admin = false,
+      this.records,
+      this.currentUserId,
+      this.initialTab = 0});
+  final Stream<QuerySnapshot<Map<String, dynamic>>> Function(int)? records;
+  final String? Function()? currentUserId;
+  final int initialTab;
   @override
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  int tab = 0;
+  late int tab = widget.initialTab;
   final filters = BookingFilters();
   bool finance = false;
   late final bookingBanners =
@@ -149,6 +157,7 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.records != null) return;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       FirebaseFirestore.instance.doc('users/$uid').get().then((s) {
@@ -162,32 +171,36 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = widget.currentUserId != null
+        ? widget.currentUserId!()
+        : FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       return const BookingScaffold(
           body: Center(child: Text('سجل الدخول للوصول إلى الحجوزات')));
     }
-    Query<Map<String, dynamic>> query;
-    if (tab == 6) {
-      query = FirebaseFirestore.instance
-          .collection('booking_venue_staff')
-          .where('userId', isEqualTo: uid);
-    } else if (tab == 5) {
-      query = FirebaseFirestore.instance
-          .collection('booking_venues')
-          .where('ownerId', isEqualTo: uid);
-    } else if (tab == 0) {
-      query = FirebaseFirestore.instance.collection('booking_venues');
-      if (!widget.admin) query = query.where('active', isEqualTo: true);
-    } else if (tab == 3) {
-      query = FirebaseFirestore.instance.collection('booking_reports');
-    } else {
-      query = FirebaseFirestore.instance.collection('bookings');
-      if (tab == 4) {
-        query = bookingFinanceQueue(query);
-      } else if (!widget.admin) {
-        query =
-            query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid);
+    Query<Map<String, dynamic>>? query;
+    if (widget.records == null) {
+      if (tab == 6) {
+        query = FirebaseFirestore.instance
+            .collection('booking_venue_staff')
+            .where('userId', isEqualTo: uid);
+      } else if (tab == 5) {
+        query = FirebaseFirestore.instance
+            .collection('booking_venues')
+            .where('ownerId', isEqualTo: uid);
+      } else if (tab == 0) {
+        query = FirebaseFirestore.instance.collection('booking_venues');
+        if (!widget.admin) query = query.where('active', isEqualTo: true);
+      } else if (tab == 3) {
+        query = FirebaseFirestore.instance.collection('booking_reports');
+      } else {
+        query = FirebaseFirestore.instance.collection('bookings');
+        if (tab == 4) {
+          query = bookingFinanceQueue(query);
+        } else if (!widget.admin) {
+          query =
+              query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid);
+        }
       }
     }
     return Directionality(
@@ -345,7 +358,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (_) =>
                               BookingSupportScreen(admin: widget.admin)))),
               ...[
-                if (tab == 0)
+                if (tab == 0 && widget.records == null)
                   BannerSlider(
                       stream: bookingBanners,
                       onBookingVenue: (id, category) async {
@@ -367,7 +380,8 @@ class _BookingScreenState extends State<BookingScreen> {
                         });
                       }),
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: query.snapshots(includeMetadataChanges: true),
+                    stream: widget.records?.call(tab) ??
+                        query!.snapshots(includeMetadataChanges: true),
                     builder: (context, s) {
                       if (s.hasError ||
                           (s.hasData &&
@@ -1001,7 +1015,23 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
 
 class BookingDetailsScreen extends StatefulWidget {
   final String bookingId;
-  const BookingDetailsScreen({super.key, required this.bookingId});
+  const BookingDetailsScreen(
+      {super.key,
+      required this.bookingId,
+      this.currentUserId,
+      this.sessions,
+      this.roles,
+      this.dataStream,
+      this.events,
+      this.paymentAccounts,
+      this.call = bookingCall});
+  final String? Function()? currentUserId;
+  final Stream<String?>? sessions;
+  final Stream<DocumentSnapshot<Map<String, dynamic>>> Function(String)? roles;
+  final Stream<DocumentSnapshot<Map<String, dynamic>>>? dataStream;
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? events;
+  final Stream<Map<String, dynamic>>? paymentAccounts;
+  final BookingMediaCall call;
   @override
   State<BookingDetailsScreen> createState() => _BookingDetailsScreenState();
 }
@@ -1014,15 +1044,20 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   Map<String, dynamic> accounts = {};
   StreamSubscription<Map<String, dynamic>>? accountListener;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? roleListener;
-  StreamSubscription<User?>? sessionListener;
+  StreamSubscription<String?>? sessionListener;
   String? privilegedUid;
   final transaction = TextEditingController(),
       reason = TextEditingController(),
       refundReference = TextEditingController();
+  String? currentUid() => widget.currentUserId != null
+      ? widget.currentUserId!()
+      : FirebaseAuth.instance.currentUser?.uid;
   @override
   void initState() {
     super.initState();
-    accountListener = SubscriptionPaymentAccounts.watch().listen((value) {
+    accountListener =
+        (widget.paymentAccounts ?? SubscriptionPaymentAccounts.watch()).listen(
+            (value) {
       if (!mounted) return;
       setState(() {
         accounts = value;
@@ -1040,7 +1075,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       }
     });
 
-    sessionListener = FirebaseAuth.instance.authStateChanges().listen((user) {
+    sessionListener = (widget.sessions ??
+            FirebaseAuth.instance.authStateChanges().map((u) => u?.uid))
+        .listen((uid) {
       roleListener?.cancel();
       if (!mounted) return;
       setState(() {
@@ -1048,13 +1085,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         finance = false;
         privilegedUid = null;
       });
-      final uid = user?.uid;
       if (uid == null) return;
-      roleListener = FirebaseFirestore.instance
-          .doc('users/$uid')
-          .snapshots(includeMetadataChanges: true)
+      roleListener = (widget.roles?.call(uid) ??
+              FirebaseFirestore.instance
+                  .doc('users/$uid')
+                  .snapshots(includeMetadataChanges: true))
           .listen((s) {
-        if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
+        if (!mounted || currentUid() != uid) return;
         final verified = !s.metadata.isFromCache &&
             !s.metadata.hasPendingWrites &&
             s.data() != null &&
@@ -1065,7 +1102,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           finance = verified && s.data()?['canReviewBookingPayments'] == true;
         });
       }, onError: (_) {
-        if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
+        if (!mounted || currentUid() != uid) return;
         setState(() {
           admin = false;
           finance = false;
@@ -1086,12 +1123,22 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     super.dispose();
   }
 
+  Future<void> guarded(Future<void> Function() task) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await bookingRun(context, task);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   Future<void> act(String action,
       [Map<String, dynamic> extra = const {}]) async {
     if (busy) return;
     setState(() => busy = true);
     await bookingRun(context, () async {
-      await bookingCall('actOnBooking', {
+      await widget.call('actOnBooking', {
         'bookingId': widget.bookingId,
         'action': action,
         'reason': reason.text,
@@ -1105,9 +1152,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('تفاصيل الحجز')),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .doc('bookings/${widget.bookingId}')
-              .snapshots(includeMetadataChanges: true),
+          stream: widget.dataStream ??
+              FirebaseFirestore.instance
+                  .doc('bookings/${widget.bookingId}')
+                  .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
             if (s.hasError ||
                 (s.hasData &&
@@ -1126,7 +1174,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             }
             final b = s.data!.data();
             if (b == null) return const Center(child: Text('الحجز غير موجود'));
-            final uid = FirebaseAuth.instance.currentUser?.uid,
+            final uid = currentUid(),
                 owner = uid == b['ownerId'],
                 customer = uid == b['customerId'];
             if (!bookingCanDisplayDetails(
@@ -1184,7 +1232,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       onPressed: busy
                           ? null
                           : () => bookingRun(context, () async {
-                                await bookingCall('reviewCompletedBooking', {
+                                await widget.call('reviewCompletedBooking', {
                                   'bookingId': widget.bookingId,
                                   'rating': rating,
                                   'comment': reason.text
@@ -1203,10 +1251,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text('محادثة الحجز')),
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance
-                        .collection('booking_action_audit')
-                        .where('bookingId', isEqualTo: widget.bookingId)
-                        .snapshots(includeMetadataChanges: true),
+                    stream: widget.events ??
+                        FirebaseFirestore.instance
+                            .collection('booking_action_audit')
+                            .where('bookingId', isEqualTo: widget.bookingId)
+                            .snapshots(includeMetadataChanges: true),
                     builder: (context, events) {
                       if (events.hasError ||
                           (events.hasData &&
@@ -1235,50 +1284,48 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     !customer &&
                     b['status'] == 'completed' &&
                     b['ownerSettlementStatus'] != 'settled')
-                  TextField(
-                      controller: refundReference,
-                      decoration: const InputDecoration(
-                          labelText:
-                              'مرجع تحويل مستحقات المالك بعد التحويل الفعلي')),
-                if (finance &&
-                    !owner &&
-                    !customer &&
-                    b['status'] == 'completed' &&
-                    b['ownerSettlementStatus'] != 'settled')
-                  FilledButton(
-                      onPressed: busy
-                          ? null
-                          : () => act('settleOwner',
-                              {'settlementReference': refundReference.text}),
-                      child: const Text('تسجيل تسوية مستحقات المالك يدويًا')),
+                  BookingManualSettlement(
+                      title: 'تسوية مستحقات المالك',
+                      reference: refundReference,
+                      busy: busy,
+                      label: 'تسجيل تسوية مستحقات المالك يدويًا',
+                      onSubmit: () => act('settleOwner',
+                          {'settlementReference': refundReference.text})),
                 if (customer && b['status'] == 'confirmed')
                   FilledButton.icon(
                       icon: const Icon(Icons.qr_code),
                       label: const Text('رمز الوصول — صالح 10 دقائق'),
                       onPressed: busy
                           ? null
-                          : () => bookingRun(context, () async {
-                                final result = await bookingCall(
+                          : () => guarded(() async {
+                                final issuedUid = currentUid();
+                                if (issuedUid == null) return;
+                                final result = await widget.call(
                                     'issueBookingCheckInCode',
                                     {'bookingId': widget.bookingId});
-                                if (context.mounted)
+                                if (context.mounted &&
+                                    currentUid() == issuedUid)
                                   await showDialog(
                                       context: context,
                                       builder: (_) => Dialog(
-                                          child: Padding(
-                                              padding: const EdgeInsets.all(24),
-                                              child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const Text(
-                                                        'اعرض الرمز للمالك عند الوصول'),
-                                                    QrImageView(
-                                                        data: result['code'],
-                                                        size: 240),
-                                                    SelectableText(
-                                                        result['code']),
-                                                  ]))));
+                                          child: SingleChildScrollView(
+                                              child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(24),
+                                                  child: BookingQrPass(
+                                                      code: result['code'],
+                                                      issuedUid: issuedUid,
+                                                      currentUserId: currentUid,
+                                                      sessions: widget
+                                                              .sessions ??
+                                                          FirebaseAuth.instance
+                                                              .authStateChanges()
+                                                              .map((u) =>
+                                                                  u?.uid),
+                                                      expiresAt:
+                                                          bookingHoldDeadline(
+                                                              result[
+                                                                  'expiresAt']))))));
                               })),
                 TextButton.icon(
                     icon: const Icon(Icons.support_agent),
@@ -1304,8 +1351,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       onPressed: busy
                           ? null
                           : () => bookingRun(context, () async {
-                                await bookingCall('verifyBookingCheckInCode',
-                                    {'code': reason.text.trim()});
+                                await widget.call('verifyBookingCheckInCode', {
+                                  'code': reason.text.trim(),
+                                  'bookingId': widget.bookingId
+                                });
                               }),
                       child: const Text(
                           'تحقق من رمز الوصول الملصق في حقل الملاحظات')),
@@ -1329,19 +1378,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 if (finance &&
                     !owner &&
                     !customer &&
-                    b['refundStatus'] == 'pending') ...[
-                  TextField(
-                      controller: refundReference,
-                      decoration: const InputDecoration(
-                          labelText:
-                              'مرجع تحويل الاسترداد بعد إعادة المبلغ فعلياً')),
-                  FilledButton(
-                      onPressed: busy
-                          ? null
-                          : () => act('settleRefund',
-                              {'refundReference': refundReference.text}),
-                      child: const Text('تسجيل إعادة المبلغ يدوياً')),
-                ],
+                    b['refundStatus'] == 'pending')
+                  BookingManualSettlement(
+                      title: 'إعادة العربون المستحق',
+                      reference: refundReference,
+                      busy: busy,
+                      label: 'تسجيل إعادة المبلغ يدوياً',
+                      onSubmit: () => act('settleRefund',
+                          {'refundReference': refundReference.text})),
                 if (b['receiptPath'] != null)
                   TextButton(
                       onPressed: () => bookingRun(context, () async {
@@ -1421,14 +1465,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                     rethrow;
                                   }
                                 }, discardInvalid: () async {
-                                  await bookingCall(
-                                      'discardInvalidBookingReceipt', {
+                                  await widget
+                                      .call('discardInvalidBookingReceipt', {
                                     'bookingId': widget.bookingId,
                                     'path': path,
                                   });
                                 });
 
-                                await bookingCall('actOnBooking', {
+                                await widget.call('actOnBooking', {
                                   'bookingId': widget.bookingId,
                                   'action': 'submitPayment',
                                   'method': selectedMethod,
@@ -1460,7 +1504,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       onPressed: busy
                           ? null
                           : () => bookingRun(context, () async {
-                                await bookingCall('reportBooking', {
+                                await widget.call('reportBooking', {
                                   'bookingId': widget.bookingId,
                                   'reason': reason.text
                                 });
@@ -2115,22 +2159,61 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
 }
 
 class BookingSettingsScreen extends StatefulWidget {
-  const BookingSettingsScreen({super.key});
+  const BookingSettingsScreen(
+      {super.key,
+      this.loadSettings,
+      this.loadUsers,
+      this.saveSettings,
+      this.call = bookingCall});
+  final Future<Map<String, dynamic>> Function()? loadSettings;
+  final Future<List<Map<String, dynamic>>> Function()? loadUsers;
+  final Future<void> Function(int)? saveSettings;
+  final BookingMediaCall call;
   @override
   State<BookingSettingsScreen> createState() => _BookingSettingsScreenState();
 }
 
 class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
-  final hold = TextEditingController(text: '120');
+  final hold = TextEditingController();
   bool loaded = false, busy = false;
+  String? error;
+  late Future<List<Map<String, dynamic>>> users = readUsers();
+  Future<List<Map<String, dynamic>>> readUsers() async {
+    if (widget.loadUsers != null) return widget.loadUsers!();
+    final result = await FirebaseFirestore.instance
+        .collection('users')
+        .get(const GetOptions(source: Source.server));
+    return [
+      for (final user in result.docs) {...user.data(), 'id': user.id}
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
-    FirebaseFirestore.instance.doc('settings/bookings').get().then((s) async {
-      final d = s.data() ?? {};
-      hold.text = '${d['holdMinutes'] ?? 120}';
-      if (mounted) setState(() => loaded = true);
-    });
+    load();
+  }
+
+  Future<void> load() async {
+    try {
+      final data = widget.loadSettings != null
+          ? await widget.loadSettings!()
+          : (await FirebaseFirestore.instance
+                      .doc('settings/bookings')
+                      .get(const GetOptions(source: Source.server)))
+                  .data() ??
+              {};
+      if (!mounted) return;
+      hold.text = '${data['holdMinutes'] ?? 120}';
+      setState(() {
+        loaded = true;
+        error = null;
+      });
+    } catch (_) {
+      if (mounted)
+        setState(() => error =
+            'تعذر تحميل الإعدادات من الخادم. أعد الاتصال وحاول مجددًا.');
+    }
   }
 
   @override
@@ -2139,56 +2222,85 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
     super.dispose();
   }
 
+  Future<void> save() async {
+    if (!loaded || busy) return;
+    final minutes = int.tryParse(hold.text);
+    if (minutes == null || minutes < 5 || minutes > 10080) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('أدخل مدة بين 5 و10080 دقيقة')));
+      return;
+    }
+    setState(() => busy = true);
+    await bookingRun(context, () async {
+      if (widget.saveSettings != null) {
+        await widget.saveSettings!(minutes);
+      } else {
+        await FirebaseFirestore.instance
+            .doc('settings/bookings')
+            .set({'holdMinutes': minutes});
+      }
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('تم حفظ الإعدادات')));
+    });
+    if (mounted) setState(() => busy = false);
+  }
+
+  Future<void> reviewer(String id, bool enabled) async {
+    if (busy) return;
+    setState(() => busy = true);
+    await bookingRun(context, () async {
+      await widget.call(
+          'setBookingPaymentReviewer', {'userId': id, 'enabled': enabled});
+      if (mounted) setState(() => users = readUsers());
+    });
+    if (mounted) setState(() => busy = false);
+  }
+
   @override
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('إعدادات الحجوزات')),
-      body: ListView(padding: const EdgeInsets.all(20), children: [
-        TextField(
-            controller: hold,
-            decoration: const InputDecoration(
-                labelText: 'مدة الحجز المؤقت بالدقائق (5–10080)')),
-        ListTile(
-            title: const Text('حسابات الدفع المشتركة'),
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const PaymentAccountSettingsScreen()))),
-        const Text(
-            'حسابات التحويل مشتركة مع اشتراكات المكاتب. لا يُفعّل زين كاش دون حساب موثّق. الإلغاء بواسطة المالك أو الإدارة يعيد كامل العربون. التسوية اليدوية تحتاج مرجع تحويل.'),
-        FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            future: FirebaseFirestore.instance.collection('users').get(),
-            builder: (context, snapshot) => Column(children: [
-                  const Text(
-                      'صلاحية مراجعة مدفوعات الحجوزات (مستقلة عن الإدارة)'),
-                  for (final user in snapshot.data?.docs ??
-                      <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-                    SwitchListTile(
-                        title: Text('${user.data()['name'] ?? user.id}'),
-                        value: user.data()['canReviewBookingPayments'] == true,
-                        onChanged: busy
-                            ? null
-                            : (enabled) => bookingRun(context, () async {
-                                  await bookingCall('setBookingPaymentReviewer',
-                                      {'userId': user.id, 'enabled': enabled});
-                                  if (mounted) setState(() {});
-                                })),
-                ])),
-        FilledButton(
-            onPressed: !loaded || busy
-                ? null
-                : () async {
-                    final minutes = int.tryParse(hold.text);
-                    if (minutes == null || minutes < 5 || minutes > 10080) {
-                      return;
-                    }
-                    setState(() => busy = true);
-                    await bookingRun(
-                        context,
-                        () => FirebaseFirestore.instance
-                            .doc('settings/bookings')
-                            .set({'holdMinutes': minutes}));
-                    if (mounted) setState(() => busy = false);
+      body: error != null
+          ? BookingStateView(
+              title: 'الإعدادات غير متاحة',
+              detail: error!,
+              icon: Icons.settings_outlined,
+              action: TextButton(
+                  onPressed: () {
+                    setState(() => error = null);
+                    load();
                   },
-            child: const Text('حفظ'))
-      ]));
+                  child: const Text('إعادة المحاولة')))
+          : !loaded
+              ? const Center(child: CircularProgressIndicator())
+              : BookingSettingsPanel(
+                  hold: hold,
+                  busy: busy,
+                  onSave: save,
+                  onAccounts: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const PaymentAccountSettingsScreen())),
+                  reviewers: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: users,
+                      builder: (context, s) {
+                        if (s.hasError)
+                          return const Text(
+                              'تعذر التحقق من المراجعين؛ لا يمكن تعديل الصلاحيات الآن.');
+                        if (!s.hasData) return const LinearProgressIndicator();
+                        if (s.data!.isEmpty)
+                          return const Text('لا توجد حسابات متاحة.');
+                        return Column(children: [
+                          for (final user in s.data!)
+                            SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text('${user['name'] ?? user['id']}'),
+                                value: user['canReviewBookingPayments'] == true,
+                                onChanged: busy
+                                    ? null
+                                    : (enabled) =>
+                                        reviewer(user['id'], enabled))
+                        ]);
+                      })));
 }

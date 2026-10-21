@@ -1,3 +1,4 @@
+import 'booking_services_ui.dart';
 import 'booking_operations.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -63,8 +64,8 @@ class _ScannerState extends State<BookingScannerScreen> {
       busy = true;
       error = null;
     });
-    await controller.stop();
     try {
+      await controller.stop();
       if (!code.startsWith('aqar-booking:${widget.bookingId}:'))
         throw StateError('رمز لحجز آخر؛ افتح الحجز الصحيح');
       await bookingCall('verifyBookingCheckInCode',
@@ -88,38 +89,37 @@ class _ScannerState extends State<BookingScannerScreen> {
   @override
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('مسح رمز وصول الحجز')),
-      body: Column(children: [
-        const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-                'اعرض رمز الزبون أمام الكاميرا. يلزم اتصال بالخادم لاعتماد الوصول.')),
-        Expanded(
-            child: MobileScanner(
-                controller: controller,
-                onDetect: (capture) {
-                  for (final b in capture.barcodes) {
-                    if (b.rawValue != null) {
-                      verify(b.rawValue!);
-                      break;
-                    }
+      body: BookingScannerPanel(
+          busy: busy,
+          error: error,
+          camera: MobileScanner(
+              controller: controller,
+              onDetect: (capture) {
+                for (final b in capture.barcodes) {
+                  if (b.rawValue != null) {
+                    verify(b.rawValue!);
+                    break;
                   }
-                },
-                errorBuilder: (context, error) => const Center(
-                    child: Text(
-                        'تعذر فتح الكاميرا؛ اسمح باستخدامها من إعدادات الهاتف أو استخدم لصق الرمز في الحجز.')))),
-        if (error != null)
-          Padding(padding: const EdgeInsets.all(16), child: Text(error!)),
-        if (error != null)
-          TextButton(
-              onPressed: () async {
-                setState(() {
-                  busy = false;
-                  error = null;
-                });
-                await controller.start();
+                }
               },
-              child: const Text('إعادة المسح'))
-      ]));
+              errorBuilder: (context, error) => const Center(
+                  child: Text(
+                      'تعذر فتح الكاميرا؛ اسمح باستخدامها من إعدادات الهاتف أو استخدم لصق الرمز في الحجز.'))),
+          onRetry: error == null
+              ? null
+              : () async {
+                  setState(() {
+                    busy = false;
+                    error = null;
+                  });
+                  try {
+                    await controller.start();
+                  } catch (_) {
+                    if (mounted)
+                      setState(() => error =
+                          'تعذر إعادة فتح الكاميرا. راجع الإذن وحاول مجددًا.');
+                  }
+                }));
 }
 
 class BookingSupportScreen extends StatefulWidget {

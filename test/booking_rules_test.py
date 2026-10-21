@@ -37,6 +37,21 @@ class BookingRules(unittest.TestCase):
             self.assertEqual(write('bookings/private',{'status':'confirmed'},uid,True,timestamp=None),403)
             self.assertEqual(write('booking_venues/fake',{'active':True},uid,timestamp=None),403)
 
+    def test_chat_qr_and_transfer_surfaces_remain_private_and_server_only(self):
+        message = 'booking_messages/private/messages/synthetic_message'
+        self.assertEqual(write(message, {'senderId':'customer','message':'synthetic'}, 'SEED', timestamp=None),200)
+        for uid in ['customer','owner']: self.assertEqual(call('/'+message,uid),200)
+        for uid in [None,'admin','reviewer','other','blocked']: self.assertEqual(call('/'+message,uid),403)
+        for uid in ['customer','owner','admin']: self.assertEqual(write(message,{'message':'tamper'},uid,True,timestamp=None),403)
+        secret = 'booking_checkin_codes/private'
+        self.assertEqual(write(secret,{'hash':'SYNTHETIC'},'SEED',timestamp=None),200)
+        for uid in [None,'customer','owner','admin','reviewer']: self.assertEqual(call('/'+secret,uid),403)
+        transfer = 'booking_ownership_transfers/synthetic_transfer'
+        self.assertEqual(write(transfer,{'ownerId':'owner','newOwnerId':'other','status':'pending_acceptance'},'SEED',timestamp=None),200)
+        for uid in ['owner','other','admin']: self.assertEqual(call('/'+transfer,uid),200)
+        for uid in [None,'customer','reviewer','blocked']: self.assertEqual(call('/'+transfer,uid),403)
+        for uid in ['owner','other','admin']: self.assertEqual(write(transfer,{'status':'approved'},uid,True,timestamp=None),403)
+
     def test_finance_role_cannot_be_self_assigned(self):
         self.assertEqual(write('users/newfinance',{'isAdmin':False,'isBlocked':False,'accountType':'user','accountMode':'user','canReviewBookingPayments':True},'newfinance',timestamp=None),403)
         self.assertEqual(write('users/customer',{'canReviewBookingPayments':True},'customer',True,timestamp=None),403)

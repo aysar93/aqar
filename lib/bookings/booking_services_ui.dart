@@ -1,0 +1,403 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'booking_widgets.dart';
+import 'booking_experience.dart';
+
+class BookingChatPanel extends StatelessWidget {
+  const BookingChatPanel(
+      {super.key,
+      required this.messages,
+      required this.uid,
+      required this.controller,
+      required this.busy,
+      required this.retry,
+      required this.onSend});
+  final List<Map<String, dynamic>> messages;
+  final String uid;
+  final TextEditingController controller;
+  final bool busy, retry;
+  final VoidCallback? onSend;
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+                'مساحة خاصة لأطراف الحجز · تجنب الروابط ومعلومات الدفع الحساسة.',
+                style: TextStyle(color: Color(0xFF64748B), height: 1.7))),
+        Expanded(
+            child: messages.isEmpty
+                ? const BookingStateView(
+                    title: 'ابدأ المحادثة',
+                    detail: 'اتفق على تفاصيل الزيارة مع الطرف الآخر هنا.',
+                    icon: Icons.forum_outlined)
+                : ListView(padding: const EdgeInsets.all(16), children: [
+                    for (final message in messages)
+                      Align(
+                          alignment: message['senderId'] == uid
+                              ? AlignmentDirectional.centerEnd
+                              : AlignmentDirectional.centerStart,
+                          child: Container(
+                              constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.sizeOf(context).width * .82),
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                  color: message['senderId'] == uid
+                                      ? bookingNavy
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                        message['senderId'] == uid
+                                            ? 'أنت'
+                                            : 'الطرف الآخر',
+                                        style: TextStyle(
+                                            color: message['senderId'] == uid
+                                                ? const Color(0xFFE3C985)
+                                                : const Color(0xFF64748B),
+                                            fontSize: 12)),
+                                    const SizedBox(height: 6),
+                                    Text('${message['message'] ?? ''}',
+                                        style: TextStyle(
+                                            color: message['senderId'] == uid
+                                                ? Colors.white
+                                                : bookingNavy,
+                                            height: 1.8)),
+                                  ]))),
+                  ])),
+        SafeArea(
+            top: false,
+            child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (retry)
+                        const Text(
+                            'تعذر تأكيد الإرسال. إعادة المحاولة تستخدم الرسالة نفسها لتجنب التكرار.',
+                            style: TextStyle(height: 1.7)),
+                      TextField(
+                          controller: controller,
+                          enabled: !busy && !retry && onSend != null,
+                          maxLength: 2000,
+                          minLines: 1,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                              labelText: 'رسالتك',
+                              hintText: 'اكتب رسالة دون روابط خارجية')),
+                      FilledButton.icon(
+                          onPressed: busy ? null : onSend,
+                          icon: Icon(
+                              busy ? Icons.hourglass_top : Icons.send_rounded),
+                          label: Text(busy
+                              ? 'جارٍ الإرسال'
+                              : retry
+                                  ? 'إعادة إرسال الرسالة نفسها'
+                                  : 'إرسال الرسالة')),
+                    ]))),
+      ]);
+}
+
+class BookingTransferCard extends StatefulWidget {
+  const BookingTransferCard(
+      {super.key,
+      required this.data,
+      required this.admin,
+      required this.onAction});
+  final Map<String, dynamic> data;
+  final bool admin;
+  final Future<void> Function(String)? onAction;
+  @override
+  State<BookingTransferCard> createState() => _TransferState();
+}
+
+class _TransferState extends State<BookingTransferCard> {
+  bool busy = false;
+  Future<void> run(String action) async {
+    if (busy || widget.onAction == null) return;
+    setState(() => busy = true);
+    try {
+      await widget.onAction!(action);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = widget.data['status'];
+    final actionable = widget.admin
+        ? status == 'pending_admin'
+        : status == 'pending_acceptance';
+    return BookingSection(
+        title: 'المكان ${widget.data['venueId'] ?? ''}',
+        subtitle: const {
+              'pending_acceptance': 'بانتظار قبول المالك الجديد',
+              'pending_admin': 'بانتظار المراجعة الإدارية',
+              'approved': 'تم نقل الملكية'
+            }[status] ??
+            'حالة تحتاج مراجعة',
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('${widget.data['reason'] ?? ''}',
+              style: const TextStyle(height: 1.8)),
+          const SizedBox(height: 16),
+          for (final entry in const {
+            'ownerId': 'المالك الحالي',
+            'newOwnerId': 'المالك الجديد'
+          }.entries)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                    '${entry.value}: ${widget.data[entry.key] ?? 'غير متوفر'}')),
+          const SizedBox(height: 12),
+          const Text(
+              'قبول المالك الجديد ثم مراجعة إدارية مستقلة. يجب تسوية الحجوزات والاستردادات القائمة قبل الاعتماد.',
+              style: TextStyle(color: Color(0xFF64748B), height: 1.8)),
+          if (actionable)
+            Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: FilledButton.icon(
+                    onPressed: busy || widget.onAction == null
+                        ? null
+                        : () => run(widget.admin ? 'approve' : 'accept'),
+                    icon: const Icon(Icons.verified_user_outlined),
+                    label: Text(busy
+                        ? 'جارٍ تنفيذ الطلب'
+                        : widget.admin
+                            ? 'اعتماد النقل'
+                            : 'قبول الملكية'))),
+        ]));
+  }
+}
+
+class BookingSettingsPanel extends StatelessWidget {
+  const BookingSettingsPanel(
+      {super.key,
+      required this.hold,
+      required this.busy,
+      required this.onSave,
+      required this.onAccounts,
+      required this.reviewers});
+  final TextEditingController hold;
+  final bool busy;
+  final VoidCallback? onSave, onAccounts;
+  final Widget reviewers;
+  @override
+  Widget build(BuildContext context) =>
+      ListView(padding: const EdgeInsets.all(20), children: [
+        BookingSection(
+            title: 'سياسة الحجز المؤقت',
+            subtitle:
+                'تُقرأ المدة من الإعدادات الحالية. الحفظ إجراء إداري يؤثر في الحجوزات الجديدة.',
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                      controller: hold,
+                      enabled: !busy && onSave != null,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: 'المدة بالدقائق',
+                          helperText: 'النطاق المسموح 5–10080 دقيقة',
+                          prefixIcon: Icon(Icons.timer_outlined))),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                      onPressed: busy ? null : onSave,
+                      icon: const Icon(Icons.save_outlined),
+                      label: Text(busy ? 'جارٍ الحفظ' : 'حفظ الإعدادات')),
+                ])),
+        BookingSection(
+            title: 'قنوات الدفع اليدوي',
+            subtitle:
+                'حسابات مشتركة مع اشتراكات المكاتب. لا يُفعّل Zain Cash دون حساب موثّق.',
+            child: OutlinedButton.icon(
+                onPressed: onAccounts,
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('إدارة حسابات الدفع المشتركة'))),
+        BookingSection(
+            title: 'مراجعو المدفوعات',
+            subtitle: 'صلاحية مستقلة عن الإدارة. اختر حسابات مخولة فقط.',
+            child: reviewers),
+        const Text(
+            'الإلغاء بواسطة المالك أو الإدارة يعيد كامل العربون. التسوية اليدوية تحتاج مرجع تحويل.',
+            style: TextStyle(height: 1.8, color: Color(0xFF64748B))),
+      ]);
+}
+
+class BookingQrPass extends StatefulWidget {
+  const BookingQrPass(
+      {super.key,
+      required this.code,
+      required this.expiresAt,
+      this.now,
+      this.sessions,
+      this.currentUserId,
+      this.issuedUid});
+  final Stream<String?>? sessions;
+  final String? Function()? currentUserId;
+  final String? issuedUid;
+  final String code;
+  final DateTime? expiresAt;
+  final DateTime Function()? now;
+  @override
+  State<BookingQrPass> createState() => _QrPassState();
+}
+
+class _QrPassState extends State<BookingQrPass> {
+  Timer? timer;
+  StreamSubscription<String?>? listener;
+  bool revoked = false;
+  @override
+  void initState() {
+    super.initState();
+    listener = widget.sessions?.listen((uid) {
+      if (mounted && uid != widget.issuedUid) setState(() => revoked = true);
+    }, onError: (_) {
+      if (mounted) setState(() => revoked = true);
+    });
+    timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    listener?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining =
+        widget.expiresAt?.difference(widget.now?.call() ?? DateTime.now());
+    final valid = !revoked &&
+        (widget.currentUserId == null ||
+            widget.currentUserId!() == widget.issuedUid) &&
+        remaining != null &&
+        remaining > Duration.zero;
+    if (!valid)
+      return const BookingStateView(
+          title: 'انتهت صلاحية رمز الوصول',
+          detail:
+              'أغلق هذه النافذة واطلب رمزًا جديدًا. اعتماد الوصول يحتاج تحقق الخادم.',
+          icon: Icons.qr_code_2);
+    return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Icon(Icons.qr_code_2, color: bookingGold, size: 36),
+          const SizedBox(height: 12),
+          const Text('مرحبًا بك، زيارتك تبدأ هنا',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('اعرض الرمز للمالك عند الوصول. لا تشاركه مع الآخرين.',
+              textAlign: TextAlign.center, style: TextStyle(height: 1.8)),
+          const SizedBox(height: 16),
+          Center(
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: AspectRatio(
+                      aspectRatio: 1,
+                      child: QrImageView(
+                          data: widget.code, backgroundColor: Colors.white)))),
+          const SizedBox(height: 16),
+          Text(
+              'الوقت المتبقي ${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+              textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          ExpansionTile(title: const Text('نسخ الرمز نصيًا'), children: [
+            SelectableText(widget.code, textDirection: TextDirection.ltr)
+          ]),
+        ]);
+  }
+}
+
+class BookingScannerPanel extends StatelessWidget {
+  const BookingScannerPanel(
+      {super.key,
+      required this.camera,
+      this.error,
+      this.onRetry,
+      required this.busy});
+  final Widget camera;
+  final String? error;
+  final VoidCallback? onRetry;
+  final bool busy;
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        const Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+                'وجّه الكاميرا إلى رمز الزبون. يعتمد الخادم الوصول للحجز والموعد الصحيحين.',
+                style: TextStyle(height: 1.8),
+                textAlign: TextAlign.center)),
+        Expanded(
+            child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24), child: camera))),
+        if (busy && error == null)
+          const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('جارٍ التحقق من الرمز…')),
+        if (error != null)
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(height: 1.8))),
+        if (onRetry != null)
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إعادة المسح'))),
+        const SafeArea(
+            top: false,
+            child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('يلزم اتصال بالخادم لاعتماد الوصول.',
+                    style: TextStyle(color: Color(0xFF64748B))))),
+      ]);
+}
+
+class BookingManualSettlement extends StatelessWidget {
+  const BookingManualSettlement(
+      {super.key,
+      required this.title,
+      required this.reference,
+      required this.busy,
+      required this.onSubmit,
+      required this.label});
+  final String title, label;
+  final TextEditingController reference;
+  final bool busy;
+  final VoidCallback? onSubmit;
+  @override
+  Widget build(BuildContext context) => BookingSection(
+      title: title,
+      subtitle:
+          'سجّل العملية بعد إجراء التحويل فعليًا. هذا الإجراء يوثّق التسوية ولا ينفذ تحويلًا ماليًا.',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TextField(
+            controller: reference,
+            enabled: !busy,
+            maxLength: 200,
+            decoration: const InputDecoration(
+                labelText: 'مرجع التحويل الفعلي',
+                prefixIcon: Icon(Icons.receipt_long_outlined))),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+            onPressed: busy ? null : onSubmit,
+            icon: const Icon(Icons.fact_check_outlined),
+            label: Text(label)),
+      ]));
+}
