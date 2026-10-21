@@ -5,9 +5,9 @@ bool bookingCanDisplayDetails({
   required Map<String, dynamic> booking,
   bool admin = false,
   bool finance = false,
+  String? privilegedUid,
 }) =>
     uid != null &&
     (uid == booking['customerId'] ||
         uid == booking['ownerId'] ||
-        admin ||
-        finance);
+        (uid == privilegedUid && (admin || finance)));

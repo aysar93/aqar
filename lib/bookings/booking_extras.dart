@@ -189,8 +189,17 @@ class _SupportState extends State<BookingSupportScreen> {
                 child: const Text('فتح تذكرة دعم'))
           ],
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: query.snapshots(),
+              stream: query.snapshots(includeMetadataChanges: true),
               builder: (context, s) {
+                if (!s.hasData ||
+                    s.hasError ||
+                    s.data!.metadata.isFromCache ||
+                    s.data!.metadata.hasPendingWrites) {
+                  return const BookingStateView(
+                      title: 'يلزم اتصال للتحقق من الصلاحية',
+                      detail:
+                          'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+                }
                 if (s.hasError) return const Text('تعذر تحميل تذاكر الدعم');
                 if (!s.hasData) return const LinearProgressIndicator();
                 final docs = s.data!.docs.toList()

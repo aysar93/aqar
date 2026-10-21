@@ -38,3 +38,15 @@ test('simultaneous valid owner settlements produce exactly one ledger entry',asy
   assert.equal((await db.collection('booking_ledger').where('bookingId','==',id).get()).size,1);
   assert.equal((await db.collection('booking_action_audit').where('bookingId','==',id).get()).size,1);
 });
+
+test('revoked or blocked reviewer cannot settle using a previously authorized identity',async()=>{
+  for(const patch of [{canReviewBookingPayments:false},{isBlocked:true}]) {
+    const id='integrity_revoked_'+Object.keys(patch)[0];
+    const b=await fixture(id);
+    await db.doc('users/integrity_reviewer').update(patch);
+    await assert.rejects(call(id,'settleOwner'));
+    assert.deepEqual((await db.doc('bookings/'+id).get()).data(),b);
+    for(const col of ['booking_ledger','booking_action_audit'])
+      assert.equal((await db.collection(col).where('bookingId','==',id).get()).size,0);
+  }
+});

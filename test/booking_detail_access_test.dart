@@ -22,16 +22,37 @@ void main() {
   test('customer, venue owner and authorized review roles retain access', () {
     expect(
         bookingCanDisplayDetails(uid: 'venue-owner', booking: cached), isTrue);
-    expect(bookingCanDisplayDetails(uid: 'admin', booking: cached, admin: true),
+    expect(
+        bookingCanDisplayDetails(
+            uid: 'admin', booking: cached, admin: true, privilegedUid: 'admin'),
         isTrue);
     expect(
         bookingCanDisplayDetails(
-            uid: 'reviewer', booking: cached, finance: true),
+            uid: 'reviewer',
+            booking: cached,
+            finance: true,
+            privilegedUid: 'reviewer'),
         isTrue);
     expect(bookingCanDisplayDetails(uid: 'staff', booking: cached), isFalse);
   });
   test('missing participant fields never authorize a signed-out account', () {
     expect(bookingCanDisplayDetails(uid: null, booking: {}), isFalse);
     expect(bookingCanDisplayDetails(uid: 'second', booking: {}), isFalse);
+  });
+  test('privileged flags require verification for the same account', () {
+    for (final admin in [false, true]) {
+      expect(
+          bookingCanDisplayDetails(
+              uid: 'second',
+              booking: cached,
+              admin: admin,
+              finance: !admin,
+              privilegedUid: 'first'),
+          isFalse);
+      expect(
+          bookingCanDisplayDetails(
+              uid: 'second', booking: cached, admin: admin, finance: !admin),
+          isFalse);
+    }
   });
 }

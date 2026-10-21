@@ -1,3 +1,4 @@
+export 'booking_state_view.dart';
 import 'booking_media_image.dart';
 import 'dart:io';
 import 'booking_media_service.dart';
@@ -231,67 +232,80 @@ class BookingVenueCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: InkWell(
             onTap: onTap,
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: Container(
-                          color: bookingNavy,
-                          child: venue['coverUrl'] is String &&
-                                  (venue['coverUrl'] as String)
-                                      .startsWith('https://')
-                              ? Image.network(venue['coverUrl'],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.holiday_village_outlined,
-                                      color: bookingGold,
-                                      size: 64))
-                              : const Icon(Icons.holiday_village_outlined,
-                                  color: bookingGold, size: 64))),
+                  Stack(children: [
+                    AspectRatio(
+                        aspectRatio: 1.8,
+                        child: ColoredBox(
+                            color: bookingNavy,
+                            child: venue['coverUrl'] is String &&
+                                    (venue['coverUrl'] as String)
+                                        .startsWith('https://')
+                                ? Image.network(venue['coverUrl'],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                        child: Icon(
+                                            Icons.holiday_village_outlined,
+                                            color: bookingGold,
+                                            size: 64)))
+                                : const Center(
+                                    child: Icon(Icons.holiday_village_outlined,
+                                        color: bookingGold, size: 64)))),
+                    Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Chip(
+                            label: Text(venueCategory(venue['category'])))),
+                  ]),
                   Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(venueCategory(venue['category']),
-                                style: const TextStyle(
-                                    color: bookingGold,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 8),
                             Text('${venue['name'] ?? ''}',
                                 style: const TextStyle(
-                                    color: bookingNavy,
-                                    fontSize: 21,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 8),
-                            Text('${venue['location'] ?? ''}',
-                                style: const TextStyle(height: 1.6)),
-                            if ((venue['capacity'] as num? ?? 0) > 0)
-                              Text(
-                                  'السعة ${venue['capacity']} ضيف — الغرف ${venue['bedrooms'] ?? 0}'),
-                            if ((venue['unitName'] ?? '').toString().isNotEmpty)
-                              Text(
-                                  '${venue['complexName'] ?? ''} — ${venue['unitName']}'),
-                            const Divider(height: 28),
-                            Text(
-                                '${venue['pricingMode'] == 'shifts' ? 'يبدأ من ' : ''}${bookingStartingPrice(venue)} د.ع ${venue['pricingMode'] == 'shifts' ? 'للشفت' : venue['pricingMode'] == 'hourly' ? 'للساعة' : 'للحجز'}',
+                                    fontSize: 23, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            Text('⌖  ${venue['location'] ?? ''}',
                                 style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: bookingNavy)),
-                            Text('العربون ${venue['deposit']} د.ع',
-                                style: const TextStyle(height: 1.6)),
+                                    color: Color(0xFF64748B), height: 1.6)),
                             const SizedBox(height: 12),
-                            const Text('التفاصيل والتوافر ←',
-                                style: TextStyle(
-                                    color: bookingGold,
-                                    fontWeight: FontWeight.w700)),
+                            Wrap(spacing: 16, runSpacing: 8, children: [
+                              if ((venue['capacity'] as num? ?? 0) > 0)
+                                Text('السعة ${venue['capacity']} ضيف'),
+                              if ((venue['bedrooms'] as num? ?? 0) > 0)
+                                Text('${venue['bedrooms']} غرف'),
+                              if ((venue['unitName'] ?? '')
+                                  .toString()
+                                  .isNotEmpty)
+                                Text(
+                                    '${venue['complexName'] ?? ''} — ${venue['unitName']}'),
+                            ]),
+                            const Divider(height: 30),
+                            Text(
+                                '${venue['pricingMode'] == 'shifts' ? 'يبدأ من ' : ''}${bookingStartingPrice(venue)} د.ع',
+                                style: const TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.w700)),
+                            Text(
+                                '${venue['pricingMode'] == 'shifts' ? 'للشفت' : venue['pricingMode'] == 'hourly' ? 'للساعة' : 'للحجز'} · العربون ${venue['deposit']} د.ع',
+                                style: const TextStyle(
+                                    color: Color(0xFF64748B), height: 1.7)),
+                            const SizedBox(height: 14),
+                            const Row(children: [
+                              Expanded(
+                                  child: Text('استكشف المكان والتوافر',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700))),
+                              Icon(Icons.arrow_back,
+                                  size: 20, color: bookingGold)
+                            ]),
                           ])),
                 ])),
       );
@@ -381,6 +395,7 @@ class BookingCalendar extends StatelessWidget {
       'unavailable': Icons.lock_outline
     };
     final count = DateTime(month.year, month.month + 1, 0).day;
+    final offset = (DateTime(month.year, month.month, 1).weekday + 1) % 7;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('${month.year} / ${month.month} — توقيت بغداد',
           style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -394,56 +409,68 @@ class BookingCalendar extends StatelessWidget {
           ])
       ]),
       const SizedBox(height: 12),
-      LayoutBuilder(
-          builder: (context, bounds) =>
-              Wrap(spacing: 4, runSpacing: 4, children: [
-                for (var n = 1; n <= count; n++)
-                  SizedBox(
-                      width: (bounds.maxWidth -
-                              4 *
-                                  (((bounds.maxWidth /
-                                              (MediaQuery.textScalerOf(context)
-                                                          .scale(14) *
-                                                      2.5 +
-                                                  16))
-                                          .floor()
-                                          .clamp(3, 7)) -
-                                      1)) /
-                          ((bounds.maxWidth /
-                                  (MediaQuery.textScalerOf(context).scale(14) *
-                                          2.5 +
-                                      16))
-                              .floor()
-                              .clamp(3, 7)),
-                      height: 72 + MediaQuery.textScalerOf(context).scale(24),
-                      child: Builder(builder: (context) {
-                        final day = DateTime(month.year, month.month, n),
-                            value = state(day),
-                            range = intervalForDay(day);
-                        final future = range[0].isAfter(DateTime.now());
-                        return Semantics(
-                            label: '$n ${names[value]}',
-                            child: Tooltip(
-                                message: names[value]!,
-                                child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.zero,
-                                        backgroundColor: colors[value],
-                                        foregroundColor: bookingNavy),
-                                    onPressed: future &&
-                                            !['confirmed', 'unavailable']
-                                                .contains(value)
-                                        ? () => onSelect(day)
-                                        : null,
-                                    child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text('$n'),
-                                          Icon(icons[value], size: 16)
-                                        ]))));
-                      }))
-              ])),
+      LayoutBuilder(builder: (context, bounds) {
+        final scale = MediaQuery.textScalerOf(context);
+        final columns = scale.scale(14) <= 18 && bounds.maxWidth >= 280
+            ? 7
+            : (bounds.maxWidth / (scale.scale(14) * 2.5 + 16))
+                .floor()
+                .clamp(3, 7);
+        final width = (bounds.maxWidth - 4 * (columns - 1)) / columns;
+        final height = 48 + scale.scale(24);
+        return Wrap(spacing: 4, runSpacing: 4, children: [
+          if (columns == 7) ...[
+            for (final label in [
+              'السبت',
+              'الأحد',
+              'الاثنين',
+              'الثلاثاء',
+              'الأربعاء',
+              'الخميس',
+              'الجمعة'
+            ])
+              SizedBox(
+                  width: width,
+                  child: Center(
+                      child:
+                          Text(label, style: const TextStyle(fontSize: 12)))),
+            for (var i = 0; i < offset; i++)
+              SizedBox(width: width, height: height),
+          ],
+          for (var n = 1; n <= count; n++)
+            SizedBox(
+                width: width,
+                height: height,
+                child: Builder(builder: (context) {
+                  final day = DateTime(month.year, month.month, n);
+                  final value = state(day), range = intervalForDay(day);
+                  final future = range[0].isAfter(DateTime.now());
+                  return Semantics(
+                      label: '$n ${names[value]}',
+                      child: Tooltip(
+                          message: names[value]!,
+                          child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  disabledForegroundColor: bookingNavy,
+                                  backgroundColor: colors[value],
+                                  foregroundColor: bookingNavy),
+                              onPressed: future &&
+                                      !['confirmed', 'unavailable']
+                                          .contains(value)
+                                  ? () => onSelect(day)
+                                  : null,
+                              child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('$n'),
+                                    Icon(icons[value], size: 16)
+                                  ]))));
+                })),
+        ]);
+      }),
     ]);
   }
 }
@@ -457,19 +484,115 @@ class BookingScaffold extends StatelessWidget {
     final base = ThemeData.light(useMaterial3: true);
     return Theme(
       data: base.copyWith(
-        colorScheme: ColorScheme.fromSeed(seedColor: bookingNavy),
+        colorScheme: ColorScheme.fromSeed(
+            seedColor: bookingNavy,
+            primary: bookingNavy,
+            secondary: bookingGold),
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        textTheme: base.textTheme
-            .apply(bodyColor: bookingNavy, displayColor: bookingNavy),
-        cardTheme: const CardThemeData(color: Colors.white, elevation: 0),
+        textTheme: base.textTheme.apply(
+            fontFamily: 'SplashTajawal',
+            bodyColor: bookingNavy,
+            displayColor: bookingNavy),
+        cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24))),
         appBarTheme: const AppBarTheme(
             backgroundColor: bookingNavy, foregroundColor: Colors.white),
         inputDecorationTheme: const InputDecorationTheme(
             filled: true,
             fillColor: Colors.white,
-            border: OutlineInputBorder()),
+            contentPadding: EdgeInsets.all(18),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(16)))),
       ),
-      child: Scaffold(appBar: appBar, body: body),
+      child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+              appBar: appBar,
+              body: SafeArea(child: body ?? const SizedBox.shrink()))),
     );
   }
+}
+
+/// Shared by the live booking request and the offline design review.
+class BookingVenueOverview extends StatelessWidget {
+  const BookingVenueOverview(
+      {super.key, required this.venue, required this.total});
+  final Map<String, dynamic> venue;
+  final num total;
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('${venue['name'] ?? 'تفاصيل المكان'}',
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+        Text('${venue['location']} · المالك: ${venue['ownerName']}',
+            style: const TextStyle(height: 1.8, color: Color(0xFF64748B))),
+        const SizedBox(height: 20),
+        Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('تفاصيل السعر',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 16),
+                      for (final entry in {
+                        'السعر المحدد': total,
+                        'العربون': venue['deposit'],
+                        'المتبقي بعد اعتماد العربون':
+                            total - (venue['deposit'] as num)
+                      }.entries)
+                        Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                spacing: 24,
+                                runSpacing: 6,
+                                children: [
+                                  Text(entry.key),
+                                  Text('${entry.value} د.ع',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700))
+                                ])),
+                      const Divider(height: 24),
+                      const Text('الشروط قبل الحجز',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                      Text('${venue['terms']}',
+                          style: const TextStyle(height: 1.8)),
+                    ]))),
+        const SizedBox(height: 20),
+      ]);
+}
+
+class BookingMetricCard extends StatelessWidget {
+  const BookingMetricCard(
+      {super.key,
+      required this.title,
+      required this.value,
+      required this.icon});
+  final String title, value;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Card(
+      child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(children: [
+            Icon(icon, color: bookingGold),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(title, style: const TextStyle(color: Color(0xFF64748B))),
+                  const SizedBox(height: 8),
+                  Text(value,
+                      style: const TextStyle(
+                          fontSize: 23, fontWeight: FontWeight.w700)),
+                ]))
+          ])));
 }

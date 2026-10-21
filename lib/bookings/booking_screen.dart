@@ -105,8 +105,10 @@ Future<Map<String, dynamic>> bookingCall(
     }
     return Map<String, dynamic>.from(payload['result'] as Map);
   }
-  final result =
-      await FirebaseFunctions.instance.httpsCallable(name, options: HttpsCallableOptions(timeout: const Duration(minutes: 5))).call(data);
+  final result = await FirebaseFunctions.instance
+      .httpsCallable(name,
+          options: HttpsCallableOptions(timeout: const Duration(minutes: 5)))
+      .call(data);
   return Map<String, dynamic>.from(result.data as Map);
 }
 
@@ -120,8 +122,8 @@ Future<void> bookingRun(
           content: Text(e is BookingReceiptIntegrityException
               ? e.message
               : e is FirebaseFunctionsException
-              ? e.message ?? 'تعذر تنفيذ العملية'
-              : 'تعذر تنفيذ العملية، حاول مجدداً')));
+                  ? e.message ?? 'تعذر تنفيذ العملية'
+                  : 'تعذر تنفيذ العملية، حاول مجدداً')));
     }
   }
 }
@@ -333,8 +335,17 @@ class _BookingScreenState extends State<BookingScreen> {
                         });
                       }),
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: query.snapshots(),
+                    stream: query.snapshots(includeMetadataChanges: true),
                     builder: (context, s) {
+                      if (!s.hasData ||
+                          s.hasError ||
+                          s.data!.metadata.isFromCache ||
+                          s.data!.metadata.hasPendingWrites) {
+                        return const BookingStateView(
+                            title: 'يلزم اتصال للتحقق من الصلاحية',
+                            detail:
+                                'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+                      }
                       if (s.hasError) {
                         return const Center(child: Text('تعذر تحميل البيانات'));
                       }
@@ -342,7 +353,10 @@ class _BookingScreenState extends State<BookingScreen> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       if (s.data!.docs.isEmpty) {
-                        return const Center(child: Text('لا توجد بيانات بعد'));
+                        return const BookingStateView(
+                            title: 'لا توجد بيانات بعد',
+                            detail: 'ستظهر الطلبات هنا عند توفرها.',
+                            icon: Icons.inbox_outlined);
                       }
                       final docs = s.data!.docs
                           .where((d) => tab != 0 || filters.matches(d.data()))
@@ -355,65 +369,85 @@ class _BookingScreenState extends State<BookingScreen> {
                             padding: EdgeInsets.all(24),
                             child: Text(
                                 'لا توجد أماكن تطابق الفلاتر؛ جرّب تخفيفها'));
-                      return Column(
-                          children: docs.map((doc) {
-                        final d = doc.data();
-                        if (tab == 6)
-                          return ListTile(
-                              title: Text('مكان ${d['venueId']}'),
-                              subtitle: const Text('صلاحيات موظف مفوض'),
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => BookingStaffScreen(
-                                          venueId: d['venueId'],
-                                          scopes: List<String>.from(
-                                              d['scopes'] ?? [])))));
-                        if (tab == 0 || tab == 5) {
-                          return BookingVenueCard(
-                              venue: d,
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => widget.admin || tab == 5
-                                          ? BookingVenueEditor(
-                                              venueId: doc.id,
-                                              data: d,
-                                              ownerMode: tab == 5)
-                                          : BookingRequestScreen(
-                                              venueId: doc.id, venue: d))));
-                        }
-                        return Card(
-                            child: ListTile(
-                                title: Text('${d['name'] ?? d['venueName']}'),
-                                subtitle: Text(tab == 0
-                                    ? '${d['location']}\nالسعر: ${d['price']} د.ع — العربون: ${d['deposit']} د.ع'
-                                    : tab == 3
-                                        ? '${d['userName']}: ${d['reason']} — ${d['status']}'
-                                        : '${d['customerName']} — ${bookingStatuses[d['status']] ?? d['status']}'),
+                      return Column(children: [
+                        if (tab == 2) ...[
+                          const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Text('نظرة على حجوزاتك',
+                                  style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w700))),
+                          BookingMetricCard(
+                              title: 'طلبات بانتظار الموافقة',
+                              value:
+                                  '${docs.where((d) => d.data()['status'] == 'requested').length}',
+                              icon: Icons.inbox_outlined),
+                          BookingMetricCard(
+                              title: 'حجوزات مؤكدة',
+                              value:
+                                  '${docs.where((d) => d.data()['status'] == 'confirmed').length}',
+                              icon: Icons.event_available),
+                        ],
+                        ...docs.map((doc) {
+                          final d = doc.data();
+                          if (tab == 6)
+                            return ListTile(
+                                title: Text('مكان ${d['venueId']}'),
+                                subtitle: const Text('صلاحيات موظف مفوض'),
                                 onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) => tab == 0
-                                            ? (widget.admin
-                                                ? BookingVenueEditor(
-                                                    venueId: doc.id, data: d)
-                                                : BookingRequestScreen(
-                                                    venueId: doc.id, venue: d))
-                                            : BookingDetailsScreen(
-                                                bookingId: (tab == 3
-                                                        ? d['bookingId']
-                                                        : doc.id)
-                                                    .toString()))),
-                                trailing: tab == 3 && d['status'] == 'open'
-                                    ? IconButton(
-                                        icon: const Icon(Icons.check),
-                                        onPressed: () => bookingRun(
-                                            context,
-                                            () => doc.reference.update(
-                                                {'status': 'resolved'})))
-                                    : null));
-                      }).toList());
+                                        builder: (_) => BookingStaffScreen(
+                                            venueId: d['venueId'],
+                                            scopes: List<String>.from(
+                                                d['scopes'] ?? [])))));
+                          if (tab == 0 || tab == 5) {
+                            return BookingVenueCard(
+                                venue: d,
+                                onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => widget.admin || tab == 5
+                                            ? BookingVenueEditor(
+                                                venueId: doc.id,
+                                                data: d,
+                                                ownerMode: tab == 5)
+                                            : BookingRequestScreen(
+                                                venueId: doc.id, venue: d))));
+                          }
+                          return Card(
+                              child: ListTile(
+                                  title: Text('${d['name'] ?? d['venueName']}'),
+                                  subtitle: Text(tab == 0
+                                      ? '${d['location']}\nالسعر: ${d['price']} د.ع — العربون: ${d['deposit']} د.ع'
+                                      : tab == 3
+                                          ? '${d['userName']}: ${d['reason']} — ${d['status']}'
+                                          : '${d['customerName']} — ${bookingStatuses[d['status']] ?? d['status']}'),
+                                  onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => tab == 0
+                                              ? (widget.admin
+                                                  ? BookingVenueEditor(
+                                                      venueId: doc.id, data: d)
+                                                  : BookingRequestScreen(
+                                                      venueId: doc.id,
+                                                      venue: d))
+                                              : BookingDetailsScreen(
+                                                  bookingId: (tab == 3
+                                                          ? d['bookingId']
+                                                          : doc.id)
+                                                      .toString()))),
+                                  trailing: tab == 3 && d['status'] == 'open'
+                                      ? IconButton(
+                                          icon: const Icon(Icons.check),
+                                          onPressed: () => bookingRun(
+                                              context,
+                                              () => doc.reference.update(
+                                                  {'status': 'resolved'})))
+                                      : null));
+                        }).toList()
+                      ]);
                     })
               ]
             ])));
@@ -559,8 +593,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                             accepted = false;
                           }));
                 }),
-          Text(
-              'المالك: ${v['ownerName']}\nالموقع: ${v['location']}\nالسعر المحدد: $total د.ع\nالعربون: ${v['deposit']} د.ع\nالمتبقي بعد اعتماد العربون: ${total - (v['deposit'] as num)} د.ع\n\nالشروط: ${v['terms']}'),
+          BookingVenueOverview(venue: v, total: total),
           BookingDirectionsButton(venue: v),
           if (v['pricingMode'] == 'hourly')
             Text('سعر الساعة: ${v['hourlyPrice']} د.ع — اختر ساعات كاملة'),
@@ -683,6 +716,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   String? displayedNumber;
   Map<String, dynamic> accounts = {};
   StreamSubscription<Map<String, dynamic>>? accountListener;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? roleListener;
+  StreamSubscription<User?>? sessionListener;
+  String? privilegedUid;
   final transaction = TextEditingController(),
       reason = TextEditingController(),
       refundReference = TextEditingController();
@@ -707,27 +743,46 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       }
     });
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      FirebaseFirestore.instance
-          .doc('users/$uid')
-          .get(const GetOptions(source: Source.server))
-          .then((s) {
-        if (mounted && FirebaseAuth.instance.currentUser?.uid == uid) {
-          setState(() {
-            admin = s.data()?['isAdmin'] == true;
-            finance = s.data()?['canReviewBookingPayments'] == true;
-          });
-        }
-      }).catchError((_) {
-        // Keep privileged access disabled when server verification fails.
+    sessionListener = FirebaseAuth.instance.authStateChanges().listen((user) {
+      roleListener?.cancel();
+      if (!mounted) return;
+      setState(() {
+        admin = false;
+        finance = false;
+        privilegedUid = null;
       });
-    }
+      final uid = user?.uid;
+      if (uid == null) return;
+      roleListener = FirebaseFirestore.instance
+          .doc('users/$uid')
+          .snapshots(includeMetadataChanges: true)
+          .listen((s) {
+        if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
+        final verified = !s.metadata.isFromCache &&
+            !s.metadata.hasPendingWrites &&
+            s.data() != null &&
+            s.data()?['isBlocked'] != true;
+        setState(() {
+          privilegedUid = verified ? uid : null;
+          admin = verified && s.data()?['isAdmin'] == true;
+          finance = verified && s.data()?['canReviewBookingPayments'] == true;
+        });
+      }, onError: (_) {
+        if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
+        setState(() {
+          admin = false;
+          finance = false;
+          privilegedUid = null;
+        });
+      });
+    });
   }
 
   @override
   void dispose() {
     accountListener?.cancel();
+    roleListener?.cancel();
+    sessionListener?.cancel();
     refundReference.dispose();
     transaction.dispose();
     reason.dispose();
@@ -754,8 +809,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .doc('bookings/${widget.bookingId}')
-              .snapshots(),
+              .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
+            if (!s.hasData ||
+                s.hasError ||
+                s.data!.metadata.isFromCache ||
+                s.data!.metadata.hasPendingWrites) {
+              return const BookingStateView(
+                  title: 'يلزم اتصال للتحقق من الصلاحية',
+                  detail:
+                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+            }
             if (s.hasError) {
               return const Center(child: Text('لا تملك صلاحية عرض هذا الحجز'));
             }
@@ -767,11 +831,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             final uid = FirebaseAuth.instance.currentUser?.uid,
                 owner = uid == b['ownerId'],
                 customer = uid == b['customerId'];
-              if (!bookingCanDisplayDetails(
-                  uid: uid, booking: b, admin: admin, finance: finance)) {
-                return const Center(child: Text('لا تملك صلاحية عرض هذا الحجز'));
-              }
-              final held = b['status'] == 'held' &&
+            if (!bookingCanDisplayDetails(
+                uid: uid,
+                booking: b,
+                admin: admin,
+                finance: finance,
+                privilegedUid: privilegedUid)) {
+              return const Center(child: Text('لا تملك صلاحية عرض هذا الحجز'));
+            }
+            final held = b['status'] == 'held' &&
                 (b['holdUntil'] as num) > DateTime.now().millisecondsSinceEpoch;
             Widget button(String label, String action) => FilledButton(
                 onPressed: busy ? null : () => act(action), child: Text(label));
@@ -819,8 +887,16 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   stream: FirebaseFirestore.instance
                       .collection('booking_action_audit')
                       .where('bookingId', isEqualTo: widget.bookingId)
-                      .snapshots(),
+                      .snapshots(includeMetadataChanges: true),
                   builder: (context, events) {
+                    if (!events.hasData ||
+                        events.hasError ||
+                        events.data!.metadata.isFromCache ||
+                        events.data!.metadata.hasPendingWrites) {
+                      return const Center(
+                          child:
+                              Text('يلزم اتصال للتحقق من صلاحية عرض البيانات'));
+                    }
                     if (!events.hasData) return const SizedBox.shrink();
                     final docs = events.data!.docs.toList()
                       ..sort((a, b) => ((a.data()['version'] as num?) ?? 0)
@@ -1019,27 +1095,26 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                   FirebaseStorage.instance.ref(path);
                               await BookingMediaService.uploadVerifiedReceipt(
                                   bytes,
-                                  reuseExisting: true,
-                                  upload: (data) async {
-                                    await receipt.putData(
-                                        data,
-                                        SettableMetadata(
-                                            contentType: 'image/jpeg'));
-                                  },
-                                  read: () async {
-                                    try {
-                                      return await receipt.getData(10 * 1024 * 1024);
-                                    } on FirebaseException catch (e) {
-                                      if (e.code == 'object-not-found') return null;
-                                      rethrow;
-                                    }
-                                  },
-                                  discardInvalid: () async {
-                                    await bookingCall('discardInvalidBookingReceipt', {
-                                      'bookingId': widget.bookingId,
-                                      'path': path,
-                                    });
-                                  });
+                                  reuseExisting: true, upload: (data) async {
+                                await receipt.putData(
+                                    data,
+                                    SettableMetadata(
+                                        contentType: 'image/jpeg'));
+                              }, read: () async {
+                                try {
+                                  return await receipt
+                                      .getData(10 * 1024 * 1024);
+                                } on FirebaseException catch (e) {
+                                  if (e.code == 'object-not-found') return null;
+                                  rethrow;
+                                }
+                              }, discardInvalid: () async {
+                                await bookingCall(
+                                    'discardInvalidBookingReceipt', {
+                                  'bookingId': widget.bookingId,
+                                  'path': path,
+                                });
+                              });
 
                               await bookingCall('actOnBooking', {
                                 'bookingId': widget.bookingId,
@@ -1197,7 +1272,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .doc('booking_venues/${widget.venueId}')
-                  .snapshots(),
+                  .snapshots(includeMetadataChanges: true),
               builder: (context, s) => Column(children: [
                     for (final path in List<String>.from(
                         s.data?.data()?['mediaPaths'] ?? []))
@@ -1209,32 +1284,61 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               tooltip: 'إزالة الوسيط المنشور',
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () => bookingRun(context, () async {
-                                    await bookingCall((path.startsWith('https://') || path.startsWith('booking_media_v3/')) ? 'removeBookingExternalMedia' : 'removeBookingMedia', {
-                                      'venueId': widget.venueId,
-                                      'path': path
-                                    });
+                                    await bookingCall(
+                                        (path.startsWith('https://') ||
+                                                path.startsWith(
+                                                    'booking_media_v3/'))
+                                            ? 'removeBookingExternalMedia'
+                                            : 'removeBookingMedia',
+                                        {
+                                          'venueId': widget.venueId,
+                                          'path': path
+                                        });
                                   })))
                   ])),
         if (widget.ownerMode && widget.venueId != null)
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance.collection('booking_media_reviews')
+              stream: FirebaseFirestore.instance
+                  .collection('booking_media_reviews')
                   .where('venueId', isEqualTo: widget.venueId)
-                  .where('ownerId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
-                  .snapshots(),
+                  .where('ownerId',
+                      isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+                  .snapshots(includeMetadataChanges: true),
               builder: (context, snapshot) => Column(children: [
-                if (snapshot.hasError) const Text('تعذر تحميل حالة الوسائط'),
-                for (final doc in snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-                  if ([2, 3].contains(doc.data()['schemaVersion']) && ['uploading', 'pending', 'delete_pending'].contains(doc.data()['status']))
-                    Card(child: Column(children: [
-                      ListTile(title: Text(const {'uploading': 'لم يكتمل الرفع', 'pending': 'بانتظار مراجعة الإدارة', 'delete_pending': 'قيد الحذف'}[doc.data()['status']] ?? ''),
-                        trailing: doc.data()['status'] == 'delete_pending' ? null : IconButton(
-                          tooltip: 'إزالة الملف', icon: const Icon(Icons.delete_outline),
-                          onPressed: () => bookingRun(context, () async {
-                            await bookingCall('removeBookingExternalMedia', {'venueId': widget.venueId, 'path': doc.data()['path']});
-                          }))),
-                      if (doc.data()['status'] == 'pending') BookingMediaGallery(paths: [doc.data()['path'] as String]),
-                    ])),
-              ])),
+                    if (snapshot.hasError)
+                      const Text('تعذر تحميل حالة الوسائط'),
+                    for (final doc in snapshot.data?.docs ??
+                        <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                      if ([2, 3].contains(doc.data()['schemaVersion']) &&
+                          ['uploading', 'pending', 'delete_pending']
+                              .contains(doc.data()['status']))
+                        Card(
+                            child: Column(children: [
+                          ListTile(
+                              title: Text(const {
+                                    'uploading': 'لم يكتمل الرفع',
+                                    'pending': 'بانتظار مراجعة الإدارة',
+                                    'delete_pending': 'قيد الحذف'
+                                  }[doc.data()['status']] ??
+                                  ''),
+                              trailing: doc.data()['status'] == 'delete_pending'
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'إزالة الملف',
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () =>
+                                          bookingRun(context, () async {
+                                            await bookingCall(
+                                                'removeBookingExternalMedia', {
+                                              'venueId': widget.venueId,
+                                              'path': doc.data()['path']
+                                            });
+                                          }))),
+                          if (doc.data()['status'] == 'pending')
+                            BookingMediaGallery(
+                                paths: [doc.data()['path'] as String]),
+                        ])),
+                  ])),
         if (widget.ownerMode && widget.venueId != null)
           Wrap(children: [
             for (final video in [false, true])
@@ -1264,9 +1368,12 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                     format: CompressFormat.jpeg,
                                     quality: 90);
                             if (video) {
-                              await BookingMediaService.uploadVideo(bytes, widget.venueId!, bookingCall);
+                              await BookingMediaService.uploadVideo(
+                                  bytes, widget.venueId!, bookingCall);
                             } else {
-                              await BookingMediaService.uploadImage(bytes, bookingCall, venueId: widget.venueId!);
+                              await BookingMediaService.uploadImage(
+                                  bytes, bookingCall,
+                                  venueId: widget.venueId!);
                             }
                             if (context.mounted)
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -1367,11 +1474,17 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 'lateRefundPercent':
                     'نسبة استرداد العربون بعد الموعد أعلاه (0–100)'
               }[e.key]),
-              keyboardType: ['latitude', 'longitude'].contains(e.key) ? const TextInputType.numberWithOptions(decimal: true, signed: true) : null,
-              textDirection: ['latitude', 'longitude'].contains(e.key) ? TextDirection.ltr : null,
+              keyboardType: ['latitude', 'longitude'].contains(e.key)
+                  ? const TextInputType.numberWithOptions(
+                      decimal: true, signed: true)
+                  : null,
+              textDirection: ['latitude', 'longitude'].contains(e.key)
+                  ? TextDirection.ltr
+                  : null,
               enabled: !(widget.ownerMode && e.key == 'commissionPercent'),
               maxLines: e.key == 'terms' ? 4 : 1),
-        const Text('إحداثيات المكان اختيارية؛ أدخل القيمتين معًا ليظهر على الخريطة. هذه إحداثيات المكان العامة.'),
+        const Text(
+            'إحداثيات المكان اختيارية؛ أدخل القيمتين معًا ليظهر على الخريطة. هذه إحداثيات المكان العامة.'),
         Wrap(children: [
           for (final e in bookingAmenities.entries)
             FilterChip(
@@ -1467,8 +1580,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 : () async {
                     setState(() => busy = true);
                     await bookingRun(context, () async {
-                      final coordinateError = bookingCoordinateError(fields['latitude']!.text, fields['longitude']!.text);
-                      if (coordinateError != null) throw StateError(coordinateError);
+                      final coordinateError = bookingCoordinateError(
+                          fields['latitude']!.text, fields['longitude']!.text);
+                      if (coordinateError != null)
+                        throw StateError(coordinateError);
                       for (final key in ['capacity', 'bedrooms']) {
                         if (fields[key]!.text.isNotEmpty &&
                             (int.tryParse(fields[key]!.text) == null ||

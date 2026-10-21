@@ -6,6 +6,20 @@ import urllib.parse
 from storage_chat_rules_test import BASE as STORAGE_BASE
 
 class BookingRules(unittest.TestCase):
+    def test_ledger_access_rechecks_finance_revocation_and_blocking(self):
+        uid = 'ledger_reviewer'
+        path = 'booking_ledger/private_ledger'
+        self.assertEqual(write('users/'+uid, {'isBlocked':False, 'canReviewBookingPayments':True}, 'SEED', timestamp=None),200)
+        self.assertEqual(write(path, {'bookingId':'private','reference':'SYNTHETIC'}, 'SEED', timestamp=None),200)
+        self.assertEqual(call('/'+path,uid),200)
+        for other in [None,'customer','owner','other','blocked']:
+            self.assertEqual(call('/'+path,other),403)
+        self.assertEqual(write('users/'+uid, {'canReviewBookingPayments':False}, 'SEED', True, timestamp=None),200)
+        self.assertEqual(call('/'+path,uid),403)
+        self.assertEqual(write('users/'+uid, {'canReviewBookingPayments':True,'isBlocked':True}, 'SEED', True, timestamp=None),200)
+        self.assertEqual(call('/'+path,uid),403)
+        self.assertEqual(write(path, {'reference':'tampered'}, 'admin', True, timestamp=None),403)
+
     @classmethod
     def setUpClass(cls):
         for uid in ['customer', 'owner', 'other', 'admin', 'reviewer', 'blocked']:

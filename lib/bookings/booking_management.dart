@@ -1,4 +1,5 @@
 import 'booking_extras.dart';
+import 'booking_ledger_access.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,8 +16,17 @@ class BookingReviewInbox extends StatelessWidget {
           stream: FirebaseFirestore.instance
               .collection('booking_reviews')
               .where('status', isEqualTo: 'pending')
-              .snapshots(),
+              .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
+            if (!s.hasData ||
+                s.hasError ||
+                s.data!.metadata.isFromCache ||
+                s.data!.metadata.hasPendingWrites) {
+              return const BookingStateView(
+                  title: 'يلزم اتصال للتحقق من الصلاحية',
+                  detail:
+                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+            }
             if (s.hasError)
               return const Center(child: Text('تعذر تحميل التقييمات'));
             if (!s.hasData)
@@ -65,8 +75,16 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
                 stream: FirebaseFirestore.instance
                     .collection('booking_messages/${widget.bookingId}/messages')
                     .orderBy('createdAt')
-                    .snapshots(),
+                    .snapshots(includeMetadataChanges: true),
                 builder: (context, s) {
+                  if (!s.hasData ||
+                      s.hasError ||
+                      s.data!.metadata.isFromCache ||
+                      s.data!.metadata.hasPendingWrites) {
+                    return const Center(
+                        child:
+                            Text('يلزم اتصال للتحقق من صلاحية عرض البيانات'));
+                  }
                   if (s.hasError)
                     return const Center(
                         child: Text('المحادثة لأطراف الحجز فقط'));
@@ -123,8 +141,17 @@ class BookingMediaInbox extends StatelessWidget {
           stream: FirebaseFirestore.instance
               .collection('booking_media_reviews')
               .where('status', isEqualTo: 'pending')
-              .snapshots(),
+              .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
+            if (!s.hasData ||
+                s.hasError ||
+                s.data!.metadata.isFromCache ||
+                s.data!.metadata.hasPendingWrites) {
+              return const BookingStateView(
+                  title: 'يلزم اتصال للتحقق من الصلاحية',
+                  detail:
+                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+            }
             if (s.hasError)
               return const Center(child: Text('تعذر تحميل الملفات'));
             if (!s.hasData)
@@ -140,10 +167,17 @@ class BookingMediaInbox extends StatelessWidget {
                           for (final approved in [true, false])
                             TextButton(
                                 onPressed: () => bookingRun(context, () async {
-                                      await bookingCall([2, 3].contains(d.data()['schemaVersion']) ? 'reviewBookingExternalMedia' : 'reviewBookingMedia', {
-                                        'mediaId': d.id,
-                                        'approved': approved
-                                      });
+                                      await bookingCall(
+                                          [
+                                            2,
+                                            3
+                                          ].contains(d.data()['schemaVersion'])
+                                              ? 'reviewBookingExternalMedia'
+                                              : 'reviewBookingMedia',
+                                          {
+                                            'mediaId': d.id,
+                                            'approved': approved
+                                          });
                                     }),
                                 child: Text(approved
                                     ? 'اعتماد وعرض الملف'
@@ -162,8 +196,17 @@ class BookingProofInbox extends StatelessWidget {
           stream: FirebaseFirestore.instance
               .collection('booking_ownership_proofs')
               .where('status', isEqualTo: 'pending')
-              .snapshots(),
+              .snapshots(includeMetadataChanges: true),
           builder: (context, s) {
+            if (!s.hasData ||
+                s.hasError ||
+                s.data!.metadata.isFromCache ||
+                s.data!.metadata.hasPendingWrites) {
+              return const BookingStateView(
+                  title: 'يلزم اتصال للتحقق من الصلاحية',
+                  detail:
+                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+            }
             if (s.hasError)
               return const Center(child: Text('تعذر تحميل الوثائق'));
             if (!s.hasData)
@@ -296,8 +339,17 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                 .collection('booking_closures')
                 .where('venueId', isEqualTo: widget.venueId)
                 .where('active', isEqualTo: true)
-                .snapshots(),
+                .snapshots(includeMetadataChanges: true),
             builder: (context, s) {
+              if (!s.hasData ||
+                  s.hasError ||
+                  s.data!.metadata.isFromCache ||
+                  s.data!.metadata.hasPendingWrites) {
+                return const BookingStateView(
+                    title: 'يلزم اتصال للتحقق من الصلاحية',
+                    detail:
+                        'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+              }
               if (s.hasError)
                 return const Text('لا تتوفر صلاحية قراءة الإغلاقات');
               return Column(children: [
@@ -490,8 +542,17 @@ class BookingTransferInbox extends StatelessWidget {
     return BookingScaffold(
         appBar: AppBar(title: const Text('طلبات نقل الملكية')),
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: query.snapshots(),
+            stream: query.snapshots(includeMetadataChanges: true),
             builder: (context, s) {
+              if (!s.hasData ||
+                  s.hasError ||
+                  s.data!.metadata.isFromCache ||
+                  s.data!.metadata.hasPendingWrites) {
+                return const BookingStateView(
+                    title: 'يلزم اتصال للتحقق من الصلاحية',
+                    detail:
+                        'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+              }
               if (s.hasError)
                 return const Center(child: Text('تعذر تحميل الطلبات'));
               if (!s.hasData)
@@ -521,29 +582,75 @@ class BookingLedgerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BookingScaffold(
       appBar: AppBar(title: const Text('دفتر مالية الحجوزات')),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('booking_ledger')
-              .snapshots(),
-          builder: (context, s) {
-            if (s.hasError)
-              return const Center(
-                  child: Text('التقرير للإدارة والمالية المخولين فقط'));
-            if (!s.hasData)
-              return const Center(child: CircularProgressIndicator());
-            int sum(String k) => s.data!.docs.fold(
-                0, (total, d) => total + ((d.data()[k] as num?)?.toInt() ?? 0));
-            return ListView(padding: const EdgeInsets.all(20), children: [
-              const Text(
-                  'الحسابات تخص العربون المحصّل يدويًا فقط. المتبقي من ثمن الحجز لا يعد مبلغًا محصّلًا.'),
-              Text(
-                  'العربون ${sum('depositCollected')} د.ع\nالاستردادات ${sum('refundPaid')} د.ع\nتسويات الملاك ${sum('ownerPaid')} د.ع\nالعمولات ${sum('platformCommission')} د.ع'),
-              const Divider(),
-              for (final d in s.data!.docs)
-                ListTile(
-                    title: Text(
-                        '${d.data()['bookingId']} — ${d.data()['action']}'),
-                    subtitle: Text('مرجع ${d.data()['reference']}')),
-            ]);
-          }));
+      body: BookingLedgerAccess(
+          sessions: FirebaseAuth.instance.authStateChanges().map((u) => u?.uid),
+          currentUid: () => FirebaseAuth.instance.currentUser?.uid,
+          permissions: (uid) => FirebaseFirestore.instance
+                  .doc('users/$uid')
+                  .snapshots(includeMetadataChanges: true)
+                  .map((s) {
+                final user = s.data();
+                return BookingLedgerPermission(
+                    fromCache:
+                        s.metadata.isFromCache || s.metadata.hasPendingWrites,
+                    allowed: user != null &&
+                        user['isBlocked'] != true &&
+                        (user['isAdmin'] == true ||
+                            user['canReviewBookingPayments'] == true));
+              }),
+          builder: (context) => StreamBuilder<
+                  QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('booking_ledger')
+                  .snapshots(includeMetadataChanges: true),
+              builder: (context, s) {
+                if (!s.hasData ||
+                    s.hasError ||
+                    s.data!.metadata.isFromCache ||
+                    s.data!.metadata.hasPendingWrites) {
+                  return const BookingStateView(
+                      title: 'يلزم اتصال للتحقق من الصلاحية',
+                      detail:
+                          'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
+                }
+                if (s.hasError)
+                  return const Center(
+                      child: Text('التقرير للإدارة والمالية المخولين فقط'));
+                if (!s.hasData)
+                  return const Center(child: CircularProgressIndicator());
+                if (s.data!.metadata.isFromCache ||
+                    s.data!.metadata.hasPendingWrites)
+                  return const Center(
+                      child: Text('اتصل بالإنترنت لتحديث دفتر المالية'));
+                int sum(String k) => s.data!.docs.fold(
+                    0,
+                    (total, d) =>
+                        total + ((d.data()[k] as num?)?.toInt() ?? 0));
+                return ListView(padding: const EdgeInsets.all(20), children: [
+                  const Text(
+                      'الحسابات تخص العربون المحصّل يدويًا فقط. المتبقي من ثمن الحجز لا يعد مبلغًا محصّلًا.'),
+                  BookingMetricCard(
+                      title: 'العربون المحصّل',
+                      value: "${sum('depositCollected')} د.ع",
+                      icon: Icons.account_balance_wallet_outlined),
+                  BookingMetricCard(
+                      title: 'الاستردادات المدفوعة',
+                      value: "${sum('refundPaid')} د.ع",
+                      icon: Icons.undo),
+                  BookingMetricCard(
+                      title: 'تسويات المالكين المدفوعة',
+                      value: "${sum('ownerPaid')} د.ع",
+                      icon: Icons.account_balance_outlined),
+                  BookingMetricCard(
+                      title: 'العمولات المسجلة',
+                      value: "${sum('platformCommission')} د.ع",
+                      icon: Icons.receipt_long),
+                  const Divider(),
+                  for (final d in s.data!.docs)
+                    ListTile(
+                        title: Text(
+                            '${d.data()['bookingId']} — ${d.data()['action']}'),
+                        subtitle: Text('مرجع ${d.data()['reference']}')),
+                ]);
+              })));
 }

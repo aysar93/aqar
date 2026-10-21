@@ -1,3 +1,4 @@
+import 'package:aqar/bookings/booking_widgets.dart';
 import 'package:aqar/bookings/booking_notification.dart';
 import 'package:aqar/bookings/booking_screen.dart';
 import 'package:aqar/subscription/payment_accounts.dart';
@@ -79,7 +80,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('الشفت الليلي').last);
     await tester.pumpAndSettle();
-    expect(find.textContaining('السعر المحدد: 200000'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(BookingVenueOverview),
+            matching: find.text('السعر المحدد')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(BookingVenueOverview),
+            matching: find.text('200000 د.ع')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(BookingVenueOverview),
+            matching: find.text('180000 د.ع')),
+        findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

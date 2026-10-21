@@ -3,6 +3,43 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:aqar/bookings/booking_widgets.dart';
 
 void main() {
+  testWidgets(
+      'normal phone calendar keeps seven weekdays and aligns January 2030',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+                body: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: BookingCalendar(
+                        month: DateTime(2030, 1),
+                        slots: const [],
+                        intervalForDay: (day) =>
+                            [day, day.add(const Duration(days: 1))],
+                        onSelect: (_) {}))))));
+    for (final day in [
+      'السبت',
+      'الأحد',
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة'
+    ]) {
+      expect(find.text(day), findsOneWidget);
+    }
+    expect(
+        (tester.getCenter(find.text('1')).dx -
+                tester.getCenter(find.text('الثلاثاء')).dx)
+            .abs(),
+        lessThan(1));
+    expect(tester.takeException(), isNull);
+  });
   for (final width in [320.0, 430.0, 900.0])
     testWidgets('RTL venue and calendar support width $width and large text',
         (tester) async {
