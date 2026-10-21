@@ -26,6 +26,7 @@ class _BannerSliderState extends State<BannerSlider>
   late final Stream<List<BannerModel>> _bannersStream;
 
   int _currentIndex = 0;
+  List<BannerModel> _lastBanners = const [];
 
   @override
   void initState() {
@@ -35,7 +36,9 @@ class _BannerSliderState extends State<BannerSlider>
     _bannersStream = (widget.stream ?? BannerService.activeBanners()).map(
       (banners) => banners.where((b) {
         final uri = Uri.tryParse(b.imageUrl.trim());
-        return uri != null && ['https', 'http'].contains(uri.scheme) && uri.host.isNotEmpty;
+        return uri != null &&
+            ['https', 'http'].contains(uri.scheme) &&
+            uri.host.isNotEmpty;
       }).toList(),
     );
   }
@@ -153,10 +156,15 @@ class _BannerSliderState extends State<BannerSlider>
     return StreamBuilder<List<BannerModel>>(
       stream: _bannersStream,
       builder: (context, snapshot) {
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+        // A transient stream error must not discard known public metadata.
+        // A successful empty snapshot still removes deleted/deactivated banners.
+        if (snapshot.hasData && !snapshot.hasError) {
+          _lastBanners = snapshot.data!;
+        }
+        final banners = _lastBanners;
+        if (banners.isEmpty) {
           return const SizedBox.shrink();
         }
-        final banners = snapshot.data!;
 
         // حماية المؤشر من الخروج عن عدد البنرات.
         if (banners.length <= 1) {

@@ -1,99 +1,31 @@
-# Media migration: code review only, no build or deployment
+# Media migration readiness — 21 October 2026
 
-## Production state (20 October 2026)
+## Current production result
 
-Five previously public pilot originals now have Firebase references: three banner
-images and two property covers. Each cover updates imageUrl and images[0] atomically;
-the other gallery entries are preserved. The first cover passed real original
-Google Play and App Store catalog/details/reopen checks. Four additional one-image,
-one-document batches passed source/target SHA-256, generation and conditional
-readback checks. Originals in Cloudinary were retained. Encrypted manifests,
-document backups, user details, media bytes and capability URLs remain outside Git.
+All **223 currently proved public images** from the 471-file inventory now have Firebase references: five previously migrated images plus 218 additional images across 73 conditional atomic batches. The remaining **248** files stay protected: 244 previously excluded private/mixed/unresolved files and four formerly public candidates now unproved or without a current reference. No Cloudinary/imported original was deleted. Do not publish the excluded paths just to reduce the remaining count.
 
-There are **222 additional public-only classified images** whose current Storage
-paths remain denied. They were NOT converted to broken URLs. The candidate rules
-allow 227 public-only images, excluding five mixed-use entries from the older
-232-entry routing manifest. The other 244 private/mixed/unknown assets stay denied.
-The 475 candidate cloud rule cases passed; those are tests, not a rules deployment.
+A fresh all-descendant scan verified zero old Cloudinary references for the eligible cohort. The 218-image phase changed 74 documents; imageUrl/images[0] consistency passed for 55 affected properties. Some Cloudinary URLs intentionally remain for excluded files and future legacy uploads. There is no deployed continuous delta importer.
 
-## Application changes
+## Published components and actual tests
 
-- New image/audio uploads use an authenticated, bounded, idempotent media broker.
-  The old Cloudinary upload helper fails explicitly; legacy URL readers remain.
-- Private reads verify authentication and revocation at the broker and never mint
-  download tokens. Private images do not use the public disk image cache.
-- Public widgets use CachedNetworkImage / CachedNetworkImageProvider. Gallery,
-  avatars, cards and banners share persistent public caching.
-- Banner metadata is no longer discarded when an image prefetch fails offline.
-  Transient failures retry with 5/10/20/40/60-second backoff while mounted and
-  refresh on resume; permanent HTTP 4xx/decode errors do not poll repeatedly.
-  Closing the widget cancels retries. Private viewers reload on resume.
-- Startup no longer waits indefinitely on optional branding or splash audio.
-- Reels/R2 and FCM services, configuration and workflows are unchanged from main.
-  Media uploads remain disabled in the existing FCM staging mode.
+The three independent media HTTP functions are ACTIVE in us-central1 with the dedicated runtime identity. Storage rules permit exactly 223 imported public objects and new public upload paths, deny private imported paths, and deny all client mutations/list operations. Firestore changed only two media path expressions, preserving old chat paths and all unrelated live rules. See [deployment details](media-production-2026-10-21.md).
 
-## Cleanup safety and remaining limitation
+Verified: 962 cloud Storage rule cases, 471 actual object checks (223 public SHA-256 matches /248 protected denials), 27 production broker cases, eight demo Firestore cases, seven cloud rule cases and six actual Firestore read/denial cases. No production chat writes were sent to test path acceptance because they would trigger notifications. Positive new/legacy write coverage is the demo rule test, not a claimed production write.
 
-Clients remove references, never directly delete shared Storage objects. An
-authenticated owner can request cleanup; duplicate requests share a stable ID.
-The separate server queue acknowledges retained bytes, not successful deletion.
+The latest affected Flutter suite passed6/6: banner stream recovery, exact public manifest, permanent-denial retry suppression, transient image retry, private account-switch clearing and real local HTTP timeout/recovery. Node passed10/10 top-level tests, including legacy missing-flag compatibility and malformed-flag rejection. Changed Dart source analyzed with no issues. Prior native original-store public URL tests remain evidence; no mobile bundle was built for the newly changed code.
 
-`media_cleanup_policy.js` only permits physical deletion with complete coverage
-of every reference writer, an exclusive writer barrier, complete zero references,
-no pending uploads, verified encrypted recovery, a stable reference revision and
-an exact GCS generation. Tests cover sharing, reference changes during backup,
-in-flight uploads, replacement generations and missing writer coverage.
+## Code and configuration
 
-**Production automatic garbage collection is not enabled or proven.** Legacy
-clients cannot honor a new transactional tombstone contract. Do not replace this
-barrier with a periodic scan, or declare physical deletion complete. Keep imported
-originals and unproven orphans retained. A deployment design covering all writers
-is required before enabling deletion. Queue creation itself does not solve that.
+All known Cloudinary image/audio upload callers use the authenticated Firebase media broker; old HTTPS readers remain supported. Three remaining public image readers in chat now use the persistent public image path. Banner metadata survives a transient stream error, updates on recovery and still clears on a successful empty list. New code treats missing legacy isBlocked/isClosed flags consistently with live Firestore defaults while rejecting explicit blocked/malformed values. No legacy user/chat document was changed for that fix.
 
-## Separate deployment/build prerequisites
+Use `config/media.production.json` as the explicit media define configuration in the separately authorized build/test task. It contains no credential. FCM staging guards remain; FCM/R2/services/workflows were not changed. PR is not merged and no workflow was dispatched.
 
-This PR must not be merged or deployed automatically. No APK/AAB/IPA, Codemagic,
-store submission or CI build is part of this task. Commits use `[skip ci]`;
-existing workflow source is unchanged. Do not dispatch any workflow.
+## Recovery, retention and next-task boundaries
 
-- Review and publish the separately tested Storage candidate only in the next
-  authorized deployment task. Verify live access before converting the remaining
-  222 images in small conditional batches with encrypted field backups.
-- `firebase.media.json` describes a **separate** media functions codebase, not the
-  FCM/default codebase. `media-server/` includes its handlers; no JSON credentials.
-- Supply MEDIA_STORAGE_BUCKET explicitly to that server, scoped workload identity
-  IAM, request limits and budget monitoring. Do not grant broad administrator roles.
-- The next application build must explicitly supply MEDIA_STORAGE_BUCKET,
-  MEDIA_UPLOAD_URL, MEDIA_PRIVATE_READ_URL and optionally MEDIA_CLEANUP_URL.
-  Missing endpoints fail closed/retain bytes; they do not silently use Cloudinary.
-- Firestore media validator changes are a separate candidate based on current
-  main; no existing FCM rule changes are replaced or published by this PR.
-- Keep old Cloudinary upload configuration and originals. Continue append-only
-  delta inventory/backups keyed by asset_id + version; do not overwrite a newer
-  owner upload with an old migration mapping. Cloudinary quota risk remains.
+Every batch has an encrypted before/after manifest and independent D-drive copy. Decryption round trips succeeded. Rollback checks current after-values, uses updateTime CAS, restores only affected fields and verifies readback. No migration rollback was needed. DPAPI recovery depends on the original Windows identity; transfer its recovery arrangement before moving backups to another account.
 
-## Verification boundaries
+Physical production GC is **disabled**. Cleanup acknowledgements mean queue-only retention. All old/new reference writers must honor a proved exclusive barrier before deletion can be enabled. Imported/private/unclassified originals are never automatic deletion targets. Only dedicated synthetic broker fixtures are eligible for manual test cleanup after reference and generation checks.
 
-Local verification: 17 Flutter tests passed, followed by three affected cache/
-permission/private-reader checks (including the newly added permanent-403 case)
-and a real loopback HTTP stream-stall timeout/recovery check. Node reported 10/10
-passing top-level tests, including the broker, error classification, retention,
-cleanup races and deduplicated cleanup requests. The 475 cloud Storage cases test
-the unpublished candidate. Full Dart analysis reported zero errors and retained
-existing warnings/infos; the final changed core files were analyzed separately.
+Dedicated builder and temporary keyless signer grants are removed after final deployment tests; runtime keeps only its necessary scoped read/create/data permissions. Both new service accounts have zero user-managed keys.
 
-Existing real Android/iPhone private access, session expiry, revocation, restore,
-legacy upload and public reader tests remain historical evidence. They were not
-rerun merely to increase counts. New Dart widget/HTTP tests are not device tests.
-New cache/retry code has not passed a newly installed iOS/Android application test:
-this task forbids building an application bundle. Verify those changed paths on
-both real devices in the separately authorized build/test task.
-
-Rollback restores only the exact approved media fields under updateTime CAS after
-checking that the current media fields still equal this migration's after values.
-Preserve views and unrelated owner edits; stop on ambiguous responses or changed
-media. Never delete a Cloudinary or imported Firebase original during rollback.
-
-References for avoiding unintended CI builds:
-[GitHub skip instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs),
-[Codemagic automatic triggers](https://docs.codemagic.io/yaml-running-builds/starting-builds-automatically/).
+Next: build/test the changed code on real Android/iPhone in a separate task, continue bounded monitoring, and keep Cloudinary available while store versions still upload there. Accepted legacy offline/restart limitations are temporary; local/widget tests do not certify native cache behavior. This is readiness of the executed public cohort and deployed backend, not authorization for store deployment, main merge, physical GC or Cloudinary shutdown.

@@ -1,0 +1,6 @@
+{
+  "MEDIA_STORAGE_BUCKET": "aqar-9f3f9-media-canary",
+  "MEDIA_UPLOAD_URL": "https://us-central1-aqar-9f3f9.cloudfunctions.net/uploadMedia",
+  "MEDIA_PRIVATE_READ_URL": "https://us-central1-aqar-9f3f9.cloudfunctions.net/readPrivateMedia",
+  "MEDIA_CLEANUP_URL": "https://us-central1-aqar-9f3f9.cloudfunctions.net/requestMediaCleanup"
+}

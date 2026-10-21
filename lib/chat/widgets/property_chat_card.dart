@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/property_model.dart';
@@ -93,7 +94,7 @@ class PropertyChatCard extends StatelessWidget {
         if ((property['imageUrl'] ?? '').toString().isNotEmpty)
           ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(property['imageUrl'],
+              child: MediaImage(property['imageUrl'],
                   height: 125,
                   width: double.infinity,
                   fit: BoxFit.cover,

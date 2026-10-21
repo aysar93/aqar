@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import '../services/media_store.dart';
 import 'dart:async';
 import 'dart:io';
@@ -566,7 +567,8 @@ class _ConversationScreenState extends State<ConversationScreen>
         if (!mounted || _accountChanged) {
           try {
             if ((_uploadedAudio!['audioPath'] ?? '').toString().isNotEmpty) {
-              await MediaStore.instance.deletePath(_uploadedAudio!['audioPath']);
+              await MediaStore.instance
+                  .deletePath(_uploadedAudio!['audioPath']);
             }
           } finally {
             if (await File(recording.path).exists()) {
@@ -964,7 +966,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                             child: (_settings['logoUrl'] ?? '')
                                     .toString()
                                     .isNotEmpty
-                                ? Image.network(_settings['logoUrl'].toString(),
+                                ? MediaImage(_settings['logoUrl'].toString(),
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) =>
                                         Image.asset('assets/images/logo.png'))

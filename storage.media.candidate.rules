@@ -29,6 +29,14 @@ service firebase.storage {
       allow create: if false; // Private writes go through the authorized GCS broker.
       allow list, update, delete: if false;
     }
+    // Imported originals remain immutable and denied except the five approved pilot paths.
+    match /pilot/public/20261017/{asset}/{version}/{name} { allow get: if bucket == 'aqar-9f3f9-media-canary' && (asset + '/' + version + '/' + name) in ['bff2fa9c9abdea12df425acbdfa7b68e/v1786852662/qctctnwbuye3gnpxjuza.jpg', 'f354e26cd3039caa31a6a40b20d0951c/v1787692322/odcexpf9ddcqukufdlle.jpg', '3797f977bdda169ea631b58296a5a1a2/v1791465251/p6f6juqjqjjsw8ygbcs6.png', '1b60486052d23f82613a7a35fac7a01b/v1791099290/nweqbykqmvgeaipwvgxm.jpg', '163ca5471771dd6cc5a0376c076df763/v1787411580/cwznssquz8rwghjqnqvt.jpg']; }
+    match /{rest=**} { allow read, write: if false; }
+    match /pilot/public/20261017/163ca5471771dd6cc5a0376c076df763/v1787411580/cwznssquz8rwghjqnqvt.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
+    match /pilot/public/20261017/1b60486052d23f82613a7a35fac7a01b/v1791099290/nweqbykqmvgeaipwvgxm.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
+    match /pilot/public/20261017/3797f977bdda169ea631b58296a5a1a2/v1791465251/p6f6juqjqjjsw8ygbcs6.png { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
+    match /pilot/public/20261017/bff2fa9c9abdea12df425acbdfa7b68e/v1786852662/qctctnwbuye3gnpxjuza.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
+    match /pilot/public/20261017/f354e26cd3039caa31a6a40b20d0951c/v1787692322/odcexpf9ddcqukufdlle.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/009f608b29ed0b2b4cf788148c39628f/v1791874272/tf5zotekdmg3hodwct8z.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/021e8bffa4b702fb4366d70ff7e3a22f/v1791424093/l0kj7ol4w2ezgagvdjjf.png { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/024cab83834967ac5919759f1218806e/v1791317810/ufo604dfdcugufgxsefd.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
@@ -80,7 +88,6 @@ service firebase.storage {
     match /staging/private/cloudinary-hwxcrlcj/image/2fb0f4015e39280d2d39e8380f94fe0d/v1792265640/bt5qkrve8tdfxdqnkpsz.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/30698c8c6dd3baec3cec729fa19a8185/v1791111931/iyqykhebxowbufpq12ps.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/3129622e9bd3ff86483cbf81794bcaf4/v1791202635/uan81as8ul9v0fzwst7t.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
-    match /staging/private/cloudinary-hwxcrlcj/image/320f4803ddd598219ea253481faf9db2/v1791154866/pj8o5prm9nhuqc5tmq4u.png { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/32fc32fa5326c077228b3cc4edb81081/v1791099293/f85jdczflaguehpxdxiw.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/33d8e294d340ae225862f3b6caefa61b/v1787411586/pzhhdsx821yelqqpiand.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/35ac2e8d56c70daaa5eb08a14f5c3b44/v1791438618/h2jkiddzipnhx1l7euxy.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
@@ -219,7 +226,6 @@ service firebase.storage {
     match /staging/private/cloudinary-hwxcrlcj/image/d16d9b170a5658cbd3d7a3b00325009a/v1791104433/bti0mrcyi1ttxedwrqkn.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/d1a216d75e6f97a8fa5e53a1ea271a17/v1791511185/eubuzaf1eschnnjsrkgk.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/d322e32edfcc8b1222810ab9a3037bfd/v1791111961/og5cvznmxhwizfjv2gap.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
-    match /staging/private/cloudinary-hwxcrlcj/image/d407480fab9dc152189c1e25b33d258e/v1791671188/wtetrzsdz19isfltyc4s.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/d580b013ac4d861649c48e7c25a7f97c/v1791111945/kizkiqastunovnl4x3fv.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/d8bf865eadbd8402d822bdd74b14827f/v1791108105/fxkby4dltn4k0bleju1g.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/d93622e3054eee081b76af16f9452794/v1791018874/qefzcwvbh2ohlez8h4pv.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
@@ -227,7 +233,6 @@ service firebase.storage {
     match /staging/private/cloudinary-hwxcrlcj/image/dc10ff48ea4ca82cb0d72d6310975346/v1785236238/i2bfesh6wpa5uqm4i4a1.png { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/dcbfb7467a9c098a3233333ded1a821e/v1791202645/utblnqrlgkmjp8ax9gam.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/e01a69c7e83f2d4fa734ae372530d717/v1789932617/opxyusq0k59rveno717g.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
-    match /staging/private/cloudinary-hwxcrlcj/image/e1cd6e65dacb11526fc9708bdd263931/v1791441984/rhfrhxdk1gmztpnxrvyx.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/e20bf2bbac1e67b9d920db86bfdf4e43/v1791317798/x6nb3wrifwevq2mkvvmc.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/e287091c3e00b2357c4c1e352f420cf3/v1787240265/wbh0gqwfto08owoepwpd.png { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/e4bbefaca965075de98139e021184c3f/v1791514665/z7ymo040zqi6zm0ngbgg.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
@@ -248,11 +253,7 @@ service firebase.storage {
     match /staging/private/cloudinary-hwxcrlcj/image/f7c7d132c0bae6dde81062ea4422e9a9/v1791202625/v2oewsgpd94wqarhh1wx.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/f7ec65755c15b902afd42947684dc654/v1790990186/sxpylb4l2tbixvaupwfy.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/f7f7621d6b1f0845f4eaa029e2f9490c/v1787241369/nmcqltevnr8ln8ttowh6.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
-    match /staging/private/cloudinary-hwxcrlcj/image/f9b9c7845e52792db4f4449071d9d32f/v1790961252/p0mxj4jc0zuwdvcrslyp.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/fb7bae3e8e7864ffddb68e7cbca69162/v1787191692/bnpdsaxnhmuqzu7lbpd7.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
     match /staging/private/cloudinary-hwxcrlcj/image/fe074047d907722f52ad4e62fd853c36/v1791317807/juluakrp6l5kt90twigw.jpg { allow get: if bucket == 'aqar-9f3f9-media-canary'; }
-    // Imported originals remain immutable and denied except the five approved pilot paths.
-    match /pilot/public/20261017/{asset}/{version}/{name} { allow get: if bucket == 'aqar-9f3f9-media-canary' && (asset + '/' + version + '/' + name) in ['bff2fa9c9abdea12df425acbdfa7b68e/v1786852662/qctctnwbuye3gnpxjuza.jpg', 'f354e26cd3039caa31a6a40b20d0951c/v1787692322/odcexpf9ddcqukufdlle.jpg', '3797f977bdda169ea631b58296a5a1a2/v1791465251/p6f6juqjqjjsw8ygbcs6.png', '1b60486052d23f82613a7a35fac7a01b/v1791099290/nweqbykqmvgeaipwvgxm.jpg', '163ca5471771dd6cc5a0376c076df763/v1787411580/cwznssquz8rwghjqnqvt.jpg']; }
-    match /{rest=**} { allow read, write: if false; }
   }
 }

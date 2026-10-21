@@ -22,7 +22,7 @@ function createPrivateReadHandler({auth,db,bucket}) {
       const token=await auth.verifyIdToken(bearer[1],true);
       if (!token.uid || token.firebase?.sign_in_provider==='anonymous') return res.status(403).end();
       const user=(await db.doc(`users/${token.uid}`).get()).data();
-      if (!user || user.isBlocked!==false || !await authorizedPath({db,bucket,uid:token.uid,user,path:req.query?.path})) return res.status(403).end();
+      if (!user || (user.isBlocked!==undefined&&user.isBlocked!==false) || !await authorizedPath({db,bucket,uid:token.uid,user,path:req.query?.path})) return res.status(403).end();
       const file=bucket.file(req.query.path),[metadata]=await file.getMetadata();
       if (metadata.metadata?.firebaseStorageDownloadTokens || Number(metadata.size)>10*1024*1024) return res.status(409).end();
       if (req.query.path.startsWith('staging/private/cloudinary-hwxcrlcj/')) {

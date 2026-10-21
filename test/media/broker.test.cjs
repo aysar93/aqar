@@ -38,5 +38,22 @@ async function send(handler,uid,body={},method='POST',query={}){if(method==='POS
  files.get(path).metadata.metadata.firebaseStorageDownloadTokens='synthetic-secret-test-only';result=await send(read,'alice',{},'GET',{path});assert.equal(result.code,409);checks++;
  const quotaDb={doc:path=>({path}),runTransaction:async fn=>fn({get:async()=>({data:()=>({count:20,bytes:100})}),set(){throw Error('Quota bypass')}})};
  await assert.rejects(firestoreQuota(quotaDb)( {uid:'alice',bytes:10}));checks++;
+
+ // Legacy records omit flags; match Firestore get('isBlocked', false),
+ // but reject malformed/null/true flags instead of treating them as active.
+ delete data.get('users/alice').isBlocked;
+ delete data.get('chats/alice').isBlocked;
+ delete data.get('chats/alice').isClosed;
+ result=await send(upload,'alice',{purpose:'chatImage',chatId:'alice',content:png.toString('base64'),uploadId:'d'.repeat(32)});assert.equal(result.code,200);checks++;
+ result=await send(read,'alice',{},'GET',{path:result.body.path});assert.equal(result.code,200);checks++;
+ for(const flag of [true,null,'false',0]) {
+  data.get('users/alice').isBlocked=flag;
+  result=await send(upload,'alice',{purpose:'avatar',content:png.toString('base64'),uploadId:'e'.repeat(32)});assert.equal(result.code,403);checks++;
+ }
+ data.get('users/alice').isBlocked=false;
+ for(const flag of [true,null,'false',0]) {
+  data.get('chats/alice').isBlocked=flag;
+  result=await send(upload,'alice',{purpose:'chatImage',chatId:'alice',content:png.toString('base64'),uploadId:'f'.repeat(32)});assert.equal(result.code,403);checks++;
+ }
  console.log(checks+' private broker checks passed; no network or production I/O');
 })().catch(e=>{console.error(e.message);process.exitCode=1});

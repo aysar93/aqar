@@ -32,13 +32,13 @@ function createPrivateUploadHandler({auth,db,bucket,authorizeQuota}) {
       if (!token.uid || token.firebase?.sign_in_provider === 'anonymous') return res.status(403).json({error:'authentication'});
       const uid=token.uid, data=validateBody(req.body);
       const user=(await db.doc(`users/${uid}`).get()).data();
-      if (!user || user.isBlocked !== false) return res.status(403).json({error:'access'});
+      if (!user || (user.isBlocked !== undefined && user.isBlocked !== false)) return res.status(403).json({error:'access'});
       const body=req.body; let path;
       if (['chatImage','chatAudio'].includes(body.purpose)) {
         if (!body.chatId || (uid !== body.chatId && user.isAdmin !== true)) return res.status(403).json({error:'access'});
         const chat=(await db.doc(`chats/${body.chatId}`).get()).data();
         const settings=(await db.doc('settings/app_settings').get()).data();
-        if (!chat || chat.isBlocked !== false || chat.isClosed !== false || settings?.allowChat !== true || (body.purpose==='chatAudio' && (settings.chatPreferences?.voiceEnabled !== true || body.seconds > (settings.chatPreferences.voiceSeconds ?? 120)))) return res.status(403).json({error:'chat'});
+        if (!chat || (chat.isBlocked !== undefined && chat.isBlocked !== false) || (chat.isClosed !== undefined && chat.isClosed !== false) || settings?.allowChat !== true || (body.purpose==='chatAudio' && (settings.chatPreferences?.voiceEnabled !== true || body.seconds > (settings.chatPreferences.voiceSeconds ?? 120)))) return res.status(403).json({error:'chat'});
         path=`uploads/private/${body.purpose==='chatImage'?'chat_images':'chat_audio'}/${body.chatId}/${uid}/${body.uploadId}.${data.ext}`;
       } else if (body.purpose==='bookingReceipt') {
         if (!body.bookingId) throw Error('INVALID_BOOKING');

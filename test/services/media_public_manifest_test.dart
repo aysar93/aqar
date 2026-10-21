@@ -7,7 +7,7 @@ void main() {
       'exact public manifest never authorizes prefix, suffix or unknown private paths',
       () {
     const bucket = 'aqar-9f3f9-media-canary';
-    expect(publicImportedMediaPaths.length, 227);
+    expect(publicImportedMediaPaths.length, 223);
     for (final path in publicImportedMediaPaths) {
       expect(
           MediaLocation.needsAuth(MediaLocation.urlFor(bucket, path), bucket),

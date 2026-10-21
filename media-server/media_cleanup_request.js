@@ -9,7 +9,7 @@ function createCleanupRequestHandler({auth,db}) {
    const token=await auth.verifyIdToken(bearer[1],true);
    if(!token.uid||token.firebase?.sign_in_provider==='anonymous')return res.status(403).end();
    const user=(await db.doc(`users/${token.uid}`).get()).data();
-   if(!user||user.isBlocked!==false)return res.status(403).end();
+   if(!user||(user.isBlocked!==undefined&&user.isBlocked!==false))return res.status(403).end();
    const path=req.body?.path,parts=typeof path==='string'?path.split('/'):[];
    const ordinary=parts.length===5&&parts[0]==='uploads'&&['public','private'].includes(parts[1])&&['property','avatar','office','banner','appLogo','license','receipt'].includes(parts[2])&&parts[3]===token.uid;
    const chat=parts.length===6&&parts[0]==='uploads'&&parts[1]==='private'&&['chat_images','chat_audio'].includes(parts[2])&&parts[4]===token.uid;

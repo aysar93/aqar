@@ -1,4 +1,5 @@
-// Public-only exact routing manifest; mixed/private/unknown excluded. Rules still authorize reads.
+// Exact public-only imported paths, rechecked against live references 2026-10-21.
+// Never add private or unresolved paths here.
 const publicImportedMediaPaths = <String>{
   "pilot/public/20261017/163ca5471771dd6cc5a0376c076df763/v1787411580/cwznssquz8rwghjqnqvt.jpg",
   "pilot/public/20261017/1b60486052d23f82613a7a35fac7a01b/v1791099290/nweqbykqmvgeaipwvgxm.jpg",
@@ -56,7 +57,6 @@ const publicImportedMediaPaths = <String>{
   "staging/private/cloudinary-hwxcrlcj/image/2fb0f4015e39280d2d39e8380f94fe0d/v1792265640/bt5qkrve8tdfxdqnkpsz.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/30698c8c6dd3baec3cec729fa19a8185/v1791111931/iyqykhebxowbufpq12ps.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/3129622e9bd3ff86483cbf81794bcaf4/v1791202635/uan81as8ul9v0fzwst7t.jpg",
-  "staging/private/cloudinary-hwxcrlcj/image/320f4803ddd598219ea253481faf9db2/v1791154866/pj8o5prm9nhuqc5tmq4u.png",
   "staging/private/cloudinary-hwxcrlcj/image/32fc32fa5326c077228b3cc4edb81081/v1791099293/f85jdczflaguehpxdxiw.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/33d8e294d340ae225862f3b6caefa61b/v1787411586/pzhhdsx821yelqqpiand.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/35ac2e8d56c70daaa5eb08a14f5c3b44/v1791438618/h2jkiddzipnhx1l7euxy.jpg",
@@ -195,7 +195,6 @@ const publicImportedMediaPaths = <String>{
   "staging/private/cloudinary-hwxcrlcj/image/d16d9b170a5658cbd3d7a3b00325009a/v1791104433/bti0mrcyi1ttxedwrqkn.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/d1a216d75e6f97a8fa5e53a1ea271a17/v1791511185/eubuzaf1eschnnjsrkgk.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/d322e32edfcc8b1222810ab9a3037bfd/v1791111961/og5cvznmxhwizfjv2gap.jpg",
-  "staging/private/cloudinary-hwxcrlcj/image/d407480fab9dc152189c1e25b33d258e/v1791671188/wtetrzsdz19isfltyc4s.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/d580b013ac4d861649c48e7c25a7f97c/v1791111945/kizkiqastunovnl4x3fv.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/d8bf865eadbd8402d822bdd74b14827f/v1791108105/fxkby4dltn4k0bleju1g.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/d93622e3054eee081b76af16f9452794/v1791018874/qefzcwvbh2ohlez8h4pv.jpg",
@@ -203,7 +202,6 @@ const publicImportedMediaPaths = <String>{
   "staging/private/cloudinary-hwxcrlcj/image/dc10ff48ea4ca82cb0d72d6310975346/v1785236238/i2bfesh6wpa5uqm4i4a1.png",
   "staging/private/cloudinary-hwxcrlcj/image/dcbfb7467a9c098a3233333ded1a821e/v1791202645/utblnqrlgkmjp8ax9gam.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/e01a69c7e83f2d4fa734ae372530d717/v1789932617/opxyusq0k59rveno717g.jpg",
-  "staging/private/cloudinary-hwxcrlcj/image/e1cd6e65dacb11526fc9708bdd263931/v1791441984/rhfrhxdk1gmztpnxrvyx.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/e20bf2bbac1e67b9d920db86bfdf4e43/v1791317798/x6nb3wrifwevq2mkvvmc.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/e287091c3e00b2357c4c1e352f420cf3/v1787240265/wbh0gqwfto08owoepwpd.png",
   "staging/private/cloudinary-hwxcrlcj/image/e4bbefaca965075de98139e021184c3f/v1791514665/z7ymo040zqi6zm0ngbgg.jpg",
@@ -224,7 +222,6 @@ const publicImportedMediaPaths = <String>{
   "staging/private/cloudinary-hwxcrlcj/image/f7c7d132c0bae6dde81062ea4422e9a9/v1791202625/v2oewsgpd94wqarhh1wx.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/f7ec65755c15b902afd42947684dc654/v1790990186/sxpylb4l2tbixvaupwfy.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/f7f7621d6b1f0845f4eaa029e2f9490c/v1787241369/nmcqltevnr8ln8ttowh6.jpg",
-  "staging/private/cloudinary-hwxcrlcj/image/f9b9c7845e52792db4f4449071d9d32f/v1790961252/p0mxj4jc0zuwdvcrslyp.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/fb7bae3e8e7864ffddb68e7cbca69162/v1787191692/bnpdsaxnhmuqzu7lbpd7.jpg",
   "staging/private/cloudinary-hwxcrlcj/image/fe074047d907722f52ad4e62fd853c36/v1791317807/juluakrp6l5kt90twigw.jpg",
 };

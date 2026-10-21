@@ -6,6 +6,7 @@
     }
   ],
   "storage": {
-    "rules": "storage.media-next.rules"
+    "target": "media-canary",
+    "rules": "storage.media.production.rules"
   }
 }
