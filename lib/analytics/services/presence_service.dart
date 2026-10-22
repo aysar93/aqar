@@ -6,6 +6,21 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
+String presenceDatabaseUrlForProject(String projectId, String? configuredUrl) {
+  if (projectId == 'aqar-9f3f9') {
+    return 'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app';
+  }
+  final uri = Uri.tryParse(configuredUrl ?? '');
+  final host = uri?.host ?? '';
+  final projectHost = host == '$projectId.firebaseio.com' ||
+      (host.startsWith('$projectId-default-rtdb.') &&
+          host.endsWith('.firebasedatabase.app'));
+  if (uri?.scheme != 'https' || !projectHost || uri!.userInfo.isNotEmpty) {
+    throw StateError('Realtime Database is not configured for this project');
+  }
+  return configuredUrl!;
+}
+
 class PresenceService {
   PresenceService(
       {FirebaseDatabase? database,
@@ -15,8 +30,9 @@ class PresenceService {
       : _database = database ??
             FirebaseDatabase.instanceFor(
               app: Firebase.app(),
-              databaseURL:
-                  'https://aqar-9f3f9-default-rtdb.asia-southeast1.firebasedatabase.app',
+              databaseURL: presenceDatabaseUrlForProject(
+                  Firebase.app().options.projectId,
+                  Firebase.app().options.databaseURL),
             ),
         _functions = functions,
         _auth = auth,

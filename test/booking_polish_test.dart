@@ -31,6 +31,7 @@ Widget app(Widget child, {double scale = 1}) => RepaintBoundary(
     key: const ValueKey('polish-capture'),
     child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: ThemeData(fontFamily: 'SplashTajawal'),
         locale: const Locale('ar'),
         supportedLocales: const [Locale('ar')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
