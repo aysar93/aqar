@@ -159,7 +159,14 @@ void main() {
                 'https://worker.test/bookings/media/new.mp4',
                 'booking_media/venue/owner/old.mp4',
               ])))));
-      expect(find.text('مشاهدة فيديو المكان'), findsNWidgets(2));
+      // PageView builds pages lazily; verify each visible entry instead of
+      // assuming both pages are mounted before the first swipe.
+      expect(find.text('مشاهدة فيديو المكان'), findsOneWidget);
+      expect(find.text('1 / 2'), findsOneWidget);
+      await tester.tap(find.byTooltip('الوسيط التالي'));
+      await tester.pumpAndSettle();
+      expect(find.text('مشاهدة فيديو المكان'), findsOneWidget);
+      expect(find.text('2 / 2'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
