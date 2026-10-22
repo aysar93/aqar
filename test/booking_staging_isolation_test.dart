@@ -1,7 +1,35 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aqar/bookings_staging_main.dart' as staging;
 
 void main() {
+  testWidgets('offline notification cleanup cannot block local logout',
+      (tester) async {
+    final pending = Completer<void>();
+    var signedOut = false;
+    final done = staging.endBookingStagingSession(
+      detachNotifications: () => pending.future,
+      signOut: () async {
+        signedOut = true;
+      },
+    );
+    await tester.pump(const Duration(seconds: 4));
+    await done;
+    expect(signedOut, isTrue);
+    pending.complete();
+  });
+  test('notification cleanup failure still signs out', () async {
+    var signedOut = false;
+    await staging.endBookingStagingSession(
+      detachNotifications: () async {
+        throw StateError('offline');
+      },
+      signOut: () async {
+        signedOut = true;
+      },
+    );
+    expect(signedOut, isTrue);
+  });
   test('staging refuses production flavor and project', () {
     expect(
         staging.bookingStagingAllowed(

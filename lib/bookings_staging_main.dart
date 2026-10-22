@@ -12,6 +12,19 @@ import 'theme/app_theme.dart';
 const bookingStagingProject = 'aqar-bookings-test-20261009';
 bool bookingStagingAllowed(String? flavor, String project) =>
     flavor == 'bookingsStaging' && project == bookingStagingProject;
+Future<void> endBookingStagingSession({
+  required Future<void> Function() detachNotifications,
+  required Future<void> Function() signOut,
+}) async {
+  try {
+    await detachNotifications().timeout(const Duration(seconds: 3));
+  } catch (_) {
+    // Notification cleanup must not prevent local logout while offline.
+  } finally {
+    await signOut();
+  }
+}
+
 final _stagingNavigator = GlobalKey<NavigatorState>();
 RemoteMessage? _pendingNotification;
 bool _stagingSessionReady = false;
@@ -171,14 +184,15 @@ class _LoginState extends State<_StagingLogin> {
       // Transient restore failures must not delete a valid persisted session.
       if (opened || inactive || !restore) {
         final uid = FirebaseAuth.instance.currentUser?.uid;
-        if (uid != null) {
-          try {
+        await endBookingStagingSession(
+          detachNotifications: () async {
+            if (uid == null) return;
             await FirebaseFirestore.instance
                 .doc('users/$uid')
                 .update({'fcmToken': FieldValue.delete()});
-          } catch (_) {}
-        }
-        await FirebaseAuth.instance.signOut();
+          },
+          signOut: () => FirebaseAuth.instance.signOut(),
+        );
       }
       if (mounted) setState(() => busy = false);
     }
