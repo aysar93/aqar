@@ -31,11 +31,11 @@ void main() {
       'الخميس',
       'الجمعة'
     ]) {
-      expect(find.text(day), findsOneWidget);
+      expect(find.bySemanticsLabel(day), findsOneWidget);
     }
     expect(
         (tester.getCenter(find.text('1')).dx -
-                tester.getCenter(find.text('الثلاثاء')).dx)
+                tester.getCenter(find.bySemanticsLabel('الثلاثاء')).dx)
             .abs(),
         lessThan(1));
     expect(tester.takeException(), isNull);
@@ -87,4 +87,33 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
     });
+
+  testWidgets('BookingCalendar day cell responds to tap and selects available date', (tester) async {
+    DateTime? tappedDay;
+    final targetMonth = DateTime(2030, 4);
+    await tester.pumpWidget(MaterialApp(
+      home: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: BookingCalendar(
+              month: targetMonth,
+              slots: const [],
+              intervalForDay: (day) => [day, day.add(const Duration(days: 1))],
+              onSelect: (day) => tappedDay = day,
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('15'), findsOneWidget);
+    await tester.tap(find.text('15'));
+    await tester.pump();
+    expect(tappedDay, isNotNull);
+    expect(tappedDay!.year, 2030);
+    expect(tappedDay!.month, 4);
+    expect(tappedDay!.day, 15);
+  });
 }

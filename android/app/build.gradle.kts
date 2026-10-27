@@ -63,6 +63,24 @@ android {
             applicationIdSuffix = ".bookings.test"
             versionNameSuffix = "-bookings-test"
         }
+        create("bookingsStagingDiagnostic") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.stagediag"
+            versionNameSuffix = "-staging-diagnostic"
+            versionCode = 2026104306
+        }
+        create("bookingsOfflinePreview") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.offlinepreview"
+            versionNameSuffix = "-offline-ui-preview"
+            versionCode = 2026104409
+        }
+        create("bookingsLocalDiagnostic") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.localdiag"
+            versionNameSuffix = "-local-diagnostic"
+            versionCode = 2026104310
+        }
     }
 
 

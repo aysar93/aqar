@@ -43,12 +43,17 @@ void _openNotification(RemoteMessage message) {
       builder: (_) => BookingDetailsScreen(bookingId: bookingId)));
 }
 
-Future<void> main() async {
+Future<void> main() => runBookingStaging();
+
+Future<void> runBookingStaging({FirebaseOptions? options}) async {
   if (!bookingStagingAllowed(appFlavor, bookingStagingProject)) {
     throw StateError('Dedicated staging flavor required');
   }
   WidgetsFlutterBinding.ensureInitialized();
-  final app = await Firebase.initializeApp();
+  if (options != null && options.projectId != bookingStagingProject) {
+    throw StateError('Staging options must identify the Staging project');
+  }
+  final app = await Firebase.initializeApp(options: options);
   if (!bookingStagingAllowed(appFlavor, app.options.projectId)) {
     await app.delete();
     throw StateError('Staging cannot connect to any other Firebase project');

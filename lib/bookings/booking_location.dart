@@ -114,3 +114,21 @@ Future<bool> bookingOpenDirections(LatLng point,
   }
   return false;
 }
+
+Future<bool> bookingOpenGoogleMaps(LatLng point) async {
+  final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${point.latitude},${point.longitude}');
+  try {
+    return await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<bool> bookingOpenWaze(LatLng point) async {
+  final uri = Uri.parse('https://waze.com/ul?ll=${point.latitude},${point.longitude}&navigate=yes');
+  try {
+    return await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    return false;
+  }
+}

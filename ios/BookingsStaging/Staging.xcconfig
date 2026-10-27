@@ -1,0 +1,9 @@
+// Applied only to the isolated copy by tool/prepare_booking_ios_staging.py.
+// No production configuration includes this file.
+PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.bookingstest
+FLUTTER_TARGET = lib/bookings_ios_staging_main.dart
+INFOPLIST_FILE = BookingsStaging/Info.plist
+CODE_SIGN_ENTITLEMENTS = BookingsStaging/Runner.entitlements
+OTHER_LDFLAGS = $(inherited) -ObjC
+CODE_SIGN_STYLE = Manual
+// Signing identities/profile and verified Firebase defines are not invented here.

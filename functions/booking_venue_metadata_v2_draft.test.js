@@ -1,0 +1,4 @@
+const test=require('node:test'),assert=require('node:assert/strict'),{extras}=require('./booking_venue_metadata_v2_draft');
+test('legacy clients preserve owner metadata and absent remains absent',()=>{assert.deepEqual(extras({}),{});assert.deepEqual(extras({name:'legacy'}, {description:'saved',guestType:'families',bathrooms:2}),{description:'saved',guestType:'families',bathrooms:2});});
+test('new metadata validates types, limits and units without conversion',()=>{assert.deepEqual(extras({area:2,areaUnit:'dunum'}),{area:2,areaUnit:'dunum'});for(const d of [{area:-1,areaUnit:'m2'},{area:1},{bathrooms:'2'},{guestType:'12 guests'},{description:'x'.repeat(10001)}])assert.throws(()=>extras(d));});
+test('owner metadata proposal cannot set featured/roles/financial fields',()=>assert.deepEqual(extras({isFeatured:true,isAdmin:true,paid:100000,commissionBps:0}),{}));

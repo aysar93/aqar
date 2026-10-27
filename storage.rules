@@ -21,6 +21,16 @@ service firebase.storage {
       allow read, write: if false;
     }
 
+    match /booking_reels_media/{venueId}/{authorUid}/{fileName} {
+      function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
+      allow read: if true;
+      allow create: if active() && request.auth.uid == authorUid && (admin() || venue().ownerId == authorUid) &&
+        request.resource.size > 0 && request.resource.size <= 50 * 1024 * 1024 &&
+        ((fileName.matches('[A-Za-z0-9_-]+[.]mp4') && request.resource.contentType == 'video/mp4') ||
+         (fileName.matches('[A-Za-z0-9_-]+[.]jpg') && request.resource.contentType == 'image/jpeg'));
+      allow update, delete: if active() && (admin() || (venue().ownerId == request.auth.uid && request.auth.uid == authorUid));
+    }
+
     match /booking_ownership_documents/{venueId}/{authorUid}/{fileName} {
       function venue() { return firestore.get(/databases/(default)/documents/booking_venues/$(venueId)).data; }
       allow read: if active() && (admin() || venue().ownerId == request.auth.uid);

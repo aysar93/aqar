@@ -6,7 +6,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aqar/bookings/booking_screen.dart';
 import 'package:aqar/bookings/booking_widgets.dart';
+import 'package:aqar/bookings/booking_page_indicator.dart';
 import 'package:aqar/bookings/booking_experience.dart';
+import 'package:aqar/bookings/booking_request_intent_store.dart';
+import 'support/booking_intent_store_fake.dart';
 
 const venue = <String, dynamic>{
   'name': 'شاليه ضفاف الفرات',
@@ -64,11 +67,22 @@ Widget app(Widget body, {double scale = 1}) => MaterialApp(
     supportedLocales: const [Locale('ar')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: RepaintBoundary(key: const ValueKey('live-capture'), child: body));
+Future<void> confirmSend(WidgetTester tester) async {
+  await tester.tap(find.text('إرسال طلب الحجز'));
+  await tester.pumpAndSettle();
+  final confirm = find.byKey(const ValueKey('booking-confirm-sheet-send'));
+  await tester.ensureVisible(confirm);
+  await tester.pumpAndSettle();
+  tester.widget<FilledButton>(confirm).onPressed!();
+  await tester.pump();
+}
+
 void main() {
   Future<void> mount(WidgetTester tester,
       {Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)
           call = reads,
       ValueChanged<String>? onRequested,
+      BookingRequestIntentStore? intentStore,
       double scale = 1,
       String? Function()? currentUserId}) async {
     tester.view.physicalSize = const Size(430, 1100);
@@ -88,6 +102,7 @@ void main() {
             venue: venue,
             call: call,
             onRequested: onRequested,
+            intentStore: intentStore ?? MemoryIntentStore(),
             currentUserId: currentUserId ?? () => 'synthetic-customer'),
         scale: scale));
     await tester.pumpAndSettle();
@@ -105,14 +120,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
         isNull);
+    await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('الفترة النهارية').last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('الشهر التالي'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('الشهر التالي'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('22'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('22'));
     await tester.pumpAndSettle();
   }
@@ -175,12 +194,26 @@ void main() {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
+        scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
-    final submit = find.text('إرسال طلب الحجز');
-    await tester.tap(submit);
-    await tester.tap(submit);
+    final open = tester
+        .widget<FilledButton>(
+            find.byKey(const ValueKey('booking-submit-request')))
+        .onPressed!;
+    open();
+    open();
+    await tester.pumpAndSettle();
+    final confirm = find.byKey(const ValueKey('booking-confirm-sheet-send'));
+    await tester.ensureVisible(confirm);
+    await tester.pumpAndSettle();
+    final action = tester.widget<FilledButton>(confirm).onPressed!;
+    action();
+    action();
+    await tester.pump();
     expect(payloads.length, 1);
     pending
         .completeError(TimeoutException('response lost after server commit'));
@@ -200,6 +233,61 @@ void main() {
     expect(payloads[1], payloads[0]);
     expect(destination, 'synthetic-booking');
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('unreadable pending request journal blocks a fresh submission',
+      (tester) async {
+    final store = MemoryIntentStore()..failRead = true;
+    var writes = 0;
+    await mount(tester, intentStore: store, call: (name, data) async {
+      if (name == 'requestBooking') writes++;
+      return reads(name, data);
+    });
+    expect(find.text('تعذر التحقق من الطلب المحفوظ'), findsOneWidget);
+    expect(find.text('إرسال طلب الحجز'), findsNothing);
+    expect(writes, 0);
+  });
+  testWidgets(
+      'lost response survives request screen destruction without a new intent',
+      (tester) async {
+    final store = MemoryIntentStore();
+    final payloads = <Map<String, dynamic>>[];
+    Future<Map<String, dynamic>> call(
+        String name, Map<String, dynamic> data) async {
+      if (name != 'requestBooking') return reads(name, data);
+      payloads.add(Map.of(data));
+      if (payloads.length == 1)
+        throw TimeoutException('local committed response lost');
+      return {'id': 'synthetic-booking'};
+    }
+
+    Future<void> submitFresh() async {
+      await dates(tester);
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
+          scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await confirmSend(tester);
+      await tester.pumpAndSettle();
+    }
+
+    await mount(tester, call: call, onRequested: (_) {}, intentStore: store);
+    await submitFresh();
+    expect(payloads, hasLength(1));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    await mount(tester, call: call, onRequested: (_) {}, intentStore: store);
+    if (find.text('إعادة المحاولة بنفس الطلب').evaluate().isEmpty) {
+      await submitFresh();
+    } else {
+      await tester.tap(find.text('إعادة المحاولة بنفس الطلب'));
+      await tester.pumpAndSettle();
+    }
+    expect(payloads, hasLength(2));
+    expect(payloads[1], payloads[0]);
   });
   testWidgets(
       'hold timer expires an open view exactly once and disposes safely',
@@ -265,12 +353,12 @@ void main() {
       final recipient = tester
           .getSemantics(find.byType(RadioListTile<String>).first)
           .getSemanticsData();
-      expect(recipient.label, contains('Ki / Qi'));
+      expect(recipient.label, contains('كي كارد'));
       expect(recipient.label, contains('SYNTHETIC-QI'));
     } finally {
       semantics.dispose();
     }
-    await tester.tap(find.text('Zain Cash'));
+    await tester.tap(find.text('زين كاش'));
     await tester.pumpAndSettle();
     expect(method, 'zaincash');
     change!(() => busy = true);
@@ -294,12 +382,21 @@ void main() {
   testWidgets('media gallery pages videos without loading or opening them',
       (tester) async {
     await tester.pumpWidget(app(const BookingScaffold(
-        body: BookingMediaGallery(paths: ['first.mp4', 'second.mp4']))));
+        body: SingleChildScrollView(
+            child: BookingMediaGallery(paths: ['first.mp4', 'second.mp4'])))));
     await tester.pumpAndSettle();
-    expect(find.text('1 / 2'), findsOneWidget);
-    await tester.tap(find.byTooltip('الوسيط التالي'));
+    expect(
+        tester
+            .widget<BookingPageIndicator>(find.byType(BookingPageIndicator))
+            .page,
+        0);
+    tester.widget<PageView>(find.byType(PageView)).controller!.jumpToPage(1);
     await tester.pumpAndSettle();
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(
+        tester
+            .widget<BookingPageIndicator>(find.byType(BookingPageIndicator))
+            .page,
+        1);
     expect(tester.takeException(), isNull);
   });
   testWidgets('persistent compact deadline hides payment after scrolling',
@@ -347,10 +444,13 @@ void main() {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
+        scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('إرسال طلب الحجز'));
+    await confirmSend(tester);
     await tester.pump();
     uid = 'second-customer';
     pending.complete({'id': 'first-customer-private-booking'});
@@ -364,10 +464,13 @@ void main() {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
+        scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('إرسال طلب الحجز'));
+    await confirmSend(tester);
     await tester.pumpAndSettle();
   }
 

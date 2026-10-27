@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show appFlavor;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
@@ -22,17 +24,58 @@ class BookingMediaImage extends StatelessWidget {
         bearer);
   }
 
+  Widget placeholder(BuildContext context, {bool loading = false}) => SizedBox(
+      width: width,
+      height: height,
+      child: ColoredBox(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Center(
+              child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: loading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.broken_image_outlined,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
+                          const SizedBox(height: 8),
+                          Text('تعذر تحميل الصورة',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant))
+                        ])))));
+
   @override
   Widget build(BuildContext context) {
+    if (url.startsWith('asset://')) {
+      if (!kDebugMode ||
+          appFlavor != 'bookingsOfflinePreview' ||
+          !const bool.fromEnvironment('BOOKING_OFFLINE_PREVIEW'))
+        return placeholder(context);
+      return Image.asset(url.substring(8),
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => placeholder(context));
+    }
     if (url.startsWith('booking_media_v3/') ||
         url.startsWith('booking_media/')) {
       return FutureBuilder<Uint8List>(
           future: loadV3(),
           builder: (context, snapshot) {
-            if (snapshot.hasError) return const Text('تعذر تحميل الصورة');
-            if (!snapshot.hasData) return const CircularProgressIndicator();
+            if (snapshot.hasError) return placeholder(context);
+            if (!snapshot.hasData) return placeholder(context, loading: true);
             return Image.memory(snapshot.data!,
-                width: width, height: height, fit: BoxFit.cover);
+                width: width,
+                height: height,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => placeholder(context));
           });
     }
     return FutureBuilder<String?>(
@@ -46,7 +89,7 @@ class BookingMediaImage extends StatelessWidget {
                 height: height,
                 child: const Center(child: CircularProgressIndicator()));
           }
-          if (snapshot.hasError) return const Text('تعذر تحميل الصورة');
+          if (snapshot.hasError) return placeholder(context);
           return Image.network(url,
               width: width,
               height: height,
@@ -54,7 +97,10 @@ class BookingMediaImage extends StatelessWidget {
               headers: snapshot.data == null
                   ? null
                   : {'Authorization': 'Bearer ${snapshot.data}'},
-              errorBuilder: (_, __, ___) => const Text('تعذر تحميل الصورة'));
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : placeholder(context, loading: true),
+              errorBuilder: (_, __, ___) => placeholder(context));
         });
   }
 }

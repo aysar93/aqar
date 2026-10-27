@@ -26,7 +26,9 @@ class BookingEditorPage extends StatelessWidget {
         ]),
         const SizedBox(height: 8),
         Text(detail,
-            style: const TextStyle(color: Color(0xFF64748B), height: 1.8)),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.8)),
         const SizedBox(height: 20),
         for (final child in children)
           Padding(padding: const EdgeInsets.only(bottom: 16), child: child),
@@ -63,8 +65,10 @@ class BookingSupportForm extends StatelessWidget {
             decoration: const InputDecoration(
                 labelText: 'تفاصيل المشكلة',
                 hintText: 'ما الذي حدث؟ وكيف يمكننا مساعدتك؟')),
-        const Text('لحماية حسابك، لا تشارك كلمة المرور أو معلومات البطاقة.',
-            style: TextStyle(color: Color(0xFF64748B), height: 1.8)),
+        Text('لحماية حسابك، لا تشارك كلمة المرور أو معلومات البطاقة.',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.8)),
         const SizedBox(height: 16),
         FilledButton.icon(
             onPressed: busy ? null : onSubmit,
@@ -131,7 +135,8 @@ class BookingReviewCard extends StatelessWidget {
             ]),
             const SizedBox(height: 8),
             Text(verified ? 'حجز مكتمل موثوق' : 'بانتظار قرار المراجعة',
-                style: const TextStyle(color: Color(0xFF64748B))),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             Text(comment, style: const TextStyle(height: 1.8)),
             if (actions.isNotEmpty) Wrap(spacing: 12, children: actions),
@@ -175,8 +180,10 @@ class BookingStaffPermissions extends StatelessWidget {
               value: scopes.contains(entry.key),
               onChanged:
                   busy ? null : (value) => onChanged(entry.key, value == true)),
-        const Text('إلغاء جميع الاختيارات ثم الحفظ يسحب الصلاحيات.',
-            style: TextStyle(height: 1.8, color: Color(0xFF64748B))),
+        Text('إلغاء جميع الاختيارات ثم الحفظ يسحب الصلاحيات.',
+            style: TextStyle(
+                height: 1.8,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 12),
         FilledButton.icon(
             onPressed: busy ? null : onSave,
@@ -243,7 +250,8 @@ class BookingMapSearchHeader extends StatelessWidget {
           const Text('اكتشف أماكن الأنبار',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           Text('$count مكانًا يطابق البحث',
-              style: const TextStyle(color: Color(0xFF64748B))),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ]))
       ]));
 }

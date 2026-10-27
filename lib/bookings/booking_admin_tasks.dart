@@ -21,12 +21,13 @@ class BookingAdminTasks extends StatelessWidget {
         const Text('ما الذي يحتاج قرارك؟',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('مهام تنتظر المراجعة، من بيانات الخادم الحالية.',
-            style: TextStyle(color: Color(0xFF64748B))),
+        Text('مهام تنتظر المراجعة، من بيانات الخادم الحالية.',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         LayoutBuilder(builder: (context, bounds) {
           final cols = bounds.maxWidth < 340 ||
-                  MediaQuery.textScalerOf(context).scale(1) > 1.5
+                  MediaQuery.textScalerOf(context).scale(1) >= 1.5
               ? 1
               : 2;
           final width = (bounds.maxWidth - (cols - 1) * 12) / cols;
@@ -78,10 +79,13 @@ class BookingAdminTasks extends StatelessWidget {
                                           const SizedBox(height: 8),
                                           Text(
                                               verified
-                                                  ? '${s.data!.docs.length}'
+                                                  ? (s.data!.docs.isEmpty
+                                                      ? 'لا مهام معلقة'
+                                                      : '${s.data!.docs.length}')
                                                   : 'غير متاح',
                                               style: const TextStyle(
-                                                  fontSize: 24)),
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w700)),
                                           if (!verified)
                                             const Text(
                                                 'يلزم اتصال وتحقق من الصلاحية',

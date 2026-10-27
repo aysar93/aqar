@@ -4,7 +4,7 @@ const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getStorage} = require('firebase-admin/storage');
 const {createHash, randomBytes} = require('node:crypto');
-const {overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement} = require('./booking_policy');
+const {overlaps, blocks, money, venueDeposit, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement} = require('./booking_policy');
 const db = getFirestore();
 const discovery = require('./booking_discovery');
 const {CONFIG, available, recipient} = require('./payment_accounts');
@@ -132,7 +132,8 @@ exports.saveBookingOffer = onCall(async r=>{
     const u=await actor(r,tx), ref=db.doc(`booking_venues/${venueId}`), v=(await tx.get(ref)).data();
     if(!v || v.ownerId!==u.uid) fail('للمالك فقط');
     const min=v.pricingMode==='hourly'?v.hourlyPrice:v.pricingMode==='shifts'?Math.min(...v.shifts.map(s=>s.price)):v.price;
-    if(Math.floor(min*(100-percent)/100)<v.deposit) fail('السعر بعد الخصم أقل من العربون');
+    const effectiveDep = venueDeposit(v);
+    if(!effectiveDep || Math.floor(min*(100-percent)/100)<effectiveDep) fail('السعر بعد الخصم أقل من العربون');
     tx.update(ref,{offer:{percent,until}});
     tx.create(db.collection('booking_venue_audit').doc(),{venueId,actorUid:u.uid,action:'offer',after:{percent,until},createdAt:FieldValue.serverTimestamp()});
   }); return {ok:true};
@@ -321,7 +322,10 @@ exports.saveBookingVenue = onCall(async r => {
     if(typeof d.latitude!=='number' || !Number.isFinite(d.latitude) || d.latitude < -90 || d.latitude > 90 || typeof d.longitude!=='number' || !Number.isFinite(d.longitude) || d.longitude < -180 || d.longitude > 180) fail('إحداثيات غير صالحة');
     Object.assign(geo,{latitude:d.latitude,longitude:d.longitude});
   }
-  if (!money(basePrice, d.deposit) || !['chalet','farm','hall','other'].includes(d.category)) fail('سعر أو نوع غير صالح');
+  // Admin-only deposit enforcement
+  const requestedDeposit = (u.isAdmin === true && (d.deposit ?? d.pricing?.deposit) != null) ? (d.deposit ?? d.pricing?.deposit) : undefined;
+  const initialDeposit = requestedDeposit !== undefined ? policy(() => venueDeposit({ ...d, deposit: requestedDeposit })) : 50000;
+  if (!['chalet','farm','hall','other'].includes(d.category)) fail('نوع المكان غير صالح');
   const ref = d.id ? db.doc(`booking_venues/${id(d.id)}`) : db.collection('booking_venues').doc();
   await db.runTransaction(async tx => {
     const currentActor = await actor(r,tx);
@@ -333,9 +337,13 @@ exports.saveBookingVenue = onCall(async r => {
     const currentOwner = (await tx.get(db.doc(`users/${ownerId}`))).data();
     if (!currentOwner || currentOwner.isBlocked) fail('حساب المالك غير متاح');
     if (previous && previous.ownerId !== ownerId) fail('استخدم طلب نقل الملكية المعتمد');
+    const effectiveDeposit = currentActor.isAdmin === true && requestedDeposit !== undefined
+      ? initialDeposit
+      : (previous?.deposit ?? (requestedDeposit !== undefined ? initialDeposit : 50000));
+    if (!money(basePrice, effectiveDeposit)) fail('سعر أو عربون غير صالح');
     tx.set(ref, {ownerId, ownerName: ownerDetails.name, name: text(d.name,200), location: text(d.location,500), category:d.category,
-      ...pricing, ...geo, ...policy(()=>discovery.metadata(d, previous)), ...(!previous && currentActor.isAdmin!==true?{verificationStatus:'pending'}:{}), commissionBps, cancellationPolicy:cancellation, price:basePrice, deposit:d.deposit, terms:text(d.terms,5000), active:d.active === true, updatedAt:FieldValue.serverTimestamp()}, {merge:true});
-    tx.create(db.collection('booking_venue_audit').doc(),{venueId:ref.id,actorUid:u.uid,before:previous || null,after:{...pricing,cancellationPolicy:cancellation,price:basePrice,deposit:d.deposit,terms:d.terms,active:d.active === true},createdAt:FieldValue.serverTimestamp()});
+      ...pricing, ...geo, ...policy(()=>discovery.metadata(d, previous)), ...(!previous && currentActor.isAdmin!==true?{verificationStatus:'pending'}:{}), commissionBps, cancellationPolicy:cancellation, price:basePrice, deposit:effectiveDeposit, terms:text(d.terms,5000), active:d.active === true, updatedAt:FieldValue.serverTimestamp()}, {merge:true});
+    tx.create(db.collection('booking_venue_audit').doc(),{venueId:ref.id,actorUid:u.uid,before:previous || null,after:{...pricing,cancellationPolicy:cancellation,price:basePrice,deposit:effectiveDeposit,terms:d.terms,active:d.active === true},createdAt:FieldValue.serverTimestamp()});
   });
   return {id:ref.id};
 });
@@ -349,7 +357,29 @@ exports.requestBooking = onCall(async r => {
     const existing = await tx.get(ref); if (existing.exists) return;
     const venue = (await tx.get(venueRef)).data();
     if (!venue?.cancellationPolicy) fail('يجب على الإدارة تهيئة سياسة الإلغاء للمكان');
-    if (!venue?.active || venue.ownerId === u.uid || d.acceptedTerms !== venue.terms || d.deposit !== venue.deposit) fail('راجع الأسعار والشروط الحالية');
+    let categoryDeposit = null;
+    try {
+      const catDoc = await tx.get(db.doc('settings/booking_categories'));
+      if (catDoc.exists) {
+        const catData = catDoc.data();
+        const conf = catData && catData[venue.category];
+        if (conf && Number.isSafeInteger(conf.deposit) && conf.deposit > 0) {
+          categoryDeposit = conf.deposit;
+        }
+      }
+      if (!categoryDeposit) {
+        const payDoc = await tx.get(db.doc('settings/payment_configuration'));
+        if (payDoc.exists) {
+          const payData = payDoc.data();
+          const conf = payData?.categoryDeposits?.[venue.category];
+          if (Number.isSafeInteger(conf) && conf > 0) {
+            categoryDeposit = conf;
+          }
+        }
+      }
+    } catch (_) {}
+    const expectedDeposit = categoryDeposit || policy(() => venueDeposit(venue));
+    if (!expectedDeposit || !venue?.active || venue.ownerId === u.uid || d.acceptedTerms !== venue.terms || d.deposit !== expectedDeposit) fail('راجع الأسعار والشروط الحالية');
     const priced = policy(()=>quote(venue,{...d,start,end}));
     if (d.price !== priced.total || d.cancellationPolicy?.freeCancellationHours !== venue.cancellationPolicy?.freeCancellationHours || d.cancellationPolicy?.lateRefundPercent !== venue.cancellationPolicy?.lateRefundPercent) fail('راجع السعر وسياسة الإلغاء');
     const owner = (await tx.get(db.doc(`users/${venue.ownerId}`))).data();
@@ -362,10 +392,10 @@ exports.requestBooking = onCall(async r => {
     tx.create(ref, {venueId:venueRef.id, venueName:venue.name, category:venue.category, location:venue.location,
       ownerId:venue.ownerId, ownerName:ownerDetails.name, ownerPhone:ownerDetails.phone,
       customerId:u.uid, customerName:customer.name, customerPhone:customer.phone,
-      start,end,total:priced.total,pricing:priced.pricing,commissionBps:venue.commissionBps || 0,commissionBasis:'deposit',cancellationPolicy:venue.cancellationPolicy || null,deposit:venue.deposit,paid:0,remaining:priced.total,terms:venue.terms,
+      start,end,total:priced.total,pricing:priced.pricing,commissionBps:venue.commissionBps || 0,commissionBasis:'deposit',cancellationPolicy:venue.cancellationPolicy || null,deposit:expectedDeposit,paid:0,remaining:priced.total,terms:venue.terms,
       notes:typeof d.notes === 'string' ? d.notes.slice(0,1000) : '', status:'requested', version:0,
       createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
-    tx.create(db.collection('booking_action_audit').doc(),{bookingId:ref.id,actorUid:u.uid,action:'request',version:0,before:null,after:{status:'requested',total:priced.total,deposit:venue.deposit},createdAt:FieldValue.serverTimestamp()});
+    tx.create(db.collection('booking_action_audit').doc(),{bookingId:ref.id,actorUid:u.uid,action:'request',version:0,before:null,after:{status:'requested',total:priced.total,deposit:expectedDeposit},createdAt:FieldValue.serverTimestamp()});
     tx.update(venueRef,{bookingRevision:FieldValue.increment(1)});
   }); return {id:ref.id};
 });
@@ -591,4 +621,55 @@ exports.removeBookingMedia = onCall(async r=>{
   // Delete the object so previously issued download URLs stop serving its bytes.
   // Durable deletion is handled by the booking cleanup queue after reference checks.
   return {ok:true,deletionQueued:true};
+});
+
+exports.deleteBookingVenue = onCall(async r => {
+  const u = await actor(r), venueId = id(r.data.venueId);
+  const venueRef = db.doc(`booking_venues/${venueId}`);
+  await db.runTransaction(async tx => {
+    const currentActor = await actor(r, tx);
+    const venue = (await tx.get(venueRef)).data();
+    if (!venue) fail('المكان غير موجود');
+    if (currentActor.isAdmin !== true && venue.ownerId !== currentActor.uid) {
+      throw new HttpsError('permission-denied', 'للمالك أو الإدارة فقط');
+    }
+    const bookingsSnap = await tx.get(db.collection('bookings').where('venueId', '==', venueId));
+    const now = Date.now();
+    const activeBookings = bookingsSnap.docs.filter(doc => {
+      const b = doc.data();
+      return ['requested', 'pending', 'held', 'confirmed', 'arrived', 'payment_review'].includes(b.status) ||
+        (b.start && b.start > now && !['cancelled', 'rejected', 'expired'].includes(b.status));
+    });
+    if (activeBookings.length > 0) {
+      fail('لا يمكن حذف مكان مرتبط بحجوزات نشطة أو قادمة. قم بإلغاء الحجوزات أو استكمالها أولاً');
+    }
+    const hasHistory = bookingsSnap.docs.length > 0;
+    if (hasHistory) {
+      tx.update(venueRef, {
+        active: false,
+        deleted: true,
+        deletedAt: FieldValue.serverTimestamp(),
+        deletedBy: currentActor.uid,
+      });
+      tx.create(db.collection('booking_venue_audit').doc(), {
+        venueId,
+        actorUid: currentActor.uid,
+        action: 'archiveDeleteVenue',
+        before: { active: venue.active },
+        after: { active: false, deleted: true },
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      tx.delete(venueRef);
+      tx.create(db.collection('booking_venue_audit').doc(), {
+        venueId,
+        actorUid: currentActor.uid,
+        action: 'hardDeleteVenue',
+        before: { name: venue.name, ownerId: venue.ownerId },
+        after: null,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+  });
+  return { ok: true };
 });

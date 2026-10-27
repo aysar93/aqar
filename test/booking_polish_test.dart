@@ -433,6 +433,8 @@ void main() {
     await mount(
         t, BookingVenueEditor(ownerMode: true, call: (n, d) async => {}),
         scale: 1.6, size: const Size(360, 640));
+    await t.drag(find.byType(ListView).first, const Offset(0, -200));
+    await t.pumpAndSettle();
     await t.tap(find.widgetWithText(TextField, 'اسم المكان'));
     t.view.viewInsets = const FakeViewPadding(bottom: 240);
     addTearDown(t.view.resetViewInsets);

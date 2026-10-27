@@ -5,11 +5,23 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'notification_navigation_service.dart';
 import 'push_token_sync.dart';
+import 'booking_foreground_notice.dart';
 
 class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   static bool _initialized = false;
+
+  static final _bookingForeground = BookingForegroundNotice(
+    navigatorKey: NotificationNavigationService.navigatorKey,
+    currentUserId: () => FirebaseAuth.instance.currentUser?.uid,
+    canReadBooking: (id) async => (await FirebaseFirestore.instance
+            .collection('bookings')
+            .doc(id)
+            .get(const GetOptions(source: Source.server)))
+        .exists,
+    openBooking: _handleNotificationClick,
+  );
 
   // =========================================================
   // تهيئة نظام الإشعارات
@@ -36,10 +48,11 @@ class FCMService {
     // وصول إشعار FCM والتطبيق مفتوح
     // =========================================================
 
-    FirebaseMessaging.onMessage.listen((message) {
+    FirebaseMessaging.onMessage.listen((message) async {
       debugPrint("========== Firebase ==========");
       debugPrint(message.notification?.title);
       debugPrint(message.notification?.body);
+      await _bookingForeground.receive(Map<String, dynamic>.from(message.data));
     });
 
     // =========================================================

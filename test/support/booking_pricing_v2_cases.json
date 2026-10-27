@@ -1,0 +1,70 @@
+{
+  "policy": {
+    "version": 2,
+    "timeZone": "Asia/Baghdad",
+    "deposit": 20000,
+    "weekendDays": [
+      5,
+      6
+    ],
+    "shifts": [
+      {
+        "kind": "morning",
+        "enabled": true,
+        "startMinute": 540,
+        "endMinute": 1080,
+        "endDayOffset": 0,
+        "weekdayPrice": 100000,
+        "weekendPrice": 150000
+      },
+      {
+        "kind": "evening",
+        "enabled": true,
+        "startMinute": 1200,
+        "endMinute": 120,
+        "endDayOffset": 1,
+        "weekdayPrice": 120000,
+        "weekendPrice": 170000
+      },
+      {
+        "kind": "full_day",
+        "enabled": true,
+        "startMinute": 540,
+        "endMinute": 540,
+        "endDayOffset": 1,
+        "weekdayPrice": 250000,
+        "weekendPrice": 300000
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "weekday morning",
+      "kind": "morning",
+      "start": "2026-10-29T06:00:00Z",
+      "end": "2026-10-29T15:00:00Z",
+      "total": 100000
+    },
+    {
+      "name": "weekend morning",
+      "kind": "morning",
+      "start": "2026-10-30T06:00:00Z",
+      "end": "2026-10-30T15:00:00Z",
+      "total": 150000
+    },
+    {
+      "name": "overnight starts weekend",
+      "kind": "evening",
+      "start": "2026-10-30T17:00:00Z",
+      "end": "2026-10-30T23:00:00Z",
+      "total": 170000
+    },
+    {
+      "name": "explicit full day",
+      "kind": "full_day",
+      "start": "2026-10-30T06:00:00Z",
+      "end": "2026-10-31T06:00:00Z",
+      "total": 300000
+    }
+  ]
+}

@@ -3,7 +3,8 @@ import 'booking_location.dart';
 
 class BookingDirectionsButton extends StatelessWidget {
   final Map<String, dynamic> venue;
-  const BookingDirectionsButton({super.key, required this.venue});
+  final String? label;
+  const BookingDirectionsButton({super.key, required this.venue, this.label});
   @override
   Widget build(BuildContext context) {
     final point = bookingCoordinates(venue);
@@ -12,7 +13,7 @@ class BookingDirectionsButton extends StatelessWidget {
     }
     return OutlinedButton.icon(
         icon: const Icon(Icons.directions),
-        label: const Text('الاتجاهات'),
+        label: Text(label ?? 'الاتجاهات'),
         onPressed: () async {
           final opened = await bookingOpenDirections(point);
           if (!opened && context.mounted) {

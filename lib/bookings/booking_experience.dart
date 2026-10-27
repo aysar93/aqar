@@ -16,7 +16,8 @@ class BookingSection extends StatelessWidget {
   Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.only(bottom: 20),
       child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding:
+              EdgeInsets.all(MediaQuery.sizeOf(context).width < 360 ? 16 : 20),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text(title,
@@ -26,8 +27,9 @@ class BookingSection extends StatelessWidget {
               Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(subtitle!,
-                      style: const TextStyle(
-                          color: Color(0xFF64748B), height: 1.7))),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.7))),
             const SizedBox(height: 16),
             child,
           ])));
@@ -40,7 +42,9 @@ class BookingVenueIdentity extends StatelessWidget {
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('${venueCategory(venue['category'])} · ${venue['location'] ?? ''}',
-            style: const TextStyle(color: Color(0xFF64748B), height: 1.8)),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.8)),
         Text('${venue['name'] ?? ''}',
             style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
@@ -68,8 +72,10 @@ class BookingCheckoutHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('رحلتك إلى حجز مريح',
-            style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+        Text('رحلتك إلى حجز مريح',
+            style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           for (var i = 0; i < 3; i++)
@@ -178,10 +184,11 @@ class _BookingHoldNoticeState extends State<BookingHoldNotice> {
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-              color: const Color(0xFFF4EAD0),
+              color: Theme.of(context).colorScheme.secondaryContainer,
               borderRadius: BorderRadius.circular(18)),
           child: Row(children: [
-            const Icon(Icons.timer_outlined, color: bookingNavy),
+            Icon(Icons.timer_outlined,
+                color: Theme.of(context).colorScheme.onSurface),
             const SizedBox(width: 12),
             Expanded(
                 child: Column(
@@ -280,7 +287,7 @@ class BookingPaymentPanel extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 value: entry.key,
                 groupValue: method,
-                title: Text(entry.key == 'qicard' ? 'Ki / Qi' : 'Zain Cash'),
+                title: Text(entry.key == 'qicard' ? 'كي كارد' : 'زين كاش'),
                 subtitle: Text('${entry.value['number'] ?? 'رقم غير متاح'}',
                     textDirection: TextDirection.ltr),
                 onChanged: busy
@@ -292,7 +299,8 @@ class BookingPaymentPanel extends StatelessWidget {
             Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16)),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -388,9 +396,10 @@ class BookingPaymentPanel extends StatelessWidget {
                     ]);
               }),
           const SizedBox(height: 8),
-          const Text(
-              'إرسال الإيصال لا يؤكد الحجز. انتظر اعتماد المراجع المالي.',
-              style: TextStyle(height: 1.8, color: Color(0xFF64748B))),
+          Text('إرسال الإيصال لا يؤكد الحجز. انتظر اعتماد المراجع المالي.',
+              style: TextStyle(
+                  height: 1.8,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ]));
   }
 }

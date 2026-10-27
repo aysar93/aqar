@@ -16,11 +16,14 @@ class BookingActionReason extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
+        Icon(Icons.info_outline,
+            size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 8),
         Expanded(
             child: Text(reason,
-                style: const TextStyle(color: Color(0xFF475569), height: 1.7)))
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.7)))
       ]));
 }
 

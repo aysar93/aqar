@@ -4,6 +4,7 @@ import 'package:aqar/bookings/booking_screen.dart';
 import 'package:aqar/subscription/payment_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/booking_intent_store_fake.dart';
 
 void main() {
   test(
@@ -55,6 +56,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: BookingRequestScreen(
             venueId: 'test',
+            intentStore: MemoryIntentStore(),
             currentUserId: () => 'synthetic-customer',
             call: (name, data) async => name == 'getPublishedBookingReviews'
                 ? {'count': 0, 'average': 0, 'reviews': []}
@@ -88,11 +90,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('الشفت الليلي').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byTooltip('الشهر التالي'));
-    await tester.tap(find.byTooltip('الشهر التالي'));
+    Future<void> revealAndTap(Finder target) async {
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 5 && target.hitTestable().evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(ListView).first, const Offset(0, -180));
+        await tester.pumpAndSettle();
+      }
+      expect(target.hitTestable(), findsOneWidget);
+      await tester.tap(target.hitTestable());
+    }
+
+    await revealAndTap(find.byTooltip('الشهر التالي'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('22'));
-    await tester.tap(find.text('22'));
+    await revealAndTap(find.text('22'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();

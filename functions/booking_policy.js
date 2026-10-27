@@ -1,3 +1,4 @@
+const { validate: validateV2, quoteDraft: quoteV2 } = require('./booking_pricing_v2_draft');
 const BLOCKING = new Set(['held', 'payment_review', 'cancel_requested', 'confirmed', 'arrived', 'completed']);
 function overlaps(a, b) { return a.start < b.end && b.start < a.end; }
 function blocks(b, now) { return BLOCKING.has(b.status) && (b.status !== 'held' || b.holdUntil > now); }
@@ -6,7 +7,37 @@ function cancellationPolicy(p) {
   if (!p || !Number.isInteger(p.freeCancellationHours) || p.freeCancellationHours < 0 || p.freeCancellationHours > 8760 || !Number.isInteger(p.lateRefundPercent) || p.lateRefundPercent < 0 || p.lateRefundPercent > 100) throw Error('سياسة إلغاء غير صالحة');
   return {freeCancellationHours:p.freeCancellationHours,lateRefundPercent:p.lateRefundPercent};
 }
+const V2_LABELS = { morning: 'الفترة الصباحية', evening: 'الفترة المسائية', full_day: 'اليوم الكامل' };
+function venueDeposit(v) {
+  if (!v || typeof v !== 'object') return null;
+  const v1 = Number.isSafeInteger(v.deposit) && v.deposit > 0 ? v.deposit : null;
+  const isV2 = v.pricing && typeof v.pricing === 'object' && v.pricing.version === 2;
+  const v2 = isV2 && Number.isSafeInteger(v.pricing.deposit) && v.pricing.deposit > 0 ? v.pricing.deposit : null;
+
+  if (v1 !== null && v2 !== null) {
+    if (v1 !== v2) throw Error('تعارض بين عربون المكان وعربون التسعير المتقدم');
+    return v1;
+  }
+  if (v2 !== null) return v2;
+  if (v1 !== null) return v1;
+  return null;
+}
 function pricingConfig(d) {
+  if (d.pricing && typeof d.pricing === 'object' && d.pricing.version === 2) {
+    const deposit = venueDeposit(d) ?? (d.pricing.deposit ?? d.deposit);
+    const validated = validateV2({ ...d.pricing, deposit });
+    const shifts = validated.shifts.filter(s => s.enabled).map(s => ({
+      id: s.kind,
+      name: (typeof s.name === 'string' && s.name.trim()) ? s.name.trim() : (V2_LABELS[s.kind] || s.kind),
+      checkInMinute: s.startMinute,
+      checkOutMinute: s.endMinute,
+      endDayOffset: s.endDayOffset,
+      weekdayPrice: s.weekdayPrice,
+      weekendPrice: s.weekendPrice,
+      price: Math.min(s.weekdayPrice, s.weekendPrice),
+    }));
+    return { pricingMode: 'shifts', pricing: validated, shifts, hourlyPrice: null };
+  }
   const mode = d.pricingMode || 'fixed';
   if (!['fixed','shifts','hourly'].includes(mode)) throw Error('نوع تسعير غير صالح');
   const shifts = mode === 'shifts' ? d.shifts : [];
@@ -21,7 +52,11 @@ function pricingConfig(d) {
 }
 function quote(v, d) {
   let total = v.price, pricing = {mode:v.pricingMode || 'fixed'};
-  if (pricing.mode === 'hourly') {
+  if (v.pricing && typeof v.pricing === 'object' && v.pricing.version === 2) {
+    const v2 = quoteV2({ ...v.pricing, deposit: v.pricing.deposit ?? v.deposit }, { kind: d.shiftId || d.kind, start: d.start, end: d.end });
+    total = v2.total;
+    pricing = { ...v2.pricing, id: v2.pricing.kind, mode: 'shifts' };
+  } else if (pricing.mode === 'hourly') {
     const minutes = (d.end-d.start)/60000;
     if (!Number.isInteger(minutes) || minutes < 60 || minutes % 60) throw Error('اختر ساعات كاملة');
     total = v.hourlyPrice * (minutes/60); pricing = {...pricing,hours:minutes/60,hourlyPrice:v.hourlyPrice};
@@ -38,8 +73,9 @@ function quote(v, d) {
     pricing={...pricing,priceBeforeDiscount:total,discountPercent:v.offer.percent};
     total=Number(BigInt(total)*BigInt(100-v.offer.percent)/100n);
   }
-  if (!money(total,v.deposit)) throw Error('مبلغ غير صالح');
-  return {total,pricing};
+  const effectiveDeposit = venueDeposit(v);
+  if (!effectiveDeposit || !money(total, effectiveDeposit)) throw Error('مبلغ غير صالح');
+  return { total, pricing, deposit: effectiveDeposit };
 }
 function refund(b, now, cancelledByOwner) {
   const p = cancellationPolicy(b.cancellationPolicy);
@@ -63,4 +99,4 @@ function refundSettlement(b) {
   if (!Number.isSafeInteger(b.paid) || b.paid < 0 || !Number.isSafeInteger(b.refundDue) || b.refundDue <= 0 || b.refundDue > b.paid || b.refunded !== 0) throw Error('الحجز القديم يحتاج بيانات استرداد معتمدة قبل التسوية');
   return b.refundDue;
 }
-module.exports = { overlaps, blocks, money, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement };
+module.exports = { overlaps, blocks, money, venueDeposit, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement };

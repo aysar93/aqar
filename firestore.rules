@@ -88,6 +88,36 @@ service cloud.firestore {
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'resolved';
       allow create, delete: if false;
     }
+    match /booking_reels/{reelId} {
+      allow read: if true;
+      allow create, delete: if activeUser() && (isAdmin() || (resource != null && resource.data.ownerId == request.auth.uid) || (request.resource != null && request.resource.data.ownerId == request.auth.uid));
+      allow update: if activeUser() && (
+        isAdmin() ||
+        (resource != null && resource.data.ownerId == request.auth.uid) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharesCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+      );
+
+      match /likes/{userId} {
+        allow read: if true;
+        allow write: if activeUser() && request.auth.uid == userId;
+      }
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if activeUser() && request.resource.data.userId == request.auth.uid && cleanContent(request.resource.data);
+        allow update, delete: if activeUser() && (resource.data.userId == request.auth.uid || isAdmin());
+      }
+    }
+    match /users/{userId}/saved_booking_reels/{reelId} {
+      allow read, write: if activeUser() && request.auth.uid == userId;
+    }
+    match /booking_reel_reports/{reportId} {
+      allow create: if activeUser() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
 
     function isAdmin() {
       return activeUser() &&

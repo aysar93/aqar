@@ -21,11 +21,13 @@ class BookingChatPanel extends StatelessWidget {
   final VoidCallback? onSend;
   @override
   Widget build(BuildContext context) => Column(children: [
-        const Padding(
+        Padding(
             padding: EdgeInsets.all(16),
             child: Text(
                 'مساحة خاصة لأطراف الحجز · تجنب الروابط ومعلومات الدفع الحساسة.',
-                style: TextStyle(color: Color(0xFF64748B), height: 1.7))),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.7))),
         Expanded(
             child: messages.isEmpty
                 ? const BookingStateView(
@@ -47,7 +49,7 @@ class BookingChatPanel extends StatelessWidget {
                               decoration: BoxDecoration(
                                   color: message['senderId'] == uid
                                       ? bookingNavy
-                                      : Colors.white,
+                                      : Theme.of(context).colorScheme.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(20)),
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,15 +60,17 @@ class BookingChatPanel extends StatelessWidget {
                                             : 'الطرف الآخر',
                                         style: TextStyle(
                                             color: message['senderId'] == uid
-                                                ? const Color(0xFFE3C985)
-                                                : const Color(0xFF64748B),
+                                                ? bookingGold
+                                                : Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
                                             fontSize: 12)),
                                     const SizedBox(height: 6),
                                     Text('${message['message'] ?? ''}',
                                         style: TextStyle(
                                             color: message['senderId'] == uid
                                                 ? Colors.white
-                                                : bookingNavy,
+                                                : Theme.of(context).colorScheme.onSurface,
                                             height: 1.8)),
                                   ]))),
                   ])),
@@ -156,9 +160,11 @@ class _TransferState extends State<BookingTransferCard> {
                 child: Text(
                     '${entry.value}: ${widget.data[entry.key] ?? 'غير متوفر'}')),
           const SizedBox(height: 12),
-          const Text(
+          Text(
               'قبول المالك الجديد ثم مراجعة إدارية مستقلة. يجب تسوية الحجوزات والاستردادات القائمة قبل الاعتماد.',
-              style: TextStyle(color: Color(0xFF64748B), height: 1.8)),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.8)),
           if (actionable)
             Padding(
                 padding: const EdgeInsets.only(top: 16),
@@ -183,14 +189,71 @@ class BookingSettingsPanel extends StatelessWidget {
       required this.busy,
       required this.onSave,
       required this.onAccounts,
-      required this.reviewers});
+      required this.reviewers,
+      this.chaletDeposit,
+      this.farmDeposit,
+      this.hallDeposit,
+      this.otherDeposit});
   final TextEditingController hold;
+  final TextEditingController? chaletDeposit;
+  final TextEditingController? farmDeposit;
+  final TextEditingController? hallDeposit;
+  final TextEditingController? otherDeposit;
   final bool busy;
   final VoidCallback? onSave, onAccounts;
   final Widget reviewers;
   @override
   Widget build(BuildContext context) =>
       ListView(padding: const EdgeInsets.all(20), children: [
+        if (chaletDeposit != null || farmDeposit != null || hallDeposit != null || otherDeposit != null)
+          BookingSection(
+              title: 'مبالغ العربون الثابتة حسب فئة المكان',
+              subtitle:
+                  'تُحدد مبالغ العربون الإلزامية لكل فئة. تطبق تلقائياً على كافة الحجوزات الجديدة.',
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (chaletDeposit != null) ...[
+                      TextField(
+                          controller: chaletDeposit,
+                          enabled: !busy && onSave != null,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                              labelText: 'عربون الشاليهات (د.ع)',
+                              prefixIcon: Icon(Icons.pool_outlined))),
+                      const SizedBox(height: 12),
+                    ],
+                    if (farmDeposit != null) ...[
+                      TextField(
+                          controller: farmDeposit,
+                          enabled: !busy && onSave != null,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                              labelText: 'عربون المزارع والاستراحات (د.ع)',
+                              prefixIcon: Icon(Icons.nature_people_outlined))),
+                      const SizedBox(height: 12),
+                    ],
+                    if (hallDeposit != null) ...[
+                      TextField(
+                          controller: hallDeposit,
+                          enabled: !busy && onSave != null,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                              labelText: 'عربون القاعات والمناسبات (د.ع)',
+                              prefixIcon: Icon(Icons.celebration_outlined))),
+                      const SizedBox(height: 12),
+                    ],
+                    if (otherDeposit != null) ...[
+                      TextField(
+                          controller: otherDeposit,
+                          enabled: !busy && onSave != null,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                              labelText: 'عربون الفئات الأخرى (د.ع)',
+                              prefixIcon: Icon(Icons.holiday_village_outlined))),
+                      const SizedBox(height: 12),
+                    ],
+                  ])),
         BookingSection(
             title: 'سياسة الحجز المؤقت',
             subtitle:
@@ -215,7 +278,7 @@ class BookingSettingsPanel extends StatelessWidget {
         BookingSection(
             title: 'قنوات الدفع اليدوي',
             subtitle:
-                'حسابات مشتركة مع اشتراكات المكاتب. لا يُفعّل Zain Cash دون حساب موثّق.',
+                'حسابات مشتركة مع اشتراكات المكاتب. لا يُفعّل زين كاش دون حساب موثّق.',
             child: OutlinedButton.icon(
                 onPressed: onAccounts,
                 icon: const Icon(Icons.account_balance_wallet_outlined),
@@ -224,9 +287,11 @@ class BookingSettingsPanel extends StatelessWidget {
             title: 'مراجعو المدفوعات',
             subtitle: 'صلاحية مستقلة عن الإدارة. اختر حسابات مخولة فقط.',
             child: reviewers),
-        const Text(
+        Text(
             'الإلغاء بواسطة المالك أو الإدارة يعيد كامل العربون. التسوية اليدوية تحتاج مرجع تحويل.',
-            style: TextStyle(height: 1.8, color: Color(0xFF64748B))),
+            style: TextStyle(
+                height: 1.8,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ]);
 }
 
@@ -361,12 +426,14 @@ class BookingScannerPanel extends StatelessWidget {
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
                   label: const Text('إعادة المسح'))),
-        const SafeArea(
+        SafeArea(
             top: false,
             child: Padding(
                 padding: EdgeInsets.all(12),
                 child: Text('يلزم اتصال بالخادم لاعتماد الوصول.',
-                    style: TextStyle(color: Color(0xFF64748B))))),
+                    style: TextStyle(
+                        color:
+                            Theme.of(context).colorScheme.onSurfaceVariant)))),
       ]);
 }
 

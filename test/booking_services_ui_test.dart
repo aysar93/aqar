@@ -303,11 +303,12 @@ void main() {
             }));
     await capture(t, '01-settings');
     expect(saves, 0);
-    await t.enterText(find.byType(TextField), '4');
+    await t.enterText(find.widgetWithText(TextField, 'المدة بالدقائق'), '4');
     await t.tap(find.text('حفظ الإعدادات'));
     await t.pumpAndSettle();
     expect(saves, 0);
-    await t.ensureVisible(find.byType(SwitchListTile));
+    await t.drag(find.byType(ListView), const Offset(0, -400));
+    await t.pumpAndSettle();
     await t.pumpAndSettle();
     await t.tap(find.byType(SwitchListTile));
     await t.pumpAndSettle();
