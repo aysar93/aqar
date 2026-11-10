@@ -119,3 +119,294 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
+
+  ios-bookings-testflight:
+    name: iPhone - Bookings Staging (TestFlight Prep)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    environment:
+      groups:
+        - appstore_credentials
+        - ios_config
+        - media_full_test
+      vars:
+        FLUTTER_APP_FLAVOR: "bookingsStaging"
+        BOOKINGS_IOS_API_KEY: "AIzaSyCq7zSLdE5YMXvwxhbYhNsMCEDNykIox-Q"
+        BOOKINGS_IOS_APP_ID: "1:463930605039:ios:9c2430877d2f70b73dca1a"
+        BOOKINGS_IOS_BUNDLE_ID: "com.andalus.aqar.staging"
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.andalus.aqar.staging
+      flutter: stable
+      xcode: latest
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+
+    scripts:
+      - name: Validate Staging build prerequisites
+        script: |
+          set -e
+          echo "=== Checking Staging Environment Prerequisites ==="
+          if [ -z "$STAGING_APP_STORE_APPLE_ID" ]; then
+            echo "ERROR: STAGING_APP_STORE_APPLE_ID environment variable is missing or empty!"
+            echo "Please configure STAGING_APP_STORE_APPLE_ID in Codemagic environment variables with the numeric Apple ID of com.andalus.aqar.staging."
+            exit 1
+          fi
+          echo "✓ Verified STAGING_APP_STORE_APPLE_ID is set: $STAGING_APP_STORE_APPLE_ID"
+
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Configure Sign in with Apple entitlement
+        script: swift tools/configure_ios_entitlements.swift
+
+      - name: Inject Firebase Staging configuration
+        script: |
+          echo "Injecting isolated Firebase Staging configuration into Runner..."
+          cp ios/BookingsStaging/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
+          cp ios/BookingsStaging/Runner.entitlements ios/Runner/Runner.entitlements
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar;/PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging;/g' ios/Runner.xcodeproj/project.pbxproj
+          echo '#include "../BookingsStaging/Staging.xcconfig"' >> ios/Flutter/Release.xcconfig
+
+      - name: Verify Staging configuration and isolation
+        script: |
+          set -e
+          echo "=== Verifying Staging Configuration Integrity ==="
+
+          # 1. Verify Target Runner Bundle ID in project.pbxproj
+          if grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar;" ios/Runner.xcodeproj/project.pbxproj; then
+            echo "ERROR: Production bundle identifier 'com.andalus.aqar' still exists in Runner target settings!"
+            exit 1
+          fi
+          if ! grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging;" ios/Runner.xcodeproj/project.pbxproj; then
+            echo "ERROR: Staging bundle identifier 'com.andalus.aqar.staging' was not applied to project.pbxproj!"
+            exit 1
+          fi
+          if ! grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.RunnerTests;" ios/Runner.xcodeproj/project.pbxproj; then
+            echo "ERROR: RunnerTests bundle identifier was unexpectedly modified!"
+            exit 1
+          fi
+          echo "✓ Verified Bundle ID: com.andalus.aqar.staging (Production ID eradicated from Runner, RunnerTests untouched)"
+
+          # 2. Verify Firebase configuration
+          if grep -q "aqar-9f3f9" ios/Runner/GoogleService-Info.plist; then
+            echo "ERROR: Production Firebase project (aqar-9f3f9) detected in ios/Runner/GoogleService-Info.plist!"
+            exit 1
+          fi
+          if ! grep -q "aqar-bookings-test-20261009" ios/Runner/GoogleService-Info.plist; then
+            echo "ERROR: Staging Firebase project (aqar-bookings-test-20261009) missing in ios/Runner/GoogleService-Info.plist!"
+            exit 1
+          fi
+          if ! grep -q "com.andalus.aqar.staging" ios/Runner/GoogleService-Info.plist; then
+            echo "ERROR: Bundle ID in ios/Runner/GoogleService-Info.plist is not com.andalus.aqar.staging!"
+            exit 1
+          fi
+          echo "✓ Verified Firebase Config: aqar-bookings-test-20261009 (com.andalus.aqar.staging)"
+
+          # 3. Verify Entitlements via PlistBuddy or plutil
+          TARGET_ENTITLEMENTS="ios/Runner/Runner.entitlements"
+          APS_ENV=$(/usr/libexec/PlistBuddy -c "Print :aps-environment" "$TARGET_ENTITLEMENTS" 2>/dev/null || plutil -extract "aps-environment" raw "$TARGET_ENTITLEMENTS" 2>/dev/null || true)
+          if [ "$APS_ENV" != "production" ]; then
+            echo "ERROR: Expected aps-environment in $TARGET_ENTITLEMENTS to be 'production', got '$APS_ENV'!"
+            exit 1
+          fi
+
+          APPLE_SIGNIN=$(/usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin:0" "$TARGET_ENTITLEMENTS" 2>/dev/null || plutil -extract "com.apple.developer.applesignin.0" raw "$TARGET_ENTITLEMENTS" 2>/dev/null || true)
+          if [ "$APPLE_SIGNIN" != "Default" ]; then
+            echo "ERROR: Expected com.apple.developer.applesignin to contain 'Default', got '$APPLE_SIGNIN'!"
+            exit 1
+          fi
+          echo "✓ Verified Entitlements via PlistBuddy/plutil: aps-environment=$APS_ENV, applesignin=$APPLE_SIGNIN"
+          echo "=== All Staging Pre-Build Checks Passed Successfully ==="
+
+      - name: Initialize signing keychain
+        script: keychain initialize
+
+      - name: Fetch App Store signing files
+        script: |
+          app-store-connect fetch-signing-files "$BOOKINGS_IOS_BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Install signing certificate
+        script: keychain add-certificates
+
+      - name: Apply provisioning profiles
+        script: xcode-project use-profiles
+
+      - name: Verify applied build settings and provisioning profiles
+        script: |
+          set -e
+          echo "=== Verifying Target Runner Xcode Release Build Settings Post-Profiles ==="
+
+          # 1. Run xcodebuild -showBuildSettings specifically for target Runner and configuration Release
+          RAW_SETTINGS=$(xcodebuild -project ios/Runner.xcodeproj -target Runner -configuration Release -showBuildSettings 2>/dev/null)
+
+          # Extract the specific build settings block for target Runner
+          RUNNER_SETTINGS=$(echo "$RAW_SETTINGS" | awk '/Build settings for action build and target ("Runner"|Runner):/{flag=1; next} /^Build settings for/{flag=0} flag')
+          if [ -z "$RUNNER_SETTINGS" ]; then
+            echo "ERROR: Could not locate explicit build settings block for target Runner in xcodebuild output!"
+            echo "Refusing to fall back to unisolated build settings to prevent capturing settings from another target."
+            exit 1
+          fi
+
+          # 2. Verify PRODUCT_BUNDLE_IDENTIFIER in target Runner Release settings
+          ACTUAL_BUNDLE_ID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]')
+          if [ "$ACTUAL_BUNDLE_ID" != "com.andalus.aqar.staging" ]; then
+            echo "ERROR: Target Runner Release PRODUCT_BUNDLE_IDENTIFIER is '$ACTUAL_BUNDLE_ID', expected 'com.andalus.aqar.staging'!"
+            exit 1
+          fi
+          echo "✓ Verified xcodebuild Release PRODUCT_BUNDLE_IDENTIFIER = $ACTUAL_BUNDLE_ID"
+
+          # 3. Verify CODE_SIGN_ENTITLEMENTS in target Runner Release settings
+          ACTUAL_ENTITLEMENTS=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*CODE_SIGN_ENTITLEMENTS[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]')
+          if [ -z "$ACTUAL_ENTITLEMENTS" ] || [ ! -f "ios/$ACTUAL_ENTITLEMENTS" ]; then
+            echo "ERROR: Target Runner Release CODE_SIGN_ENTITLEMENTS is invalid or missing: '$ACTUAL_ENTITLEMENTS'!"
+            exit 1
+          fi
+          echo "✓ Verified xcodebuild Release CODE_SIGN_ENTITLEMENTS = $ACTUAL_ENTITLEMENTS"
+
+          # 4. Extract DEVELOPMENT_TEAM from target Runner Release settings
+          XCODE_TEAM_ID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]"')
+          echo "Target Runner DEVELOPMENT_TEAM: '$XCODE_TEAM_ID'"
+          if [ -z "$XCODE_TEAM_ID" ]; then
+            echo "ERROR: DEVELOPMENT_TEAM is missing or empty in target Runner Release build settings!"
+            exit 1
+          fi
+
+          # 5. Extract applied PROVISIONING_PROFILE UUID strictly (disallowing specifier or name fallbacks)
+          APPLIED_PROFILE_UUID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PROVISIONING_PROFILE[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]"')
+          echo "Target Runner applied PROVISIONING_PROFILE (UUID): '$APPLIED_PROFILE_UUID'"
+          if [ -z "$APPLIED_PROFILE_UUID" ]; then
+            echo "ERROR: Actual PROVISIONING_PROFILE (UUID) could not be extracted from target Runner Xcode Release build settings!"
+            echo "Matching by name or specifier is strictly disabled. Provisioning Profile UUID is required."
+            exit 1
+          fi
+
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          if [ ! -d "$PROFILES_DIR" ]; then
+            echo "ERROR: Provisioning Profiles directory does not exist: $PROFILES_DIR"
+            exit 1
+          fi
+
+          # 6. Locate the exact Provisioning Profile file containing the applied UUID
+          MATCHED_PROFILE=""
+          for p in "$PROFILES_DIR"/*.mobileprovision; do
+            [ -e "$p" ] || continue
+            DECODED_PLIST=$(security cms -D -i "$p" 2>/dev/null || true)
+            P_UUID=$(echo "$DECODED_PLIST" | grep -A1 "<key>UUID</key>" | grep "<string>" | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
+            if [ "$P_UUID" = "$APPLIED_PROFILE_UUID" ]; then
+              MATCHED_PROFILE="$p"
+              break
+            fi
+          done
+
+          if [ -z "$MATCHED_PROFILE" ] || [ ! -f "$MATCHED_PROFILE" ]; then
+            echo "ERROR: No Provisioning Profile found in $PROFILES_DIR containing exact UUID '$APPLIED_PROFILE_UUID'!"
+            exit 1
+          fi
+
+          echo "Found exact applied provisioning profile file: $(basename "$MATCHED_PROFILE")"
+          DECODED=$(security cms -D -i "$MATCHED_PROFILE")
+
+          # 7. Extract Team ID from Profile and verify match with Xcode DEVELOPMENT_TEAM
+          PROFILE_TEAM_ID=$(echo "$DECODED" | grep -A2 "<key>com.apple.developer.team-identifier</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
+          if [ -z "$PROFILE_TEAM_ID" ]; then
+            PROFILE_TEAM_ID=$(echo "$DECODED" | grep -A2 "<key>TeamIdentifier</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
+          fi
+          echo "Provisioning Profile Team ID: '$PROFILE_TEAM_ID'"
+
+          if [ -z "$PROFILE_TEAM_ID" ]; then
+            echo "ERROR: Could not extract Team ID from applied Provisioning Profile!"
+            exit 1
+          fi
+
+          if [ "$XCODE_TEAM_ID" != "$PROFILE_TEAM_ID" ]; then
+            echo "ERROR: Team ID mismatch! Xcode DEVELOPMENT_TEAM ($XCODE_TEAM_ID) does not match Profile Team ID ($PROFILE_TEAM_ID)!"
+            exit 1
+          fi
+          echo "✓ Verified Team ID match: Xcode DEVELOPMENT_TEAM ($XCODE_TEAM_ID) == Profile Team ID ($PROFILE_TEAM_ID)"
+
+          # 8. Verify application-identifier strictly equals TEAM_ID.com.andalus.aqar.staging
+          PROFILE_APP_ID=$(echo "$DECODED" | grep -A1 "<key>application-identifier</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
+          EXPECTED_APP_ID="${XCODE_TEAM_ID}.com.andalus.aqar.staging"
+          echo "Applied profile application-identifier: '$PROFILE_APP_ID'"
+          echo "Expected application-identifier:        '$EXPECTED_APP_ID'"
+
+          if [ "$PROFILE_APP_ID" != "$EXPECTED_APP_ID" ]; then
+            echo "ERROR: Profile application-identifier '$PROFILE_APP_ID' does NOT match expected '$EXPECTED_APP_ID'!"
+            exit 1
+          fi
+          echo "✓ Verified application-identifier exactly equals $EXPECTED_APP_ID"
+
+          # 9. Verify aps-environment in Profile Entitlements
+          APS_IN_PROFILE=$(echo "$DECODED" | grep -A1 "<key>aps-environment</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
+          if [ "$APS_IN_PROFILE" != "production" ]; then
+            echo "ERROR: Applied Provisioning Profile aps-environment is '$APS_IN_PROFILE', expected 'production'!"
+            exit 1
+          fi
+          echo "✓ Verified Profile aps-environment = production"
+
+          # 10. Verify Sign in with Apple in Profile Entitlements
+          if ! echo "$DECODED" | grep -A2 "<key>com.apple.developer.applesignin</key>" | grep -q "<string>Default</string>"; then
+            echo "ERROR: Applied Provisioning Profile lacks 'Default' Sign in with Apple capability!"
+            exit 1
+          fi
+          echo "✓ Verified Profile Sign in with Apple = Default"
+
+          echo "=== Post-Profile Build Settings Verification Completed Successfully ==="
+
+      - name: Build Staging TestFlight IPA (Artifact Only)
+        script: |
+          set -e
+          echo "Resolving latest build number from App Store Connect for Apple ID: $STAGING_APP_STORE_APPLE_ID..."
+          BUILD_NUM_RAW=""
+          set +e
+          BUILD_NUM_RAW=$(app-store-connect get-latest-app-store-build-number "$STAGING_APP_STORE_APPLE_ID" 2>&1)
+          FETCH_STATUS=$?
+          set -e
+
+          if [ $FETCH_STATUS -eq 0 ]; then
+            TRIMMED=$(echo "$BUILD_NUM_RAW" | tr -d '[:space:]')
+            if [[ "$TRIMMED" =~ ^[0-9]+$ ]]; then
+              if [ "$TRIMMED" -eq 0 ]; then
+                echo "App Store Connect reported build number 0 (no builds uploaded yet). Initializing build number to 1."
+                BUILD_NUMBER=1
+              else
+                BUILD_NUMBER=$((TRIMMED + 1))
+                echo "Found existing build number: $TRIMMED -> Building number: $BUILD_NUMBER"
+              fi
+            else
+              echo "ERROR: Received unexpected non-numeric output from app-store-connect get-latest-app-store-build-number:"
+              echo "$BUILD_NUM_RAW"
+              exit 1
+            fi
+          else
+            # Exit code non-zero: ONLY accept exact known messages from the tool confirming zero builds
+            if echo "$BUILD_NUM_RAW" | grep -qiE "^(No builds found for app|No builds found|Build number not found for app)"; then
+              echo "App Store Connect confirmed: no builds exist for this app yet. Initializing build number to 1."
+              BUILD_NUMBER=1
+            else
+              echo "ERROR: Failed to fetch build number from App Store Connect (Exit Code: $FETCH_STATUS):"
+              echo "$BUILD_NUM_RAW"
+              echo "Stopping build due to connection, authentication, or query failure."
+              exit $FETCH_STATUS
+            fi
+          fi
+
+          flutter build ipa --release \
+            --target=lib/bookings_ios_staging_main.dart \
+            --dart-define=FLUTTER_APP_FLAVOR="$FLUTTER_APP_FLAVOR" \
+            --dart-define=BOOKINGS_IOS_API_KEY="$BOOKINGS_IOS_API_KEY" \
+            --dart-define=BOOKINGS_IOS_APP_ID="$BOOKINGS_IOS_APP_ID" \
+            --dart-define=BOOKINGS_IOS_BUNDLE_ID="$BOOKINGS_IOS_BUNDLE_ID" \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist="$HOME/export_options.plist"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
