@@ -136,7 +136,7 @@ workflows:
         BOOKINGS_IOS_BUNDLE_ID: "com.andalus.aqar.staging"
       ios_signing:
         provisioning_profiles:
-          - "Aqar FCM Staging ios_app_store 1792230067"
+          - aqar_bookings_staging_app_store
         certificates:
           - rafcut_distribution
       flutter: stable
