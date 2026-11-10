@@ -128,7 +128,6 @@ workflows:
     environment:
       groups:
         - appstore_credentials
-        - ios_config
         - media_full_test
       vars:
         FLUTTER_APP_FLAVOR: "bookingsStaging"
@@ -136,8 +135,10 @@ workflows:
         BOOKINGS_IOS_APP_ID: "1:463930605039:ios:9c2430877d2f70b73dca1a"
         BOOKINGS_IOS_BUNDLE_ID: "com.andalus.aqar.staging"
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.andalus.aqar.staging
+        provisioning_profiles:
+          - "Aqar FCM Staging ios_app_store 1792230067"
+        certificates:
+          - rafcut_distribution
       flutter: stable
       xcode: latest
 
@@ -222,20 +223,11 @@ workflows:
           echo "✓ Verified Entitlements via PlistBuddy/plutil: aps-environment=$APS_ENV, applesignin=$APPLE_SIGNIN"
           echo "=== All Staging Pre-Build Checks Passed Successfully ==="
 
-      - name: Initialize signing keychain
-        script: keychain initialize
-
-      - name: Fetch App Store signing files
-        script: |
-          app-store-connect fetch-signing-files "$BOOKINGS_IOS_BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-
       - name: Install signing certificate
-        script: keychain add-certificates
-
-      - name: Apply provisioning profiles
-        script: xcode-project use-profiles
+        script: |
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Verify applied build settings and provisioning profiles
         script: |
