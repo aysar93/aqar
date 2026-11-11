@@ -168,6 +168,11 @@ workflows:
           cp ios/BookingsStaging/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
           cp ios/BookingsStaging/Runner.entitlements ios/Runner/Runner.entitlements
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar;/PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's|CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;|CODE_SIGN_ENTITLEMENTS = BookingsStaging/Runner.entitlements;|g' ios/Runner.xcodeproj/project.pbxproj
+          if ! grep -q "CODE_SIGN_ENTITLEMENTS = BookingsStaging/Runner.entitlements;" ios/Runner.xcodeproj/project.pbxproj; then
+            echo "ERROR: Failed to update CODE_SIGN_ENTITLEMENTS to BookingsStaging/Runner.entitlements in project.pbxproj!"
+            exit 1
+          fi
           echo '#include "../BookingsStaging/Staging.xcconfig"' >> ios/Flutter/Release.xcconfig
 
       - name: Verify Staging configuration and isolation
@@ -230,6 +235,10 @@ workflows:
       - name: Verify applied build settings and provisioning profiles
         script: |
           set -e
+          TMP_DIR=$(mktemp -d)
+          trap 'rm -rf "$TMP_DIR"' EXIT
+          PLIST_BUDDY="/usr/libexec/PlistBuddy"
+
           echo "=== Verifying Target Runner Xcode Release Build Settings Post-Profiles ==="
 
           # 1. Run xcodebuild -showBuildSettings specifically for target Runner and configuration Release
@@ -244,105 +253,213 @@ workflows:
           fi
 
           # 2. Verify PRODUCT_BUNDLE_IDENTIFIER in target Runner Release settings
-          ACTUAL_BUNDLE_ID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]')
+          ACTUAL_BUNDLE_ID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER[[:space:]]*=' | head -n 1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//')
           if [ "$ACTUAL_BUNDLE_ID" != "com.andalus.aqar.staging" ]; then
             echo "ERROR: Target Runner Release PRODUCT_BUNDLE_IDENTIFIER is '$ACTUAL_BUNDLE_ID', expected 'com.andalus.aqar.staging'!"
             exit 1
           fi
           echo "✓ Verified xcodebuild Release PRODUCT_BUNDLE_IDENTIFIER = $ACTUAL_BUNDLE_ID"
 
-          # 3. Verify CODE_SIGN_ENTITLEMENTS in target Runner Release settings
-          ACTUAL_ENTITLEMENTS=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*CODE_SIGN_ENTITLEMENTS[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]')
-          if [ -z "$ACTUAL_ENTITLEMENTS" ] || [ ! -f "ios/$ACTUAL_ENTITLEMENTS" ]; then
-            echo "ERROR: Target Runner Release CODE_SIGN_ENTITLEMENTS is invalid or missing: '$ACTUAL_ENTITLEMENTS'!"
+          # 3. Verify CODE_SIGN_STYLE is Manual
+          ACTUAL_SIGN_STYLE=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*CODE_SIGN_STYLE[[:space:]]*=' | head -n 1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//')
+          echo "Target Runner CODE_SIGN_STYLE: '$ACTUAL_SIGN_STYLE'"
+          if [ "$ACTUAL_SIGN_STYLE" != "Manual" ]; then
+            echo "ERROR: Target Runner Release CODE_SIGN_STYLE is '$ACTUAL_SIGN_STYLE', expected 'Manual'!"
             exit 1
           fi
-          echo "✓ Verified xcodebuild Release CODE_SIGN_ENTITLEMENTS = $ACTUAL_ENTITLEMENTS"
+          echo "✓ Verified xcodebuild Release CODE_SIGN_STYLE = Manual"
 
-          # 4. Extract DEVELOPMENT_TEAM from target Runner Release settings
-          XCODE_TEAM_ID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]"')
+          # 4. Verify CODE_SIGN_ENTITLEMENTS strictly points to BookingsStaging/Runner.entitlements and inspect its contents
+          ACTUAL_ENTITLEMENTS=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*CODE_SIGN_ENTITLEMENTS[[:space:]]*=' | head -n 1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//')
+          if [ "$ACTUAL_ENTITLEMENTS" != "BookingsStaging/Runner.entitlements" ] || [ ! -f "ios/$ACTUAL_ENTITLEMENTS" ]; then
+            echo "ERROR: Target Runner Release CODE_SIGN_ENTITLEMENTS is '$ACTUAL_ENTITLEMENTS', expected 'BookingsStaging/Runner.entitlements'!"
+            exit 1
+          fi
+          ENT_APS=$("$PLIST_BUDDY" -c "Print :aps-environment" "ios/$ACTUAL_ENTITLEMENTS" 2>/dev/null || true)
+          ENT_SIGNIN=$("$PLIST_BUDDY" -c "Print :com.apple.developer.applesignin:0" "ios/$ACTUAL_ENTITLEMENTS" 2>/dev/null || true)
+          if [ "$ENT_APS" != "production" ] || [ "$ENT_SIGNIN" != "Default" ]; then
+            echo "ERROR: ios/$ACTUAL_ENTITLEMENTS has invalid entitlements (aps-environment='$ENT_APS', applesignin='$ENT_SIGNIN')!"
+            exit 1
+          fi
+          echo "✓ Verified xcodebuild Release CODE_SIGN_ENTITLEMENTS = $ACTUAL_ENTITLEMENTS (aps-environment=production, applesignin=Default)"
+
+          # 5. Extract DEVELOPMENT_TEAM (necessary, NOT sufficient proof of provisioning profile binding)
+          XCODE_TEAM_ID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=' | head -n 1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//')
           echo "Target Runner DEVELOPMENT_TEAM: '$XCODE_TEAM_ID'"
-          if [ -z "$XCODE_TEAM_ID" ]; then
-            echo "ERROR: DEVELOPMENT_TEAM is missing or empty in target Runner Release build settings!"
+          if [ "$XCODE_TEAM_ID" != "H96JUT8PUM" ]; then
+            echo "ERROR: Target Runner Release DEVELOPMENT_TEAM is '$XCODE_TEAM_ID', expected 'H96JUT8PUM'!"
+            exit 1
+          fi
+          echo "✓ Verified DEVELOPMENT_TEAM = $XCODE_TEAM_ID (continuing to verify explicit profile & export_options binding)"
+
+          # 6. Inspect both PROVISIONING_PROFILE and PROVISIONING_PROFILE_SPECIFIER
+          APPLIED_PROFILE_UUID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PROVISIONING_PROFILE[[:space:]]*=' | head -n 1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//')
+          APPLIED_PROFILE_SPECIFIER=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PROVISIONING_PROFILE_SPECIFIER[[:space:]]*=' | head -n 1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//')
+          echo "Target Runner PROVISIONING_PROFILE:           '$APPLIED_PROFILE_UUID'"
+          echo "Target Runner PROVISIONING_PROFILE_SPECIFIER: '$APPLIED_PROFILE_SPECIFIER'"
+          if [ -z "$APPLIED_PROFILE_UUID" ] && [ -z "$APPLIED_PROFILE_SPECIFIER" ]; then
+            echo "ERROR: Both PROVISIONING_PROFILE and PROVISIONING_PROFILE_SPECIFIER are empty in target Runner Release settings!"
             exit 1
           fi
 
-          # 5. Extract applied PROVISIONING_PROFILE UUID strictly (disallowing specifier or name fallbacks)
-          APPLIED_PROFILE_UUID=$(echo "$RUNNER_SETTINGS" | grep -E '^[[:space:]]*PROVISIONING_PROFILE[[:space:]]*=' | head -n 1 | awk -F '=' '{print $2}' | tr -d '[:space:]"')
-          echo "Target Runner applied PROVISIONING_PROFILE (UUID): '$APPLIED_PROFILE_UUID'"
-          if [ -z "$APPLIED_PROFILE_UUID" ]; then
-            echo "ERROR: Actual PROVISIONING_PROFILE (UUID) could not be extracted from target Runner Xcode Release build settings!"
-            echo "Matching by name or specifier is strictly disabled. Provisioning Profile UUID is required."
+          # 7. Require $HOME/export_options.plist and read provisioningProfiles for com.andalus.aqar.staging
+          EXPORT_OPTIONS_PLIST="$HOME/export_options.plist"
+          if [ ! -f "$EXPORT_OPTIONS_PLIST" ]; then
+            echo "ERROR: Required $EXPORT_OPTIONS_PLIST is missing!"
             exit 1
           fi
-
-          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          if [ ! -d "$PROFILES_DIR" ]; then
-            echo "ERROR: Provisioning Profiles directory does not exist: $PROFILES_DIR"
+          EXPORT_PROFILE_VALUE=$("$PLIST_BUDDY" -c "Print :provisioningProfiles:com.andalus.aqar.staging" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true)
+          if [ -z "$EXPORT_PROFILE_VALUE" ]; then
+            echo "ERROR: $EXPORT_OPTIONS_PLIST does not contain :provisioningProfiles:com.andalus.aqar.staging!"
             exit 1
           fi
+          EXPORT_TEAM_ID=$("$PLIST_BUDDY" -c "Print :teamID" "$EXPORT_OPTIONS_PLIST" 2>/dev/null || true)
+          if [ -n "$EXPORT_TEAM_ID" ] && [ "$EXPORT_TEAM_ID" != "$XCODE_TEAM_ID" ]; then
+            echo "ERROR: $EXPORT_OPTIONS_PLIST teamID '$EXPORT_TEAM_ID' does not match '$XCODE_TEAM_ID'!"
+            exit 1
+          fi
+          echo "export_options.plist provisioningProfiles[com.andalus.aqar.staging] = '$EXPORT_PROFILE_VALUE'"
 
-          # 6. Locate the exact Provisioning Profile file containing the applied UUID
+          # 8. Scan both standard Provisioning Profiles directories and both file extensions, deduplicating by UUID
+          SEARCH_DIRS_FOUND=0
+          CANDIDATE_COUNT=0
+          MATCH_COUNT=0
           MATCHED_PROFILE=""
-          for p in "$PROFILES_DIR"/*.mobileprovision; do
-            [ -e "$p" ] || continue
-            DECODED_PLIST=$(security cms -D -i "$p" 2>/dev/null || true)
-            P_UUID=$(echo "$DECODED_PLIST" | grep -A1 "<key>UUID</key>" | grep "<string>" | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
-            if [ "$P_UUID" = "$APPLIED_PROFILE_UUID" ]; then
-              MATCHED_PROFILE="$p"
-              break
-            fi
+          MATCHED_PLIST=""
+          MATCHED_UUID=""
+          MATCHED_NAME=""
+
+          for dir in \
+            "$HOME/Library/MobileDevice/Provisioning Profiles" \
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            [ -d "$dir" ] || continue
+            SEARCH_DIRS_FOUND=$((SEARCH_DIRS_FOUND + 1))
+            for ext in mobileprovision provisionprofile; do
+              for p in "$dir"/*."$ext"; do
+                [ -e "$p" ] || continue
+                CANDIDATE_COUNT=$((CANDIDATE_COUNT + 1))
+                TMP_PLIST="$TMP_DIR/candidate_${CANDIDATE_COUNT}.plist"
+                if ! security cms -D -i "$p" > "$TMP_PLIST" 2>/dev/null; then
+                  continue
+                fi
+                P_UUID=$("$PLIST_BUDDY" -c "Print :UUID" "$TMP_PLIST" 2>/dev/null || true)
+                P_NAME=$("$PLIST_BUDDY" -c "Print :Name" "$TMP_PLIST" 2>/dev/null || true)
+                if [ -z "$P_UUID" ]; then
+                  continue
+                fi
+
+                # Deduplicate identical profiles copied across both standard directories by UUID
+                P_SHA256=$(shasum -a 256 "$p" | awk '{print $1}')
+                SEEN_MARKER="$TMP_DIR/seen_uuid_${P_UUID}"
+                if [ -f "$SEEN_MARKER" ]; then
+                  PREV_SHA256=$(cat "$SEEN_MARKER")
+                  if [ "$PREV_SHA256" != "$P_SHA256" ]; then
+                    echo "ERROR: Conflicting provisioning profile files share the same UUID '$P_UUID'!"
+                    exit 1
+                  fi
+                  continue
+                fi
+                echo "$P_SHA256" > "$SEEN_MARKER"
+
+                IS_MATCH=1
+                if [ -n "$APPLIED_PROFILE_UUID" ] && [ "$P_UUID" != "$APPLIED_PROFILE_UUID" ]; then
+                  IS_MATCH=0
+                fi
+                if [ -n "$APPLIED_PROFILE_SPECIFIER" ] && [ "$P_NAME" != "$APPLIED_PROFILE_SPECIFIER" ] && [ "$P_UUID" != "$APPLIED_PROFILE_SPECIFIER" ]; then
+                  IS_MATCH=0
+                fi
+
+                if [ "$IS_MATCH" -eq 1 ]; then
+                  MATCH_COUNT=$((MATCH_COUNT + 1))
+                  MATCHED_PROFILE="$p"
+                  MATCHED_PLIST="$TMP_PLIST"
+                  MATCHED_UUID="$P_UUID"
+                  MATCHED_NAME="$P_NAME"
+                fi
+              done
+            done
           done
 
-          if [ -z "$MATCHED_PROFILE" ] || [ ! -f "$MATCHED_PROFILE" ]; then
-            echo "ERROR: No Provisioning Profile found in $PROFILES_DIR containing exact UUID '$APPLIED_PROFILE_UUID'!"
+          if [ "$SEARCH_DIRS_FOUND" -eq 0 ]; then
+            echo "ERROR: Neither standard Provisioning Profiles directory exists under $HOME/Library!"
             exit 1
           fi
 
-          echo "Found exact applied provisioning profile file: $(basename "$MATCHED_PROFILE")"
-          DECODED=$(security cms -D -i "$MATCHED_PROFILE")
-
-          # 7. Extract Team ID from Profile and verify match with Xcode DEVELOPMENT_TEAM
-          PROFILE_TEAM_ID=$(echo "$DECODED" | grep -A2 "<key>com.apple.developer.team-identifier</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
-          if [ -z "$PROFILE_TEAM_ID" ]; then
-            PROFILE_TEAM_ID=$(echo "$DECODED" | grep -A2 "<key>TeamIdentifier</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
-          fi
-          echo "Provisioning Profile Team ID: '$PROFILE_TEAM_ID'"
-
-          if [ -z "$PROFILE_TEAM_ID" ]; then
-            echo "ERROR: Could not extract Team ID from applied Provisioning Profile!"
+          if [ "$MATCH_COUNT" -eq 0 ] || [ -z "$MATCHED_PROFILE" ]; then
+            echo "ERROR: No single installed Provisioning Profile (.mobileprovision/.provisionprofile) satisfied all applied references (PROVISIONING_PROFILE='$APPLIED_PROFILE_UUID', PROVISIONING_PROFILE_SPECIFIER='$APPLIED_PROFILE_SPECIFIER')!"
             exit 1
           fi
 
+          if [ "$MATCH_COUNT" -gt 1 ]; then
+            echo "ERROR: Ambiguous match! $MATCH_COUNT distinct Provisioning Profile UUIDs matched SPECIFIER='$APPLIED_PROFILE_SPECIFIER'!"
+            exit 1
+          fi
+
+          echo "Matched unique Provisioning Profile:"
+          echo "  File: $MATCHED_PROFILE"
+          echo "  UUID: $MATCHED_UUID"
+          echo "  Name: $MATCHED_NAME"
+
+          # Verify consistency across PROVISIONING_PROFILE, PROVISIONING_PROFILE_SPECIFIER, and export_options.plist
+          if [ -n "$APPLIED_PROFILE_UUID" ] && [ "$MATCHED_UUID" != "$APPLIED_PROFILE_UUID" ]; then
+            echo "ERROR: Matched profile UUID '$MATCHED_UUID' conflicts with PROVISIONING_PROFILE '$APPLIED_PROFILE_UUID'!"
+            exit 1
+          fi
+          if [ -n "$APPLIED_PROFILE_SPECIFIER" ] && [ "$MATCHED_NAME" != "$APPLIED_PROFILE_SPECIFIER" ] && [ "$MATCHED_UUID" != "$APPLIED_PROFILE_SPECIFIER" ]; then
+            echo "ERROR: Matched profile (UUID='$MATCHED_UUID', Name='$MATCHED_NAME') conflicts with PROVISIONING_PROFILE_SPECIFIER '$APPLIED_PROFILE_SPECIFIER'!"
+            exit 1
+          fi
+          if [ "$EXPORT_PROFILE_VALUE" != "$MATCHED_UUID" ] && [ "$EXPORT_PROFILE_VALUE" != "$MATCHED_NAME" ]; then
+            echo "ERROR: $EXPORT_OPTIONS_PLIST specifies '$EXPORT_PROFILE_VALUE', which conflicts with matched profile (UUID='$MATCHED_UUID', Name='$MATCHED_NAME')!"
+            exit 1
+          fi
+          echo "✓ Verified PROVISIONING_PROFILE, PROVISIONING_PROFILE_SPECIFIER, and export_options.plist all resolve to the same profile"
+
+          # 9. Verify Team ID and Entitlements in matched profile using PlistBuddy
+          PROFILE_TEAM_ID=$("$PLIST_BUDDY" -c "Print :TeamIdentifier:0" "$MATCHED_PLIST" 2>/dev/null || true)
+          PROFILE_ENT_TEAM_ID=$("$PLIST_BUDDY" -c "Print :Entitlements:com.apple.developer.team-identifier" "$MATCHED_PLIST" 2>/dev/null || true)
+          if [ -z "$PROFILE_TEAM_ID" ]; then
+            echo "ERROR: Could not extract :TeamIdentifier:0 from matched Provisioning Profile!"
+            exit 1
+          fi
           if [ "$XCODE_TEAM_ID" != "$PROFILE_TEAM_ID" ]; then
-            echo "ERROR: Team ID mismatch! Xcode DEVELOPMENT_TEAM ($XCODE_TEAM_ID) does not match Profile Team ID ($PROFILE_TEAM_ID)!"
+            echo "ERROR: Team ID mismatch! Xcode DEVELOPMENT_TEAM ($XCODE_TEAM_ID) != Profile TeamIdentifier ($PROFILE_TEAM_ID)!"
             exit 1
           fi
-          echo "✓ Verified Team ID match: Xcode DEVELOPMENT_TEAM ($XCODE_TEAM_ID) == Profile Team ID ($PROFILE_TEAM_ID)"
+          if [ -n "$PROFILE_ENT_TEAM_ID" ] && [ "$PROFILE_ENT_TEAM_ID" != "$XCODE_TEAM_ID" ]; then
+            echo "ERROR: Profile Entitlements team-identifier ($PROFILE_ENT_TEAM_ID) != Xcode DEVELOPMENT_TEAM ($XCODE_TEAM_ID)!"
+            exit 1
+          fi
+          echo "✓ Verified Team ID match: $XCODE_TEAM_ID"
 
-          # 8. Verify application-identifier strictly equals TEAM_ID.com.andalus.aqar.staging
-          PROFILE_APP_ID=$(echo "$DECODED" | grep -A1 "<key>application-identifier</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
-          EXPECTED_APP_ID="${XCODE_TEAM_ID}.com.andalus.aqar.staging"
+          # 10. Read ApplicationIdentifierPrefix from profile and verify application-identifier strictly equals <Prefix>.com.andalus.aqar.staging
+          PROFILE_PREFIX=$("$PLIST_BUDDY" -c "Print :ApplicationIdentifierPrefix:0" "$MATCHED_PLIST" 2>/dev/null || true)
+          if [ -z "$PROFILE_PREFIX" ]; then
+            echo "ERROR: Could not extract :ApplicationIdentifierPrefix:0 from matched Provisioning Profile!"
+            exit 1
+          fi
+          PROFILE_APP_ID=$("$PLIST_BUDDY" -c "Print :Entitlements:application-identifier" "$MATCHED_PLIST" 2>/dev/null || true)
+          EXPECTED_APP_ID="${PROFILE_PREFIX}.com.andalus.aqar.staging"
+          echo "Profile ApplicationIdentifierPrefix: '$PROFILE_PREFIX'"
           echo "Applied profile application-identifier: '$PROFILE_APP_ID'"
           echo "Expected application-identifier:        '$EXPECTED_APP_ID'"
-
           if [ "$PROFILE_APP_ID" != "$EXPECTED_APP_ID" ]; then
             echo "ERROR: Profile application-identifier '$PROFILE_APP_ID' does NOT match expected '$EXPECTED_APP_ID'!"
             exit 1
           fi
           echo "✓ Verified application-identifier exactly equals $EXPECTED_APP_ID"
 
-          # 9. Verify aps-environment in Profile Entitlements
-          APS_IN_PROFILE=$(echo "$DECODED" | grep -A1 "<key>aps-environment</key>" | grep "<string>" | head -n 1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/' | tr -d '[:space:]')
+          # 11. Verify aps-environment and Sign in with Apple in Profile Entitlements
+          APS_IN_PROFILE=$("$PLIST_BUDDY" -c "Print :Entitlements:aps-environment" "$MATCHED_PLIST" 2>/dev/null || true)
           if [ "$APS_IN_PROFILE" != "production" ]; then
             echo "ERROR: Applied Provisioning Profile aps-environment is '$APS_IN_PROFILE', expected 'production'!"
             exit 1
           fi
           echo "✓ Verified Profile aps-environment = production"
 
-          # 10. Verify Sign in with Apple in Profile Entitlements
-          if ! echo "$DECODED" | grep -A2 "<key>com.apple.developer.applesignin</key>" | grep -q "<string>Default</string>"; then
-            echo "ERROR: Applied Provisioning Profile lacks 'Default' Sign in with Apple capability!"
+          SIGNIN_IN_PROFILE=$("$PLIST_BUDDY" -c "Print :Entitlements:com.apple.developer.applesignin:0" "$MATCHED_PLIST" 2>/dev/null || true)
+          if [ "$SIGNIN_IN_PROFILE" != "Default" ]; then
+            echo "ERROR: Applied Provisioning Profile Sign in with Apple capability is '$SIGNIN_IN_PROFILE', expected 'Default'!"
             exit 1
           fi
           echo "✓ Verified Profile Sign in with Apple = Default"
@@ -363,6 +480,151 @@ workflows:
             --dart-define=BOOKINGS_IOS_BUNDLE_ID="$BOOKINGS_IOS_BUNDLE_ID" \
             --build-number="$BUILD_NUMBER" \
             --export-options-plist="$HOME/export_options.plist"
+
+      - name: Verify built Staging IPA signature and isolation
+        script: |
+          set -e
+          PLIST_BUDDY="/usr/libexec/PlistBuddy"
+          IPA_TMP=$(mktemp -d)
+          trap 'rm -rf "$IPA_TMP"' EXIT
+
+          echo "=== Verifying Built Staging IPA Archive ==="
+
+          IPA_COUNT=0
+          IPA_PATH=""
+          for f in build/ios/ipa/*.ipa; do
+            [ -e "$f" ] || continue
+            IPA_COUNT=$((IPA_COUNT + 1))
+            IPA_PATH="$f"
+          done
+          if [ "$IPA_COUNT" -ne 1 ] || [ -z "$IPA_PATH" ]; then
+            echo "ERROR: Expected exactly 1 .ipa in build/ios/ipa/, found $IPA_COUNT!"
+            exit 1
+          fi
+          echo "Inspecting IPA: $IPA_PATH"
+
+          unzip -q "$IPA_PATH" -d "$IPA_TMP"
+          APP_COUNT=0
+          APP_DIR=""
+          for a in "$IPA_TMP"/Payload/*.app; do
+            [ -d "$a" ] || continue
+            APP_COUNT=$((APP_COUNT + 1))
+            APP_DIR="$a"
+          done
+          if [ "$APP_COUNT" -ne 1 ] || [ -z "$APP_DIR" ]; then
+            echo "ERROR: Expected exactly 1 .app bundle in IPA Payload/, found $APP_COUNT!"
+            exit 1
+          fi
+          echo "Inspecting App Bundle: $(basename "$APP_DIR")"
+
+          # 1. Verify Bundle ID in IPA Info.plist
+          IPA_BUNDLE_ID=$("$PLIST_BUDDY" -c "Print :CFBundleIdentifier" "$APP_DIR/Info.plist" 2>/dev/null || true)
+          if [ "$IPA_BUNDLE_ID" != "com.andalus.aqar.staging" ]; then
+            echo "ERROR: IPA CFBundleIdentifier is '$IPA_BUNDLE_ID', expected 'com.andalus.aqar.staging'!"
+            exit 1
+          fi
+          echo "✓ Verified IPA Info.plist CFBundleIdentifier = $IPA_BUNDLE_ID"
+
+          # 2. Verify Firebase Staging GoogleService-Info.plist inside IPA
+          if [ ! -f "$APP_DIR/GoogleService-Info.plist" ]; then
+            echo "ERROR: GoogleService-Info.plist is missing from built IPA bundle!"
+            exit 1
+          fi
+          IPA_FB_PROJECT=$("$PLIST_BUDDY" -c "Print :PROJECT_ID" "$APP_DIR/GoogleService-Info.plist" 2>/dev/null || true)
+          IPA_FB_BUNDLE=$("$PLIST_BUDDY" -c "Print :BUNDLE_ID" "$APP_DIR/GoogleService-Info.plist" 2>/dev/null || true)
+          IPA_FB_APP_ID=$("$PLIST_BUDDY" -c "Print :GOOGLE_APP_ID" "$APP_DIR/GoogleService-Info.plist" 2>/dev/null || true)
+          if [ "$IPA_FB_PROJECT" != "aqar-bookings-test-20261009" ] || \
+             [ "$IPA_FB_BUNDLE" != "com.andalus.aqar.staging" ] || \
+             [ "$IPA_FB_APP_ID" != "1:463930605039:ios:9c2430877d2f70b73dca1a" ]; then
+            echo "ERROR: IPA contains invalid GoogleService-Info.plist (PROJECT_ID='$IPA_FB_PROJECT', BUNDLE_ID='$IPA_FB_BUNDLE', GOOGLE_APP_ID='$IPA_FB_APP_ID')!"
+            exit 1
+          fi
+          echo "✓ Verified IPA GoogleService-Info.plist matches aqar-bookings-test-20261009 / com.andalus.aqar.staging"
+
+          # 3. Verify embedded.mobileprovision inside IPA
+          EMB_PROFILE="$APP_DIR/embedded.mobileprovision"
+          if [ ! -f "$EMB_PROFILE" ]; then
+            echo "ERROR: embedded.mobileprovision is missing from built IPA bundle!"
+            exit 1
+          fi
+          security cms -D -i "$EMB_PROFILE" > "$IPA_TMP/embedded_profile.plist"
+          EMB_UUID=$("$PLIST_BUDDY" -c "Print :UUID" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+          EMB_NAME=$("$PLIST_BUDDY" -c "Print :Name" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+          EMB_TEAM=$("$PLIST_BUDDY" -c "Print :TeamIdentifier:0" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+          EMB_PREFIX=$("$PLIST_BUDDY" -c "Print :ApplicationIdentifierPrefix:0" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+          EMB_APP_ID=$("$PLIST_BUDDY" -c "Print :Entitlements:application-identifier" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+          EMB_APS=$("$PLIST_BUDDY" -c "Print :Entitlements:aps-environment" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+          EMB_SIGNIN=$("$PLIST_BUDDY" -c "Print :Entitlements:com.apple.developer.applesignin:0" "$IPA_TMP/embedded_profile.plist" 2>/dev/null || true)
+
+          echo "IPA Embedded Profile UUID: $EMB_UUID"
+          echo "IPA Embedded Profile Name: $EMB_NAME"
+          if [ "$EMB_TEAM" != "H96JUT8PUM" ] || [ -z "$EMB_PREFIX" ] || [ "$EMB_APP_ID" != "${EMB_PREFIX}.com.andalus.aqar.staging" ]; then
+            echo "ERROR: IPA embedded profile ID/Team mismatch (Team='$EMB_TEAM', Prefix='$EMB_PREFIX', AppID='$EMB_APP_ID')!"
+            exit 1
+          fi
+          if [ "$EMB_APS" != "production" ] || [ "$EMB_SIGNIN" != "Default" ]; then
+            echo "ERROR: IPA embedded profile entitlements mismatch (aps-environment='$EMB_APS', applesignin='$EMB_SIGNIN')!"
+            exit 1
+          fi
+          EXPORT_PROFILE_VALUE=$("$PLIST_BUDDY" -c "Print :provisioningProfiles:com.andalus.aqar.staging" "$HOME/export_options.plist" 2>/dev/null || true)
+          if [ "$EXPORT_PROFILE_VALUE" != "$EMB_UUID" ] && [ "$EXPORT_PROFILE_VALUE" != "$EMB_NAME" ]; then
+            echo "ERROR: IPA embedded profile (UUID='$EMB_UUID', Name='$EMB_NAME') does not match export_options.plist ('$EXPORT_PROFILE_VALUE')!"
+            exit 1
+          fi
+          echo "✓ Verified IPA embedded.mobileprovision ($EMB_APP_ID, Team=$EMB_TEAM, aps=production, SignIn=Default)"
+
+          # 4. Verify codesign integrity, Team ID, Bundle Identifier, and signed binary entitlements
+          codesign --verify --deep --strict --verbose=2 "$APP_DIR"
+          codesign -dvv "$APP_DIR" > "$IPA_TMP/codesign_info.txt" 2>&1
+          cat "$IPA_TMP/codesign_info.txt"
+
+          if ! grep -q "^TeamIdentifier=H96JUT8PUM$" "$IPA_TMP/codesign_info.txt"; then
+            echo "ERROR: codesign TeamIdentifier is not H96JUT8PUM!"
+            exit 1
+          fi
+          if ! grep -q "^Identifier=com.andalus.aqar.staging$" "$IPA_TMP/codesign_info.txt"; then
+            echo "ERROR: codesign Identifier is not com.andalus.aqar.staging!"
+            exit 1
+          fi
+          if ! grep -q "^Authority=" "$IPA_TMP/codesign_info.txt"; then
+            echo "ERROR: IPA signature has no signing Authority (possible ad-hoc or unsigned build)!"
+            exit 1
+          fi
+
+          codesign -d --entitlements :- "$APP_DIR" > "$IPA_TMP/app_entitlements.plist" 2>/dev/null
+          SIGNED_APP_ID=$("$PLIST_BUDDY" -c "Print :application-identifier" "$IPA_TMP/app_entitlements.plist" 2>/dev/null || true)
+          SIGNED_TEAM_ID=$("$PLIST_BUDDY" -c "Print :com.apple.developer.team-identifier" "$IPA_TMP/app_entitlements.plist" 2>/dev/null || true)
+          SIGNED_APS=$("$PLIST_BUDDY" -c "Print :aps-environment" "$IPA_TMP/app_entitlements.plist" 2>/dev/null || true)
+          SIGNED_SIGNIN=$("$PLIST_BUDDY" -c "Print :com.apple.developer.applesignin:0" "$IPA_TMP/app_entitlements.plist" 2>/dev/null || true)
+          if [ "$SIGNED_APP_ID" != "${EMB_PREFIX}.com.andalus.aqar.staging" ] || \
+             [ "$SIGNED_TEAM_ID" != "H96JUT8PUM" ] || \
+             [ "$SIGNED_APS" != "production" ] || \
+             [ "$SIGNED_SIGNIN" != "Default" ]; then
+            echo "ERROR: Signed binary entitlements mismatch (app-id='$SIGNED_APP_ID', team='$SIGNED_TEAM_ID', aps='$SIGNED_APS', signin='$SIGNED_SIGNIN')!"
+            exit 1
+          fi
+          echo "✓ Verified codesign binary entitlements match embedded profile and Staging requirements"
+
+          # 5. Verify the IPA leaf signing certificate is included in embedded.mobileprovision DeveloperCertificates
+          codesign -d --extract-certificates="$IPA_TMP/cert" "$APP_DIR" 2>/dev/null
+          if [ ! -f "$IPA_TMP/cert0" ]; then
+            echo "ERROR: Could not extract leaf signing certificate from $APP_DIR!"
+            exit 1
+          fi
+          python3 - "$IPA_TMP/cert0" "$IPA_TMP/embedded_profile.plist" << 'PYEOF'
+          import plistlib, sys
+          with open(sys.argv[1], 'rb') as f:
+              leaf = f.read()
+          with open(sys.argv[2], 'rb') as f:
+              prof = plistlib.load(f)
+          certs = prof.get('DeveloperCertificates', [])
+          if leaf not in certs:
+              print('ERROR: IPA leaf signing certificate is NOT in embedded.mobileprovision DeveloperCertificates!')
+              sys.exit(1)
+          print('✓ Verified IPA leaf signing certificate is authorized by embedded.mobileprovision')
+          PYEOF
+
+          echo "=== Staging IPA Verification Completed Successfully ==="
 
     artifacts:
       - build/ios/ipa/*.ipa
