@@ -10,8 +10,12 @@ import 'bookings/booking_screen.dart';
 import 'theme/app_theme.dart';
 
 const bookingStagingProject = 'aqar-bookings-test-20261009';
-bool bookingStagingAllowed(String? flavor, String project) =>
-    flavor == 'bookingsStaging' && project == bookingStagingProject;
+bool bookingStagingAllowed(String? flavor, String project) {
+  if (project != bookingStagingProject) return false;
+  const envFlavor = String.fromEnvironment('BOOKINGS_APP_FLAVOR');
+  final effective = flavor ?? (envFlavor.isNotEmpty ? envFlavor : null);
+  return effective == 'bookingsStaging';
+}
 Future<void> endBookingStagingSession({
   required Future<void> Function() detachNotifications,
   required Future<void> Function() signOut,

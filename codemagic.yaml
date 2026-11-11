@@ -129,7 +129,7 @@ workflows:
       groups:
         - media_full_test
       vars:
-        FLUTTER_APP_FLAVOR: "bookingsStaging"
+        BOOKINGS_APP_FLAVOR: "bookingsStaging"
         BOOKINGS_IOS_API_KEY: "AIzaSyCq7zSLdE5YMXvwxhbYhNsMCEDNykIox-Q"
         BOOKINGS_IOS_APP_ID: "1:463930605039:ios:9c2430877d2f70b73dca1a"
         BOOKINGS_IOS_BUNDLE_ID: "com.andalus.aqar.staging"
@@ -474,7 +474,7 @@ workflows:
 
           flutter build ipa --release \
             --target=lib/bookings_ios_staging_main.dart \
-            --dart-define=FLUTTER_APP_FLAVOR="$FLUTTER_APP_FLAVOR" \
+            --dart-define=BOOKINGS_APP_FLAVOR="$BOOKINGS_APP_FLAVOR" \
             --dart-define=BOOKINGS_IOS_API_KEY="$BOOKINGS_IOS_API_KEY" \
             --dart-define=BOOKINGS_IOS_APP_ID="$BOOKINGS_IOS_APP_ID" \
             --dart-define=BOOKINGS_IOS_BUNDLE_ID="$BOOKINGS_IOS_BUNDLE_ID" \
