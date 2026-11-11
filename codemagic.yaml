@@ -127,7 +127,6 @@ workflows:
 
     environment:
       groups:
-        - appstore_credentials
         - media_full_test
       vars:
         FLUTTER_APP_FLAVOR: "bookingsStaging"
@@ -147,17 +146,6 @@ workflows:
         - $FLUTTER_ROOT/.pub-cache
 
     scripts:
-      - name: Validate Staging build prerequisites
-        script: |
-          set -e
-          echo "=== Checking Staging Environment Prerequisites ==="
-          if [ -z "$STAGING_APP_STORE_APPLE_ID" ]; then
-            echo "ERROR: STAGING_APP_STORE_APPLE_ID environment variable is missing or empty!"
-            echo "Please configure STAGING_APP_STORE_APPLE_ID in Codemagic environment variables with the numeric Apple ID of com.andalus.aqar.staging."
-            exit 1
-          fi
-          echo "✓ Verified STAGING_APP_STORE_APPLE_ID is set: $STAGING_APP_STORE_APPLE_ID"
-
       - name: Get Flutter packages
         script: flutter pub get
 
@@ -354,40 +342,8 @@ workflows:
       - name: Build Staging TestFlight IPA (Artifact Only)
         script: |
           set -e
-          echo "Resolving latest build number from App Store Connect for Apple ID: $STAGING_APP_STORE_APPLE_ID..."
-          BUILD_NUM_RAW=""
-          set +e
-          BUILD_NUM_RAW=$(app-store-connect get-latest-app-store-build-number "$STAGING_APP_STORE_APPLE_ID" 2>&1)
-          FETCH_STATUS=$?
-          set -e
-
-          if [ $FETCH_STATUS -eq 0 ]; then
-            TRIMMED=$(echo "$BUILD_NUM_RAW" | tr -d '[:space:]')
-            if [[ "$TRIMMED" =~ ^[0-9]+$ ]]; then
-              if [ "$TRIMMED" -eq 0 ]; then
-                echo "App Store Connect reported build number 0 (no builds uploaded yet). Initializing build number to 1."
-                BUILD_NUMBER=1
-              else
-                BUILD_NUMBER=$((TRIMMED + 1))
-                echo "Found existing build number: $TRIMMED -> Building number: $BUILD_NUMBER"
-              fi
-            else
-              echo "ERROR: Received unexpected non-numeric output from app-store-connect get-latest-app-store-build-number:"
-              echo "$BUILD_NUM_RAW"
-              exit 1
-            fi
-          else
-            # Exit code non-zero: ONLY accept exact known messages from the tool confirming zero builds
-            if echo "$BUILD_NUM_RAW" | grep -qiE "^(No builds found for app|No builds found|Build number not found for app)"; then
-              echo "App Store Connect confirmed: no builds exist for this app yet. Initializing build number to 1."
-              BUILD_NUMBER=1
-            else
-              echo "ERROR: Failed to fetch build number from App Store Connect (Exit Code: $FETCH_STATUS):"
-              echo "$BUILD_NUM_RAW"
-              echo "Stopping build due to connection, authentication, or query failure."
-              exit $FETCH_STATUS
-            fi
-          fi
+          BUILD_NUMBER=1
+          echo "Using local fixed staging build number: $BUILD_NUMBER"
 
           flutter build ipa --release \
             --target=lib/bookings_ios_staging_main.dart \
