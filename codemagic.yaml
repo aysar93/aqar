@@ -154,7 +154,17 @@ workflows:
 
       - name: Inject Firebase Staging configuration
         script: |
+          set -e
           echo "Injecting isolated Firebase Staging configuration into Runner..."
+          for required_file in \
+            ios/BookingsStaging/GoogleService-Info.plist \
+            ios/BookingsStaging/Runner.entitlements \
+            ios/BookingsStaging/Staging.xcconfig; do
+            if [ ! -f "$required_file" ]; then
+              echo "ERROR: Required Staging configuration file is missing: $required_file"
+              exit 1
+            fi
+          done
           cp ios/BookingsStaging/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
           cp ios/BookingsStaging/Runner.entitlements ios/Runner/Runner.entitlements
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar;/PRODUCT_BUNDLE_IDENTIFIER = com.andalus.aqar.staging;/g' ios/Runner.xcodeproj/project.pbxproj

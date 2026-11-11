@@ -8,8 +8,9 @@ FirebaseOptions bookingIosStagingOptions() {
   const bundle = String.fromEnvironment('BOOKINGS_IOS_BUNDLE_ID');
   if (key.isEmpty ||
       !appId.startsWith('1:463930605039:ios:') ||
-      bundle != 'com.andalus.aqar.bookingstest') {
-    throw StateError('Verified isolated iOS Staging configuration required');
+      bundle != 'com.andalus.aqar.staging') {
+    throw StateError(
+        'Verified isolated iOS Staging configuration required (expected com.andalus.aqar.staging exclusively)');
   }
   return const FirebaseOptions(
     apiKey: key,
