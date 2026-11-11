@@ -199,10 +199,16 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('booking-next')));
       await tester.pumpAndSettle();
 
-      // Verify Step 2 (Guest Data)
+      // Verify Step 2 (Guest Data) and enter required guest details
       expect(find.text('بيانات الحجز'), findsAtLeastNWidgets(1));
       expect(find.text('عدد الضيوف المتوقع:'), findsOneWidget);
       expect(find.byIcon(Icons.check), findsOneWidget); // Step 1 is checked
+      await tester.enterText(
+          find.widgetWithText(TextField, 'الاسم الكامل للضيف / الزبون'),
+          'ضيف تجريبي');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'رقم الهاتف للتواصل'), '07701234567');
+      await tester.pumpAndSettle();
 
       // Tap "متابعة لمراجعة الحجز" -> enters Step 3
       expect(find.text('متابعة لمراجعة الحجز'), findsOneWidget);

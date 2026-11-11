@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'booking_access_guard.dart';
 import 'booking_widgets.dart';
 
 const bookingTaskCollections = {
@@ -54,10 +55,21 @@ class BookingAdminTasks extends StatelessWidget {
                                           : 'pending')
                               .snapshots(includeMetadataChanges: true),
                       builder: (context, s) {
-                        final verified = s.hasData &&
-                            !s.hasError &&
-                            !s.data!.metadata.isFromCache &&
-                            !s.data!.metadata.hasPendingWrites;
+                        final isCache = s.hasData &&
+                            (s.data!.metadata.isFromCache ||
+                                s.data!.metadata.hasPendingWrites);
+                        final info = BookingAccessGuard.classifySnapshot(
+                          snapshot: s,
+                          isFromCache: isCache,
+                          hasPendingWrites:
+                              s.data?.metadata.hasPendingWrites ?? false,
+                          cacheGraceElapsed: s.connectionState !=
+                              ConnectionState.waiting,
+                          cachedTitle: 'يلزم اتصال للتحقق من الصلاحية',
+                          cachedDetail: 'تأكد من الاتصال لتحديث العداد',
+                          permissionDetail: 'هذا القسم للإدارة المخولة فقط',
+                        );
+                        final verified = info.isVerified;
                         return Card(
                             margin: EdgeInsets.zero,
                             child: InkWell(
@@ -82,14 +94,16 @@ class BookingAdminTasks extends StatelessWidget {
                                                   ? (s.data!.docs.isEmpty
                                                       ? 'لا مهام معلقة'
                                                       : '${s.data!.docs.length}')
-                                                  : 'غير متاح',
+                                                  : (s.hasError ? 'غير مخوّل' : 'غير متاح'),
                                               style: const TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.w700)),
                                           if (!verified)
-                                            const Text(
-                                                'يلزم اتصال وتحقق من الصلاحية',
-                                                style: TextStyle(fontSize: 12)),
+                                            Text(
+                                                s.hasError
+                                                    ? info.title
+                                                    : info.detail,
+                                                style: const TextStyle(fontSize: 12)),
                                         ]))));
                       }))
           ]);

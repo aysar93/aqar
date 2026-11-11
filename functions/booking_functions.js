@@ -4,7 +4,7 @@ const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getStorage} = require('firebase-admin/storage');
 const {createHash, randomBytes} = require('node:crypto');
-const {overlaps, blocks, money, venueDeposit, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement} = require('./booking_policy');
+const {overlaps, blocks, money, venueDeposit, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement, resolveBookingRecipients, validateGuestInput} = require('./booking_policy');
 const db = getFirestore();
 const discovery = require('./booking_discovery');
 const {CONFIG, available, recipient} = require('./payment_accounts');
@@ -349,11 +349,13 @@ exports.saveBookingVenue = onCall(async r => {
 });
 exports.requestBooking = onCall(async r => {
   const u = await actor(r), d = r.data, customer = person(u);
+  const guest = policy(() => validateGuestInput(d, customer));
   const ref = db.doc(`bookings/${u.uid}_${id(d.requestId)}`), venueRef = db.doc(`booking_venues/${id(d.venueId)}`);
   const start = Number(d.start), end = Number(d.end);
   if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start <= Date.now() || end <= start || end-start > 31*86400000) fail('موعد غير صالح');
   await db.runTransaction(async tx => {
     const u=await actor(r,tx),customer=person(u);
+    const validatedGuest = policy(() => validateGuestInput(d, customer));
     const existing = await tx.get(ref); if (existing.exists) return;
     const venue = (await tx.get(venueRef)).data();
     if (!venue?.cancellationPolicy) fail('يجب على الإدارة تهيئة سياسة الإلغاء للمكان');
@@ -391,7 +393,7 @@ exports.requestBooking = onCall(async r => {
     if (occupied.docs.some(s => blocks(s.data(),Date.now()) && overlaps({start,end},s.data()))) fail('الموعد محجوز');
     tx.create(ref, {venueId:venueRef.id, venueName:venue.name, category:venue.category, location:venue.location,
       ownerId:venue.ownerId, ownerName:ownerDetails.name, ownerPhone:ownerDetails.phone,
-      customerId:u.uid, customerName:customer.name, customerPhone:customer.phone,
+      customerId:u.uid, customerName:validatedGuest.customerName, customerPhone:validatedGuest.customerPhone, guestCount:validatedGuest.guestCount,
       start,end,total:priced.total,pricing:priced.pricing,commissionBps:venue.commissionBps || 0,commissionBasis:'deposit',cancellationPolicy:venue.cancellationPolicy || null,deposit:expectedDeposit,paid:0,remaining:priced.total,terms:venue.terms,
       notes:typeof d.notes === 'string' ? d.notes.slice(0,1000) : '', status:'requested', version:0,
       createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
@@ -490,18 +492,99 @@ exports.actOnBooking = onCall({memory:'512MiB',timeoutSeconds:120},async r => {
     tx.update(venueRef,{bookingRevision:FieldValue.increment(1)});
   }); return {ok:true};
 });
+exports.reportBookingVenue = onCall(async r => {
+  const u = await actor(r);
+  const venueId = id(r.data.venueId);
+  const vDoc = await db.doc(`booking_venues/${venueId}`).get();
+  if (!vDoc.exists) throw new HttpsError('not-found', 'المكان غير موجود');
+  const v = vDoc.data();
+  const reason = text(r.data.reason, 100);
+  const details = typeof r.data.details === 'string' ? r.data.details.trim().slice(0, 1000) : '';
+
+  const openReports = await db.collection('booking_reports')
+    .where('userId', '==', u.uid)
+    .where('status', '==', 'open')
+    .get();
+  if (openReports.size >= 5) {
+    throw new HttpsError('resource-exhausted', 'يرجى انتظار معالجة البلاغات المفتوحة أولاً');
+  }
+
+  const reportId = `venue_${venueId}_${u.uid}`;
+  const ref = db.doc(`booking_reports/${reportId}`);
+  const existing = await ref.get();
+  if (existing.exists && existing.data().status === 'open') {
+    throw new HttpsError('already-exists', 'لديك بلاغ مفتوح لهذا المكان بالفعل');
+  }
+
+  await ref.set({
+    reportId,
+    type: 'venue',
+    venueId,
+    venueName: v.name || 'شاليه',
+    ownerId: v.ownerId,
+    userId: u.uid,
+    userName: person(u).name,
+    reason,
+    details,
+    status: 'open',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  return { ok: true, id: reportId };
+});
+
 exports.reportBooking = onCall(async r => {
-  const u=await actor(r), ref=db.doc(`bookings/${id(r.data.bookingId)}`), b=(await ref.get()).data();
-  if (!b || ![b.customerId,b.ownerId].includes(u.uid)) throw new HttpsError('permission-denied','الحجز خاص');
-  await db.doc(`booking_reports/${ref.id}_${u.uid}`).set({bookingId:ref.id,userId:u.uid,userName:person(u).name,venueName:b.venueName,
-    reason:text(r.data.reason),status:'open',createdAt:FieldValue.serverTimestamp()}); return {ok:true};
+  const u = await actor(r);
+  const bookingId = id(r.data.bookingId);
+  const ref = db.doc(`bookings/${bookingId}`);
+  const b = (await ref.get()).data();
+  if (!b || ![b.customerId, b.ownerId].includes(u.uid)) throw new HttpsError('permission-denied', 'الحجز خاص بأطرافه فقط');
+  const reason = text(r.data.reason, 100);
+  const details = typeof r.data.details === 'string' ? r.data.details.trim().slice(0, 1000) : '';
+
+  const openReports = await db.collection('booking_reports')
+    .where('userId', '==', u.uid)
+    .where('status', '==', 'open')
+    .get();
+  if (openReports.size >= 5) {
+    throw new HttpsError('resource-exhausted', 'يرجى انتظار معالجة البلاغات المفتوحة أولاً');
+  }
+
+  const reportId = `${ref.id}_${u.uid}`;
+  const reportRef = db.doc(`booking_reports/${reportId}`);
+  const existing = await reportRef.get();
+  if (existing.exists && existing.data().status === 'open') {
+    throw new HttpsError('already-exists', 'لديك بلاغ مفتوح لهذا الحجز بالفعل');
+  }
+
+  await reportRef.set({
+    reportId,
+    type: 'booking',
+    bookingId: ref.id,
+    venueId: b.venueId || '',
+    venueName: b.venueName || '',
+    ownerId: b.ownerId,
+    customerId: b.customerId,
+    userId: u.uid,
+    userName: person(u).name,
+    reason,
+    details,
+    status: 'open',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  return { ok: true, id: reportId };
 });
 exports.bookingNotifications = onDocumentWritten({document:'bookings/{bookingId}',retry:true}, async event => {
   const b=event.data.after.data(), before=event.data.before.data();
   if (!b || before?.status===b.status && before?.refundStatus===b.refundStatus) return;
   const admins=await db.collection('users').where('isAdmin','==',true).get();
   const reviewers=await db.collection('users').where('canReviewBookingPayments','==',true).get();
-  const recipients=new Set([b.customerId,b.ownerId,...reviewers.docs.filter(s=>!s.data().isBlocked).map(s=>s.id),...admins.docs.filter(s=>!s.data().isBlocked).map(s=>s.id)]);
+  const adminIds = admins.docs.filter(s=>!s.data().isBlocked).map(s=>s.id);
+  const reviewerIds = reviewers.docs.filter(s=>!s.data().isBlocked).map(s=>s.id);
+  const recipients = resolveBookingRecipients(b, { reviewers: reviewerIds, admins: adminIds });
   for (const userId of recipients) {
     const recipientUser=(await db.doc(`users/${userId}`).get()).data();
     if(!recipientUser || recipientUser.isBlocked) continue;
@@ -549,28 +632,197 @@ exports.moderateBookingReview = onCall(async r => {
   }); return {ok:true};
 });
 exports.openBookingSupportTicket = onCall(async r => {
-  const bookingId=id(r.data.bookingId), ref=db.doc(`booking_support/${id(r.auth?.uid)}_${id(r.data.requestId)}`);
-  const subject=text(r.data.subject,200), message=text(r.data.message,2000);
-  await db.runTransaction(async tx=>{
-    const u=await actor(r,tx), b=(await tx.get(db.doc(`bookings/${bookingId}`))).data();
-    if(!b || ![b.customerId,b.ownerId].includes(u.uid)) fail('الدعم لأطراف الحجز فقط');
-    const existing=await tx.get(ref);
-    if(existing.exists) return;
-    const open=await tx.get(db.collection('booking_support').where('userId','==',u.uid));
-    if(open.docs.filter(d=>d.data().status!=='resolved').length>=5) fail('تابع التذاكر المفتوحة أولًا');
-    tx.create(ref,{bookingId,userId:u.uid,subject,message,status:'open',createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
-  }); return {id:ref.id};
+  const bookingId = id(r.data.bookingId);
+  const requestId = id(r.data.requestId);
+  const ref = db.doc(`booking_support/${id(r.auth?.uid)}_${requestId}`);
+  const subject = text(r.data.subject, 200);
+  const message = text(r.data.message, 2000);
+  const disputeType = typeof r.data.disputeType === 'string' && r.data.disputeType.trim()
+    ? r.data.disputeType.trim().slice(0, 50)
+    : (typeof r.data.type === 'string' && r.data.type.trim() ? r.data.type.trim().slice(0, 50) : 'general');
+
+  await db.runTransaction(async tx => {
+    const u = await actor(r, tx);
+    const b = (await tx.get(db.doc(`bookings/${bookingId}`))).data();
+    if (!b || ![b.customerId, b.ownerId].includes(u.uid)) fail('الدعم لأطراف الحجز فقط');
+    const existing = await tx.get(ref);
+    if (existing.exists) return;
+    const open = await tx.get(db.collection('booking_support').where('userId', '==', u.uid));
+    if (open.docs.filter(d => !['resolved', 'closed'].includes(d.data().status)).length >= 5) {
+      fail('تابع التذاكر المفتوحة أولًا');
+    }
+
+    const role = u.uid === b.customerId ? 'customer' : 'owner';
+    const otherPartyId = u.uid === b.customerId ? b.ownerId : b.customerId;
+    const initialMsg = {
+      senderUid: u.uid,
+      senderName: person(u).name,
+      senderRole: role,
+      text: message,
+      createdAt: Date.now()
+    };
+
+    tx.create(ref, {
+      ticketId: ref.id,
+      bookingId,
+      venueId: b.venueId || '',
+      venueName: b.venueName || '',
+      customerId: b.customerId,
+      ownerId: b.ownerId,
+      userId: u.uid,
+      userName: person(u).name,
+      openedByRole: role,
+      otherPartyId,
+      type: disputeType,
+      subject,
+      message,
+      messages: [initialMsg],
+      status: 'open',
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+  });
+  return { id: ref.id };
 });
-exports.updateBookingSupportTicket = onCall(async r=>{
-  const ref=db.doc(`booking_support/${id(r.data.ticketId)}`), response=text(r.data.response,2000);
-  if(!['in_progress','resolved'].includes(r.data.status)) fail('حالة غير صالحة');
-  await db.runTransaction(async tx=>{
-    const u=await actor(r,tx), t=(await tx.get(ref)).data();
-    if(!t || !u.isAdmin || t.userId===u.uid) fail('للإدارة المستقلة فقط');
-    tx.update(ref,{status:r.data.status,response,assignedTo:u.uid,updatedAt:FieldValue.serverTimestamp()});
-    const note=db.collection('notifications').doc();
-    tx.create(note,{notificationId:note.id,type:'booking',bookingId:t.bookingId,target:'user',userId:t.userId,title:'دعم الحجوزات',message:'تم تحديث تذكرة الدعم',deliveryType:'external',readBy:[],createdAt:FieldValue.serverTimestamp()});
-  }); return {ok:true};
+
+exports.addBookingSupportMessage = onCall(async r => {
+  const ticketId = id(r.data.ticketId);
+  const ref = db.doc(`booking_support/${ticketId}`);
+  const msgText = text(r.data.message, 2000);
+
+  await db.runTransaction(async tx => {
+    const u = await actor(r, tx);
+    const t = (await tx.get(ref)).data();
+    if (!t) fail('التذكرة غير موجودة');
+    if (['resolved', 'closed'].includes(t.status)) fail('التذكرة مغلقة ولا تقبل ردوداً إضافية');
+    const currentCount = Array.isArray(t.messages) ? t.messages.length : 0;
+    if (currentCount >= 50) fail('تم الوصول للحد الأقصى لرسائل التذكرة (50 رسالة)');
+
+    const isCustomer = u.uid === t.customerId;
+    const isOwner = u.uid === t.ownerId;
+    const isCreator = u.uid === t.userId;
+    const isAdmin = u.isAdmin === true;
+    if (!isCustomer && !isOwner && !isCreator && !isAdmin) fail('غير مصرح لك بالرد على هذه التذكرة');
+
+    const role = isAdmin ? 'admin' : (isCustomer ? 'customer' : (isOwner ? 'owner' : 'user'));
+    const newMsg = {
+      senderUid: u.uid,
+      senderName: person(u).name,
+      senderRole: role,
+      text: msgText,
+      createdAt: Date.now()
+    };
+
+    const patch = {
+      messages: FieldValue.arrayUnion(newMsg),
+      updatedAt: FieldValue.serverTimestamp()
+    };
+
+    if (role === 'customer' && t.status === 'awaiting_customer') {
+      patch.status = 'under_review';
+    } else if (role === 'owner' && t.status === 'awaiting_owner') {
+      patch.status = 'under_review';
+    }
+
+    tx.update(ref, patch);
+
+    const targetUids = new Set();
+    if (isAdmin) {
+      if (t.customerId) targetUids.add(t.customerId);
+      if (t.ownerId) targetUids.add(t.ownerId);
+      if (t.userId) targetUids.add(t.userId);
+    } else {
+      if (t.otherPartyId) targetUids.add(t.otherPartyId);
+    }
+    targetUids.delete(u.uid);
+
+    for (const targetUid of targetUids) {
+      const note = db.collection('notifications').doc();
+      tx.create(note, {
+        notificationId: note.id,
+        type: 'booking',
+        bookingId: t.bookingId,
+        target: 'user',
+        userId: targetUid,
+        title: 'رد جديد على تذكرة الحجز',
+        message: `${person(u).name}: ${msgText.slice(0, 60)}`,
+        deliveryType: 'external',
+        readBy: [],
+        createdAt: FieldValue.serverTimestamp()
+      });
+    }
+  });
+  return { ok: true };
+});
+
+exports.updateBookingSupportTicket = onCall(async r => {
+  const ref = db.doc(`booking_support/${id(r.data.ticketId)}`);
+  const response = r.data.response ? text(r.data.response, 2000) : '';
+  const resolution = r.data.resolution ? text(r.data.resolution, 2000) : response;
+  const validStatuses = ['in_progress', 'under_review', 'awaiting_customer', 'awaiting_owner', 'resolved', 'closed'];
+  if (!validStatuses.includes(r.data.status)) fail('حالة غير صالحة');
+
+  await db.runTransaction(async tx => {
+    const u = await actor(r, tx);
+    const t = (await tx.get(ref)).data();
+    if (!t || !u.isAdmin || [t.userId, t.customerId, t.ownerId].includes(u.uid)) fail('للإدارة المستقلة فقط');
+
+    const patch = {
+      status: r.data.status,
+      assignedTo: u.uid,
+      updatedAt: FieldValue.serverTimestamp()
+    };
+
+    if (response) {
+      patch.response = response;
+      patch.messages = FieldValue.arrayUnion({
+        senderUid: u.uid,
+        senderName: person(u).name,
+        senderRole: 'admin',
+        text: response,
+        createdAt: Date.now()
+      });
+    }
+
+    if (['resolved', 'closed'].includes(r.data.status)) {
+      patch.resolution = resolution || response || 'تم إنهاء المتابعة';
+      patch.resolvedBy = u.uid;
+      patch.resolvedAt = FieldValue.serverTimestamp();
+
+      tx.create(db.collection('booking_action_audit').doc(), {
+        bookingId: t.bookingId,
+        ticketId: ref.id,
+        action: 'resolveSupportTicket',
+        actorUid: u.uid,
+        decision: r.data.status,
+        resolution: resolution || response || 'تم إنهاء المتابعة',
+        createdAt: FieldValue.serverTimestamp()
+      });
+    }
+
+    tx.update(ref, patch);
+
+    const recipients = new Set([t.userId, t.customerId, t.ownerId].filter(Boolean));
+    recipients.delete(u.uid);
+    for (const targetUid of recipients) {
+      const note = db.collection('notifications').doc();
+      tx.create(note, {
+        notificationId: note.id,
+        type: 'booking',
+        bookingId: t.bookingId,
+        target: 'user',
+        userId: targetUid,
+        title: 'تحديث تذكرة/نزاع الحجز',
+        message: ['resolved', 'closed'].includes(r.data.status)
+          ? `قرار الإدارة: ${resolution || response || 'تم حل التذكرة'}`
+          : `تم تحديث حالة التذكرة إلى: ${r.data.status}`,
+        deliveryType: 'external',
+        readBy: [],
+        createdAt: FieldValue.serverTimestamp()
+      });
+    }
+  });
+  return { ok: true };
 });
 
 // Batched discovery checks expose only IDs and availability, never guest details.

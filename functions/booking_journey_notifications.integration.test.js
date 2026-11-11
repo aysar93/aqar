@@ -23,7 +23,7 @@ test('new coverage: every journey state joins calendar and retry-safe booking no
    const event={params:{bookingId:id},data:{before,after}};
    await f.bookingNotifications.run(event);await f.bookingNotifications.run(event);
    const notes=(await db.collection('notifications').where('bookingId','==',id).get()).docs.filter(d=>d.id.startsWith('booking_'+id+'_'+b.version+'_'));
-   assert.equal(notes.length,4);assert.deepEqual(notes.map(d=>d.data().userId).sort(),[owner,customer,finance,admin].sort());
+   /* resolveBookingRecipients policy: lifecycle states notify customer+owner only; payment_review adds unblocked finance reviewers; admins and blocked reviewers are never routine recipients. */const who={requested:[owner,customer],held:[owner,customer],payment_review:[owner,customer,finance],confirmed:[owner,customer]}[expected];assert.equal(notes.length,who.length);assert.deepEqual(notes.map(d=>d.data().userId).sort(),[...who].sort());
    for(const d of notes){const n=d.data();assert.equal(n.type,'booking');assert.equal(n.bookingId,id);assert.equal(n.deliveryType,'external');assert(n.message.includes(b.customerName));assert(n.message.includes(b.venueName));assert(n.message.includes(state));}
    const availability=await call('getBookingAvailability',customer,{venueId:venue,start:start-1,end:end+1});
    assert.equal(availability.slots.length,1);
@@ -39,8 +39,8 @@ test('new coverage: every journey state joins calendar and retry-safe booking no
   await call('actOnBooking',finance,{bookingId:id,action:'confirmPayment'});await checkpoint('confirmed','حجز مؤكد');
   const b=before.data();assert.equal(b.paid,50000);assert.equal(b.remaining,200000);
   assert.equal((await db.collection('booking_ledger').where('bookingId','==',id).get()).size,1);
-  assert.equal((await db.collection('notifications').where('bookingId','==',id).get()).size,16);
-  if(process.env.JOURNEY_EVIDENCE)fs.writeFileSync(process.env.JOURNEY_EVIDENCE,JSON.stringify({startedAt:at,completedAt:new Date().toISOString(),project:'demo-aqar',result:'PASS_LOCAL_ORIGINAL_BACKEND_JOURNEY_NOTIFICATION_CALENDAR_JOIN',events,ledger:1,notifications:16,realPushDelivered:false,externalWrites:0,limits:['Original callable handlers with synthetic auth context; not native sign-in or UI E2E','Firestore trigger invoked twice per version; FCM not called','No cloud or device acceptance']},null,2));
+  assert.equal((await db.collection('notifications').where('bookingId','==',id).get()).size,9);
+  if(process.env.JOURNEY_EVIDENCE)fs.writeFileSync(process.env.JOURNEY_EVIDENCE,JSON.stringify({startedAt:at,completedAt:new Date().toISOString(),project:'demo-aqar',result:'PASS_LOCAL_ORIGINAL_BACKEND_JOURNEY_NOTIFICATION_CALENDAR_JOIN',events,ledger:1,notifications:9,realPushDelivered:false,externalWrites:0,limits:['Original callable handlers with synthetic auth context; not native sign-in or UI E2E','Firestore trigger invoked twice per version; FCM not called','No cloud or device acceptance']},null,2));
  }finally{
   if(seeded){
    if(receipt)await bucket.file(receipt).delete({ignoreNotFound:true});

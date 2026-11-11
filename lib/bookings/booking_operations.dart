@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'booking_form_validator.dart';
 import 'booking_widgets.dart';
 import 'booking_experience.dart';
 
@@ -35,7 +36,7 @@ class BookingEditorPage extends StatelessWidget {
       ]);
 }
 
-class BookingSupportForm extends StatelessWidget {
+class BookingSupportForm extends StatefulWidget {
   const BookingSupportForm(
       {super.key,
       required this.subject,
@@ -45,25 +46,80 @@ class BookingSupportForm extends StatelessWidget {
   final TextEditingController subject, message;
   final bool busy;
   final VoidCallback onSubmit;
+
+  @override
+  State<BookingSupportForm> createState() => _BookingSupportFormState();
+}
+
+class _BookingSupportFormState extends State<BookingSupportForm> {
+  String? _subjectError;
+  String? _messageError;
+
+  void _validateAndSubmit() {
+    final sErr = BookingFormValidator.requiredText(
+      widget.subject.text,
+      fieldName: 'موضوع الطلب',
+      minLength: 2,
+      maxLength: 200,
+    );
+    final mErr = BookingFormValidator.requiredText(
+      widget.message.text,
+      fieldName: 'تفاصيل المشكلة',
+      minLength: 5,
+      maxLength: 2000,
+    );
+    if (sErr != null || mErr != null) {
+      setState(() {
+        _subjectError = sErr;
+        _messageError = mErr;
+      });
+      return;
+    }
+    if (_subjectError != null || _messageError != null) {
+      setState(() {
+        _subjectError = null;
+        _messageError = null;
+      });
+    }
+    widget.onSubmit();
+  }
+
   @override
   Widget build(BuildContext context) => BookingSection(
       title: 'كيف نساعدك؟',
       subtitle: 'يرتبط طلبك بهذا الحجز لتتمكن الإدارة من متابعة التفاصيل.',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TextField(
-            controller: subject,
-            enabled: !busy,
+            controller: widget.subject,
+            enabled: !widget.busy,
             maxLength: 200,
-            decoration: const InputDecoration(
-                labelText: 'موضوع الطلب', prefixIcon: Icon(Icons.subject))),
+            onChanged: (_) {
+              if (_subjectError != null) setState(() => _subjectError = null);
+            },
+            decoration: InputDecoration(
+                labelText: 'موضوع الطلب',
+                errorText: _subjectError,
+                suffix: const Text('*',
+                    style: TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.bold)),
+                prefixIcon: const Icon(Icons.subject))),
         const SizedBox(height: 12),
         TextField(
-            controller: message,
-            enabled: !busy,
+            controller: widget.message,
+            enabled: !widget.busy,
             maxLength: 2000,
             maxLines: 4,
-            decoration: const InputDecoration(
+            onChanged: (_) {
+              if (_messageError != null) setState(() => _messageError = null);
+            },
+            decoration: InputDecoration(
                 labelText: 'تفاصيل المشكلة',
+                errorText: _messageError,
+                suffix: const Text('*',
+                    style: TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.bold)),
                 hintText: 'ما الذي حدث؟ وكيف يمكننا مساعدتك؟')),
         Text('لحماية حسابك، لا تشارك كلمة المرور أو معلومات البطاقة.',
             style: TextStyle(
@@ -71,9 +127,9 @@ class BookingSupportForm extends StatelessWidget {
                 height: 1.8)),
         const SizedBox(height: 16),
         FilledButton.icon(
-            onPressed: busy ? null : onSubmit,
-            icon: Icon(busy ? Icons.hourglass_top : Icons.support_agent),
-            label: Text(busy ? 'جارٍ الإرسال' : 'فتح تذكرة دعم')),
+            onPressed: widget.busy ? null : _validateAndSubmit,
+            icon: Icon(widget.busy ? Icons.hourglass_top : Icons.support_agent),
+            label: Text(widget.busy ? 'جارٍ الإرسال' : 'فتح تذكرة دعم')),
       ]));
 }
 
@@ -234,7 +290,7 @@ class BookingReviewCard extends StatelessWidget {
           ])));
 }
 
-class BookingStaffPermissions extends StatelessWidget {
+class BookingStaffPermissions extends StatefulWidget {
   const BookingStaffPermissions(
       {super.key,
       required this.controller,
@@ -247,18 +303,50 @@ class BookingStaffPermissions extends StatelessWidget {
   final void Function(String, bool) onChanged;
   final VoidCallback onSave;
   final bool busy;
+
+  @override
+  State<BookingStaffPermissions> createState() =>
+      _BookingStaffPermissionsState();
+}
+
+class _BookingStaffPermissionsState extends State<BookingStaffPermissions> {
+  String? _uidError;
+
+  void _validateAndSave() {
+    final err = BookingFormValidator.requiredText(
+      widget.controller.text,
+      fieldName: 'UID حساب الموظف',
+      minLength: 2,
+      maxLength: 128,
+    );
+    if (err != null) {
+      setState(() => _uidError = err);
+      return;
+    }
+    if (_uidError != null) setState(() => _uidError = null);
+    widget.onSave();
+  }
+
   @override
   Widget build(BuildContext context) => BookingSection(
       title: 'فريق المكان',
       subtitle: 'امنح كل موظف ما يحتاجه فقط. هذه الصلاحيات لا تشمل المالية.',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TextField(
-            controller: controller,
-            enabled: !busy,
+            controller: widget.controller,
+            enabled: !widget.busy,
             textDirection: TextDirection.ltr,
-            decoration: const InputDecoration(
+            onChanged: (_) {
+              if (_uidError != null) setState(() => _uidError = null);
+            },
+            decoration: InputDecoration(
                 labelText: 'UID حساب الموظف',
-                prefixIcon: Icon(Icons.badge_outlined))),
+                errorText: _uidError,
+                suffix: const Text('*',
+                    style: TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.bold)),
+                prefixIcon: const Icon(Icons.badge_outlined))),
         const SizedBox(height: 12),
         for (final entry in const {
           'calendar': 'إدارة الإغلاقات',
@@ -268,16 +356,17 @@ class BookingStaffPermissions extends StatelessWidget {
           CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(entry.value),
-              value: scopes.contains(entry.key),
-              onChanged:
-                  busy ? null : (value) => onChanged(entry.key, value == true)),
+              value: widget.scopes.contains(entry.key),
+              onChanged: widget.busy
+                  ? null
+                  : (value) => widget.onChanged(entry.key, value == true)),
         Text('إلغاء جميع الاختيارات ثم الحفظ يسحب الصلاحيات.',
             style: TextStyle(
                 height: 1.8,
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 12),
         FilledButton.icon(
-            onPressed: busy ? null : onSave,
+            onPressed: widget.busy ? null : _validateAndSave,
             icon: const Icon(Icons.verified_user_outlined),
             label: const Text('حفظ الصلاحيات')),
       ]));

@@ -348,10 +348,12 @@ void main() {
             t.element(find.byType(BookingVenueRail)));
       });
       await t.pumpAndSettle();
-      final pages = find.byType(PageView);
+      final pages = find.byType(PageView).first;
       final controller = t.widget<PageView>(pages).controller!;
       expect(controller.page, 0);
-      await t.drag(pages, const Offset(300, 0));
+      final rect = t.getRect(pages);
+      await t.dragFrom(
+          Offset(rect.center.dx, rect.bottom - 24), const Offset(300, 0));
       await t.pumpAndSettle();
       expect(controller.page, greaterThan(0));
       controller.jumpToPage(9);

@@ -492,10 +492,26 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
                                       spacing: 8,
                                       children: _shifts.map((s) {
                                         final selected = _selectedShift == s['id'];
+                                        final id = s['id'] ?? '';
+                                        final visual = id.isEmpty
+                                            ? null
+                                            : BookingShiftVisual.resolve(
+                                                {'id': id, 'name': s['label']});
+                                        final fg = visual?.foreground(
+                                            Theme.of(context).brightness);
                                         return ChoiceChip(
+                                          avatar: visual == null
+                                              ? null
+                                              : Icon(
+                                                  visual.icon,
+                                                  size: 16,
+                                                  color: selected
+                                                      ? Colors.white
+                                                      : fg,
+                                                ),
                                           label: Text(s['label']!),
                                           selected: selected,
-                                          selectedColor: bookingGold,
+                                          selectedColor: visual?.accentColor ?? bookingGold,
                                           labelStyle: TextStyle(
                                             color: selected ? Colors.white : null,
                                             fontSize: 12,

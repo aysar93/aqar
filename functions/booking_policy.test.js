@@ -56,3 +56,23 @@ test('FCM booking payload retains identifiers needed to open details',()=>{
   assert.deepEqual(notificationPushData({type:'booking',bookingId:'customer_123'},'notice_1'),{type:'booking',bookingId:'customer_123',notificationId:'notice_1'});
   assert.deepEqual(notificationPushData({type:'property'},'notice_2'),{});
 });
+const {normalizeValidPhone, validateGuestInput} = require('./booking_policy');
+test('guest phone normalization and validation reject blank or malformed input',()=>{
+  assert.equal(normalizeValidPhone('07701234567'), '+9647701234567');
+  assert.equal(normalizeValidPhone('+9647701234567'), '+9647701234567');
+  assert.equal(normalizeValidPhone('٠٧٧٠١٢٣٤٥٦٧'), '+9647701234567');
+  assert.equal(normalizeValidPhone('   '), null);
+  assert.equal(normalizeValidPhone('abc12345'), null);
+  assert.equal(normalizeValidPhone('0770'), null);
+  assert.deepEqual(
+    validateGuestInput({guestName: '  علي حسن  ', guestPhone: '07801234567', guestCount: 4}, {}),
+    {customerName: 'علي حسن', customerPhone: '+9647801234567', guestCount: 4},
+  );
+  assert.throws(() => validateGuestInput({guestName: '   ', guestPhone: '07701234567'}, {}));
+  assert.throws(() => validateGuestInput({guestName: 'علي حسن', guestPhone: '123'}, {}));
+  assert.throws(() => validateGuestInput({guestName: 'علي حسن', guestPhone: '07701234567', guestCount: 0}, {}));
+  assert.deepEqual(
+    validateGuestInput({}, {name: 'ضيف افتراضي', phone: '07711234567'}),
+    {customerName: 'ضيف افتراضي', customerPhone: '+9647711234567', guestCount: 1},
+  );
+});

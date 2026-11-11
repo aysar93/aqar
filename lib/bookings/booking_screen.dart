@@ -1,3 +1,5 @@
+import 'booking_access_guard.dart';
+import 'booking_form_validator.dart';
 import '../features/property_map/models/property_location.dart';
 import '../features/property_map/screens/location_picker_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -465,7 +467,23 @@ class _BookingScreenState extends State<BookingScreen> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (_) =>
-                                                const BookingSettingsScreen())))
+                                                const BookingSettingsScreen()))),
+                                PopupMenuButton<int>(
+                                    tooltip: 'أدوات الإدارة والمالك',
+                                    icon: const Icon(Icons.grid_view_outlined),
+                                    onSelected: (value) =>
+                                        setState(() => tab = value),
+                                    itemBuilder: (_) => [
+                                          for (final e in <int, String>{
+                                            2: 'لوحة المالك',
+                                            5: 'أماكني وأسعاري',
+                                            6: 'مهام الموظف',
+                                            if (finance) 4: 'المراجعة المالية'
+                                          }.entries)
+                                            PopupMenuItem(
+                                                value: e.key,
+                                                child: Text(e.value))
+                                        ])
                               ]
                             : [
                                 IconButton(
@@ -476,23 +494,6 @@ class _BookingScreenState extends State<BookingScreen> {
                                     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                                   ),
                                 ),
-                                if (widget.admin && tab != 1 && !isDiscovery)
-                                  PopupMenuButton<int>(
-                                      tooltip: 'أدوات الإدارة والمالك',
-                                      icon: const Icon(Icons.grid_view_outlined),
-                                      onSelected: (value) =>
-                                          setState(() => tab = value),
-                                      itemBuilder: (_) => [
-                                            for (final e in <int, String>{
-                                          2: 'لوحة المالك',
-                                          5: 'أماكني وأسعاري',
-                                          6: 'مهام الموظف',
-                                          if (finance) 4: 'المراجعة المالية'
-                                        }.entries)
-                                              PopupMenuItem(
-                                                  value: e.key,
-                                                  child: Text(e.value))
-                                          ])
                               ])),
             bottomNavigationBar: BookingBottomBar(
               currentIndex: _bottomBarIndex,
@@ -555,7 +556,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                 subtitle: widget.admin
                                     ? 'راجع الأماكن والطلبات والتوثيق من مساحة واحدة.'
                                     : 'إدارة الشاليهات والأسعار ومتابعة طلبات الحجز.')),
-                  if (tab != 0 && tab != 1 && tab != 2) ...workspaceTools(uid),
+                  if ((tab != 0 && tab != 1 && tab != 2) ||
+                      (widget.admin && tab == 0))
+                    ...workspaceTools(uid),
                   if (tab == 0)
                     BookingFilterBar(
                         welcome: true,
@@ -665,30 +668,28 @@ class _BookingScreenState extends State<BookingScreen> {
                         stream: widget.records?.call(tab) ??
                             query!.snapshots(includeMetadataChanges: true),
                         builder: (context, s) {
-                          if (s.hasError ||
-                              (s.hasData &&
-                                  (s.data!.metadata.isFromCache ||
-                                      s.data!.metadata.hasPendingWrites))) {
-                            return const BookingStateView(
-                                title: 'يلزم اتصال للتحقق من الصلاحية',
-                                detail:
-                                    'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-                          }
-                          if (s.hasError) {
-                            return const Center(
-                                child: Text('تعذر تحميل البيانات'));
-                          }
-                          if (!s.hasData) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-                          if (s.data!.docs.isEmpty &&
-                              !(tab == 0 && !widget.admin)) {
-                            return const BookingStateView(
-                                title: 'لا توجد بيانات بعد',
-                                detail: 'ستظهر الطلبات هنا عند توفرها.',
-                                icon: Icons.inbox_outlined);
-                          }
+                          final requireVerifiedServer =
+                              tab != 0 || widget.admin || !s.hasData || (s.data?.docs.isEmpty ?? true);
+                          return BookingVerifiedGate(
+                            hasData: s.hasData,
+                            hasError: s.hasError,
+                            error: s.error,
+                            isFromCache: requireVerifiedServer &&
+                                (s.data?.metadata.isFromCache ?? false),
+                            hasPendingWrites:
+                                s.data?.metadata.hasPendingWrites ?? false,
+                            permissionDetail: tab == 0
+                                ? 'تعذر تحميل قائمة الأماكن بسبب صلاحية الحساب أو الاتصال.'
+                                : 'بيانات الحجوزات أو الإدارة تتطلب التحقق من الحساب عبر الخادم.',
+                            onRetry: () => setState(() {}),
+                            child: Builder(builder: (context) {
+                              if (s.data!.docs.isEmpty &&
+                                  !(tab == 0 && !widget.admin)) {
+                                return const BookingStateView(
+                                    title: 'لا توجد بيانات بعد',
+                                    detail: 'ستظهر الطلبات هنا عند توفرها.',
+                                    icon: Icons.inbox_outlined);
+                              }
                           final sourceDocs = tab == 0 && !widget.admin
                               ? s.data!.docs.take(publicLimit)
                               : s.data!.docs;
@@ -940,6 +941,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   bookingId: doc.id)))));
                             }).toList()
                           ]);
+                            }),
+                          );
                         })
                   ],
                 ])));
@@ -1061,7 +1064,23 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   }
 
   bool accepted = false, busy = false;
+  String? guestNameError;
+  String? guestPhoneError;
   String? shiftId;
+
+  bool _validateGuestStep() {
+    guestNameError = BookingFormValidator.requiredText(
+      guestName.text,
+      fieldName: 'الاسم الكامل للضيف',
+      minLength: 2,
+      maxLength: 100,
+    );
+    guestPhoneError = BookingFormValidator.phoneError(
+      guestPhone.text,
+      required: true,
+    );
+    return guestNameError == null && guestPhoneError == null;
+  }
   DateTime calendarMonth = bookingBaghdadMonth();
   late Future<Map<String, dynamic>> availability = loadAvailability();
   Future<Map<String, dynamic>> loadAvailability() {
@@ -1421,13 +1440,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                             ],
                             const SizedBox(height: 8),
                             if (step < 3)
-                              FilledButton.icon(
+                              FilledButton(
                                   key: const ValueKey('booking-next'),
-                                  icon: Icon(step == 0
-                                      ? Icons.calendar_month_outlined
-                                      : step == 1
-                                          ? Icons.person_outline
-                                          : Icons.receipt_long_outlined, size: 18),
                                   style: FilledButton.styleFrom(
                                       backgroundColor: bookingGold,
                                       foregroundColor: const Color(0xFF1E293B),
@@ -1439,13 +1453,39 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                       ? null
                                       : () {
                                           HapticFeedback.selectionClick();
+                                          if (step == 2) {
+                                            setState(() {
+                                              if (_validateGuestStep()) {
+                                                step++;
+                                              }
+                                            });
+                                            return;
+                                          }
                                           setState(() => step++);
                                         },
-                                  label: Text(step == 0
-                                      ? 'احجز الآن'
-                                      : step == 1
-                                          ? 'متابعة لبيانات الحجز'
-                                          : 'متابعة لمراجعة الحجز')),
+                                  child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                            step == 0
+                                                ? Icons.calendar_month_outlined
+                                                : step == 1
+                                                    ? Icons.person_outline
+                                                    : Icons.receipt_long_outlined,
+                                            size: 18),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                            child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                    step == 0
+                                                        ? 'احجز الآن'
+                                                        : step == 1
+                                                            ? 'متابعة لبيانات الحجز'
+                                                            : 'متابعة لمراجعة الحجز',
+                                                    maxLines: 1))),
+                                      ])),
                             if (step == 3)
                               FilledButton(
                                   key: const ValueKey('booking-submit-request'),
@@ -1537,10 +1577,13 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                               if (v2Quote != null)
                                                 'pricingSnapshot':
                                                     v2Quote['pricing'],
-                                              'guestName': guestName.text.trim().isNotEmpty ? guestName.text.trim() : null,
-                                              'guestPhone': guestPhone.text.trim().isNotEmpty ? guestPhone.text.trim() : null,
-                                              'guestCount': guestCount,
-                                              'notes': notes.text
+                                               'guestName': guestName.text.trim(),
+                                               'guestPhone':
+                                                   BookingFormValidator.normalizeValidPhone(
+                                                           guestPhone.text) ??
+                                                       guestPhone.text.trim(),
+                                               'guestCount': guestCount,
+                                               'notes': notes.text
                                             });
                                             Map<String, dynamic> r;
                                             await intentStore.save(
@@ -1771,21 +1814,12 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                             child: Builder(builder: (context) {
                                                 final sName = shift['name']?.toString() ?? '';
-                                                final isMorning = sName.contains('صباح') || sName.toLowerCase().contains('morning');
-                                                final isEvening = sName.contains('مساء') || sName.contains('مسائ') || sName.toLowerCase().contains('night') || sName.toLowerCase().contains('evening');
-                                                final isFullDay = sName.contains('كامل') || sName.toLowerCase().contains('fullday');
-                                                final shiftIcon = isMorning
-                                                    ? Icons.wb_sunny_rounded
-                                                    : isEvening
-                                                        ? Icons.nights_stay_rounded
-                                                        : isFullDay
-                                                            ? Icons.timelapse_rounded
-                                                            : Icons.access_time_rounded;
-                                                final shiftIconColor = isMorning
-                                                    ? const Color(0xFFD97706)
-                                                    : isEvening
-                                                        ? const Color(0xFF2563EB)
-                                                        : const Color(0xFF10B981);
+                                                final visual = BookingShiftVisual.resolve(shift);
+                                                final brightness = Theme.of(context).brightness;
+                                                final shiftIcon = visual.icon;
+                                                final shiftIconFg = visual.foreground(brightness);
+                                                final shiftIconBg = visual.background(brightness);
+                                                final shiftIconBorder = visual.border(brightness);
                                                 final startMinute = shift['checkInMinute'] ?? shift['startMinute'];
                                                 final endMinute = shift['checkOutMinute'] ?? shift['endMinute'];
                                                 final timeText = (startMinute != null && endMinute != null)
@@ -1803,10 +1837,11 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                                     Container(
                                                       padding: const EdgeInsets.all(6),
                                                       decoration: BoxDecoration(
-                                                        color: shiftIconColor.withValues(alpha: 0.12),
+                                                        color: shiftIconBg,
                                                         borderRadius: BorderRadius.circular(8),
+                                                        border: Border.all(color: shiftIconBorder, width: 0.8),
                                                       ),
-                                                      child: Icon(shiftIcon, color: shiftIconColor, size: 18),
+                                                      child: Icon(shiftIcon, color: shiftIconFg, size: 18),
                                                     ),
                                                     const SizedBox(width: 10),
                                                     Expanded(
@@ -1961,8 +1996,18 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                               children: [
                                 TextFormField(
                                   controller: guestName,
+                                  onChanged: (_) {
+                                    if (guestNameError != null) {
+                                      setState(() => guestNameError = null);
+                                    }
+                                  },
                                   decoration: InputDecoration(
                                     labelText: 'الاسم الكامل للضيف / الزبون',
+                                    errorText: guestNameError,
+                                    suffix: const Text('*',
+                                        style: TextStyle(
+                                            color: Color(0xFFDC2626),
+                                            fontWeight: FontWeight.bold)),
                                     prefixIcon: const Icon(Icons.person_outline, color: bookingGold),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                     filled: true,
@@ -1972,8 +2017,20 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                 TextFormField(
                                   controller: guestPhone,
                                   keyboardType: TextInputType.phone,
+                                  textDirection: TextDirection.ltr,
+                                  onChanged: (_) {
+                                    if (guestPhoneError != null) {
+                                      setState(() => guestPhoneError = null);
+                                    }
+                                  },
                                   decoration: InputDecoration(
                                     labelText: 'رقم الهاتف للتواصل',
+                                    hintText: '07XXXXXXXXX',
+                                    errorText: guestPhoneError,
+                                    suffix: const Text('*',
+                                        style: TextStyle(
+                                            color: Color(0xFFDC2626),
+                                            fontWeight: FontWeight.bold)),
                                     prefixIcon: const Icon(Icons.phone_outlined, color: bookingGold),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                     filled: true,
@@ -1998,6 +2055,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                       ),
                                       IconButton(
                                         visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                                         icon: const Icon(Icons.remove_circle_outline, size: 22),
                                         onPressed: guestCount > 1 ? () => setState(() => guestCount--) : null,
                                       ),
@@ -2007,6 +2066,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                       ),
                                       IconButton(
                                         visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                                         icon: const Icon(Icons.add_circle_outline, size: 22),
                                         onPressed: guestCount < 100 ? () => setState(() => guestCount++) : null,
                                       ),
@@ -2633,11 +2694,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 if (customer && b['status'] == 'completed') ...[
                   DropdownButtonFormField<int>(
                       initialValue: rating,
+                      isExpanded: true,
                       decoration:
                           const InputDecoration(labelText: 'تقييم تجربة الحجز'),
                       items: [
                         for (var i = 1; i <= 5; i++)
-                          DropdownMenuItem(value: i, child: Text('$i / 5'))
+                          DropdownMenuItem(value: i, child: Text('$i / 5', overflow: TextOverflow.ellipsis))
                       ],
                       onChanged:
                           busy ? null : (v) => setState(() => rating = v ?? 5)),
@@ -2759,6 +2821,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                 booking: b,
                                 bookingId: widget.bookingId,
                                 venue: vSnap,
+                                context: context,
                               );
                             } catch (e) {
                               if (context.mounted) {
@@ -2798,7 +2861,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 if (owner && ['confirmed', 'arrived'].contains(b['status']))
                   button('إنهاء الحجز بعد موعد الخروج', 'complete'),
                 BookingAgreedPolicy(booking: b),
-                if (b['pricing'] != null)
+                if (b['pricing'] is Map &&
+                    ((b['pricing'] as Map)['name'] != null ||
+                        (b['pricing'] as Map)['kind'] != null ||
+                        (b['pricing'] as Map)['id'] != null))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        const Text('التسعير والفترة:'),
+                        BookingPeriodBadge(shift: b['pricing']),
+                      ],
+                    ),
+                  )
+                else if (b['pricing'] != null)
                   Text(
                       'التسعير: ${b['pricing'] is Map ? (b['pricing']['name'] ?? b['pricing']['mode'] ?? '') : b['pricing']}'),
                 BookingRecordedMoney(booking: b),
@@ -3282,6 +3361,16 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
   }();
   late bool active = widget.data['active'] ?? false;
   bool busy = false;
+  final Map<String, String> _fieldErrors = {};
+  bool _isRequiredEditorField(String key) =>
+      key == 'name' ||
+      key == 'location' ||
+      key == 'terms' ||
+      key == 'freeCancellationHours' ||
+      key == 'lateRefundPercent' ||
+      (!widget.ownerMode && (key == 'ownerId' || key == 'deposit')) ||
+      (pricingMode == 'fixed' && key == 'price') ||
+      (pricingMode == 'hourly' && key == 'hourlyPrice');
   bool _uploadingMedia = false;
   double _uploadProgress = 0.0;
   String _uploadStatus = '';
@@ -3556,10 +3645,22 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
 
   Widget editorField(String key) {
     final e = MapEntry(key, fields[key]!);
+    final isRequired = _isRequiredEditorField(key);
     return TextField(
         controller: e.value,
+        onChanged: (_) {
+          if (_fieldErrors.containsKey(key)) {
+            setState(() => _fieldErrors.remove(key));
+          }
+        },
         style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5),
         decoration: InputDecoration(
+            errorText: _fieldErrors[key],
+            suffix: isRequired
+                ? const Text('*',
+                    style: TextStyle(
+                        color: Color(0xFFDC2626), fontWeight: FontWeight.bold))
+                : null,
             labelText: const {
               'capacity': 'السعة القصوى (ضيوف)',
               'bedrooms': 'عدد الغرف',
@@ -3626,8 +3727,13 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
     required VoidCallback onPickIn,
     required VoidCallback onPickOut,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accentGold = Color(0xFFD4AF37);
+    final brightness = Theme.of(context).brightness;
+    final isDark = brightness == Brightness.dark;
+    final visual = BookingShiftVisual.resolve(title);
+    final accentColor = visual.accentColor;
+    final iconFg = visual.foreground(brightness);
+    final iconBg = visual.background(brightness);
+    final iconBorder = visual.border(brightness);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
@@ -3635,7 +3741,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isActive
-              ? accentGold.withValues(alpha: 0.75)
+              ? accentColor.withValues(alpha: 0.75)
               : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
           width: isActive ? 1.5 : 1.0,
         ),
@@ -3657,14 +3763,14 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: accentGold.withValues(alpha: 0.12),
+                    color: iconBg,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: accentGold.withValues(alpha: 0.25),
-                      width: 0.8,
+                      color: iconBorder,
+                      width: 0.9,
                     ),
                   ),
-                  child: Icon(icon, color: accentGold, size: 22),
+                  child: Icon(visual.icon, color: iconFg, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -3697,7 +3803,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 ),
                 Switch(
                   value: isActive,
-                  activeColor: accentGold,
+                  activeThumbColor: accentColor,
                   onChanged: busy ? null : onToggle,
                 ),
               ],
@@ -3735,7 +3841,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                const Icon(Icons.access_time_rounded, size: 14, color: accentGold),
+                                Icon(Icons.access_time_rounded, size: 14, color: accentColor),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
@@ -3782,7 +3888,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                const Icon(Icons.logout_rounded, size: 14, color: accentGold),
+                                Icon(Icons.logout_rounded, size: 14, color: accentColor),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
@@ -3812,8 +3918,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 decoration: InputDecoration(
                   labelText: 'سعر الفترة (د.ع)',
                   labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                  floatingLabelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: accentGold),
-                  prefixIcon: const Icon(Icons.payments_outlined, size: 18, color: accentGold),
+                  floatingLabelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: accentColor),
+                  prefixIcon: Icon(Icons.payments_outlined, size: 18, color: accentColor),
                   suffixText: 'د.ع',
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -3827,22 +3933,127 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
     );
   }
 
-  Widget saveButton() => FilledButton(
+  static int _tabForField(String key) {
+    switch (key) {
+      case 'deposit':
+      case 'commissionPercent':
+      case 'price':
+      case 'hourlyPrice':
+      case 'freeCancellationHours':
+      case 'lateRefundPercent':
+        return 1;
+      case 'location':
+      case 'latitude':
+      case 'longitude':
+        return 2;
+      case 'terms':
+        return 4;
+      default:
+        return 0;
+    }
+  }
+
+  Widget saveButton(BuildContext tabContext) => FilledButton(
       onPressed: busy
           ? null
           : () async {
               if (busy) return;
+              final errors = <String, String>{};
+              void putErr(String k, String? msg) {
+                if (msg != null) errors[k] = msg;
+              }
+
+              putErr(
+                  'name',
+                  BookingFormValidator.requiredText(fields['name']!.text,
+                      fieldName: 'اسم المكان', minLength: 2, maxLength: 120));
+              putErr(
+                  'location',
+                  BookingFormValidator.requiredText(fields['location']!.text,
+                      fieldName: 'الموقع', minLength: 2, maxLength: 200));
+              putErr(
+                  'terms',
+                  BookingFormValidator.requiredText(fields['terms']!.text,
+                      fieldName: 'شروط المكان', minLength: 3, maxLength: 5000));
+              if (!widget.ownerMode) {
+                putErr(
+                    'ownerId',
+                    BookingFormValidator.requiredText(fields['ownerId']!.text,
+                        fieldName: 'معرف حساب المالك',
+                        minLength: 2,
+                        maxLength: 128));
+                putErr(
+                    'deposit',
+                    BookingFormValidator.intRangeError(fields['deposit']!.text,
+                        fieldName: 'العربون بالدينار',
+                        min: 1,
+                        max: 1000000000));
+              }
+              if (pricingMode == 'fixed') {
+                putErr(
+                    'price',
+                    BookingFormValidator.intRangeError(fields['price']!.text,
+                        fieldName: 'السعر الثابت', min: 1, max: 1000000000));
+              } else if (pricingMode == 'hourly') {
+                putErr(
+                    'hourlyPrice',
+                    BookingFormValidator.intRangeError(
+                        fields['hourlyPrice']!.text,
+                        fieldName: 'سعر الساعة',
+                        min: 1,
+                        max: 1000000000));
+              }
+              putErr(
+                  'freeCancellationHours',
+                  BookingFormValidator.intRangeError(
+                      fields['freeCancellationHours']!.text,
+                      fieldName: 'الإلغاء المجاني',
+                      min: 0,
+                      max: 8760));
+              putErr(
+                  'lateRefundPercent',
+                  BookingFormValidator.intRangeError(
+                      fields['lateRefundPercent']!.text,
+                      fieldName: 'استرداد العربون',
+                      min: 0,
+                      max: 100));
+              for (final key in [
+                'capacity',
+                'bedrooms',
+                'bathrooms',
+                'pools',
+                'parkingSpots',
+                'area'
+              ]) {
+                putErr(
+                    key,
+                    BookingFormValidator.intRangeError(fields[key]!.text,
+                        fieldName: key, min: 0, max: 100000, required: false));
+              }
+              final coordinateError = bookingCoordinateError(
+                  fields['latitude']!.text, fields['longitude']!.text);
+              if (coordinateError != null) {
+                errors['latitude'] = coordinateError;
+                errors['longitude'] = coordinateError;
+              }
+              if (errors.isNotEmpty) {
+                setState(() {
+                  _fieldErrors
+                    ..clear()
+                    ..addAll(errors);
+                });
+                DefaultTabController.maybeOf(tabContext)
+                    ?.animateTo(_tabForField(errors.keys.first));
+                ScaffoldMessenger.of(tabContext).showSnackBar(SnackBar(
+                  content: Text(errors.values.first),
+                ));
+                return;
+              }
+              if (_fieldErrors.isNotEmpty) {
+                setState(() => _fieldErrors.clear());
+              }
               setState(() => busy = true);
-              await bookingRun(context, () async {
-                final coordinateError = bookingCoordinateError(
-                    fields['latitude']!.text, fields['longitude']!.text);
-                if (coordinateError != null) throw StateError(coordinateError);
-                for (final key in ['capacity', 'bedrooms']) {
-                  if (fields[key]!.text.isNotEmpty &&
-                      (int.tryParse(fields[key]!.text) == null ||
-                          int.parse(fields[key]!.text) < 0))
-                    throw StateError('سعة أو عدد غرف غير صالح');
-                }
+              await bookingRun(tabContext, () async {
                 if (pricingMode == 'shifts') {
                   if (!morningActive && !eveningActive && !fullDayActive) {
                     throw StateError('يجب تفعيل فترة واحدة على الأقل في نظام الفترات اليومية');
@@ -3949,7 +4160,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   ])),
           bottomNavigationBar: SafeArea(
               top: false,
-              child: Padding(
+              child: Builder(
+                builder: (tabContext) => Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                   child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -3960,8 +4172,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                 ? 'الحفظ معطل أثناء تنفيذ الطلب.'
                                 : 'يحفظ جميع التبويبات؛ لا تحتاج للانتقال إلى المراجعة للحفظ.',
                             style: const TextStyle(fontSize: 12, height: 1.6)),
-                        saveButton()
-                      ]))),
+                        saveButton(tabContext)
+                      ]),
+                ),
+              )),
           body: TabBarView(children: [
             // 0: التفاصيل
             BookingEditorPage(
@@ -4004,7 +4218,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                       },
                     ),
                   DropdownButtonFormField<String>(
-                      value: category,
+                      initialValue: category,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'تصنيف المكان'),
                       items: [
                         for (final e in {
@@ -4013,17 +4228,31 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                           'hall': 'قاعة',
                           'other': 'أخرى'
                         }.entries)
-                          DropdownMenuItem(value: e.key, child: Text(e.value))
+                          DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value,
+                                  maxLines: 1, overflow: TextOverflow.ellipsis))
                       ],
                       onChanged: busy ? null : (v) => setState(() => category = v!)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                      value: guestType,
-                      decoration: const InputDecoration(labelText: 'فئة الضيوف المسموح بها'),
+                      initialValue: guestType,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                          labelText: 'فئة الضيوف المسموح بها'),
                       items: const [
-                        DropdownMenuItem(value: 'families', child: Text('عوائل فقط')),
-                        DropdownMenuItem(value: 'youth', child: Text('شباب فقط')),
-                        DropdownMenuItem(value: 'both', child: Text('عوائل وشباب')),
+                        DropdownMenuItem(
+                            value: 'families',
+                            child: Text('عوائل فقط',
+                                maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(
+                            value: 'youth',
+                            child: Text('شباب فقط',
+                                maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(
+                            value: 'both',
+                            child: Text('عوائل وشباب',
+                                maxLines: 1, overflow: TextOverflow.ellipsis)),
                       ],
                       onChanged: busy ? null : (v) => setState(() => guestType = v ?? 'both')),
                   editorField('name'),
@@ -4088,15 +4317,22 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   editorField('commissionPercent'),
                   DropdownButtonFormField<String>(
                       initialValue: pricingMode,
+                      isExpanded: true,
                       decoration:
                           const InputDecoration(labelText: 'نوع التسعير'),
                       items: const [
                         DropdownMenuItem(
-                            value: 'fixed', child: Text('سعر ثابت')),
+                            value: 'fixed',
+                            child: Text('سعر ثابت',
+                                maxLines: 1, overflow: TextOverflow.ellipsis)),
                         DropdownMenuItem(
-                            value: 'shifts', child: Text('فترات يومية')),
+                            value: 'shifts',
+                            child: Text('فترات يومية',
+                                maxLines: 1, overflow: TextOverflow.ellipsis)),
                         DropdownMenuItem(
-                            value: 'hourly', child: Text('بالساعة'))
+                            value: 'hourly',
+                            child: Text('بالساعة',
+                                maxLines: 1, overflow: TextOverflow.ellipsis))
                       ],
                       onChanged: busy
                           ? null
@@ -4332,22 +4568,24 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                     if (widget.ownerMode && widget.venueId != null)
                       StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                           stream: _venueMediaReviewsStream(),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasError ||
-                                (snapshot.hasData &&
-                                    (snapshot.data!.metadata.isFromCache ||
-                                        snapshot.data!.metadata
-                                            .hasPendingWrites))) {
-                              return const BookingStateView(
-                                  title: 'يلزم اتصال للتحقق من الصلاحية',
-                                  detail:
-                                      'تحديث حالة الوسائط الخاصة يحتاج اتصالًا وحسابًا مصرحًا.');
-                            }
-                            if (!snapshot.hasData)
-                              return const LinearProgressIndicator();
-                            return Column(children: [
-                              if (snapshot.hasError)
-                                const Text('تعذر تحميل حالة الوسائط'),
+                          builder: (context, snapshot) => BookingVerifiedGate(
+                                hasData: snapshot.hasData,
+                                hasError: snapshot.hasError,
+                                error: snapshot.error,
+                                isFromCache:
+                                    snapshot.data?.metadata.isFromCache ??
+                                        false,
+                                hasPendingWrites: snapshot
+                                        .data?.metadata.hasPendingWrites ??
+                                    false,
+                                cachedDetail:
+                                    'تحديث حالة الوسائط الخاصة يحتاج اتصالًا وحسابًا مصرحًا.',
+                                permissionDetail:
+                                    'مراجعة وسائط هذا المكان متاحة للمالك والإدارة فقط.',
+                                onRetry: widget.localMediaHooks == null
+                                    ? () => setState(() {})
+                                    : null,
+                                child: Builder(builder: (context) => Column(children: [
                               for (final doc in snapshot.data?.docs ??
                                   <QueryDocumentSnapshot<
                                       Map<String, dynamic>>>[])
@@ -4393,8 +4631,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                         doc.data()['path'] as String
                                       ]),
                                   ])),
-                            ]);
-                          }),
+                            ])),
+                          )),
                     if (widget.ownerMode && widget.venueId != null) ...[
                       Wrap(children: [
                         for (final video in [false, true])

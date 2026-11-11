@@ -90,16 +90,35 @@ class BookingMediaService {
     return bytes.takeBytes();
   }
 
-  static Future<File> downloadVideo(String bucket, String path) async {
+  static Future<File> downloadVideo(
+    String bucket,
+    String path, {
+    bool forceRefreshToken = false,
+  }) async {
     final uri = Uri.parse(videoUrl(bucket, path));
-    Future<Map<String, String>> headers() async {
-      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-      return token == null ? {} : {'Authorization': 'Bearer $token'};
+    Future<Map<String, String>> headers({bool refresh = false}) async {
+      try {
+        final token = await FirebaseAuth.instance.currentUser?.getIdToken(refresh);
+        return token == null ? {} : {'Authorization': 'Bearer $token'};
+      } catch (_) {
+        return {};
+      }
     }
 
-    final head = await http
-        .head(uri, headers: await headers())
+    var head = await http
+        .head(uri, headers: await headers(refresh: forceRefreshToken))
         .timeout(const Duration(seconds: 120));
+    if (head.statusCode == 401 && !forceRefreshToken) {
+      head = await http
+          .head(uri, headers: await headers(refresh: true))
+          .timeout(const Duration(seconds: 120));
+    }
+    if (head.statusCode == 403 || head.statusCode == 401) {
+      throw StateError('ليس لديك صلاحية مشاهدة هذا الفيديو (${head.statusCode})');
+    }
+    if (head.statusCode == 404) {
+      throw StateError('المقطع غير متاح أو تم حذفه (404)');
+    }
     final size = int.tryParse(head.headers['content-length'] ?? '');
     if (head.statusCode != 200 ||
         size == null ||
@@ -114,14 +133,20 @@ class BookingMediaService {
     try {
       for (var start = 0; start < size; start += 4 * 1024 * 1024) {
         final end = (start + 4 * 1024 * 1024 - 1).clamp(0, size - 1);
-        final response = await http.get(uri, headers: {
-          ...await headers(),
+        var response = await http.get(uri, headers: {
+          ...await headers(refresh: forceRefreshToken),
           'Range': 'bytes=$start-$end'
         }).timeout(const Duration(seconds: 120));
+        if (response.statusCode == 401) {
+          response = await http.get(uri, headers: {
+            ...await headers(refresh: true),
+            'Range': 'bytes=$start-$end'
+          }).timeout(const Duration(seconds: 120));
+        }
         if (response.statusCode != 206 ||
             response.bodyBytes.length != end - start + 1 ||
             response.headers['content-range'] != 'bytes $start-$end/$size') {
-          throw StateError('تعذر تحميل الفيديو');
+          throw StateError('تعذر تحميل الفيديو (${response.statusCode})');
         }
         sink.add(response.bodyBytes);
       }
@@ -135,8 +160,13 @@ class BookingMediaService {
   }
 
   static String videoUrl(String bucket, String path) {
-    final project = bucket.replaceFirst(
+    var project = bucket.replaceFirst(
         RegExp(r'\.(firebasestorage\.app|appspot\.com)$'), '');
+    if (project.isEmpty) {
+      try {
+        project = Firebase.app().options.projectId;
+      } catch (_) {}
+    }
     final id = path.split('/').last.split('.').first;
     final base = emulatorHost == null
         ? 'https://us-central1-$project.cloudfunctions.net/bookingMediaContent'

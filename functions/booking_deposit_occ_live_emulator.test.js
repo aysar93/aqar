@@ -110,11 +110,11 @@ test('Deposit Reconciliation and OCC Concurrency Live on Firestore Emulator', as
       ownerId: 'owner_user',
       name: 'Conflict Venue',
       location: 'Anbar',
-      category: 'resort',
+      category: 'chalet',
       price: 200000,
       deposit: 25000,
       pricing: {
-        v: 2,
+        version: 2,
         mode: 'shift',
         basePrice: 200000,
         deposit: 50000, // Conflict: 25000 vs 50000
@@ -125,7 +125,7 @@ test('Deposit Reconciliation and OCC Concurrency Live on Firestore Emulator', as
     };
     await assert.rejects(
       call('saveBookingVenue', 'admin_user', conflictPayload),
-      /سعر أو نوع أو عربون غير صالح/
+      /تعارض بين عربون المكان وعربون التسعير المتقدم/
     );
   });
 

@@ -378,7 +378,9 @@ void main() {
     await _ready(tester);
     expect(find.byKey(const ValueKey('booking-venue-minimap')), findsNothing);
     expect(
-        find.text('إحداثيات المكان غير متاحة للاتجاهات.'), findsOneWidget);
+        find.text(
+            'إحداثيات المكان غير مسجلة على الخريطة حالياً؛ تواصل مع المالك للاسترشاد.'),
+        findsOneWidget);
     final initialBarTop =
         tester.getRect(find.byKey(const ValueKey('booking-section-0'))).top;
     await tester.ensureVisible(find.byKey(const ValueKey('booking-section-4')));
@@ -389,8 +391,12 @@ void main() {
         tester.getRect(find.byKey(const ValueKey('booking-section-4')));
     final bookRect =
         tester.getRect(find.byKey(const ValueKey('booking-next')));
-    expect(stickyRect.top, lessThan(120));
     expect(stickyRect.bottom, lessThan(bookRect.top));
+    await tester.drag(
+        find.byType(SingleChildScrollView).first, const Offset(0, 1200));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('booking-section-0')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('booking-section-0')));
     await tester.pumpAndSettle();
     await tester.drag(
@@ -449,7 +455,7 @@ void main() {
     expect(
         find.byKey(const ValueKey('booking-venue-minimap')), findsOneWidget);
     expect(find.text('33.4258, 43.2992'), findsOneWidget);
-    expect(find.text('التوجه إلى موقع المكان'), findsOneWidget);
+    expect(find.text('فتح في خرائط Google'), findsOneWidget);
     expect(find.textContaining('(اليوم التالي)'), findsOneWidget);
     expect(find.textContaining('الخميس، الجمعة'), findsOneWidget);
     expect(Firebase.apps, isEmpty);

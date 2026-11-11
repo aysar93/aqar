@@ -413,12 +413,17 @@ void main() {
             ownerMode: true,
             data: const {
               'name': 'شاليه اصطناعي',
+              'location': 'الرمادي · الأنبار',
               'category': 'chalet',
               'price': 250000,
               'deposit': 50000,
               'capacity': 8,
               'bedrooms': 2,
-              'terms': 'شروط محفوظة'
+              'terms': 'شروط محفوظة',
+              'cancellationPolicy': {
+                'freeCancellationHours': 24,
+                'lateRefundPercent': 50,
+              },
             },
             call: (n, d) async {
               saves++;
@@ -433,7 +438,15 @@ void main() {
     await mount(
         t, BookingVenueEditor(ownerMode: true, call: (n, d) async => {}),
         scale: 1.6, size: const Size(360, 640));
-    await t.drag(find.byType(ListView).first, const Offset(0, -200));
+    await t.scrollUntilVisible(
+      find.widgetWithText(TextField, 'اسم المكان'),
+      120,
+      scrollable: find.descendant(
+        of: find.byType(TabBarView),
+        matching: find.byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down),
+      ),
+    );
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(TextField, 'اسم المكان'));
     t.view.viewInsets = const FakeViewPadding(bottom: 240);

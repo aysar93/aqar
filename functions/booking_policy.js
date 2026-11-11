@@ -99,4 +99,112 @@ function refundSettlement(b) {
   if (!Number.isSafeInteger(b.paid) || b.paid < 0 || !Number.isSafeInteger(b.refundDue) || b.refundDue <= 0 || b.refundDue > b.paid || b.refunded !== 0) throw Error('الحجز القديم يحتاج بيانات استرداد معتمدة قبل التسوية');
   return b.refundDue;
 }
-module.exports = { overlaps, blocks, money, venueDeposit, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement };
+
+function resolveBookingRecipients(booking, options = {}) {
+  const { customerId, ownerId, status, refundStatus } = booking || {};
+  const reviewers = Array.isArray(options.reviewers) ? options.reviewers : [];
+  const admins = Array.isArray(options.admins) ? options.admins : [];
+
+  const recipients = new Set();
+  if (customerId && typeof customerId === 'string') recipients.add(customerId);
+  if (ownerId && typeof ownerId === 'string') recipients.add(ownerId);
+
+  switch (status) {
+    case 'payment_review':
+      // Only finance reviewers review payment receipts. Do NOT flood general admins.
+      for (const r of reviewers) recipients.add(r);
+      break;
+
+    case 'cancel_requested':
+      // Cancellation during review requires both finance and admin awareness.
+      for (const r of reviewers) recipients.add(r);
+      for (const a of admins) recipients.add(a);
+      break;
+
+    case 'cancelled':
+      // If a refund is due, notify reviewers to process settlement.
+      if (refundStatus === 'pending') {
+        for (const r of reviewers) recipients.add(r);
+      }
+      break;
+
+    case 'confirmed':
+    case 'held':
+    case 'requested':
+    case 'rejected':
+    case 'expired':
+    case 'payment_rejected':
+    case 'arrived':
+    case 'completed':
+    default:
+      // Normal lifecycle: Customer and Owner only.
+      // Do NOT send confirmation or routine events to reviewers or general admins.
+      break;
+  }
+
+  return Array.from(recipients);
+}
+
+function toEnglishDigits(input) {
+  return String(input)
+    .replace(/[\u0660-\u0669]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u06F0-\u06F9]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x06F0 + 48));
+}
+
+function normalizeValidPhone(raw) {
+  if (typeof raw !== 'string') return null;
+  const cleaned = toEnglishDigits(raw.trim());
+  if (!cleaned || cleaned.length > 50) return null;
+  if (/[a-zA-Z\u0600-\u06FF]/.test(cleaned)) return null;
+  const compact = cleaned.replace(/[\s\-()]/g, '');
+  if (/^07[3-9]\d{8}$/.test(compact)) return `+964${compact.slice(1)}`;
+  if (/^\+9640?7[3-9]\d{8}$/.test(compact)) {
+    const rest = compact.replace(/^\+9640?/, '');
+    return `+964${rest}`;
+  }
+  if (/^009640?7[3-9]\d{8}$/.test(compact)) {
+    const rest = compact.replace(/^009640?/, '');
+    return `+964${rest}`;
+  }
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact;
+  return null;
+}
+
+function validateGuestInput(d, fallbackCustomer = {}) {
+  let customerName;
+  if (d?.guestName !== undefined) {
+    if (typeof d.guestName !== 'string') throw Error('يرجى إدخال اسم الضيف بشكل صحيح');
+    const trimmed = d.guestName.trim();
+    if (trimmed.length < 2 || trimmed.length > 100) throw Error('يرجى إدخال اسم الضيف بشكل صحيح');
+    customerName = trimmed;
+  } else {
+    customerName = typeof fallbackCustomer.name === 'string' && fallbackCustomer.name.trim()
+      ? fallbackCustomer.name.trim()
+      : '';
+    if (customerName.length < 2) throw Error('يرجى إدخال اسم الضيف بشكل صحيح');
+  }
+
+  let customerPhone;
+  if (d?.guestPhone !== undefined) {
+    const normalized = normalizeValidPhone(d.guestPhone);
+    if (!normalized) throw Error('رقم هاتف الضيف غير صالح');
+    customerPhone = normalized;
+  } else {
+    const fallbackPhone = typeof fallbackCustomer.phone === 'string' ? fallbackCustomer.phone.trim() : '';
+    const normalized = normalizeValidPhone(fallbackPhone);
+    if (!normalized) throw Error('رقم هاتف الضيف غير صالح');
+    customerPhone = normalized;
+  }
+
+  let guestCount = 1;
+  if (d?.guestCount !== undefined) {
+    if (!Number.isInteger(d.guestCount) || d.guestCount < 1 || d.guestCount > 100) {
+      throw Error('عدد الضيوف غير صالح');
+    }
+    guestCount = d.guestCount;
+  }
+
+  return { customerName, customerPhone, guestCount };
+}
+
+module.exports = { overlaps, blocks, money, venueDeposit, pricingConfig, quote, cancellationPolicy, refund, ownerSettlement, refundSettlement, resolveBookingRecipients, normalizeValidPhone, validateGuestInput };

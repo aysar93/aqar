@@ -6,16 +6,17 @@ import 'booking_design.dart';
 import 'booking_geo_utils.dart';
 import 'booking_reference_checkout.dart' show bookingSafeDateTime;
 import 'package:intl/intl.dart' show NumberFormat;
+import 'booking_shift_visual.dart';
+export 'booking_shift_visual.dart';
 export 'booking_state_view.dart';
 import 'booking_media_image.dart';
 import 'dart:io';
-import 'booking_media_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_filters.dart';
 import 'booking_pricing_draft.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:video_player/video_player.dart';
+import 'booking_video_resolver.dart';
 
 bool isBookingVideoPath(String path) {
   final clean = path.split('?').first.toLowerCase();
@@ -286,6 +287,8 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
   File? localVideo;
   String? error;
   bool loading = true;
+  bool _disposed = false;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -293,61 +296,61 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
     load();
   }
 
+  @override
+  void didUpdateWidget(covariant _BookingInlineVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      load();
+    }
+  }
+
   Future<void> load() async {
+    final gen = ++_generation;
+    final oldController = controller;
+    final oldFile = localVideo;
+    controller = null;
+    localVideo = null;
+    if (oldController != null || oldFile != null) {
+      unawaited(BookingVideoResolver.disposeControllerAndFile(
+          oldController, oldFile));
+    }
+    if (mounted) {
+      setState(() {
+        loading = true;
+        error = null;
+      });
+    }
     try {
-      if (widget.path.startsWith('booking_media_v3/') ||
-          widget.path.startsWith('booking_media/')) {
-        final file = await BookingMediaService.downloadVideo(
-            FirebaseStorage.instance.bucket, widget.path);
-        if (!mounted) {
-          await file.parent.delete(recursive: true);
-          return;
-        }
-        localVideo = file;
-        final c = VideoPlayerController.file(file);
-        controller = c;
-        await c.initialize();
-        if (mounted) setState(() => loading = false);
+      final result = await BookingVideoResolver.openInitializedController(
+        widget.path,
+        isCancelled: () => _disposed || !mounted || gen != _generation,
+      );
+      if (_disposed || !mounted || gen != _generation) {
+        await BookingVideoResolver.disposeControllerAndFile(
+            result.controller, result.localFile);
         return;
       }
-      final url = widget.path.startsWith('booking_media_v3/')
-          ? BookingMediaService.videoUrl(
-              FirebaseStorage.instance.bucket, widget.path)
-          : widget.path.startsWith('https://')
-              ? widget.path
-              : await FirebaseStorage.instance
-                  .ref(widget.path)
-                  .getDownloadURL();
-      if (!mounted) return;
-      final isFirebaseStorage = url.contains('firebasestorage.googleapis.com') ||
-          url.contains('storage.googleapis.com');
-      final token = isFirebaseStorage
-          ? await FirebaseAuth.instance.currentUser?.getIdToken()
-          : null;
-      final c = VideoPlayerController.networkUrl(Uri.parse(url),
-          httpHeaders: token == null ? {} : {'Authorization': 'Bearer $token'});
-      controller = c;
-      await c.initialize();
+      controller = result.controller;
+      localVideo = result.localFile;
       if (mounted) setState(() => loading = false);
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          loading = false;
-          error = 'تعذر تشغيل الفيديو؛ تحقق من الاتصال بالإنترنت.';
-        });
-      }
+    } catch (e) {
+      if (_disposed || !mounted || gen != _generation) return;
+      setState(() {
+        loading = false;
+        error = BookingVideoResolver.describePlaybackError(e);
+      });
     }
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _generation++;
     final file = localVideo;
-    final disposed = controller?.dispose();
-    if (file != null) {
-      (disposed ?? Future<void>.value())
-          .then((_) => file.parent.delete(recursive: true))
-          .catchError((_) => file.parent);
-    }
+    final c = controller;
+    localVideo = null;
+    controller = null;
+    unawaited(BookingVideoResolver.disposeControllerAndFile(c, file));
     super.dispose();
   }
 
@@ -649,50 +652,30 @@ String venueCategory(dynamic value) =>
 const bookingCardTitleStyle =
     TextStyle(fontSize: 16, height: 1.3, fontWeight: FontWeight.w700);
 const bookingCardLocationStyle = TextStyle(fontSize: 12, height: 1.3);
-Widget buildCardShiftBadge(BuildContext context, String shiftName) {
-  final isMorning = shiftName.contains('صباح') || shiftName.toLowerCase().contains('morning');
-  final isEvening = shiftName.contains('مساء') || shiftName.contains('مسائ') || shiftName.toLowerCase().contains('night') || shiftName.toLowerCase().contains('evening');
-  final isFullDay = shiftName.contains('كامل') || shiftName.toLowerCase().contains('fullday');
-  final icon = isMorning
-      ? Icons.wb_sunny_rounded
-      : isEvening
-          ? Icons.nights_stay_rounded
-          : Icons.timelapse_rounded;
-  // لون أخضر موحّد لمستطيلات الفترات
-  const color = Color(0xFF10B981);
-  final shortLabel = isMorning
-      ? 'صباحي'
-      : isEvening
-          ? 'مسائي'
-          : isFullDay
-              ? 'يوم كامل'
-              : shiftName.replaceAll('الفترة', '').trim();
-
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: isDark ? 0.18 : 0.12),
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: color.withValues(alpha: 0.35), width: 0.8),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 4),
-        Text(
-          shortLabel,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF065F46),
-            height: 1.2,
-          ),
-        ),
-      ],
-    ),
+Widget buildCardShiftBadge(BuildContext context, dynamic shift) {
+  final visual = BookingShiftVisual.resolve(shift);
+  final shortLabel = switch (visual.kind) {
+    BookingShiftKind.morning => 'صباحي',
+    BookingShiftKind.evening => 'مسائي',
+    BookingShiftKind.fullDay => 'يوم كامل',
+    BookingShiftKind.other =>
+      visual.label.replaceAll('الفترة', '').trim().isNotEmpty
+          ? visual.label.replaceAll('الفترة', '').trim()
+          : visual.label,
+  };
+  final normalizedKind = switch (visual.kind) {
+    BookingShiftKind.morning => 'morning',
+    BookingShiftKind.evening => 'evening',
+    BookingShiftKind.fullDay => 'full_day',
+    BookingShiftKind.other => 'other',
+  };
+  return BookingPeriodBadge(
+    shift: {
+      if (shift is Map) ...shift,
+      'kind': normalizedKind,
+      'name': shortLabel,
+    },
+    compact: true,
   );
 }
 
@@ -710,35 +693,37 @@ num? bookingCardPrice(Map<String, dynamic> v) {
   }
 }
 
-List<String> bookingCardShifts(Map<String, dynamic> v) {
+List<Map<String, dynamic>> bookingCardShiftEntries(Map<String, dynamic> v) {
   final v2 = BookingPricingDraft.fromVenue(v);
-  List<String> rawNames = [];
-  if (v2 != null) {
-    rawNames = [for (final s in v2.enabledShifts) '${s['name']}'];
-  } else if (v['pricingMode'] == 'shifts') {
-    rawNames = [
-      for (final s in v['shifts'] as List? ?? [])
-        if (s is Map &&
-            s['name'] is String &&
-            (s['name'] as String).trim().isNotEmpty)
-          '${s['name']}'
-    ];
-  }
-  final cleanNames = <String>[];
-  for (final n in rawNames) {
-    final mapped = n.contains('صباح')
-        ? 'صباحي'
-        : n.contains('مساء')
-            ? 'مسائي'
-            : n.contains('كامل')
-                ? 'يوم كامل'
-                : n.replaceAll('الفترة', '').trim();
-    if (mapped.isNotEmpty && !cleanNames.contains(mapped)) {
-      cleanNames.add(mapped);
+  final Iterable<Map<String, dynamic>> rawEntries = v2 != null
+      ? v2.enabledShifts
+      : (v['pricingMode'] == 'shifts'
+          ? (v['shifts'] as List? ?? []).whereType<Map>().map((e) => Map<String, dynamic>.from(e))
+          : const <Map<String, dynamic>>[]);
+  final seen = <String>{};
+  final result = <Map<String, dynamic>>[];
+  for (final entry in rawEntries) {
+    final visual = BookingShiftVisual.resolve(entry);
+    final label = switch (visual.kind) {
+      BookingShiftKind.morning => 'صباحي',
+      BookingShiftKind.evening => 'مسائي',
+      BookingShiftKind.fullDay => 'يوم كامل',
+      BookingShiftKind.other => visual.label.replaceAll('الفترة', '').trim(),
+    };
+    if (label.isEmpty) continue;
+    final key = '${visual.kind.name}:$label';
+    if (seen.add(key)) {
+      result.add({
+        ...entry,
+        'name': label,
+      });
     }
   }
-  return cleanNames;
+  return result;
 }
+
+List<String> bookingCardShifts(Map<String, dynamic> v) =>
+    [for (final s in bookingCardShiftEntries(v)) '${s['name']}'];
 
 TextSpan bookingCardPriceSpan(Map<String, dynamic> v) => TextSpan(
         style: const TextStyle(
@@ -1009,7 +994,7 @@ class BookingVenueCard extends StatelessWidget {
     if (cover is String && cover.isNotEmpty && !paths.contains(cover))
       paths.insert(0, cover);
     final guest = bookingGuestLabel(venue['guestType']),
-        shifts = bookingCardShifts(venue),
+        shifts = bookingCardShiftEntries(venue),
         muted = Theme.of(context).colorScheme.onSurfaceVariant,
         liveBadge = BookingGeoUtils.getLiveAvailabilityBadge(venue),
         distanceInfo = BookingGeoUtils.getDistanceInfo(venue),
@@ -1226,12 +1211,14 @@ class BookingStatusLegend extends StatelessWidget {
             children: [
               Icon(Icons.circle, size: 12, color: item.color),
               const SizedBox(width: 5),
-              Text(
-                item.label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
+              Flexible(
+                child: Text(
+                  item.label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                  ),
                 ),
               ),
             ],

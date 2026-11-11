@@ -15,10 +15,25 @@ class BookingVenueMiniMap extends StatelessWidget {
     required this.venue,
   });
 
+  Widget? _buildSafeTileLayer() {
+    try {
+      return TileLayer(
+        urlTemplate: AqarMapTileLayer.urlTemplate,
+        userAgentPackageName: AqarMapTileLayer.userAgentPackageName,
+        errorTileCallback: (tile, error, stackTrace) {
+          // Silently fallback without crashing
+        },
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final latLng = point;
+    final tileLayer = _buildSafeTileLayer();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -28,6 +43,7 @@ class BookingVenueMiniMap extends StatelessWidget {
           height: 180,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
@@ -53,13 +69,7 @@ class BookingVenueMiniMap extends StatelessWidget {
                   ),
                 ),
                 children: [
-                  TileLayer(
-                    urlTemplate: AqarMapTileLayer.urlTemplate,
-                    userAgentPackageName: AqarMapTileLayer.userAgentPackageName,
-                    errorTileCallback: (tile, error, stackTrace) {
-                      // Silently fallback without crashing
-                    },
-                  ),
+                  if (tileLayer != null) tileLayer,
                   MarkerLayer(
                     markers: [
                       Marker(

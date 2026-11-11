@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'booking_access_guard.dart';
+import 'booking_form_validator.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'booking_services_ui.dart';
 import 'booking_experience.dart';
@@ -23,37 +25,29 @@ class BookingReviewInbox extends StatelessWidget {
               .collection('booking_reviews')
               .where('status', isEqualTo: 'pending')
               .snapshots(includeMetadataChanges: true),
-          builder: (context, s) {
-            if (s.hasError ||
-                (s.hasData &&
-                    (s.data!.metadata.isFromCache ||
-                        s.data!.metadata.hasPendingWrites))) {
-              return const BookingStateView(
-                  title: 'يلزم اتصال للتحقق من الصلاحية',
-                  detail:
-                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-            }
-            if (s.hasError)
-              return const Center(child: Text('تعذر تحميل التقييمات'));
-            if (!s.hasData)
-              return const Center(child: CircularProgressIndicator());
-            return ListView(padding: const EdgeInsets.all(20), children: [
-              for (final d in s.data!.docs)
-                BookingReviewCard(
-                    rating: d.data()['rating'],
-                    comment: '${d.data()['comment']}',
-                    actions: [
-                      for (final approved in [true, false])
-                        TextButton(
-                            onPressed: () => bookingRun(context, () async {
-                                  await bookingCall('moderateBookingReview',
-                                      {'reviewId': d.id, 'approved': approved});
-                                }),
-                            child:
-                                Text(approved ? 'نشر التقييم' : 'رفض التقييم')),
-                    ])
-            ]);
-          }));
+          builder: (context, s) => BookingVerifiedGate(
+              hasData: s.hasData,
+              hasError: s.hasError,
+              error: s.error,
+              isFromCache: s.data?.metadata.isFromCache ?? false,
+              hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
+              permissionDetail: 'مراجعة التقييمات متاحة للإدارة المخولة فقط.',
+              child: Builder(builder: (_) => ListView(padding: const EdgeInsets.all(20), children: [
+                for (final d in s.data!.docs)
+                  BookingReviewCard(
+                      rating: d.data()['rating'],
+                      comment: '${d.data()['comment']}',
+                      actions: [
+                        for (final approved in [true, false])
+                          TextButton(
+                              onPressed: () => bookingRun(context, () async {
+                                    await bookingCall('moderateBookingReview',
+                                        {'reviewId': d.id, 'approved': approved});
+                                  }),
+                              child:
+                                  Text(approved ? 'نشر التقييم' : 'رفض التقييم')),
+                      ])
+              ])))));
 }
 
 class BookingChatScreen extends StatefulWidget {
@@ -184,20 +178,40 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
                       .orderBy('createdAt')
                       .snapshots(includeMetadataChanges: true),
               builder: (context, s) {
-                final verified = !s.hasError &&
-                    s.hasData &&
-                    !s.data!.metadata.isFromCache &&
-                    !s.data!.metadata.hasPendingWrites &&
-                    uid == currentUid();
-                verifiedUid = verified ? uid : null;
-                if (!verified) {
-                  if (!s.hasData && !s.hasError)
-                    return const Center(child: CircularProgressIndicator());
-                  return const BookingStateView(
-                      title: 'المحادثة محمية',
-                      detail:
-                          'أعد الاتصال للتحقق من الحساب قبل عرض الرسائل أو إرسالها.',
-                      icon: Icons.lock_outline);
+                final info = BookingAccessGuard.classifySnapshot(
+                  snapshot: s,
+                  isFromCache: s.data?.metadata.isFromCache ?? false,
+                  hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
+                  cacheGraceElapsed: s.connectionState != ConnectionState.waiting,
+                  currentUid: uid,
+                  cachedTitle: 'المحادثة محمية',
+                  cachedDetail:
+                      'أعد الاتصال للتحقق من الحساب قبل عرض الرسائل أو إرسالها.',
+                  permissionDetail: 'المحادثة متاحة لأطراف الحجز فقط.',
+                );
+                verifiedUid = info.isVerified && uid == currentUid() ? uid : null;
+                if (!info.isVerified || uid != currentUid()) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: BookingVerifiedGate(
+                        hasData: s.hasData,
+                        hasError: s.hasError,
+                        error: s.error,
+                        isFromCache: s.data?.metadata.isFromCache ?? false,
+                        hasPendingWrites:
+                            s.data?.metadata.hasPendingWrites ?? false,
+                        cachedTitle: 'المحادثة محمية',
+                        cachedDetail:
+                            'أعد الاتصال للتحقق من الحساب قبل عرض الرسائل أو إرسالها.',
+                        permissionDetail: 'المحادثة متاحة لأطراف الحجز فقط.',
+                        onRetry: widget.messages == null
+                            ? () => setState(() {})
+                            : null,
+                        child: const SizedBox.shrink(),
+                      ),
+                    ),
+                  );
                 }
                 return BookingChatPanel(
                     messages: [for (final d in s.data!.docs) d.data()],
@@ -223,39 +237,34 @@ class BookingMediaInbox extends StatelessWidget {
                   .collection('booking_media_reviews')
                   .where('status', isEqualTo: 'pending')
                   .snapshots(includeMetadataChanges: true),
-          builder: (context, s) {
-            if (s.hasError ||
-                (s.hasData &&
-                    (s.data!.metadata.isFromCache ||
-                        s.data!.metadata.hasPendingWrites))) {
-              return const BookingStateView(
-                  title: 'يلزم اتصال للتحقق من الصلاحية',
-                  detail:
-                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-            }
-            if (s.hasError)
-              return const Center(child: Text('تعذر تحميل الملفات'));
-            if (!s.hasData)
-              return const Center(child: CircularProgressIndicator());
-            if (s.data!.docs.isEmpty)
-              return const BookingStateView(
-                  title: 'كل الملفات تمت مراجعتها',
-                  detail:
-                      'ستظهر هنا الصور والفيديوهات الجديدة التي تنتظر قرار الإدارة.');
-            return ListView(padding: const EdgeInsets.all(16), children: [
-              for (final d in s.data!.docs)
-                BookingMediaReviewCard(
-                    venueId: '${d.data()['venueId']}',
-                    preview: BookingMediaGallery(paths: [d.data()['path']]),
-                    onReview: (approved) => bookingRun(context, () async {
-                          await call(
-                              [2, 3].contains(d.data()['schemaVersion'])
-                                  ? 'reviewBookingExternalMedia'
-                                  : 'reviewBookingMedia',
-                              {'mediaId': d.id, 'approved': approved});
-                        }))
-            ]);
-          }));
+          builder: (context, s) => BookingVerifiedGate(
+              hasData: s.hasData,
+              hasError: s.hasError,
+              error: s.error,
+              isFromCache: s.data?.metadata.isFromCache ?? false,
+              hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
+              permissionDetail: 'مراجعة الوسائط متاحة للإدارة المخولة فقط.',
+              child: Builder(builder: (_) {
+                if (s.data!.docs.isEmpty) {
+                  return const BookingStateView(
+                      title: 'كل الملفات تمت مراجعتها',
+                      detail:
+                          'ستظهر هنا الصور والفيديوهات الجديدة التي تنتظر قرار الإدارة.');
+                }
+                return ListView(padding: const EdgeInsets.all(16), children: [
+                  for (final d in s.data!.docs)
+                    BookingMediaReviewCard(
+                        venueId: '${d.data()['venueId']}',
+                        preview: BookingMediaGallery(paths: [d.data()['path']]),
+                        onReview: (approved) => bookingRun(context, () async {
+                              await call(
+                                  [2, 3].contains(d.data()['schemaVersion'])
+                                      ? 'reviewBookingExternalMedia'
+                                      : 'reviewBookingMedia',
+                                  {'mediaId': d.id, 'approved': approved});
+                            }))
+                ]);
+              }))));
 }
 
 class BookingProofInbox extends StatelessWidget {
@@ -270,57 +279,49 @@ class BookingProofInbox extends StatelessWidget {
                   .collection('booking_ownership_proofs')
                   .where('status', isEqualTo: 'pending')
                   .snapshots(includeMetadataChanges: true),
-          builder: (context, s) {
-            if (s.hasError ||
-                (s.hasData &&
-                    (s.data!.metadata.isFromCache ||
-                        s.data!.metadata.hasPendingWrites))) {
-              return const BookingStateView(
-                  title: 'يلزم اتصال للتحقق من الصلاحية',
-                  detail:
-                      'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-            }
-            if (s.hasError)
-              return const Center(child: Text('تعذر تحميل الوثائق'));
-            if (!s.hasData)
-              return const Center(child: CircularProgressIndicator());
-            return ListView(children: [
-              for (final d in s.data!.docs)
-                Card(
-                    child: Column(children: [
-                  ListTile(
-                      title: Text('المكان ${d.id}'),
-                      subtitle: Text('المالك ${d.data()['ownerId']}')),
-                  TextButton(
-                      onPressed: () => bookingRun(context, () async {
-                            final bytes = await FirebaseStorage.instance
-                                .ref(d.data()['path'])
-                                .getData(10 * 1024 * 1024);
-                            if (context.mounted && bytes != null)
-                              await showDialog(
-                                  context: context,
-                                  builder: (_) => Dialog(
-                                      child: InteractiveViewer(
-                                          child: Image.memory(bytes))));
-                          }),
-                      child: const Text('عرض الإثبات الخاص')),
-                  for (final approved in [true, false])
+          builder: (context, s) => BookingVerifiedGate(
+              hasData: s.hasData,
+              hasError: s.hasError,
+              error: s.error,
+              isFromCache: s.data?.metadata.isFromCache ?? false,
+              hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
+              permissionDetail: 'مراجعة إثباتات الملكية متاحة للإدارة فقط.',
+              child: Builder(builder: (_) => ListView(children: [
+                for (final d in s.data!.docs)
+                  Card(
+                      child: Column(children: [
+                    ListTile(
+                        title: Text('المكان ${d.id}'),
+                        subtitle: Text('المالك ${d.data()['ownerId']}')),
                     TextButton(
                         onPressed: () => bookingRun(context, () async {
-                              await bookingCall('reviewBookingOwnershipProof', {
-                                'venueId': d.id,
-                                'approved': approved,
-                                'reason': approved
-                                    ? 'تم تدقيق إثبات الملكية'
-                                    : 'الوثيقة غير كافية؛ يرجى إعادة التقديم'
-                              });
+                              final bytes = await FirebaseStorage.instance
+                                  .ref(d.data()['path'])
+                                  .getData(10 * 1024 * 1024);
+                              if (context.mounted && bytes != null)
+                                await showDialog(
+                                    context: context,
+                                    builder: (_) => Dialog(
+                                        child: InteractiveViewer(
+                                            child: Image.memory(bytes))));
                             }),
-                        child: Text(approved
-                            ? 'اعتماد الوثيقة'
-                            : 'رفض وطلب إعادة التقديم')),
-                ]))
-            ]);
-          }));
+                        child: const Text('عرض الإثبات الخاص')),
+                    for (final approved in [true, false])
+                      TextButton(
+                          onPressed: () => bookingRun(context, () async {
+                                await bookingCall('reviewBookingOwnershipProof', {
+                                  'venueId': d.id,
+                                  'approved': approved,
+                                  'reason': approved
+                                      ? 'تم تدقيق إثبات الملكية'
+                                      : 'الوثيقة غير كافية؛ يرجى إعادة التقديم'
+                                });
+                              }),
+                          child: Text(approved
+                              ? 'اعتماد الوثيقة'
+                              : 'رفض وطلب إعادة التقديم')),
+                  ]))
+              ])))));
 }
 
 class BookingOwnerTools extends StatefulWidget {
@@ -343,6 +344,9 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
   final scopes = <String>{};
   DateTime? start, end;
   bool busy = false;
+  String? _reasonError;
+  String? _discountError;
+  String? _ownerError;
   @override
   void dispose() {
     staff.dispose();
@@ -404,19 +408,43 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                           'النهاية بتوقيت بغداد: ${end?.add(const Duration(hours: 3)) ?? "اختر"}')),
                   TextField(
                       controller: reason,
-                      decoration: const InputDecoration(
-                          labelText: 'سبب الإغلاق أو نقل الملكية')),
+                      onChanged: (_) {
+                        if (_reasonError != null) {
+                          setState(() => _reasonError = null);
+                        }
+                      },
+                      decoration: InputDecoration(
+                          labelText: 'سبب الإغلاق أو نقل الملكية',
+                          errorText: _reasonError)),
                   FilledButton(
                       onPressed: busy || start == null || end == null
                           ? null
-                          : () => run('saveBookingClosure', {
+                          : () {
+                              if (!end!.isAfter(start!)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'يجب أن يكون وقت النهاية بعد البداية')));
+                                return;
+                              }
+                              final rErr = BookingFormValidator.requiredText(
+                                  reason.text,
+                                  fieldName: 'السبب',
+                                  minLength: 2,
+                                  maxLength: 300);
+                              if (rErr != null) {
+                                setState(() => _reasonError = rErr);
+                                return;
+                              }
+                              run('saveBookingClosure', {
                                 'venueId': widget.venueId,
                                 'requestId':
                                     '${DateTime.now().microsecondsSinceEpoch}',
                                 'start': start!.millisecondsSinceEpoch,
                                 'end': end!.millisecondsSinceEpoch,
-                                'reason': reason.text
-                              }),
+                                'reason': reason.text.trim()
+                              });
+                            },
                       child: const Text('حفظ موعد غير متاح')),
                   StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: widget.closures ??
@@ -425,19 +453,18 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                               .where('venueId', isEqualTo: widget.venueId)
                               .where('active', isEqualTo: true)
                               .snapshots(includeMetadataChanges: true),
-                      builder: (context, s) {
-                        if (s.hasError ||
-                            (s.hasData &&
-                                (s.data!.metadata.isFromCache ||
-                                    s.data!.metadata.hasPendingWrites))) {
-                          return const BookingStateView(
-                              title: 'يلزم اتصال للتحقق من الصلاحية',
-                              detail:
-                                  'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-                        }
-                        if (s.hasError)
-                          return const Text('لا تتوفر صلاحية قراءة الإغلاقات');
-                        return Column(children: [
+                      builder: (context, s) => BookingVerifiedGate(
+                        hasData: s.hasData,
+                        hasError: s.hasError,
+                        error: s.error,
+                        isFromCache: s.data?.metadata.isFromCache ?? false,
+                        hasPendingWrites:
+                            s.data?.metadata.hasPendingWrites ?? false,
+                        permissionDetail: 'لا تتوفر صلاحية قراءة الإغلاقات لهذا المكان.',
+                        onRetry: widget.closures == null
+                            ? () => setState(() {})
+                            : null,
+                        child: Builder(builder: (_) => Column(children: [
                           for (final d in s.data?.docs ??
                               <QueryDocumentSnapshot<Map<String, dynamic>>>[])
                             ListTile(
@@ -450,8 +477,8 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                                         : () => run('reopenBookingClosure',
                                             {'closureId': d.id}),
                                     child: const Text('إعادة الإتاحة')))
-                        ]);
-                      }),
+                        ])),
+                      )),
                 ])),
         if (widget.ownerControls) ...[
           BookingSection(
@@ -463,18 +490,37 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                     TextField(
                         controller: discount,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                            labelText: 'خصم مؤقت 0–50٪ لمدة 7 أيام')),
+                        onChanged: (_) {
+                          if (_discountError != null) {
+                            setState(() => _discountError = null);
+                          }
+                        },
+                        decoration: InputDecoration(
+                            labelText: 'خصم مؤقت 0–50٪ لمدة 7 أيام',
+                            errorText: _discountError)),
                     FilledButton(
                         onPressed: busy
                             ? null
-                            : () => run('saveBookingOffer', {
+                            : () {
+                                final dErr =
+                                    BookingFormValidator.intRangeError(
+                                  discount.text,
+                                  fieldName: 'نسبة الخصم',
+                                  min: 0,
+                                  max: 50,
+                                );
+                                if (dErr != null) {
+                                  setState(() => _discountError = dErr);
+                                  return;
+                                }
+                                run('saveBookingOffer', {
                                   'venueId': widget.venueId,
-                                  'percent': int.tryParse(discount.text),
+                                  'percent': int.parse(discount.text.trim()),
                                   'until': DateTime.now()
                                       .add(const Duration(days: 7))
                                       .millisecondsSinceEpoch
-                                }),
+                                });
+                              },
                         child: const Text('حفظ العرض — الصفر يلغي الخصم')),
                   ])),
           const Divider(height: 32),
@@ -504,19 +550,40 @@ class _BookingOwnerToolsState extends State<BookingOwnerTools> {
                   children: [
                     TextField(
                         controller: owner,
-                        decoration: const InputDecoration(
-                            labelText: 'UID المالك الجديد'),
+                        onChanged: (_) {
+                          if (_ownerError != null) {
+                            setState(() => _ownerError = null);
+                          }
+                        },
+                        decoration: InputDecoration(
+                            labelText: 'UID المالك الجديد',
+                            errorText: _ownerError,
+                            suffix: const Text('*',
+                                style: TextStyle(
+                                    color: Color(0xFFDC2626),
+                                    fontWeight: FontWeight.bold))),
                         textDirection: TextDirection.ltr),
                     FilledButton(
                         onPressed: busy
                             ? null
-                            : () => run('requestBookingOwnershipTransfer', {
+                            : () {
+                                final oErr = BookingFormValidator.requiredText(
+                                    owner.text,
+                                    fieldName: 'UID المالك الجديد',
+                                    minLength: 2,
+                                    maxLength: 128);
+                                if (oErr != null) {
+                                  setState(() => _ownerError = oErr);
+                                  return;
+                                }
+                                run('requestBookingOwnershipTransfer', {
                                   'venueId': widget.venueId,
                                   'newOwnerId': owner.text.trim(),
                                   'requestId':
                                       '${DateTime.now().microsecondsSinceEpoch}',
-                                  'reason': reason.text
-                                }),
+                                  'reason': reason.text.trim()
+                                });
+                              },
                         child: const Text('تقديم طلب نقل ملكية')),
                   ])),
         ],
@@ -637,37 +704,33 @@ class BookingTransferInbox extends StatelessWidget {
         appBar: AppBar(title: const Text('طلبات نقل الملكية')),
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: transfers ?? query!.snapshots(includeMetadataChanges: true),
-            builder: (context, s) {
-              if (s.hasError ||
-                  (s.hasData &&
-                      (s.data!.metadata.isFromCache ||
-                          s.data!.metadata.hasPendingWrites))) {
-                return const BookingStateView(
-                    title: 'يلزم اتصال للتحقق من الصلاحية',
-                    detail:
-                        'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-              }
-              if (s.hasError)
-                return const Center(child: Text('تعذر تحميل الطلبات'));
-              if (!s.hasData)
-                return const Center(child: CircularProgressIndicator());
-              if (s.data!.docs.isEmpty)
-                return const BookingStateView(
-                    title: 'لا توجد طلبات نقل ملكية',
-                    detail: 'تظهر طلبات المالك الجديد هنا بعد إنشائها.',
-                    icon: Icons.swap_horiz);
-              return ListView(padding: const EdgeInsets.all(20), children: [
-                for (final d in s.data!.docs)
-                  BookingTransferCard(
-                      key: ValueKey(d.id),
-                      data: d.data(),
-                      admin: admin,
-                      onAction: (action) => bookingRun(context, () async {
-                            await bookingCall('actOnBookingOwnershipTransfer',
-                                {'transferId': d.id, 'action': action});
-                          })),
-              ]);
-            }));
+            builder: (context, s) => BookingVerifiedGate(
+              hasData: s.hasData,
+              hasError: s.hasError,
+              error: s.error,
+              isFromCache: s.data?.metadata.isFromCache ?? false,
+              hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
+              permissionDetail: 'طلبات نقل الملكية متاحة للأطراف المعنية والإدارة فقط.',
+              child: Builder(builder: (_) {
+                if (s.data!.docs.isEmpty) {
+                  return const BookingStateView(
+                      title: 'لا توجد طلبات نقل ملكية',
+                      detail: 'تظهر طلبات المالك الجديد هنا بعد إنشائها.',
+                      icon: Icons.swap_horiz);
+                }
+                return ListView(padding: const EdgeInsets.all(20), children: [
+                  for (final d in s.data!.docs)
+                    BookingTransferCard(
+                        key: ValueKey(d.id),
+                        data: d.data(),
+                        admin: admin,
+                        onAction: (action) => bookingRun(context, () async {
+                              await bookingCall('actOnBookingOwnershipTransfer',
+                                  {'transferId': d.id, 'action': action});
+                            })),
+                ]);
+              }),
+            )));
   }
 }
 
@@ -697,26 +760,17 @@ class BookingLedgerScreen extends StatelessWidget {
                   stream: FirebaseFirestore.instance
                       .collection('booking_ledger')
                       .snapshots(includeMetadataChanges: true),
-                  builder: (context, s) {
-                    if (s.hasError ||
-                        (s.hasData &&
-                            (s.data!.metadata.isFromCache ||
-                                s.data!.metadata.hasPendingWrites))) {
-                      return const BookingStateView(
-                          title: 'يلزم اتصال للتحقق من الصلاحية',
-                          detail:
-                              'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-                    }
-                    if (s.hasError)
-                      return const Center(
-                          child: Text('التقرير للإدارة والمالية المخولين فقط'));
-                    if (!s.hasData)
-                      return const Center(child: CircularProgressIndicator());
-                    if (s.data!.metadata.isFromCache ||
-                        s.data!.metadata.hasPendingWrites)
-                      return const Center(
-                          child: Text('اتصل بالإنترنت لتحديث دفتر المالية'));
-                    return BookingLedgerContent(
-                        entries: s.data!.docs.map((d) => d.data()).toList());
-                  })));
+                  builder: (context, s) => BookingVerifiedGate(
+                      hasData: s.hasData,
+                      hasError: s.hasError,
+                      error: s.error,
+                      isFromCache: s.data?.metadata.isFromCache ?? false,
+                      hasPendingWrites:
+                          s.data?.metadata.hasPendingWrites ?? false,
+                      permissionDetail:
+                          'التقرير للإدارة والمالية المخولين فقط.',
+                      child: Builder(
+                          builder: (_) => BookingLedgerContent(
+                              entries:
+                                  s.data!.docs.map((d) => d.data()).toList()))))));
 }

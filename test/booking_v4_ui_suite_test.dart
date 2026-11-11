@@ -385,11 +385,21 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('شاليه معتمد أول'), findsOneWidget);
-      expect(find.text('مزرعة معتمدة ثانية'), findsOneWidget);
-      expect(find.text('شاليه قيد المراجعة مخفي'), findsOneWidget);
-      expect(find.text('قاعة مرفوضة مخفية'), findsOneWidget);
-      expect(find.text('مزرعة معطلة مخفية'), findsOneWidget);
+      final scrollable = find.byType(Scrollable).first;
+      for (final name in const [
+        'شاليه معتمد أول',
+        'مزرعة معتمدة ثانية',
+        'شاليه قيد المراجعة مخفي',
+        'قاعة مرفوضة مخفية',
+        'مزرعة معطلة مخفية',
+      ]) {
+        await tester.scrollUntilVisible(
+          find.text(name),
+          200,
+          scrollable: scrollable,
+        );
+        expect(find.text(name), findsOneWidget);
+      }
     });
   });
 }

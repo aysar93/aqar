@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,7 @@ import 'package:video_player/video_player.dart';
 import '../services/share_origin.dart';
 import 'booking_filters.dart';
 import 'booking_screen.dart';
+import 'booking_video_resolver.dart';
 import 'booking_widgets.dart';
 
 /// Data model representing a single vertical reel item for a bookable venue.
@@ -102,7 +104,13 @@ class BookingReelItem {
       final media = (data['mediaPaths'] as List?) ?? [];
       for (final path in media) {
         final pStr = path.toString();
-        if (pStr.endsWith('.mp4') || pStr.contains('/videos/')) {
+        final lower = pStr.toLowerCase();
+        final basePath = lower.split('?').first;
+        if (basePath.endsWith('.mp4') ||
+            basePath.endsWith('.mov') ||
+            basePath.endsWith('.m4v') ||
+            basePath.endsWith('.webm') ||
+            lower.contains('/videos/')) {
           items.add(BookingReelItem.fromVenueDoc(vDoc, pStr));
           break;
         }
@@ -379,6 +387,10 @@ class BookingReelCard extends StatefulWidget {
   final bool isActive;
   final bool isMuted;
   final VoidCallback onToggleMute;
+  final Future<({VideoPlayerController controller, File? localFile})> Function(
+    String rawPathOrUrl,
+    bool Function() isCancelled,
+  )? videoLoader;
 
   const BookingReelCard({
     super.key,
@@ -386,6 +398,7 @@ class BookingReelCard extends StatefulWidget {
     required this.isActive,
     required this.isMuted,
     required this.onToggleMute,
+    this.videoLoader,
   });
 
   @override
@@ -394,6 +407,9 @@ class BookingReelCard extends StatefulWidget {
 
 class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingObserver {
   VideoPlayerController? _controller;
+  File? _localFile;
+  int _loadGeneration = 0;
+  bool _disposed = false;
   bool _initialized = false;
   bool _hasError = false;
   String _errorMessage = '';
@@ -462,17 +478,28 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
   }
 
   Future<void> _initializeVideo() async {
+    final gen = ++_loadGeneration;
+    final previousController = _controller;
+    final previousFile = _localFile;
+    _controller = null;
+    _localFile = null;
+    if (previousController != null || previousFile != null) {
+      unawaited(BookingVideoResolver.disposeControllerAndFile(
+          previousController, previousFile));
+    }
+
     if (mounted) {
       setState(() {
         _hasError = false;
         _errorMessage = '';
         _initialized = false;
+        _isPlaying = false;
       });
     }
     try {
-      final url = widget.reel.videoUrl;
+      final url = widget.reel.videoUrl.trim();
       if (url.isEmpty) {
-        if (mounted) {
+        if (mounted && gen == _loadGeneration) {
           setState(() {
             _hasError = true;
             _errorMessage = 'رابط الفيديو غير متوفر';
@@ -481,11 +508,33 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
         return;
       }
 
-      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      bool isCancelled() => _disposed || !mounted || gen != _loadGeneration;
+      final loaded = await (widget.videoLoader != null
+          ? widget.videoLoader!(url, isCancelled)
+          : BookingVideoResolver.openInitializedController(
+              url,
+              isCancelled: isCancelled,
+            ));
+
+      if (isCancelled()) {
+        await BookingVideoResolver.disposeControllerAndFile(
+            loaded.controller, loaded.localFile);
+        return;
+      }
+
+      final controller = loaded.controller;
       _controller = controller;
-      await controller.initialize();
+      _localFile = loaded.localFile;
       await controller.setLooping(true);
       await controller.setVolume(widget.isMuted ? 0 : 1);
+
+      if (isCancelled()) {
+        _controller = null;
+        _localFile = null;
+        await BookingVideoResolver.disposeControllerAndFile(
+            controller, loaded.localFile);
+        return;
+      }
 
       if (mounted) {
         setState(() {
@@ -494,23 +543,27 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
           _isPlaying = widget.isActive;
         });
         if (widget.isActive) {
-          controller.play();
+          await controller.play();
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _initialized = false;
-          _hasError = true;
-          _errorMessage = 'تعذر تشغيل الفيديو';
-        });
-      }
+      if (_disposed || !mounted || gen != _loadGeneration) return;
+      setState(() {
+        _initialized = false;
+        _hasError = true;
+        _errorMessage = BookingVideoResolver.describePlaybackError(e);
+      });
     }
   }
 
   @override
   void didUpdateWidget(covariant BookingReelCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.reel.videoUrl != widget.reel.videoUrl ||
+        oldWidget.reel.id != widget.reel.id) {
+      _initializeVideo();
+      return;
+    }
     if (_controller == null || !_controller!.value.isInitialized) return;
 
     if (widget.isActive && !oldWidget.isActive) {
@@ -730,13 +783,21 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
 
   @override
   void dispose() {
+    _disposed = true;
+    _loadGeneration++;
     WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
+    final controller = _controller;
+    final localFile = _localFile;
+    _controller = null;
+    _localFile = null;
+    unawaited(BookingVideoResolver.disposeControllerAndFile(controller, localFile));
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final rawRatio = _controller?.value.aspectRatio ?? (9 / 16);
+    final safeRatio = (rawRatio.isFinite && rawRatio > 0) ? rawRatio : (9 / 16);
     return GestureDetector(
       onTap: _togglePlayPause,
       onDoubleTap: _toggleLike,
@@ -747,7 +808,7 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
           if (_initialized && _controller != null)
             Center(
               child: AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
+                aspectRatio: safeRatio,
                 child: VideoPlayer(_controller!),
               ),
             )

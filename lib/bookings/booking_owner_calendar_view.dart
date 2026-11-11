@@ -182,10 +182,12 @@ class _BookingOwnerCalendarViewState extends State<BookingOwnerCalendarView> {
         // 3. Gantt-like Multi-Day Matrix (Stream of Owner's Bookings)
         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: widget.bookingsStream ??
-              FirebaseFirestore.instance
-                  .collection('bookings')
-                  .where('ownerId', isEqualTo: widget.ownerId)
-                  .snapshots(),
+              (widget.initialBookingsForTest != null
+                  ? const Stream.empty()
+                  : FirebaseFirestore.instance
+                      .collection('bookings')
+                      .where('ownerId', isEqualTo: widget.ownerId)
+                      .snapshots()),
           builder: (context, snapshot) {
             if (widget.initialBookingsForTest == null && snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -377,54 +379,60 @@ class _BookingOwnerCalendarViewState extends State<BookingOwnerCalendarView> {
                                               mainAxisSize: MainAxisSize.min,
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                            for (final bk in dayBookings.take(2)) ...[
-                                              InkWell(
-                                                onTap: () {
-                                                  HapticFeedback.selectionClick();
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) => BookingDetailsScreen(
-                                                        bookingId: bk['id'] as String,
+                                              for (final bk in dayBookings.take(2)) ...[
+                                                Builder(builder: (context) {
+                                                  final visual = BookingShiftVisual.resolve(bk['pricing']);
+                                                  final badgeColor = bk['status'] == 'confirmed'
+                                                      ? visual.accentColor
+                                                      : _statusColor(bk['status']);
+                                                  return InkWell(
+                                                    onTap: () {
+                                                      HapticFeedback.selectionClick();
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (_) => BookingDetailsScreen(
+                                                            bookingId: bk['id'] as String,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    child: Container(
+                                                      margin: const EdgeInsets.only(bottom: 2),
+                                                      padding: const EdgeInsets.symmetric(
+                                                          horizontal: 3, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: badgeColor,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            Icon(
+                                                              visual.icon,
+                                                              size: 9,
+                                                              color: Colors.white,
+                                                            ),
+                                                            const SizedBox(width: 2),
+                                                            Text(
+                                                              _shiftShort(bk['pricing']),
+                                                              style: const TextStyle(
+                                                                fontSize: 8,
+                                                                color: Colors.white,
+                                                                fontWeight: FontWeight.bold,
+                                                                fontFamily: 'Cairo',
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                   );
-                                                },
-                                                borderRadius: BorderRadius.circular(4),
-                                                child: Container(
-                                                  margin: const EdgeInsets.only(bottom: 2),
-                                                  padding: const EdgeInsets.symmetric(
-                                                      horizontal: 3, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: _statusColor(bk['status']),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: FittedBox(
-                                                    fit: BoxFit.scaleDown,
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                       children: [
-                                                        Icon(
-                                                          _shiftIcon(bk['pricing']),
-                                                          size: 9,
-                                                          color: Colors.white,
-                                                        ),
-                                                        const SizedBox(width: 2),
-                                                        Text(
-                                                          _shiftShort(bk['pricing']),
-                                                          style: const TextStyle(
-                                                            fontSize: 8,
-                                                            color: Colors.white,
-                                                            fontWeight: FontWeight.bold,
-                                                            fontFamily: 'Cairo',
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                                }),
+                                              ],
                                             if (dayBookings.length > 2)
                                               FittedBox(
                                                 fit: BoxFit.scaleDown,
@@ -477,24 +485,14 @@ class _BookingOwnerCalendarViewState extends State<BookingOwnerCalendarView> {
     }
   }
 
-  IconData _shiftIcon(dynamic pricing) {
-    final s = pricing is Map
-        ? (pricing['name'] ?? pricing['mode'] ?? '').toString()
-        : pricing.toString();
-    if (s.contains('صباح') || s.toLowerCase().contains('morning')) return Icons.wb_sunny_rounded;
-    if (s.contains('مساء') || s.contains('مسائ') || s.toLowerCase().contains('night') || s.toLowerCase().contains('evening')) return Icons.nights_stay_rounded;
-    if (s.contains('كامل') || s.toLowerCase().contains('fullday')) return Icons.timelapse_rounded;
-    return Icons.access_time_rounded;
-  }
-
   String _shiftShort(dynamic pricing) {
-    final s = pricing is Map
-        ? (pricing['name'] ?? pricing['mode'] ?? '').toString()
-        : pricing.toString();
-    if (s.contains('صباح') || s.toLowerCase().contains('morning')) return 'ص';
-    if (s.contains('مساء') || s.contains('مسائ') || s.toLowerCase().contains('night') || s.toLowerCase().contains('evening')) return 'م';
-    if (s.contains('كامل') || s.toLowerCase().contains('fullday')) return 'ك';
-    return 'ح';
+    final kind = BookingShiftVisual.resolve(pricing).kind;
+    return switch (kind) {
+      BookingShiftKind.morning => 'ص',
+      BookingShiftKind.evening => 'م',
+      BookingShiftKind.fullDay => 'ك',
+      BookingShiftKind.other => 'ح',
+    };
   }
 
   void _showMonthPicker(BuildContext context) {

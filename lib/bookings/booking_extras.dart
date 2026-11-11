@@ -1,3 +1,4 @@
+import 'booking_access_guard.dart';
 import 'booking_experience.dart';
 import 'booking_decision_ui.dart';
 import 'booking_services_ui.dart';
@@ -197,48 +198,49 @@ class _SupportState extends State<BookingSupportScreen> {
                 }),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: query.snapshots(includeMetadataChanges: true),
-              builder: (context, s) {
-                if (s.hasError ||
-                    (s.hasData &&
-                        (s.data!.metadata.isFromCache ||
-                            s.data!.metadata.hasPendingWrites))) {
-                  return const BookingStateView(
-                      title: 'يلزم اتصال للتحقق من الصلاحية',
-                      detail:
-                          'أعد الاتصال ليتم التحقق من الحساب وتحديث البيانات الخاصة بأمان.');
-                }
-                if (s.hasError) return const Text('تعذر تحميل تذاكر الدعم');
-                if (!s.hasData) return const LinearProgressIndicator();
-                final docs = s.data!.docs.toList()
-                  ..sort((a, b) => ((b.data()['updatedAt'] as Timestamp?)
-                              ?.millisecondsSinceEpoch ??
-                          0)
-                      .compareTo((a.data()['updatedAt'] as Timestamp?)
-                              ?.millisecondsSinceEpoch ??
-                          0));
-                if (docs.isEmpty)
-                  return const Text(
-                      'لا توجد تذاكر. افتح تفاصيل الحجز لطلب الدعم.');
-                return Column(children: [
-                  for (final d in docs)
-                    BookingSupportTicket(data: d.data(), actions: [
-                      if (d.data()['status'] != 'resolved' && d.data()['status'] != 'closed') ...[
-                        TextButton.icon(
-                            icon: const Icon(Icons.reply),
-                            onPressed: () => addReply(d.id),
-                            label: const Text('إضافة رد')),
-                      ],
-                      if (widget.admin && d.data()['status'] != 'resolved' && d.data()['status'] != 'closed') ...[
-                        TextButton(
-                            onPressed: () => respond(d.id, 'in_progress'),
-                            child: const Text('تولي التذكرة والرد')),
-                        TextButton(
-                            onPressed: () => respond(d.id, 'resolved'),
-                            child: const Text('حل وإغلاق')),
-                      ]
-                    ])
-                ]);
-              })
+              builder: (context, s) => BookingVerifiedGate(
+                hasData: s.hasData,
+                hasError: s.hasError,
+                error: s.error,
+                isFromCache: s.data?.metadata.isFromCache ?? false,
+                hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
+                onRetry: () => setState(() {}),
+                child: Builder(builder: (_) {
+                  final docs = s.data!.docs.toList()
+                    ..sort((a, b) => ((b.data()['updatedAt'] as Timestamp?)
+                                ?.millisecondsSinceEpoch ??
+                            0)
+                        .compareTo((a.data()['updatedAt'] as Timestamp?)
+                                ?.millisecondsSinceEpoch ??
+                            0));
+                  if (docs.isEmpty) {
+                    return const Text(
+                        'لا توجد تذاكر. افتح تفاصيل الحجز لطلب الدعم.');
+                  }
+                  return Column(children: [
+                    for (final d in docs)
+                      BookingSupportTicket(data: d.data(), actions: [
+                        if (d.data()['status'] != 'resolved' &&
+                            d.data()['status'] != 'closed') ...[
+                          TextButton.icon(
+                              icon: const Icon(Icons.reply),
+                              onPressed: () => addReply(d.id),
+                              label: const Text('إضافة رد')),
+                        ],
+                        if (widget.admin &&
+                            d.data()['status'] != 'resolved' &&
+                            d.data()['status'] != 'closed') ...[
+                          TextButton(
+                              onPressed: () => respond(d.id, 'in_progress'),
+                              child: const Text('تولي التذكرة والرد')),
+                          TextButton(
+                              onPressed: () => respond(d.id, 'resolved'),
+                              child: const Text('حل وإغلاق')),
+                        ]
+                      ])
+                  ]);
+                }),
+              ))
         ]));
   }
 }

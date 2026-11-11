@@ -92,12 +92,17 @@ Future<void> chooseReferenceReview(WidgetTester t) async {
   await t.pumpAndSettle();
   final shiftDropdown = find.byType(DropdownButtonFormField<String>);
   if (shiftDropdown.evaluate().isNotEmpty) {
+    await t.ensureVisible(shiftDropdown);
+    await t.pumpAndSettle();
     await t.tap(shiftDropdown);
     await t.pumpAndSettle();
   } else {
     expect(find.text('اختر الفترة المطلوبة:'), findsOneWidget);
   }
-  await t.tap(find.textContaining('الفترة الصباحية').last);
+  final shiftItem = find.textContaining('الفترة الصباحية').last;
+  await t.ensureVisible(shiftItem);
+  await t.pumpAndSettle();
+  await t.tap(shiftItem);
   await t.pumpAndSettle();
   expect(find.byIcon(Icons.radio_button_checked), findsWidgets);
   final m = find.byTooltip('الشهر التالي');
@@ -116,6 +121,23 @@ Future<void> chooseReferenceReview(WidgetTester t) async {
 Future<void> openReferenceConfirmation(WidgetTester t) async {
   await t.tap(find.byKey(const ValueKey('booking-next')));
   await t.pumpAndSettle();
+  if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+    final nameField =
+        find.widgetWithText(TextFormField, 'الاسم الكامل للضيف / الزبون');
+    if (nameField.evaluate().isNotEmpty) {
+      await t.ensureVisible(nameField);
+      await t.enterText(nameField, 'ضيف تجريبي');
+    }
+    final phoneField =
+        find.widgetWithText(TextFormField, 'رقم الهاتف للتواصل');
+    if (phoneField.evaluate().isNotEmpty) {
+      await t.ensureVisible(phoneField);
+      await t.enterText(phoneField, '07701234567');
+    }
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('booking-next')));
+    await t.pumpAndSettle();
+  }
   await t.scrollUntilVisible(find.byType(CheckboxListTile), 250,
       scrollable: find.byType(Scrollable).first);
   await t.pumpAndSettle();
@@ -266,7 +288,10 @@ void main() {
       expect(t.takeException(), isNull);
       await capture(t, key, '${item.$2}-390-dark-100');
     }
-    expect(find.text('إحداثيات المكان غير متاحة للاتجاهات.'), findsOneWidget);
+    expect(
+        find.text(
+            'إحداثيات المكان غير مسجلة على الخريطة حالياً؛ تواصل مع المالك للاسترشاد.'),
+        findsOneWidget);
   });
   testWidgets('draft two price groups explicit days not live pricing',
       (t) async {
@@ -448,7 +473,9 @@ void main() {
         await ready(t);
         final outer = find.byType(PageView).first,
             c = t.widget<PageView>(find.byType(PageView).first).controller!;
-        await t.drag(outer, const Offset(280, 0));
+        final rect = t.getRect(outer);
+        await t.dragFrom(
+            Offset(rect.center.dx, rect.bottom - 24), const Offset(280, 0));
         await t.pumpAndSettle();
         expect(c.page, greaterThan(0));
         c.jumpToPage(count - 1);
@@ -481,7 +508,7 @@ void main() {
     await t.pumpWidget(shell(BookingCardMedia(
         paths: [paths.first], name: 'عينة ب', category: 'قاعة')));
     await ready(t);
-    expect(controller.page, 0);
+    expect(find.byType(PageView), findsNothing);
     expect(find.byType(BookingPageIndicator), findsNothing);
     expect(t.takeException(), isNull);
   });

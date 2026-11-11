@@ -40,7 +40,7 @@ function canRead({m, owner, venue}, u) {
   const owns = m.kind === 'banner' ? u?.uid === m.ownerUid : venue?.ownerId === m.ownerUid && u?.uid === m.ownerUid;
   if (u?.isAdmin === true || owns) return true;
   return m.status === 'approved' && owner && !owner.isBlocked &&
-    (m.kind === 'banner' ? venue?.isActive === true && venue?.mediaId === m.path.split('/').pop().split('.')[0] : venue?.active === true && venue?.ownerId === m.ownerUid && (venue.mediaPaths || []).includes(m.path));
+    (m.kind === 'banner' ? venue?.isActive === true && venue?.mediaId === m.path.split('/').pop().split('.')[0] : venue?.active === true && !['pending','rejected'].includes(venue?.verificationStatus) && venue?.ownerId === m.ownerUid && (venue.mediaPaths || []).includes(m.path));
 }
 function canUpload({m, venue}, u) {
   return u && m.kind === 'venue' && m.type === 'video/mp4' && m.status === 'uploading' && m.expiresAt > Date.now() && m.ownerUid === u.uid && venue?.ownerId === u.uid;

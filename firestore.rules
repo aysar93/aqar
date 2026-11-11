@@ -76,7 +76,8 @@ service cloud.firestore {
       allow write: if false;
     }
     match /booking_venues/{venueId} {
-      allow read: if isAdmin() || resource.data.active == true || (activeUser() && resource.data.ownerId == request.auth.uid);
+      allow get: if resource == null || isAdmin() || (resource.data.active == true && resource.data.verificationStatus in ['verified', 'approved']) || (activeUser() && resource.data.ownerId == request.auth.uid);
+      allow list: if isAdmin() || (resource.data.active == true && resource.data.verificationStatus in ['verified', 'approved']) || (activeUser() && resource.data.ownerId == request.auth.uid);
       allow write: if false;
     }
     match /bookings/{bookingId} {

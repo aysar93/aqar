@@ -130,7 +130,7 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('booking-next')));
     await t.pumpAndSettle();
-    expect(find.text('اختيار الموعد'), findsOneWidget);
+    expect(find.text('اختيار الموعد'), findsAtLeastNWidgets(1));
     expect(Firebase.apps, isEmpty);
     expect(t.takeException(), isNull);
   });

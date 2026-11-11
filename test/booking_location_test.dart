@@ -58,7 +58,9 @@ void main() {
     ]) {
       expect(bookingCoordinateError(values[0], values[1]), isNotNull);
     }
-    expect(bookingCoordinates({'latitude': '33', 'longitude': 43}), isNull);
+    expect(bookingCoordinates({'latitude': '33', 'longitude': 43}),
+        const LatLng(33, 43));
+    expect(bookingCoordinates({'latitude': 'abc', 'longitude': 43}), isNull);
     expect(bookingCoordinates({}), isNull);
     expect(bookingDistanceKm(const LatLng(33, 43), const LatLng(33, 43)), 0);
     expect(bookingDistanceKm(const LatLng(33, 43), const LatLng(34, 43)),

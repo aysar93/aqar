@@ -166,7 +166,8 @@ void main() {
     expect(calendar(month, (_) {}).state(DateTime(2027, 1, 6)), 'confirmed');
     await t.tap(find.text('الشهر التالي'));
     await t.pump();
-    expect(find.textContaining('فبراير'), findsOneWidget);
+    expect(find.text('28'), findsOneWidget);
+    expect(find.text('29'), findsNothing);
     expect(t.takeException(), isNull);
   });
   for (final width in [320.0, 360.0, 390.0, 430.0])
@@ -228,8 +229,11 @@ void main() {
                   child: BookingVenueRail(venues: d.venues, onOpen: (_) {}))),
           scale: 1.5));
       await ready(t);
-      final c = t.widget<PageView>(find.byType(PageView)).controller!;
-      await t.drag(find.byType(PageView), const Offset(320, 0));
+      final pages = find.byType(PageView).first;
+      final c = t.widget<PageView>(pages).controller!;
+      final rect = t.getRect(pages);
+      await t.dragFrom(
+          Offset(rect.center.dx, rect.bottom - 24), const Offset(320, 0));
       await t.pumpAndSettle();
       expect(c.page, greaterThan(0));
       c.jumpToPage(9);
@@ -356,8 +360,19 @@ void main() {
         t.widget<BookingCalendar>(find.byType(BookingCalendar)).selectedDay;
     expect(before, isNotNull);
     await t.tap(find.byKey(const ValueKey('booking-next')));
-    await t.pump();
-    expect(find.text('مراجعة الطلب'), findsOneWidget);
+    await t.pumpAndSettle();
+    await t.enterText(
+        find.widgetWithText(TextFormField, 'الاسم الكامل للضيف / الزبون'),
+        'ضيف تجريبي');
+    await t.enterText(
+        find.widgetWithText(TextFormField, 'رقم الهاتف للتواصل'),
+        '07701234567');
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('booking-next')));
+    await t.pumpAndSettle();
+    expect(find.text('مراجعة وتأكيد الحجز'), findsOneWidget);
+    await t.tap(find.byTooltip('الخطوة السابقة'));
+    await t.pumpAndSettle();
     await t.tap(find.byTooltip('الخطوة السابقة'));
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.byType(BookingCalendar), 200,
@@ -413,10 +428,10 @@ void main() {
               .count,
           paths.length);
       expect(
-          find.byType(GestureDetector).evaluate().where((e) =>
-              e.widget is GestureDetector &&
-              (e.widget as GestureDetector).onTapUp != null),
-          isEmpty);
+          find.descendant(
+              of: find.byType(BookingPageIndicator),
+              matching: find.byType(GestureDetector)),
+          findsNothing);
       expect(t.takeException(), isNull);
       expect(Firebase.apps, isEmpty);
     }

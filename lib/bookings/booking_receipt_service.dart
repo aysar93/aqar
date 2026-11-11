@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -384,20 +385,57 @@ class BookingReceiptService {
     );
   }
 
+  /// Computes a safe non-zero popover anchor rect for iPadOS / iOS share sheets.
+  static Rect resolveShareBounds(BuildContext? context, [Rect? bounds]) {
+    if (bounds != null && !bounds.isEmpty) return bounds;
+    if (context != null && context.mounted) {
+      final box = context.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize && !box.size.isEmpty) {
+        final origin = box.localToGlobal(Offset.zero);
+        final rect = origin & box.size;
+        if (rect.width > 0 &&
+            rect.height > 0 &&
+            rect.left.isFinite &&
+            rect.top.isFinite) {
+          return rect;
+        }
+      }
+    }
+    return const Rect.fromLTWH(0, 0, 100, 100);
+  }
+
   /// Share PDF receipt via WhatsApp, Mail, Files, or native share sheet
   static Future<void> shareReceipt({
     required Map<String, dynamic> booking,
     required String bookingId,
     Map<String, dynamic>? venue,
+    BuildContext? context,
+    Rect? bounds,
+    Future<bool> Function({
+      required Uint8List bytes,
+      required String filename,
+      Rect? bounds,
+    })? sharePdfHandler,
   }) async {
     final bytes = await generateReceiptPdf(
       booking: booking,
       bookingId: bookingId,
       venue: venue,
     );
+    final safeBounds = resolveShareBounds(context, bounds);
+    final filename = 'ايصال_حجز_$bookingId.pdf';
+    if (sharePdfHandler != null) {
+      await sharePdfHandler(
+        bytes: bytes,
+        filename: filename,
+        bounds: safeBounds,
+      );
+      return;
+    }
     await Printing.sharePdf(
       bytes: bytes,
-      filename: 'ايصال_حجز_$bookingId.pdf',
+      filename: filename,
+      bounds: safeBounds,
     );
   }
 }

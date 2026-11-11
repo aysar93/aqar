@@ -119,13 +119,23 @@ void main() {
           matchesGoldenFile('live_captures/$name.png'));
   }
 
-  Future<void> dates(WidgetTester tester) async {
+  Future<void> advanceToReview(WidgetTester tester) async {
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
     if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.enterText(
+          find.widgetWithText(TextField, 'الاسم الكامل للضيف / الزبون'),
+          'ضيف تجريبي');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'رقم الهاتف للتواصل'), '07701234567');
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('booking-next')));
       await tester.pumpAndSettle();
     }
+  }
+
+  Future<void> dates(WidgetTester tester) async {
+    await advanceToReview(tester);
     final exc = tester.takeException();
     if (exc != null) {
       debugDumpRenderTree();
@@ -197,12 +207,7 @@ void main() {
         .ensureVisible(find.byKey(const ValueKey('booking-calendar-section')));
     await tester.pumpAndSettle();
     await capture(tester, '03-calendar');
-    await tester.tap(find.byKey(const ValueKey('booking-next')));
-    await tester.pumpAndSettle();
-    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(const ValueKey('booking-next')));
-      await tester.pumpAndSettle();
-    }
+    await advanceToReview(tester);
     await capture(tester, '04-review');
     expect(find.byType(BookingVenueOverview), findsOneWidget);
   });
@@ -222,12 +227,7 @@ void main() {
 
     await mount(tester, call: call, onRequested: (id) => destination = id);
     await dates(tester);
-    await tester.tap(find.byKey(const ValueKey('booking-next')));
-    await tester.pumpAndSettle();
-    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(const ValueKey('booking-next')));
-      await tester.pumpAndSettle();
-    }
+    await advanceToReview(tester);
     await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -300,12 +300,7 @@ void main() {
 
     Future<void> submitFresh() async {
       await dates(tester);
-      await tester.tap(find.byKey(const ValueKey('booking-next')));
-      await tester.pumpAndSettle();
-      if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
-        await tester.tap(find.byKey(const ValueKey('booking-next')));
-        await tester.pumpAndSettle();
-      }
+      await advanceToReview(tester);
       await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
           scrollable: find.byType(Scrollable).first);
       await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -419,12 +414,7 @@ void main() {
       (tester) async {
     await mount(tester, scale: 2);
     await dates(tester);
-    await tester.tap(find.byKey(const ValueKey('booking-next')));
-    await tester.pumpAndSettle();
-    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(const ValueKey('booking-next')));
-      await tester.pumpAndSettle();
-    }
+    await advanceToReview(tester);
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
     final exc = tester.takeException();
@@ -504,12 +494,7 @@ void main() {
         call: call,
         onRequested: (id) => destination = id);
     await dates(tester);
-    await tester.tap(find.byKey(const ValueKey('booking-next')));
-    await tester.pumpAndSettle();
-    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(const ValueKey('booking-next')));
-      await tester.pumpAndSettle();
-    }
+    await advanceToReview(tester);
     await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -532,12 +517,7 @@ void main() {
   });
   Future<void> acceptAndSend(WidgetTester tester) async {
     await dates(tester);
-    await tester.tap(find.byKey(const ValueKey('booking-next')));
-    await tester.pumpAndSettle();
-    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
-      await tester.tap(find.byKey(const ValueKey('booking-next')));
-      await tester.pumpAndSettle();
-    }
+    await advanceToReview(tester);
     await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));

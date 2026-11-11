@@ -151,7 +151,7 @@ test('booking lifecycle serializes overlapping approvals, enforces identities an
   // Other suites seed independent administrators/reviewers in this emulator.
   // Verify this fixture's recipients and retry deduplication, not a global count.
   const noticeUsers=notices.docs.map(s=>s.data().userId);
-  for(const recipient of [uid,'owner','admin','reviewer']) assert.equal(noticeUsers.filter(u=>u===recipient).length,1);
+  /* resolveBookingRecipients policy: a confirmed booking notifies only customer and owner; admins and reviewers are excluded. */for(const recipient of [uid,'owner']) assert.equal(noticeUsers.filter(u=>u===recipient).length,1);for(const recipient of ['admin','reviewer']) assert.equal(noticeUsers.filter(u=>u===recipient).length,0);
   assert.equal(new Set(noticeUsers).size,noticeUsers.length);
   assert.equal(noticeUsers.includes('stranger'),false);
   await call('actOnBooking',uid,{bookingId:chosen.id,action:'cancel',reason:'cancel'});
@@ -216,7 +216,7 @@ test('phase two pricing, independent review, cancellation during receipt review 
   await Promise.all([1,2].map(()=>f.bookingNotifications.run({data:{after,before:{data:()=>cancelled}},params:{bookingId:booking.id}})));
   const notices=await db.collection('notifications').where('bookingId','==',booking.id).get();
   assert.equal(notices.docs.filter(n=>n.data().userId==='p2owner').length,1);
-  assert.equal(notices.docs.filter(n=>n.data().userId==='p2admin').length,1);
+  /* resolveBookingRecipients policy: a cancelled booking never notifies general admins (reviewers only while refundStatus is pending). */assert.equal(notices.docs.filter(n=>n.data().userId==='p2admin').length,0);assert.equal(notices.docs.filter(n=>n.data().userId==='p2customer').length,1);
   await call('saveBookingVenue','p2admin',{id:v.id,ownerId:'p2owner',name:'night farm',location:'Baghdad',category:'farm',price:100000,deposit:20000,terms:'changed',active:true,pricingMode:'hourly',hourlyPrice:30000,cancellationPolicy:{freeCancellationHours:2,lateRefundPercent:0}});
   const old=(await db.doc(`bookings/${booking.id}`).get()).data();assert.equal(old.terms,'terms');assert.equal(old.cancellationPolicy.freeCancellationHours,48);
   const hourly={...data,requestId:'hourly',start:data.end,end:data.end+2*3600000,price:60000,acceptedTerms:'changed',cancellationPolicy:{freeCancellationHours:2,lateRefundPercent:0}};

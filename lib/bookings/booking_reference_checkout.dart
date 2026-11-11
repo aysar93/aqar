@@ -115,7 +115,14 @@ class _BookingRequestConfirmationState
                   Text('${venue['name']}',
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w700)),
-                  if (shiftName != null) Text(shiftName),
+                  if (shiftName != null && shiftName.trim().isNotEmpty)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('الفترة: '),
+                        Flexible(child: BookingPeriodBadge(shift: shiftName)),
+                      ],
+                    ),
                   if (bookingGuestLabel(venue['guestType']) != null)
                     Text(bookingGuestLabel(venue['guestType'])!),
                   BookingArrivalSummary(start: start, end: end),
@@ -223,8 +230,21 @@ class BookingReservationHeader extends StatelessWidget {
                       start: bookingSafeDateTime(booking['start']),
                       end: bookingSafeDateTime(booking['end'])),
                   if (booking['pricing'] is Map &&
-                      booking['pricing']['name'] is String)
-                    Text('الفترة: ${booking['pricing']['name']}'),
+                      (booking['pricing']['name'] is String ||
+                          booking['pricing']['kind'] is String ||
+                          booking['pricing']['id'] is String))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          const Text('الفترة:'),
+                          BookingPeriodBadge(shift: booking['pricing']),
+                        ],
+                      ),
+                    ),
                   if (bookingGuestLabel(v?['guestType']) != null)
                     Text(bookingGuestLabel(v?['guestType'])!),
                   const SizedBox(height: 8),

@@ -84,25 +84,15 @@ class BookingVenuePrices extends StatelessWidget {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       if (v2 != null) ...[
         for (final s in v2.enabledShifts) ...[
-          Builder(builder: (_) {
-            final isEvening = s['kind'] == 'evening' || '${s['name']}'.contains('مساء') || '${s['name']}'.contains('مسائ') || '${s['name']}'.toLowerCase().contains('night');
-            final isFullDay = s['kind'] == 'full_day' || '${s['name']}'.contains('كامل') || '${s['name']}'.toLowerCase().contains('fullday');
-            final icon = isEvening
-                ? Icons.nights_stay_rounded
-                : isFullDay
-                    ? Icons.timelapse_rounded
-                    : Icons.wb_sunny_rounded;
-            final color = isEvening
-                ? const Color(0xFF60A5FA)
-                : isFullDay
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFF59E0B);
+          Builder(builder: (context) {
+            final visual = BookingShiftVisual.resolve(s);
+            final iconColor = visual.foreground(Theme.of(context).brightness);
             return rate(
                 '${s['name']}',
                 '${bookingClock12(s['startMinute'])} — ${bookingClock12(s['endMinute'])}${s['endDayOffset'] == 1 ? ' (اليوم التالي)' : ''}',
                 s['weekdayPrice'],
-                icon,
-                color,
+                visual.icon,
+                iconColor,
                 subtitlePrice: s['weekendPrice'] != s['weekdayPrice']
                     ? 'نهاية الأسبوع: ${bookingMoney(s['weekendPrice'])}'
                     : 'سعر موحّد طوال الأسبوع');
@@ -117,26 +107,16 @@ class BookingVenuePrices extends StatelessWidget {
       ] else if (venue['pricingMode'] == 'shifts') ...[
         for (final raw in venue['shifts'] as List? ?? [])
           if (raw is Map) ...[
-            Builder(builder: (_) {
+            Builder(builder: (context) {
               final sName = '${raw['name'] ?? ''}';
-              final isEvening = sName.contains('مساء') || sName.contains('مسائ') || sName.toLowerCase().contains('night');
-              final isFullDay = sName.contains('كامل') || sName.toLowerCase().contains('fullday');
-              final icon = isEvening
-                  ? Icons.nights_stay_rounded
-                  : isFullDay
-                      ? Icons.timelapse_rounded
-                      : Icons.wb_sunny_rounded;
-              final color = isEvening
-                  ? const Color(0xFF60A5FA)
-                  : isFullDay
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFF59E0B);
+              final visual = BookingShiftVisual.resolve(raw);
+              final iconColor = visual.foreground(Theme.of(context).brightness);
               return rate(
                   sName,
                   '${bookingClock12(raw['checkInMinute'])} — ${bookingClock12(raw['checkOutMinute'])}',
                   raw['price'],
-                  icon,
-                  color);
+                  visual.icon,
+                  iconColor);
             }),
             const Divider(height: 1)
           ],
@@ -190,6 +170,7 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
     ];
     String selectedReason = reasons[0];
     final detailsController = TextEditingController();
+    String? detailsError;
     bool sending = false;
     showModalBottomSheet(
       context: context,
@@ -241,9 +222,17 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
                     controller: detailsController,
                     maxLines: 3,
                     maxLength: 500,
-                    decoration: const InputDecoration(
-                      labelText: 'تفاصيل إضافية (اختياري)',
-                      border: OutlineInputBorder(),
+                    onChanged: (_) {
+                      if (detailsError != null) {
+                        setDlgState(() => detailsError = null);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      labelText: selectedReason == 'سبب آخر'
+                          ? 'تفاصيل إضافية (مطلوبة) *'
+                          : 'تفاصيل إضافية (اختياري)',
+                      errorText: detailsError,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -263,6 +252,12 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
                           onPressed: sending
                               ? null
                               : () async {
+                                  if (selectedReason == 'سبب آخر' &&
+                                      detailsController.text.trim().length < 5) {
+                                    setDlgState(() => detailsError =
+                                        'يرجى توضيح تفاصيل البلاغ (5 أحرف على الأقل)');
+                                    return;
+                                  }
                                   final uid = FirebaseAuth.instance.currentUser?.uid;
                                   if (uid == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
