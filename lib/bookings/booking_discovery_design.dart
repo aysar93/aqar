@@ -1,4 +1,7 @@
 import '../screens/notifications_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -40,55 +43,107 @@ class BookingWelcomeSearch extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Row 1: Actions Top Bar (Back button, Spacer, Notifications with Live Badge, Toolbar Action)
                     Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (Navigator.of(context).canPop()) ...[
-                            IconButton(
-                              tooltip: 'الرجوع للرئيسية',
-                              style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFF0F172A).withValues(alpha: .10),
-                                foregroundColor: _navy,
-                              ),
-                              onPressed: () => Navigator.of(context).maybePop(),
-                              icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          const Expanded(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                Text('مكان يليق بك',
-                                    style: TextStyle(
-                                        fontSize: 27,
-                                        height: 1.35,
-                                        fontWeight: FontWeight.w700,
-                                        color: _navy)),
-                                SizedBox(height: 6),
-                                Text('شاليهات وقاعات ومزارع في الأنبار',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        height: 1.5,
-                                        color: Color(0xFF354157)))
-                              ])),
+                      children: [
+                        if (Navigator.of(context).canPop()) ...[
                           IconButton(
-                            tooltip: 'الإشعارات',
+                            tooltip: 'الرجوع للرئيسية',
                             style: IconButton.styleFrom(
                               backgroundColor: const Color(0xFF0F172A).withValues(alpha: .10),
                               foregroundColor: _navy,
                             ),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                            ),
-                            icon: const Icon(Icons.notifications_none_rounded, size: 22),
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
                           ),
-                          if (toolbarAction != null) ...[
-                            const SizedBox(width: 8),
-                            toolbarAction!
-                          ]
-                        ]),
+                        ],
+                        const Spacer(),
+                        // Notification Icon with Live Badge
+                        StreamBuilder<QuerySnapshot>(
+                          stream: Firebase.apps.isNotEmpty &&
+                                  FirebaseAuth.instance.currentUser != null
+                              ? FirebaseFirestore.instance
+                                  .collection('users/${FirebaseAuth.instance.currentUser!.uid}/notifications')
+                                  .where('read', isEqualTo: false)
+                                  .limit(10)
+                                  .snapshots()
+                              : const Stream.empty(),
+                          builder: (context, snapshot) {
+                            final unreadCount = snapshot.data?.docs.length ?? 0;
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                IconButton(
+                                  tooltip: 'الإشعارات',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0F172A).withValues(alpha: .10),
+                                    foregroundColor: _navy,
+                                  ),
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                                  ),
+                                  icon: const Icon(Icons.notifications_none_rounded, size: 22),
+                                ),
+                                if (unreadCount > 0)
+                                  Positioned(
+                                    top: 4,
+                                    left: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEF4444),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                      child: Center(
+                                        child: Text(
+                                          '$unreadCount',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                        if (toolbarAction != null) ...[
+                          const SizedBox(width: 8),
+                          toolbarAction!,
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Row 2: Headline below top bar
+                    const Text(
+                      'مكان يليق بك',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 22,
+                        height: 1.3,
+                        fontWeight: FontWeight.w700,
+                        color: _navy,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'شاليهات وقاعات ومزارع في الأنبار',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        height: 1.4,
+                        color: Color(0xFF354157),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Theme(
                         data: Theme.of(context).copyWith(

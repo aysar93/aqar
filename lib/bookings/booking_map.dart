@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -49,17 +48,16 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
   void initState() {
     super.initState();
     venues = widget.venues ??
-        FirebaseFirestore.instance
-            .collection('booking_venues')
-            .where('active', isEqualTo: true)
+        publicBookingVenuesQuery()
             .snapshots(includeMetadataChanges: true)
             .map((snapshot) => [
                   for (final doc in snapshot.docs)
-                    {
-                      ...doc.data(),
-                      'id': doc.id,
-                      '_fromCache': snapshot.metadata.isFromCache,
-                    }
+                    if (isPubliclyEligibleBookingVenue(doc.data()))
+                      {
+                        ...doc.data(),
+                        'id': doc.id,
+                        '_fromCache': snapshot.metadata.isFromCache,
+                      }
                 ]);
   }
 
@@ -123,7 +121,11 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
             if (snapshot.hasData) lastVenues = snapshot.data!;
             final docs = (snapshot.data ?? lastVenues)
                 .where((v) =>
-                    bookingCoordinates(v) != null && filters.matches(v))
+                    v['active'] != false &&
+                    !const ['pending', 'rejected']
+                        .contains(v['verificationStatus']) &&
+                    bookingCoordinates(v) != null &&
+                    filters.matches(v))
                 .toList();
             final nearby = userPoint == null
                 ? <Map<String, dynamic>>[]

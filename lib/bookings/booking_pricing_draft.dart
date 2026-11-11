@@ -51,6 +51,17 @@ class BookingPricingDraft {
     return v2 ?? v1;
   }
 
+  static int safeVenueDeposit(Map<String, dynamic> venue, {int fallback = 50000}) {
+    try {
+      final d = venueDeposit(venue);
+      if (d != null && d > 0) return d;
+    } catch (_) {}
+    final raw = venue['deposit'] ?? venue['depositAmount'];
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw.trim()) ?? 0;
+    return fallback;
+  }
+
   static Map<String, dynamic> _copy(Map<String, dynamic> p) => {
         ...p,
         'weekendDays': List<int>.from(p['weekendDays'] as List? ?? []),

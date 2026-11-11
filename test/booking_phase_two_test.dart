@@ -86,10 +86,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
+    final shiftDropdown = find.byType(DropdownButtonFormField<String>);
+    if (shiftDropdown.evaluate().isNotEmpty) {
+      await tester.tap(shiftDropdown);
+      await tester.pumpAndSettle();
+    } else {
+      expect(find.text('اختر الفترة المطلوبة:'), findsOneWidget);
+    }
     await tester.tap(find.textContaining('الشفت الليلي').last);
     await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.radio_button_checked), findsWidgets);
     Future<void> revealAndTap(Finder target) async {
       await tester.ensureVisible(target);
       await tester.pumpAndSettle();

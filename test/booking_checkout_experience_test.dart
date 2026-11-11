@@ -109,7 +109,11 @@ void main() {
   }
 
   Future<void> capture(WidgetTester tester, String name) async {
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
     if (const bool.fromEnvironment('BOOKING_CAPTURE_UI'))
       await expectLater(find.byKey(const ValueKey('live-capture')),
           matchesGoldenFile('live_captures/$name.png'));
@@ -118,22 +122,44 @@ void main() {
   Future<void> dates(WidgetTester tester) async {
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+    }
+    final exc = tester.takeException();
+    if (exc != null) {
+      debugDumpRenderTree();
+    }
+    expect(exc, isNull);
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
         isNull);
-    await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+    final shiftDropdown = find.byType(DropdownButtonFormField<String>);
+    if (shiftDropdown.evaluate().isNotEmpty) {
+      await tester.ensureVisible(shiftDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(shiftDropdown);
+      await tester.pumpAndSettle();
+    } else {
+      expect(find.text('اختر الفترة المطلوبة:'), findsOneWidget);
+    }
+    print('DATES 2: ${tester.takeException()}');
+    await tester.ensureVisible(find.textContaining('الفترة النهارية').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
+    print('DATES 3: ${tester.takeException()}');
     await tester.tap(find.textContaining('الفترة النهارية').last);
     await tester.pumpAndSettle();
+    print('DATES 4: ${tester.takeException()}');
+    expect(find.byIcon(Icons.radio_button_checked), findsWidgets);
     await tester.ensureVisible(find.byTooltip('الشهر التالي'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('الشهر التالي'));
     await tester.pumpAndSettle();
+    print('DATES 5: ${tester.takeException()}');
     await tester.ensureVisible(find.text('22'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('22'));
     await tester.pumpAndSettle();
+    print('DATES 6: ${tester.takeException()}');
   }
 
   test('fixed and hourly input uses Baghdad even across UTC date boundaries',
@@ -173,6 +199,10 @@ void main() {
     await capture(tester, '03-calendar');
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+    }
     await capture(tester, '04-review');
     expect(find.byType(BookingVenueOverview), findsOneWidget);
   });
@@ -194,6 +224,10 @@ void main() {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+    }
     await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -232,7 +266,11 @@ void main() {
     expect(payloads.length, 2);
     expect(payloads[1], payloads[0]);
     expect(destination, 'synthetic-booking');
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
   testWidgets('unreadable pending request journal blocks a fresh submission',
       (tester) async {
@@ -264,6 +302,10 @@ void main() {
       await dates(tester);
       await tester.tap(find.byKey(const ValueKey('booking-next')));
       await tester.pumpAndSettle();
+      if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+        await tester.tap(find.byKey(const ValueKey('booking-next')));
+        await tester.pumpAndSettle();
+      }
       await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
           scrollable: find.byType(Scrollable).first);
       await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -312,7 +354,11 @@ void main() {
     expect(expired, 1);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 3));
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
   testWidgets(
       'live payment panel preserves recipient selection and busy controls',
@@ -375,9 +421,17 @@ void main() {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+    }
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      debugDumpRenderTree();
+    }
+    expect(exc, isNull);
   });
   testWidgets('media gallery pages videos without loading or opening them',
       (tester) async {
@@ -397,7 +451,11 @@ void main() {
             .widget<BookingPageIndicator>(find.byType(BookingPageIndicator))
             .page,
         1);
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
   testWidgets('persistent compact deadline hides payment after scrolling',
       (tester) async {
@@ -427,7 +485,11 @@ void main() {
     expect(find.text('PAYMENT_FORM_VISIBLE'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 2));
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
   testWidgets(
       'account change while request response is pending hides form and prevents old-account navigation',
@@ -444,6 +506,10 @@ void main() {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+    }
     await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -458,12 +524,20 @@ void main() {
     expect(destination, isNull);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('تغيّر الحساب أثناء الطلب'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
   Future<void> acceptAndSend(WidgetTester tester) async {
     await dates(tester);
     await tester.tap(find.byKey(const ValueKey('booking-next')));
     await tester.pumpAndSettle();
+    if (find.text('متابعة لمراجعة الحجز').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('booking-next')));
+      await tester.pumpAndSettle();
+    }
     await tester.scrollUntilVisible(find.byType(CheckboxListTile), 250,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.byType(CheckboxListTile));
@@ -493,7 +567,11 @@ void main() {
             .onPressed,
         isNotNull);
     expect(find.text('إرسال طلب الحجز'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
   testWidgets(
       'a rejection after an uncertain attempt cannot silently replace its intent',
@@ -522,6 +600,10 @@ void main() {
             .onPressed,
         isNull);
     expect(find.text('العودة للتحقق من حجوزاتي'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    final exc = tester.takeException();
+    if (exc != null) {
+      print('SCALE_TEST_EXCEPTION: $exc');
+    }
+    expect(exc, isNull);
   });
 }

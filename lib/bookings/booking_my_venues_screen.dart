@@ -1,7 +1,10 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'booking_filters.dart';
+import 'booking_owner_calendar_view.dart';
 import 'booking_widgets.dart';
 import 'booking_browse_ui.dart';
 import 'booking_management.dart';
@@ -13,8 +16,9 @@ import 'booking_screen.dart';
 /// quick editor access, calendar closures, and booking request tracking.
 class BookingMyVenuesScreen extends StatefulWidget {
   final String? userId;
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? stream;
 
-  const BookingMyVenuesScreen({super.key, this.userId});
+  const BookingMyVenuesScreen({super.key, this.userId, this.stream});
 
   @override
   State<BookingMyVenuesScreen> createState() => _BookingMyVenuesScreenState();
@@ -22,6 +26,7 @@ class BookingMyVenuesScreen extends StatefulWidget {
 
 class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
   String _selectedFilter = 'all'; // all, approved, pending, rejected
+  String _currentView = 'list'; // 'list' or 'calendar'
 
   String get _currentUid =>
       widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -47,9 +52,27 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
       child: Scaffold(
         backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         appBar: AppBar(
-          title: const Text('إدارة أماكني'),
-          centerTitle: true,
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              _currentView == 'calendar' ? 'تقويم حجوزات أماكني' : 'إدارة أماكني',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+            ),
+          ),
+          centerTitle: false,
           actions: [
+            IconButton(
+              icon: Icon(
+                _currentView == 'list' ? Icons.calendar_month_outlined : Icons.view_list_outlined,
+                color: bookingGold,
+              ),
+              tooltip: _currentView == 'list' ? 'عرض جدول التقويم' : 'عرض قائمة الأماكن',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                setState(() => _currentView = _currentView == 'list' ? 'calendar' : 'list');
+              },
+            ),
             IconButton(
               icon: Icon(Icons.add_business_outlined, color: bookingGold),
               tooltip: 'إضافة مكان جديد',
@@ -58,10 +81,7 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
           ],
         ),
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('booking_venues')
-              .where('ownerId', isEqualTo: _currentUid)
-              .snapshots(),
+          stream: widget.stream ?? ownerBookingVenuesQuery(_currentUid).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -90,29 +110,40 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
 
             // Compute summary metrics
             final totalCount = venues.length;
-            final approvedCount = venues.where((v) =>
-                v['verificationStatus'] == 'approved' ||
-                (v['active'] == true && v['verificationStatus'] != 'rejected')).length;
+            final approvedCount =
+                venues.where(isPubliclyEligibleBookingVenue).length;
             final pendingCount = venues.where((v) =>
                 v['verificationStatus'] == 'pending' ||
-                (v['active'] != true && v['verificationStatus'] != 'rejected')).length;
+                (!isPubliclyEligibleBookingVenue(v) &&
+                    v['verificationStatus'] != 'rejected')).length;
             final rejectedCount = venues.where((v) =>
                 v['verificationStatus'] == 'rejected').length;
 
             // Filter venues based on selected tab
             final filteredVenues = venues.where((v) {
-              final status = v['verificationStatus'] ?? (v['active'] == true ? 'approved' : 'pending');
+              final rawStatus = v['verificationStatus']?.toString();
               if (_selectedFilter == 'approved') {
-                return status == 'approved' || v['active'] == true;
+                return isPubliclyEligibleBookingVenue(v);
               }
               if (_selectedFilter == 'pending') {
-                return status == 'pending' && v['active'] != true;
+                return rawStatus == 'pending' ||
+                    (!isPubliclyEligibleBookingVenue(v) &&
+                        rawStatus != 'rejected');
               }
               if (_selectedFilter == 'rejected') {
-                return status == 'rejected';
+                return rawStatus == 'rejected';
               }
               return true;
             }).toList();
+
+            if (_currentView == 'calendar') {
+              return SingleChildScrollView(
+                child: BookingOwnerCalendarView(
+                  ownerId: _currentUid,
+                  venues: venues,
+                ),
+              );
+            }
 
             return CustomScrollView(
               slivers: [
@@ -360,7 +391,11 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
     final location = venue['location']?.toString() ?? 'الأنبار';
     final category = venue['category']?.toString() ?? 'chalet';
     final categoryName = _getCategoryName(category);
-    final status = venue['verificationStatus'] ?? (venue['active'] == true ? 'approved' : 'pending');
+    final status = venue['verificationStatus'] == 'rejected'
+        ? 'rejected'
+        : isPubliclyEligibleBookingVenue(venue)
+            ? 'approved'
+            : 'pending';
     final rejectionReason = venue['rejectionReason']?.toString() ?? venue['adminNotes']?.toString();
     final images = List<String>.from(venue['images'] ?? []);
     final firstImage = images.isNotEmpty ? images.first : null;
@@ -561,37 +596,49 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
                       label: const Text('التوفر', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
                     ),
 
-                    // 3. Incoming Requests with pending badge
+                    // 3. Incoming Requests with dynamic counter badge
                     StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('bookings')
-                          .where('venueId', isEqualTo: venueId)
-                          .where('status', isEqualTo: 'requested')
-                          .snapshots(),
+                      stream: () {
+                        try {
+                          return FirebaseFirestore.instance
+                              .collection('bookings')
+                              .where('venueId', isEqualTo: venueId)
+                              .where('status', isEqualTo: 'requested')
+                              .snapshots();
+                        } catch (_) {
+                          return const Stream<QuerySnapshot>.empty();
+                        }
+                      }(),
                       builder: (context, snap) {
                         final pending = snap.data?.docs.length ?? 0;
-                        return OutlinedButton.icon(
-                          onPressed: () => _viewVenueRequests(context, venueId, name),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            visualDensity: VisualDensity.compact,
-                            side: BorderSide(
-                              color: pending > 0 ? const Color(0xFFDC2626) : const Color(0xFFC5A16B).withValues(alpha: 0.5),
-                              width: pending > 0 ? 1.5 : 1.0,
+                        return Badge.count(
+                          count: pending,
+                          isLabelVisible: pending > 0,
+                          backgroundColor: const Color(0xFFDC2626),
+                          textColor: Colors.white,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _viewVenueRequests(context, venueId, name),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              visualDensity: VisualDensity.compact,
+                              side: BorderSide(
+                                color: pending > 0 ? const Color(0xFFDC2626) : const Color(0xFFC5A16B).withValues(alpha: 0.5),
+                                width: pending > 0 ? 1.5 : 1.0,
+                              ),
                             ),
-                          ),
-                          icon: Icon(
-                            Icons.receipt_long_outlined,
-                            size: 14,
-                            color: pending > 0 ? const Color(0xFFDC2626) : null,
-                          ),
-                          label: Text(
-                            pending > 0 ? 'الطلبات ($pending)' : 'الطلبات',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontFamily: 'Cairo',
-                              fontWeight: pending > 0 ? FontWeight.bold : FontWeight.normal,
+                            icon: Icon(
+                              Icons.receipt_long_outlined,
+                              size: 14,
                               color: pending > 0 ? const Color(0xFFDC2626) : null,
+                            ),
+                            label: Text(
+                              pending > 0 ? 'الطلبات ($pending)' : 'الطلبات',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontFamily: 'Cairo',
+                                fontWeight: pending > 0 ? FontWeight.bold : FontWeight.normal,
+                                color: pending > 0 ? const Color(0xFFDC2626) : null,
+                              ),
                             ),
                           ),
                         );
@@ -628,6 +675,7 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
 
     switch (status) {
       case 'approved':
+      case 'verified':
         bg = const Color(0xFF10B981);
         fg = Colors.white;
         text = 'معتمد ونشط';
@@ -732,24 +780,33 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'طلبات الحجز — $venueName',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.receipt_long_outlined, color: bookingGold, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'طلبات الحجز — $venueName',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: 'إغلاق',
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const Divider(height: 1),

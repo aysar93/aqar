@@ -7,6 +7,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
+import 'booking_media_image.dart';
+
 typedef BookingMediaCall = Future<Map<String, dynamic>> Function(
     String name, Map<String, dynamic> data);
 
@@ -56,8 +58,9 @@ class BookingMediaService {
 
   static Future<Uint8List> readImageData(String url, String? token,
       {http.Client? client}) async {
+    final canAttach = token != null && BookingMediaImage.isTrustedMediaUrl(url);
     final headers =
-        token == null ? <String, String>{} : {'Authorization': 'Bearer $token'};
+        canAttach ? {'Authorization': 'Bearer $token'} : <String, String>{};
     final uri = Uri.parse(url);
     Future<http.Response> get(Map<String, String> h) => (client == null
             ? http.get(uri, headers: h)
@@ -158,10 +161,12 @@ class BookingMediaService {
 
   static Future<void> uploadVideo(
       Uint8List bytes, String venueId, BookingMediaCall call,
-      {Future<void> Function(String, Uint8List)? upload}) async {
+      {Future<void> Function(String, Uint8List)? upload,
+      void Function(double progress, String status)? onProgress}) async {
     if (bytes.length < 12 || bytes.length > 50 * 1024 * 1024) {
       throw StateError('حجم الفيديو غير صالح');
     }
+    onProgress?.call(0.05, 'جارٍ حجز مسار الفيديو على الخادم...');
     final result = await call(
         'reserveBookingVideo', {'venueId': venueId, 'size': bytes.length});
     final path = result['path'] as String;
@@ -173,14 +178,22 @@ class BookingMediaService {
         r'\.mp4$');
     if (!expected.hasMatch(path)) throw StateError('مسار الفيديو غير صالح');
     if (upload != null) {
+      onProgress?.call(0.2, 'جارٍ رفع الفيديو...');
       await upload(path, bytes);
+      onProgress?.call(0.9, 'اكتمل رفع الملف...');
     } else {
       const chunkSize = 4 * 1024 * 1024;
       final project = Firebase.app().options.projectId;
       final base = emulatorHost == null
           ? 'https://us-central1-$project.cloudfunctions.net/uploadBookingVideoChunk'
           : 'http://$emulatorHost:5001/$project/us-central1/uploadBookingVideoChunk';
+      final totalChunks = (bytes.length / chunkSize).ceil();
       for (var offset = 0; offset < bytes.length; offset += chunkSize) {
+        final currentChunk = (offset ~/ chunkSize) + 1;
+        final progress = 0.1 + (offset / bytes.length) * 0.8;
+        onProgress?.call(
+            progress,
+            'جارٍ رفع المقطع (الجزء $currentChunk من $totalChunks)...');
         final end = (offset + chunkSize).clamp(0, bytes.length);
         for (var attempt = 0;; attempt++) {
           try {
@@ -209,6 +222,8 @@ class BookingMediaService {
         }
       }
     }
+    onProgress?.call(0.95, 'جارٍ تثبيت مقطع الفيديو واعتماده...');
     await call('finishBookingVideo', {'mediaId': mediaId});
+    onProgress?.call(1.0, 'اكتمل الرفع بنجاح');
   }
 }

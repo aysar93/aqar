@@ -15,7 +15,7 @@ import '../../app_updates/app_updates_management_screen.dart';
 import '../../analytics/screens/analytics_dashboard_screen.dart';
 import '../../reels/admin/reels_admin_screen.dart';
 import 'content_reports_screen.dart';
-import '../../bookings/booking_screen.dart';
+import '../../bookings/admin/booking_admin_dashboard_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -50,12 +50,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         body: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            adminButton(context,
-                icon: Icons.event_available,
-                title: 'إدارة الحجوزات',
-                subtitle: 'الأماكن والحجوزات والعربون والبلاغات',
-                color: Colors.teal,
-                page: const BookingScreen(admin: true)),
             const Text(
               "مرحباً بك",
               style: TextStyle(
@@ -142,6 +136,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       : 'إدارة واعتماد المكاتب العقارية',
                   color: const Color(0xffD4AF37),
                   page: const OfficeManagementScreen(),
+                  badgeCount: count,
+                );
+              },
+            ),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('bookings')
+                  .where('status', isEqualTo: 'requested')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final count = snapshot.data?.docs.length ?? 0;
+                return adminButton(
+                  context,
+                  icon: Icons.event_available_rounded,
+                  title: 'إدارة الحجوزات',
+                  subtitle: count > 0
+                      ? '$count طلب حجز بانتظار المراجعة'
+                      : 'الأماكن والحجوزات والمدفوعات والتقارير',
+                  color: const Color(0xffD4AF37),
+                  page: const BookingAdminDashboardScreen(),
                   badgeCount: count,
                 );
               },

@@ -18,10 +18,12 @@ class BookingSectionHeader extends StatelessWidget {
   const BookingSectionHeader({
     super.key,
     required this.title,
+    this.subtitle,
     required this.count,
     this.onSeeAll,
   });
   final String title;
+  final String? subtitle;
   final int count;
   final VoidCallback? onSeeAll;
 
@@ -29,31 +31,63 @@ class BookingSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
+    final isFeatured = title.contains('المميزة');
+    final sectionIcon = isFeatured ? Icons.auto_awesome_rounded : Icons.explore_outlined;
+
     return Padding(
       key: ValueKey('booking-section-header-$title'),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 4,
-            height: 20,
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: bookingGold,
-              borderRadius: BorderRadius.circular(4),
+              color: dark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Icon(
+              sectionIcon,
+              size: 18,
+              color: isFeatured ? bookingGold : (dark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7)),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.25,
-                fontWeight: FontWeight.w700,
-                color: dark ? Colors.white : bookingNavy,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                    color: dark ? Colors.white : bookingNavy,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.normal,
+                      color: dark ? Colors.white60 : const Color(0xFF64748B),
+                      fontFamily: 'Cairo',
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           if (onSeeAll != null) ...[
@@ -73,8 +107,6 @@ class BookingSectionHeader extends StatelessWidget {
                     'عرض الكل',
                     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
                   ),
-                  SizedBox(width: 2),
-                  Icon(Icons.chevron_left, size: 16),
                 ],
               ),
             ),
@@ -103,7 +135,8 @@ class BookingBrowseContent extends StatelessWidget {
   final bool featuredPreview;
   final VoidCallback? onLoadMore;
   Widget section(BuildContext context, String title,
-          List<Map<String, dynamic>> items, String empty) {
+          List<Map<String, dynamic>> items, String empty,
+          {String? subtitle}) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final cardBg = dark ? const Color(0xFF1E2638) : Colors.white;
@@ -134,6 +167,7 @@ class BookingBrowseContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: BookingSectionHeader(
               title: title,
+              subtitle: subtitle,
               count: items.length,
               onSeeAll: items.isEmpty
                   ? null
@@ -184,9 +218,11 @@ class BookingBrowseContent extends StatelessWidget {
               child: Text('المميزة — بيانات معاينة محلية فقط',
                   style: TextStyle(fontSize: 12))),
         section(context, 'المميزة', featuredVenues,
-            'لا توجد أماكن ذات تمييز معتمد حاليًا.'),
+            'لا توجد أماكن ذات تمييز معتمد حاليًا.',
+            subtitle: 'أماكن مختارة بعناية'),
         section(context, 'استكشف الأماكن', venues,
-            'لا توجد أماكن مطابقة ضمن الدفعة المحمّلة؛ جرّب الفلاتر أو حمّل المزيد.'),
+            'لا توجد أماكن مطابقة ضمن الدفعة المحمّلة؛ جرّب الفلاتر أو حمّل المزيد.',
+            subtitle: 'شاليهات وقاعات ومزارع مختارة'),
         const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Text(
@@ -344,8 +380,9 @@ class BookingRecordCard extends StatelessWidget {
                     const Row(children: [
                       Expanded(
                           child: Text('عرض تفاصيل الحجز',
-                              style: TextStyle(fontWeight: FontWeight.w700))),
-                      Icon(Icons.chevron_left, color: bookingGold)
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFC5A059)))),
                     ]),
                   ]))));
 }

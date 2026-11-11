@@ -29,15 +29,17 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   String _selectedCategory = ''; // '' = all, chalet, farm, hall, other
-  String _selectedCity = '';
-  RangeValues _priceRange = const RangeValues(0, 1500000);
+  String _selectedCity = 'جميع المدن';
+  String _selectedSort = 'الأحدث';
+  RangeValues _priceRange = const RangeValues(50000, 2000000);
   DateTime? _selectedDate;
   String _selectedShift = ''; // '', morning, evening, fullDay
   int? _minCapacity;
   final Set<String> _selectedAmenities = {};
+  final Set<int> _selectedRatings = {};
 
   static const _cities = [
-    'الكل',
+    'جميع المدن',
     'الرمادي',
     'الفلوجة',
     'الحبانية',
@@ -46,8 +48,16 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
     'الكرمة',
     'القائم',
     'عنه',
-    'راوة',
+    'راوه',
     'الرطبة',
+  ];
+
+  static const _sortOptions = [
+    'الأحدث',
+    'أقل سعر',
+    'أعلى سعر',
+    'الأعلى تقييماً',
+    'الأكثر شعبية',
   ];
 
   static const _categories = [
@@ -95,12 +105,14 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
     setState(() {
       _searchController.clear();
       _selectedCategory = '';
-      _selectedCity = '';
-      _priceRange = const RangeValues(0, 1500000);
+      _selectedCity = 'جميع المدن';
+      _selectedSort = 'الأحدث';
+      _priceRange = const RangeValues(50000, 2000000);
       _selectedDate = null;
       _selectedShift = '';
       _minCapacity = null;
       _selectedAmenities.clear();
+      _selectedRatings.clear();
     });
   }
 
@@ -108,16 +120,23 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
     int count = 0;
     if (_searchController.text.trim().isNotEmpty) count++;
     if (_selectedCategory.isNotEmpty) count++;
-    if (_selectedCity.isNotEmpty && _selectedCity != 'الكل') count++;
-    if (_priceRange.start > 0 || _priceRange.end < 1500000) count++;
+    if (_selectedCity.isNotEmpty && _selectedCity != 'جميع المدن') count++;
+    if (_priceRange.start > 50000 || _priceRange.end < 2000000) count++;
     if (_selectedDate != null) count++;
     if (_selectedShift.isNotEmpty) count++;
     if (_minCapacity != null) count++;
     count += _selectedAmenities.length;
+    count += _selectedRatings.length;
     return count;
   }
 
   bool _matchesFilters(Map<String, dynamic> venue) {
+    if (venue['active'] == false ||
+        const ['pending', 'rejected'].contains(venue['verificationStatus']) ||
+        (widget.stream == null &&
+            !isBookingVenueApprovedStatus(venue['verificationStatus']))) {
+      return false;
+    }
     final name = venue['name']?.toString() ?? '';
     final location = venue['location']?.toString() ?? '';
     final complex = venue['complexName']?.toString() ?? '';
@@ -132,7 +151,7 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
       return false;
     }
 
-    if (_selectedCity.isNotEmpty && _selectedCity != 'الكل') {
+    if (_selectedCity.isNotEmpty && _selectedCity != 'جميع المدن') {
       if (!location.contains(_selectedCity) && !name.contains(_selectedCity)) {
         return false;
       }
@@ -141,6 +160,13 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
     final price = bookingStartingPrice(venue);
     if (price > 0) {
       if (price < _priceRange.start || price > _priceRange.end) {
+        return false;
+      }
+    }
+
+    if (_selectedRatings.isNotEmpty) {
+      final r = (venue['rating'] as num?)?.round() ?? 0;
+      if (!_selectedRatings.contains(r)) {
         return false;
       }
     }
@@ -222,6 +248,49 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
                 ],
               ),
             ),
+
+            // Horizontal Sorting Row
+            Container(
+              height: 44,
+              color: surfaceColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _sortOptions.map((opt) {
+                    final isSel = _selectedSort == opt;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: InkWell(
+                        onTap: () => setState(() => _selectedSort = opt),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: isSel ? bookingGold : Colors.transparent,
+                                width: 2.2,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            opt,
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12,
+                              fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                              color: isSel ? bookingGold : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
 
             // Main Content: Filters Expansion + Results List
             Expanded(
@@ -369,10 +438,10 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
                                       ],
                                     ),
                                     RangeSlider(
-                                      values: _priceRange,
-                                      min: 0,
-                                      max: 2000000,
-                                      divisions: 20,
+                                       values: _priceRange,
+                                       min: 50000,
+                                       max: 2000000,
+                                       divisions: 39,
                                       activeColor: bookingGold,
                                       inactiveColor: isDark ? Colors.white24 : Colors.black12,
                                       labels: RangeLabels(
@@ -519,10 +588,7 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
                   StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: widget.stream ??
                         (Firebase.apps.isNotEmpty
-                            ? FirebaseFirestore.instance
-                                .collection('booking_venues')
-                                .where('active', isEqualTo: true)
-                                .snapshots()
+                            ? publicBookingVenuesQuery().snapshots()
                             : const Stream.empty()),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -554,6 +620,22 @@ class _BookingSearchScreenState extends State<BookingSearchScreen> {
                                 'id': doc.id,
                               })
                           .toList();
+
+                      filtered.sort((a, b) {
+                        switch (_selectedSort) {
+                          case 'أقل سعر':
+                            return bookingStartingPrice(a).compareTo(bookingStartingPrice(b));
+                          case 'أعلى سعر':
+                            return bookingStartingPrice(b).compareTo(bookingStartingPrice(a));
+                          case 'الأعلى تقييماً':
+                            return ((b['rating'] as num?) ?? 0).compareTo((a['rating'] as num?) ?? 0);
+                          case 'الأكثر شعبية':
+                            return ((b['bookingsCount'] as num?) ?? 0).compareTo((a['bookingsCount'] as num?) ?? 0);
+                          case 'الأحدث':
+                          default:
+                            return 0;
+                        }
+                      });
 
                       if (filtered.isEmpty) {
                         return SliverFillRemaining(

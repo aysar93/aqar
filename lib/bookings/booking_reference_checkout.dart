@@ -1,6 +1,29 @@
 import 'package:flutter/material.dart';
 import 'booking_widgets.dart';
 
+String shortBookingCode(String id) {
+  if (id.length <= 8) return id;
+  final clean = id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+  return 'AQAR-${clean.length > 5 ? clean.substring(0, 5) : clean}';
+}
+
+DateTime? bookingSafeDateTime(dynamic value) {
+  if (value is num && value.isFinite) {
+    try {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (value is DateTime) return value.toUtc();
+  if (value is String) return DateTime.tryParse(value)?.toUtc();
+  try {
+    final dynamic dyn = value;
+    if (dyn.toDate != null) return (dyn.toDate() as DateTime).toUtc();
+  } catch (_) {}
+  return null;
+}
+
 class BookingArrivalSummary extends StatelessWidget {
   const BookingArrivalSummary(
       {super.key, required this.start, required this.end});
@@ -25,8 +48,9 @@ class BookingArrivalSummary extends StatelessWidget {
                                     .colorScheme
                                     .onSurfaceVariant)),
                         Text(
-                            bookingVisitTime(
-                                e.$2?.toUtc().add(const Duration(hours: 3))),
+                            e.$2 != null
+                                ? bookingVisitTime(e.$2!.toUtc().add(const Duration(hours: 3)))
+                                : 'غير متوفر',
                             style: const TextStyle(fontWeight: FontWeight.w700))
                       ]))
           ])));
@@ -95,24 +119,34 @@ class _BookingRequestConfirmationState
                   if (bookingGuestLabel(venue['guestType']) != null)
                     Text(bookingGuestLabel(venue['guestType'])!),
                   BookingArrivalSummary(start: start, end: end),
-                  for (final e in {
-                    'الإجمالي': total,
-                    'العربون المطلوب': venue['deposit'],
-                    'المتبقي بعد اعتماد العربون':
-                        total - (venue['deposit'] as num)
-                  }.entries)
-                    Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Wrap(
-                            alignment: WrapAlignment.spaceBetween,
-                            spacing: 16,
-                            runSpacing: 4,
-                            children: [
-                              Text(e.key),
-                              Text(bookingMoney(e.value),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700))
-                            ])),
+                  Builder(builder: (context) {
+                    final rawDeposit = venue['deposit'];
+                    final depositNum = rawDeposit is num
+                        ? rawDeposit
+                        : (num.tryParse(rawDeposit?.toString() ?? '') ?? 0);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final e in {
+                          'الإجمالي': total,
+                          'العربون المطلوب': rawDeposit ?? depositNum,
+                          'المتبقي بعد اعتماد العربون': total - depositNum
+                        }.entries)
+                          Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  spacing: 16,
+                                  runSpacing: 4,
+                                  children: [
+                                    Text(e.key),
+                                    Text(bookingMoney(e.value),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700))
+                                  ])),
+                      ],
+                    );
+                  }),
                   const Divider(height: 24),
                   Text('${venue['terms']}',
                       style: const TextStyle(fontSize: 13, height: 1.7)),
@@ -144,11 +178,16 @@ class BookingReservationHeader extends StatelessWidget {
   final String id;
   @override
   Widget build(BuildContext context) {
-    final v =
-        venue != null && venue!['id'] == booking['venueId'] ? venue : null;
-    final paths = List<String>.from(v?['mediaPaths'] ?? [])
+    final snapshot = booking['venueSnapshot'] is Map ? (booking['venueSnapshot'] as Map) : null;
+    final v = (venue != null && venue!['id'] == booking['venueId'])
+        ? venue
+        : (snapshot != null ? Map<String, dynamic>.from(snapshot) : null);
+    final rawPaths = v?['mediaPaths'] ?? booking['mediaPaths'] ?? [];
+    final paths = (rawPaths is Iterable ? rawPaths : const [])
+        .map((e) => e.toString())
         .where((p) => !p.toLowerCase().endsWith('.mp4'))
         .toList();
+    final statusText = bookingStatusLabel(booking['status']);
     return Card(
         margin: const EdgeInsets.only(bottom: 16),
         clipBehavior: Clip.antiAlias,
@@ -162,11 +201,10 @@ class BookingReservationHeader extends StatelessWidget {
                       spacing: 12,
                       runSpacing: 8,
                       children: [
-                        Text('رقم الحجز: $id',
+                        Text('رقم الحجز: ${shortBookingCode(id)}',
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
-                        Text(bookingStatusNames[booking['status']] ??
-                            'حالة غير معروفة')
+                        Text(statusText)
                       ]),
                   const SizedBox(height: 14),
                   if (paths.isNotEmpty)
@@ -174,7 +212,7 @@ class BookingReservationHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                         child: BookingCardMedia(
                             paths: [paths.first],
-                            name: '${booking['venueName']}',
+                            name: '${booking['venueName'] ?? ''}',
                             category: venueCategory(booking['category']))),
                   const SizedBox(height: 12),
                   Text('${booking['venueName'] ?? ''}',
@@ -182,16 +220,8 @@ class BookingReservationHeader extends StatelessWidget {
                           fontSize: 21, fontWeight: FontWeight.w700)),
                   Text('${booking['location'] ?? ''}'),
                   BookingArrivalSummary(
-                      start: booking['start'] is num
-                          ? DateTime.fromMillisecondsSinceEpoch(
-                              (booking['start'] as num).toInt(),
-                              isUtc: true)
-                          : null,
-                      end: booking['end'] is num
-                          ? DateTime.fromMillisecondsSinceEpoch(
-                              (booking['end'] as num).toInt(),
-                              isUtc: true)
-                          : null),
+                      start: bookingSafeDateTime(booking['start']),
+                      end: bookingSafeDateTime(booking['end'])),
                   if (booking['pricing'] is Map &&
                       booking['pricing']['name'] is String)
                     Text('الفترة: ${booking['pricing']['name']}'),
@@ -201,8 +231,21 @@ class BookingReservationHeader extends StatelessWidget {
                   Text('الإجمالي ${bookingMoney(booking['total'])}',
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w700)),
-                  Text(
-                      'العربون ${bookingMoney(booking['deposit'])} · المتبقي ${bookingMoney(booking['remaining'])}'),
+                  Builder(builder: (_) {
+                    final totalNum = booking['total'] is num
+                        ? (booking['total'] as num)
+                        : num.tryParse('${booking['total'] ?? ''}');
+                    final depositNum = booking['deposit'] is num
+                        ? (booking['deposit'] as num)
+                        : num.tryParse('${booking['deposit'] ?? ''}');
+                    final remainingCalc = booking['status'] == 'cancelled'
+                        ? 0
+                        : ((totalNum != null && depositNum != null && totalNum > depositNum)
+                            ? (totalNum - depositNum)
+                            : (booking['remaining'] ?? 0));
+                    return Text(
+                        'العربون ${bookingMoney(booking['deposit'])} · المتبقي ${bookingMoney(remainingCalc)}');
+                  }),
                   const SizedBox(height: 8),
                   const Text(
                       'حالة الدفع من السجل المعتمد؛ إرسال الطلب لا يعني تأكيد الحجز.',

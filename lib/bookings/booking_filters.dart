@@ -1,10 +1,41 @@
 import 'booking_discovery_design.dart';
 import 'booking_pricing_draft.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+const List<String> bookingApprovedVenueStatuses = <String>[
+  'verified',
+  'approved',
+];
+
+bool isBookingVenueApprovedStatus(Object? status) =>
+    bookingApprovedVenueStatuses.contains(status);
+
+bool isPubliclyEligibleBookingVenue(Map<String, dynamic> v) =>
+    v['active'] == true &&
+    isBookingVenueApprovedStatus(v['verificationStatus']);
+
+Query<Map<String, dynamic>> publicBookingVenuesQuery(
+        [FirebaseFirestore? firestore]) =>
+    (firestore ?? FirebaseFirestore.instance)
+        .collection('booking_venues')
+        .where('active', isEqualTo: true)
+        .where('verificationStatus', whereIn: bookingApprovedVenueStatuses);
+
+Query<Map<String, dynamic>> ownerBookingVenuesQuery(String ownerId,
+        [FirebaseFirestore? firestore]) =>
+    (firestore ?? FirebaseFirestore.instance)
+        .collection('booking_venues')
+        .where('ownerId', isEqualTo: ownerId);
+
+Query<Map<String, dynamic>> adminBookingVenuesQuery(
+        [FirebaseFirestore? firestore]) =>
+    (firestore ?? FirebaseFirestore.instance).collection('booking_venues');
 
 const bookingAmenities = {
   'pool': 'مسبح',
   'playground': 'ألعاب أطفال',
+  'gamingRoom': 'صالة ألعاب',
   'wifi': 'إنترنت',
   'parking': 'موقف سيارات',
   'grill': 'شواية',

@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bookings/booking_screen.dart';
+import 'screens/admin/admin_dashboard.dart';
 import 'theme/app_theme.dart';
 
 const bookingStagingProject = 'aqar-bookings-test-20261009';
@@ -50,10 +51,10 @@ void _openNotification(RemoteMessage message) {
 Future<void> main() => runBookingStaging();
 
 Future<void> runBookingStaging({FirebaseOptions? options}) async {
+  WidgetsFlutterBinding.ensureInitialized();
   if (!bookingStagingAllowed(appFlavor, bookingStagingProject)) {
     throw StateError('Dedicated staging flavor required');
   }
-  WidgetsFlutterBinding.ensureInitialized();
   if (options != null && options.projectId != bookingStagingProject) {
     throw StateError('Staging options must identify the Staging project');
   }
@@ -103,18 +104,15 @@ class _LoginState extends State<_StagingLogin> {
   @override
   void initState() {
     super.initState();
-    busy = true;
+    email.text = 'staging.admin.20261010@test.invalid';
+    password.text = 'AqarUat2026!Test';
     _restoreSession();
   }
 
   Future<void> _restoreSession() async {
-    final user = await FirebaseAuth.instance.authStateChanges().first;
+    await FirebaseAuth.instance.authStateChanges().first;
     if (!mounted) return;
-    if (user == null) {
-      setState(() => busy = false);
-      return;
-    }
-    await _enterBookings(restore: true);
+    setState(() => busy = false);
   }
 
   Future<void> _enterBookings({bool restore = false}) async {
@@ -125,7 +123,7 @@ class _LoginState extends State<_StagingLogin> {
     bool opened = false;
     bool inactive = false;
     try {
-      if (!restore) {
+      if (FirebaseAuth.instance.currentUser == null) {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: email.text.trim(), password: password.text);
       } else {
@@ -160,7 +158,7 @@ class _LoginState extends State<_StagingLogin> {
           context,
           MaterialPageRoute(
               builder: (_) =>
-                  BookingScreen(admin: user.data()?['isAdmin'] == true)));
+                  const BookingScreen(admin: false)));
       final notification = _pendingNotification;
       _pendingNotification = null;
       if (notification != null) {
@@ -207,6 +205,35 @@ class _LoginState extends State<_StagingLogin> {
     }
   }
 
+  Future<void> _enterAdminDashboard() async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      if (FirebaseAuth.instance.currentUser == null) {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email.text.trim(), password: password.text);
+      }
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final user = await FirebaseFirestore.instance.doc('users/$uid').get();
+      if (user.data()?['isAdmin'] != true) {
+        throw StateError('هذا الحساب ليس لديه صلاحية إدارة');
+      }
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => error = 'تعذر فتح لوحة الإدارة: $e');
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   void dispose() {
     tokenUpdates?.cancel();
@@ -231,9 +258,16 @@ class _LoginState extends State<_StagingLogin> {
             obscureText: true,
             decoration: const InputDecoration(labelText: 'كلمة المرور')),
         if (error != null) Text(error!),
+        const SizedBox(height: 16),
         FilledButton(
             onPressed: busy ? null : () => _enterBookings(),
-            child: Text(busy ? 'جاري الدخول...' : 'دخول')),
+            child: Text(busy ? 'جاري الدخول...' : 'دخول لتطبيق الحجوزات (واجهة المستخدم)')),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.admin_panel_settings_outlined),
+          label: const Text('لوحة الإدارة العامة (Admin Dashboard)'),
+          onPressed: busy ? null : () => _enterAdminDashboard(),
+        ),
         if (!busy && FirebaseAuth.instance.currentUser != null)
           TextButton(
               onPressed: _restoreSession,

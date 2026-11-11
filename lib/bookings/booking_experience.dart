@@ -69,52 +69,145 @@ class BookingCheckoutHeader extends StatelessWidget {
   const BookingCheckoutHeader({super.key, required this.step});
   final int step;
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('رحلتك إلى حجز مريح',
-            style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 12),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          for (var i = 0; i < 3; i++)
-            Expanded(
-                child: Semantics(
-                    label: 'الخطوة ${i + 1} من 3، ${[
-                      'المكان',
-                      'الموعد',
-                      'المراجعة'
-                    ][i]}${i == step ? '، الحالية' : ''}',
-                    child: Column(children: [
-                      Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                              color: i <= step
-                                  ? bookingNavy
-                                  : const Color(0xFFE2E8F0),
-                              shape: BoxShape.circle),
-                          child: Center(
-                              child: i < step
-                                  ? const Icon(Icons.check,
-                                      size: 18, color: bookingGold)
-                                  : Text('${i + 1}',
-                                      style: TextStyle(
-                                          color: i <= step
-                                              ? Colors.white
-                                              : bookingNavy,
-                                          fontWeight: FontWeight.w700)))),
-                      const SizedBox(height: 8),
-                      Text(['المكان', 'الموعد', 'المراجعة'][i],
-                          textAlign: TextAlign.center,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const stages = [
+      {'title': 'اختيار الموعد', 'sub': 'اليوم والفترة'},
+      {'title': 'بيانات الحجز', 'sub': 'الأسعار والشروط'},
+      {'title': 'التأكيد', 'sub': 'إرسال الطلب'},
+    ];
+    final activeStage = step.clamp(0, 2);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                for (var i = 0; i < stages.length; i++) ...[
+                  // Step Indicator Node
+                  Semantics(
+                    label: 'الخطوة ${i + 1} من 3، ${stages[i]['title']}${i == activeStage ? '، الحالية' : (i < activeStage ? '، مكتملة' : '')}',
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i < activeStage
+                            ? const Color(0xFF16A34A)
+                            : i == activeStage
+                                ? bookingNavy
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                          color: i == activeStage
+                              ? bookingGold
+                              : (i < activeStage ? const Color(0xFF16A34A) : Colors.transparent),
+                          width: i == activeStage ? 2.5 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: i < activeStage
+                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            : Text(
+                                '${i + 1}',
+                                style: TextStyle(
+                                  color: i == activeStage
+                                      ? bookingGold
+                                      : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  // Connecting Progress Line
+                  if (i < stages.length - 1)
+                    Expanded(
+                      child: Container(
+                        height: 3,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: i < activeStage
+                              ? const Color(0xFF16A34A)
+                              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Step Labels Row
+            Row(
+              children: [
+                for (var i = 0; i < stages.length; i++)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: i == 0
+                          ? CrossAxisAlignment.start
+                          : (i == stages.length - 1
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.center),
+                      children: [
+                        Text(
+                          stages[i]['title']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontWeight: i == step
-                                  ? FontWeight.w700
-                                  : FontWeight.w400)),
-                    ]))),
-        ]),
-      ]));
+                            fontFamily: 'Cairo',
+                            fontSize: 11.5,
+                            fontWeight: i == activeStage ? FontWeight.bold : FontWeight.w500,
+                            color: i == activeStage
+                                ? (isDark ? bookingGold : bookingNavy)
+                                : (i < activeStage
+                                    ? (isDark ? Colors.white70 : const Color(0xFF334155))
+                                    : (isDark ? Colors.white38 : const Color(0xFF94A3B8))),
+                          ),
+                        ),
+                        Text(
+                          stages[i]['sub']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 9.5,
+                            color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 DateTime? bookingHoldDeadline(dynamic value) {

@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
+import '../services/share_origin.dart';
+import 'booking_filters.dart';
 import 'booking_screen.dart';
 import 'booking_widgets.dart';
 
@@ -89,6 +91,24 @@ class BookingReelItem {
       createdAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       rawVenue: data,
     );
+  }
+  static List<BookingReelItem> extractEligibleVenueReels(
+    Iterable<DocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final items = <BookingReelItem>[];
+    for (final vDoc in docs) {
+      final data = vDoc.data();
+      if (data == null || !isPubliclyEligibleBookingVenue(data)) continue;
+      final media = (data['mediaPaths'] as List?) ?? [];
+      for (final path in media) {
+        final pStr = path.toString();
+        if (pStr.endsWith('.mp4') || pStr.contains('/videos/')) {
+          items.add(BookingReelItem.fromVenueDoc(vDoc, pStr));
+          break;
+        }
+      }
+    }
+    return items;
   }
 }
 
@@ -228,23 +248,8 @@ class _BookingReelsScreenState extends State<BookingReelsScreen> {
 
       // 2. Fetch venues that have video in media
       if (items.isEmpty) {
-        final venuesSnap = await FirebaseFirestore.instance
-            .collection('booking_venues')
-            .where('active', isEqualTo: true)
-            .limit(15)
-            .get();
-
-        for (final vDoc in venuesSnap.docs) {
-          final data = vDoc.data();
-          final media = (data['mediaPaths'] as List?) ?? [];
-          for (final path in media) {
-            final pStr = path.toString();
-            if (pStr.endsWith('.mp4') || pStr.contains('/videos/')) {
-              items.add(BookingReelItem.fromVenueDoc(vDoc, pStr));
-              break;
-            }
-          }
-        }
+        final venuesSnap = await publicBookingVenuesQuery().limit(15).get();
+        items.addAll(BookingReelItem.extractEligibleVenueReels(venuesSnap.docs));
       }
 
       final ranked = await BookingReelRecommendationService.rankFeed(items);
@@ -425,7 +430,12 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
   }
 
   void _checkUserInteractions() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return;
+    }
     if (uid == null) return;
 
     // Check like
@@ -630,10 +640,12 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
   }
 
   void _shareReel() {
-    final shareUrl = 'https://aqar.app/booking/venue/${widget.reel.venueId}';
+    final shareUrl =
+        'https://aysar93.github.io/aqar-pages/booking/venue/?id=${widget.reel.venueId}';
     Share.share(
       'شاهد هذا المكان المميز في عقارات الأنبار:\n${widget.reel.venueName} — ${widget.reel.location}\nالسعر: ${widget.reel.price} د.ع\n\nاحجز الآن عبر الرابط:\n$shareUrl',
       subject: widget.reel.venueName,
+      sharePositionOrigin: shareOrigin(context),
     );
   }
 
@@ -958,13 +970,33 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
 class BookingReelCommentsSheet extends StatefulWidget {
   final String reelId;
   final bool admin;
-  const BookingReelCommentsSheet({super.key, required this.reelId, this.admin = false});
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? commentsStream;
+  final String? Function()? currentUserId;
+  const BookingReelCommentsSheet({
+    super.key,
+    required this.reelId,
+    this.admin = false,
+    this.commentsStream,
+    this.currentUserId,
+  });
 
   @override
   State<BookingReelCommentsSheet> createState() => _BookingReelCommentsSheetState();
 }
 
 class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
+  final TextEditingController _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode();
+  Map<String, String>? _replyingTo;
+  bool _submitting = false;
+
+  void _setReply(String commentId, String author) {
+    setState(() {
+      _replyingTo = {'id': commentId, 'author': author};
+    });
+    _commentFocusNode.requestFocus();
+  }
+
   void _editComment(DocumentSnapshot<Map<String, dynamic>> doc) {
     final controller = TextEditingController(text: doc.data()?['text'] ?? '');
     showDialog(
@@ -1004,12 +1036,9 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
     );
   }
 
-  final TextEditingController _commentController = TextEditingController();
-  bool _submitting = false;
-
   Future<void> _submitComment() async {
     final text = _commentController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _submitting) return;
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -1021,17 +1050,23 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
 
     setState(() => _submitting = true);
     try {
-      await FirebaseFirestore.instance
-          .collection('booking_reels')
-          .doc(widget.reelId)
-          .collection('comments')
-          .add({
+      final payload = <String, dynamic>{
         'userId': user.uid,
         'userName': user.displayName ?? 'مستخدم',
         'userPhoto': user.photoURL ?? '',
         'text': text,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+      if (_replyingTo != null) {
+        payload['parentId'] = _replyingTo!['id'];
+        payload['replyToAuthor'] = _replyingTo!['author'];
+      }
+
+      await FirebaseFirestore.instance
+          .collection('booking_reels')
+          .doc(widget.reelId)
+          .collection('comments')
+          .add(payload);
 
       await FirebaseFirestore.instance
           .collection('booking_reels')
@@ -1039,6 +1074,7 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
           .update({'commentsCount': FieldValue.increment(1)}).catchError((_) {});
 
       _commentController.clear();
+      _replyingTo = null;
     } catch (_) {}
     if (mounted) setState(() => _submitting = false);
   }
@@ -1046,6 +1082,7 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
   @override
   void dispose() {
     _commentController.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
@@ -1055,7 +1092,7 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
     final dark = theme.brightness == Brightness.dark;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
+      height: MediaQuery.of(context).size.height * 0.70,
       decoration: BoxDecoration(
         color: dark ? const Color(0xFF1E2638) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -1077,8 +1114,8 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
             child: Row(
               children: [
                 const Text(
-                  'التعليقات',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  'التعليقات والردود',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                 ),
                 const Spacer(),
                 IconButton(
@@ -1093,12 +1130,13 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
           // Comments List
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('booking_reels')
-                  .doc(widget.reelId)
-                  .collection('comments')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
+              stream: widget.commentsStream ??
+                  FirebaseFirestore.instance
+                      .collection('booking_reels')
+                      .doc(widget.reelId)
+                      .collection('comments')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return const Center(child: Text('تعذر تحميل التعليقات'));
@@ -1123,52 +1161,103 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
                     final author = data['userName']?.toString() ?? 'مستخدم';
                     final userPhoto = data['userPhoto']?.toString() ?? '';
                     final comment = data['text']?.toString() ?? '';
-                    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+                    final isReply = data['parentId'] != null;
+                    final replyToAuthor = data['replyToAuthor']?.toString();
+                    String? currentUid;
+                    try {
+                      currentUid = widget.currentUserId?.call() ?? FirebaseAuth.instance.currentUser?.uid;
+                    } catch (_) {}
                     final isAuthor = currentUid != null && currentUid == data['userId'];
                     final canDelete = isAuthor || widget.admin;
 
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: bookingGold.withValues(alpha: .2),
-                          backgroundImage: userPhoto.isNotEmpty ? NetworkImage(userPhoto) : null,
-                          child: userPhoto.isEmpty
-                              ? Text(
-                                  author.isNotEmpty ? author[0] : '؟',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: bookingGold),
-                                )
-                              : null,
+                    return Padding(
+                      padding: EdgeInsets.only(right: isReply ? 28 : 0),
+                      child: Container(
+                        padding: isReply ? const EdgeInsets.all(8) : EdgeInsets.zero,
+                        decoration: isReply
+                            ? BoxDecoration(
+                                color: (dark ? Colors.white : Colors.black).withValues(alpha: 0.03),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: (dark ? Colors.white10 : Colors.black12)),
+                              )
+                            : null,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: isReply ? 14 : 18,
+                              backgroundColor: bookingGold.withValues(alpha: .2),
+                              backgroundImage: userPhoto.isNotEmpty ? NetworkImage(userPhoto) : null,
+                              child: userPhoto.isEmpty
+                                  ? Text(
+                                      author.isNotEmpty ? author[0] : '؟',
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: bookingGold, fontSize: isReply ? 11 : 13),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Wrap(
+                                    spacing: 6,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      Text(author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo')),
+                                      if (isReply && replyToAuthor != null)
+                                        Text(
+                                          'رد على @$replyToAuthor',
+                                          style: const TextStyle(fontSize: 11, color: bookingGold, fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(comment, style: const TextStyle(fontSize: 13.5, height: 1.4, fontFamily: 'Cairo')),
+                                  const SizedBox(height: 4),
+                                  // Reply action button
+                                  InkWell(
+                                    onTap: () => _setReply(docs[index].id, author),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.reply_rounded, size: 14, color: bookingGold),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'رد',
+                                            style: TextStyle(fontSize: 11.5, color: bookingGold, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isAuthor)
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 16, color: bookingGold),
+                                onPressed: () => _editComment(docs[index]),
+                              ),
+                            if (canDelete)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                                onPressed: () async {
+                                  await docs[index].reference.delete();
+                                  try {
+                                    await FirebaseFirestore.instance
+                                        .collection('booking_reels')
+                                        .doc(widget.reelId)
+                                        .update({'commentsCount': FieldValue.increment(-1)}).catchError((_) {});
+                                  } catch (_) {}
+                                },
+                              ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              const SizedBox(height: 2),
-                              Text(comment, style: const TextStyle(fontSize: 14, height: 1.4)),
-                            ],
-                          ),
-                        ),
-                        if (isAuthor)
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, size: 18, color: bookingGold),
-                            onPressed: () => _editComment(docs[index]),
-                          ),
-                        if (canDelete)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                            onPressed: () async {
-                              await docs[index].reference.delete();
-                              await FirebaseFirestore.instance
-                                  .collection('booking_reels')
-                                  .doc(widget.reelId)
-                                  .update({'commentsCount': FieldValue.increment(-1)}).catchError((_) {});
-                            },
-                          ),
-                      ],
+                      ),
                     );
                   },
                 );
@@ -1176,33 +1265,65 @@ class _BookingReelCommentsSheetState extends State<BookingReelCommentsSheet> {
             ),
           ),
 
-          // New Comment Input
+          // New Comment / Reply Input
           Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 12),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    decoration: InputDecoration(
-                      hintText: 'اكتب تعليقك...',
-                      filled: true,
-                      fillColor: dark ? const Color(0xFF131B2E) : const Color(0xFFF0F4F8),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
+                if (_replyingTo != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    margin: const EdgeInsets.only(bottom: 6),
+                    decoration: BoxDecoration(
+                      color: bookingGold.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: bookingGold.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.reply_rounded, size: 16, color: bookingGold),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'الرد على ${_replyingTo!['author']}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: bookingGold, fontFamily: 'Cairo'),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _replyingTo = null),
+                          child: const Icon(Icons.close_rounded, size: 16, color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _submitting ? null : _submitComment,
-                  icon: _submitting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.send),
-                  style: IconButton.styleFrom(backgroundColor: bookingGold, foregroundColor: bookingNavy),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        focusNode: _commentFocusNode,
+                        decoration: InputDecoration(
+                          hintText: _replyingTo != null ? 'اكتب ردك على ${_replyingTo!['author']}...' : 'اكتب تعليقك...',
+                          filled: true,
+                          fillColor: dark ? const Color(0xFF131B2E) : const Color(0xFFF0F4F8),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: _submitting ? null : _submitComment,
+                      icon: _submitting
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.send),
+                      style: IconButton.styleFrom(backgroundColor: bookingGold, foregroundColor: bookingNavy),
+                    ),
+                  ],
                 ),
               ],
             ),

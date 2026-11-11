@@ -332,10 +332,16 @@ void main() {
     await ready(t);
     await t.tap(find.byKey(const ValueKey('booking-next')));
     await t.pump();
-    await t.tap(find.byType(DropdownButtonFormField<String>));
-    await t.pumpAndSettle();
+    final shiftDropdown = find.byType(DropdownButtonFormField<String>);
+    if (shiftDropdown.evaluate().isNotEmpty) {
+      await t.tap(shiftDropdown);
+      await t.pumpAndSettle();
+    } else {
+      expect(find.text('اختر الفترة المطلوبة:'), findsOneWidget);
+    }
     await t.tap(find.textContaining('الفترة الصباحية').last);
     await t.pumpAndSettle();
+    expect(find.byIcon(Icons.radio_button_checked), findsWidgets);
     final next = find.byTooltip('الشهر التالي');
     await t.ensureVisible(next);
     await t.pumpAndSettle();

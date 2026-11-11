@@ -82,31 +82,122 @@ class BookingSupportTicket extends StatelessWidget {
       {super.key, required this.data, this.actions = const []});
   final Map<String, dynamic> data;
   final List<Widget> actions;
+
+  static const typeNames = {
+    'no_access': 'عدم تسليم المكان',
+    'description_mismatch': 'اختلاف وصف الشاليه',
+    'property_damage': 'تلف أو ضرر',
+    'cancellation_dispute': 'نزاع إلغاء',
+    'deposit_dispute': 'خلاف على العربون أو الاسترداد',
+    'stay_issue': 'مشكلة أثناء الإقامة',
+    'general': 'دعم واستفسار عام',
+  };
+
+  static const statusNames = {
+    'open': 'مفتوحة',
+    'under_review': 'قيد المراجعة الإدارية',
+    'in_progress': 'قيد المتابعة',
+    'awaiting_customer': 'بانتظار رد الزبون',
+    'awaiting_owner': 'بانتظار رد المالك',
+    'resolved': 'تم الحل',
+    'closed': 'مغلقة'
+  };
+
   @override
-  Widget build(BuildContext context) => BookingSection(
-      title: '${data['subject'] ?? 'طلب دعم'}',
-      subtitle: const {
-            'open': 'مفتوحة',
-            'in_progress': 'قيد المتابعة',
-            'resolved': 'تم الحل'
-          }[data['status']] ??
-          'حالة غير معروفة',
+  Widget build(BuildContext context) {
+    final typeKey = data['type'] ?? data['disputeType'];
+    final typeLabel = typeNames[typeKey];
+    final statusLabel = statusNames[data['status']] ?? 'حالة غير معروفة';
+    final messages = (data['messages'] is List) ? (data['messages'] as List) : null;
+
+    return BookingSection(
+      title: '${data['subject'] ?? 'طلب دعم أو نزاع'}',
+      subtitle: typeLabel != null ? '$statusLabel • $typeLabel' : statusLabel,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('${data['message'] ?? ''}', style: const TextStyle(height: 1.8)),
-        if (data['response'] != null)
+        if (data['venueName'] != null && data['venueName'].toString().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('المكان: ${data['venueName']}',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
+          ),
+        if (messages != null && messages.isNotEmpty) ...[
+          const Text('سجل المحادثة والردود:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 8),
+          for (final m in messages)
+            if (m is Map)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: m['senderRole'] == 'admin'
+                      ? const Color(0xFFF0FDF4)
+                      : (m['senderRole'] == 'owner' ? const Color(0xFFFFFBEB) : const Color(0xFFF1F5F9)),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: m['senderRole'] == 'admin'
+                        ? const Color(0xFFBBF7D0)
+                        : (m['senderRole'] == 'owner' ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+                  ),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text(
+                      m['senderRole'] == 'admin'
+                          ? 'الإدارة'
+                          : (m['senderRole'] == 'owner' ? 'المالك' : 'الزبون'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: m['senderRole'] == 'admin'
+                            ? const Color(0xFF166534)
+                            : (m['senderRole'] == 'owner' ? const Color(0xFF92400E) : const Color(0xFF1E293B)),
+                      ),
+                    ),
+                    if (m['senderName'] != null)
+                      Text('${m['senderName']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text('${m['text'] ?? ''}', style: const TextStyle(height: 1.6)),
+                ]),
+              ),
+        ] else ...[
+          Text('${data['message'] ?? ''}', style: const TextStyle(height: 1.8)),
+          if (data['response'] != null)
+            Container(
+                margin: const EdgeInsets.only(top: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(16)),
+                child: Text('رد الدعم\n${data['response']}',
+                    style: const TextStyle(height: 1.8))),
+        ],
+        if (data['resolution'] != null && data['resolution'].toString().isNotEmpty)
           Container(
-              margin: const EdgeInsets.only(top: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(16)),
-              child: Text('رد الدعم\n${data['response']}',
-                  style: const TextStyle(height: 1.8))),
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF10B981)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                const Icon(Icons.gavel, color: Color(0xFF059669), size: 20),
+                const SizedBox(width: 8),
+                const Flexible(child: Text('القرار الإداري النهائي', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+              ]),
+              const SizedBox(height: 8),
+              Text('${data['resolution']}', style: const TextStyle(height: 1.8, color: Color(0xFF065F46))),
+            ]),
+          ),
         if (actions.isNotEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Wrap(spacing: 8, children: actions)),
-      ]));
+              child: Wrap(spacing: 8, runSpacing: 8, children: actions)),
+      ]),
+    );
+  }
 }
 
 class BookingReviewCard extends StatelessWidget {
@@ -211,21 +302,28 @@ class BookingReportCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onResolve;
   @override
-  Widget build(BuildContext context) => BookingSection(
-      title: 'بلاغ مرتبط بحجز',
+  Widget build(BuildContext context) {
+    final isBooking = data['bookingId'] != null && data['bookingId'].toString().isNotEmpty;
+    return BookingSection(
+      title: isBooking ? 'بلاغ مرتبط بحجز' : 'بلاغ عن شاليه/مكان',
       subtitle:
           data['status'] == 'resolved' ? 'تمت المعالجة' : 'بحاجة إلى المتابعة',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('${data['reason'] ?? ''}',
             style: const TextStyle(fontSize: 18, height: 1.8)),
+        if (data['details'] != null && data['details'].toString().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text('${data['details']}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.5)),
+        ],
         const SizedBox(height: 8),
+        if (data['venueName'] != null) Text('المكان: ${data['venueName']}'),
         Text('مقدم البلاغ: ${data['userName'] ?? 'غير متوفر'}'),
         const SizedBox(height: 16),
         Wrap(spacing: 12, runSpacing: 8, children: [
           OutlinedButton.icon(
               onPressed: onOpen,
-              icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('فتح الحجز')),
+              icon: Icon(isBooking ? Icons.receipt_long_outlined : Icons.cottage_outlined),
+              label: Text(isBooking ? 'فتح الحجز' : 'فتح المكان')),
           if (onResolve != null)
             FilledButton.icon(
                 onPressed: onResolve,
@@ -233,6 +331,7 @@ class BookingReportCard extends StatelessWidget {
                 label: const Text('تحديد كمعالج')),
         ])
       ]));
+  }
 }
 
 class BookingMapSearchHeader extends StatelessWidget {

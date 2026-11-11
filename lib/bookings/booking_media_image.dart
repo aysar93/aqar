@@ -15,6 +15,26 @@ class BookingMediaImage extends StatelessWidget {
   final double? width, height;
   final Future<String?>? token;
 
+  static bool isTrustedMediaUrl(String rawUrl) {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null) return false;
+    if (uri.scheme != 'https' && uri.scheme != 'http') return false;
+    if (uri.scheme == 'http' && uri.host != 'localhost' && uri.host != '127.0.0.1') {
+      return false;
+    }
+    final host = uri.host.toLowerCase();
+    if (host == 'firebasestorage.googleapis.com' ||
+        host == 'storage.googleapis.com' ||
+        host.endsWith('.firebasestorage.app') ||
+        RegExp(r'^us-central1-[a-z0-9_-]+\.cloudfunctions\.net$').hasMatch(host)) {
+      return true;
+    }
+    if (host == 'image.test' || host == '127.0.0.1' || host == 'localhost') {
+      return true;
+    }
+    return false;
+  }
+
   Future<Uint8List> loadV3() async {
     final bearer = await (token ??
         FirebaseAuth.instance.currentUser?.getIdToken() ??
@@ -90,13 +110,14 @@ class BookingMediaImage extends StatelessWidget {
                 child: const Center(child: CircularProgressIndicator()));
           }
           if (snapshot.hasError) return placeholder(context);
+          final canAttach = snapshot.data != null && isTrustedMediaUrl(url);
           return Image.network(url,
               width: width,
               height: height,
               fit: BoxFit.cover,
-              headers: snapshot.data == null
-                  ? null
-                  : {'Authorization': 'Bearer ${snapshot.data}'},
+              headers: canAttach
+                  ? {'Authorization': 'Bearer ${snapshot.data}'}
+                  : null,
               loadingBuilder: (_, child, progress) => progress == null
                   ? child
                   : placeholder(context, loading: true),

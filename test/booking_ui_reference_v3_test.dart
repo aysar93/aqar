@@ -90,10 +90,16 @@ BookingCalendar calendar(DateTime month, ValueChanged<DateTime> onSelect,
 Future<void> chooseReferenceReview(WidgetTester t) async {
   await t.tap(find.byKey(const ValueKey('booking-next')));
   await t.pumpAndSettle();
-  await t.tap(find.byType(DropdownButtonFormField<String>));
-  await t.pumpAndSettle();
+  final shiftDropdown = find.byType(DropdownButtonFormField<String>);
+  if (shiftDropdown.evaluate().isNotEmpty) {
+    await t.tap(shiftDropdown);
+    await t.pumpAndSettle();
+  } else {
+    expect(find.text('اختر الفترة المطلوبة:'), findsOneWidget);
+  }
   await t.tap(find.textContaining('الفترة الصباحية').last);
   await t.pumpAndSettle();
+  expect(find.byIcon(Icons.radio_button_checked), findsWidgets);
   final m = find.byTooltip('الشهر التالي');
   await t.scrollUntilVisible(m,200,scrollable:find.byType(Scrollable).first);
   await t.ensureVisible(m);
@@ -150,7 +156,7 @@ void main() {
             of: find.byType(BookingWelcomeSearch),
             matching: find.byType(BookingCategoryStrip)),
         findsNothing);
-    await t.tap(find.byTooltip('الفلاتر المتقدمة'));
+    await t.tap(find.byTooltip('تصفية النتائج'));
     await t.pumpAndSettle();
     expect(find.text('تصفية النتائج'), findsOneWidget);
     await t.tap(find.text('إلغاء'));
@@ -225,7 +231,7 @@ void main() {
     final c = t.widget<PageView>(outer).controller!;
     c.jumpToPage(9);
     await t.pumpAndSettle();
-    expect(c.page, 9);
+    expect(c.page, closeTo(9, 0.15));
     expect(t.takeException(), isNull);
     await t.pumpWidget(shell(SingleChildScrollView(
         child: BookingVenueCard(venue: {

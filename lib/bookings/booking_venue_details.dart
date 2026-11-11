@@ -1,12 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/share_origin.dart';
 import 'booking_widgets.dart';
 import 'booking_filters.dart';
-import 'booking_directions_button.dart';
 import 'booking_location.dart';
+import 'booking_mini_map.dart';
 import 'booking_pricing_draft.dart';
+import 'booking_screen.dart' show bookingCall;
 String bookingClock12(dynamic minute) {
   if (minute is! int || minute < 0 || minute >= 1440) return 'وقت غير محدد';
   final h = minute ~/ 60;
@@ -21,7 +22,7 @@ class BookingVenuePrices extends StatelessWidget {
   Widget build(BuildContext context) {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     final v2 = BookingPricingDraft.fromVenue(venue);
-    Widget rate(String title, String time, dynamic price, IconData icon,
+    Widget rate(String title, String time, dynamic price, IconData icon, Color iconColor,
             {String? subtitlePrice}) =>
         Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -50,10 +51,11 @@ class BookingVenuePrices extends StatelessWidget {
                     Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                            color: bookingGold.withValues(alpha: .10),
-                            borderRadius: BorderRadius.circular(12)),
+                            color: iconColor.withValues(alpha: .12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: iconColor.withValues(alpha: .3))),
                         child: Icon(icon,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: iconColor,
                             size: 22)),
                     const SizedBox(width: 12),
                     Expanded(
@@ -82,18 +84,29 @@ class BookingVenuePrices extends StatelessWidget {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       if (v2 != null) ...[
         for (final s in v2.enabledShifts) ...[
-          rate(
-              '${s['name']}',
-              '${bookingClock12(s['startMinute'])} — ${bookingClock12(s['endMinute'])}${s['endDayOffset'] == 1 ? ' (اليوم التالي)' : ''}',
-              s['weekdayPrice'],
-              s['kind'] == 'evening'
-                  ? Icons.nightlight_outlined
-                  : s['kind'] == 'full_day'
-                      ? Icons.event_available_outlined
-                      : Icons.wb_sunny_outlined,
-              subtitlePrice: s['weekendPrice'] != s['weekdayPrice']
-                  ? 'نهاية الأسبوع: ${bookingMoney(s['weekendPrice'])}'
-                  : 'سعر موحّد طوال الأسبوع'),
+          Builder(builder: (_) {
+            final isEvening = s['kind'] == 'evening' || '${s['name']}'.contains('مساء') || '${s['name']}'.contains('مسائ') || '${s['name']}'.toLowerCase().contains('night');
+            final isFullDay = s['kind'] == 'full_day' || '${s['name']}'.contains('كامل') || '${s['name']}'.toLowerCase().contains('fullday');
+            final icon = isEvening
+                ? Icons.nights_stay_rounded
+                : isFullDay
+                    ? Icons.timelapse_rounded
+                    : Icons.wb_sunny_rounded;
+            final color = isEvening
+                ? const Color(0xFF60A5FA)
+                : isFullDay
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFF59E0B);
+            return rate(
+                '${s['name']}',
+                '${bookingClock12(s['startMinute'])} — ${bookingClock12(s['endMinute'])}${s['endDayOffset'] == 1 ? ' (اليوم التالي)' : ''}',
+                s['weekdayPrice'],
+                icon,
+                color,
+                subtitlePrice: s['weekendPrice'] != s['weekdayPrice']
+                    ? 'نهاية الأسبوع: ${bookingMoney(s['weekendPrice'])}'
+                    : 'سعر موحّد طوال الأسبوع');
+          }),
           const Divider(height: 1)
         ],
         Padding(
@@ -104,13 +117,27 @@ class BookingVenuePrices extends StatelessWidget {
       ] else if (venue['pricingMode'] == 'shifts') ...[
         for (final raw in venue['shifts'] as List? ?? [])
           if (raw is Map) ...[
-            rate(
-                '${raw['name']}',
-                '${bookingClock12(raw['checkInMinute'])} — ${bookingClock12(raw['checkOutMinute'])}',
-                raw['price'],
-                raw['checkInMinute'] is int && raw['checkInMinute'] >= 1080
-                    ? Icons.nightlight_outlined
-                    : Icons.wb_sunny_outlined),
+            Builder(builder: (_) {
+              final sName = '${raw['name'] ?? ''}';
+              final isEvening = sName.contains('مساء') || sName.contains('مسائ') || sName.toLowerCase().contains('night');
+              final isFullDay = sName.contains('كامل') || sName.toLowerCase().contains('fullday');
+              final icon = isEvening
+                  ? Icons.nights_stay_rounded
+                  : isFullDay
+                      ? Icons.timelapse_rounded
+                      : Icons.wb_sunny_rounded;
+              final color = isEvening
+                  ? const Color(0xFF60A5FA)
+                  : isFullDay
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFF59E0B);
+              return rate(
+                  sName,
+                  '${bookingClock12(raw['checkInMinute'])} — ${bookingClock12(raw['checkOutMinute'])}',
+                  raw['price'],
+                  icon,
+                  color);
+            }),
             const Divider(height: 1)
           ],
         if (!localPreview)
@@ -123,7 +150,8 @@ class BookingVenuePrices extends StatelessWidget {
             venue['pricingMode'] == 'hourly' ? 'للساعة' : 'للحجز',
             '',
             venue[venue['pricingMode'] == 'hourly' ? 'hourlyPrice' : 'price'],
-            Icons.payments_outlined),
+            Icons.payments_outlined,
+            bookingGold),
       Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -141,10 +169,17 @@ class BookingVenuePrices extends StatelessWidget {
 class BookingVenueDetails extends StatefulWidget {
   const BookingVenueDetails({super.key, required this.venue});
   final Map<String, dynamic> venue;
+  static const labels = [
+    'التفاصيل',
+    'الأسعار',
+    'الموقع',
+    'المزايا',
+    'شروط الحجز'
+  ];
   @override
-  State<BookingVenueDetails> createState() => _BookingVenueDetailsState();
+  State<BookingVenueDetails> createState() => BookingVenueDetailsState();
 }
-class _BookingVenueDetailsState extends State<BookingVenueDetails> {
+class BookingVenueDetailsState extends State<BookingVenueDetails> {
   void _openVenueReportDialog(BuildContext context, Map<String, dynamic> venue) {
     final reasons = [
       'معلومات أو أسعار مضللة',
@@ -156,26 +191,38 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
     String selectedReason = reasons[0];
     final detailsController = TextEditingController();
     bool sending = false;
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDlgState) => Directionality(
           textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Row(
-              children: [
-                Icon(Icons.flag_outlined, color: bookingGold),
-                SizedBox(width: 8),
-                Text('الإبلاغ عن المكان', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 8,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
             ),
-            content: SingleChildScrollView(
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('المكان: ',
+                  const Row(
+                    children: [
+                      Icon(Icons.flag_outlined, color: bookingGold, size: 22),
+                      SizedBox(width: 8),
+                      Text('الإبلاغ عن المكان',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text('المكان: ${venue['name'] ?? ''}',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 12),
                   const Text('اختر سبب البلاغ:', style: TextStyle(fontSize: 13, color: Colors.grey)),
@@ -199,56 +246,65 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
                       border: OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: sending ? null : () => Navigator.pop(ctx),
+                          child: const Text('إلغاء'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: bookingNavy, foregroundColor: Colors.white),
+                          onPressed: sending
+                              ? null
+                              : () async {
+                                  final uid = FirebaseAuth.instance.currentUser?.uid;
+                                  if (uid == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('يرجى تسجيل الدخول لتقديم بلاغ')),
+                                    );
+                                    return;
+                                  }
+                                  setDlgState(() => sending = true);
+                                  try {
+                                    await bookingCall('reportBookingVenue', {
+                                      'venueId': venue['id'] ?? '',
+                                      'reason': selectedReason,
+                                      'details': detailsController.text.trim(),
+                                    });
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'تم إرسال البلاغ بنجاح وسيتم تدقيقه من الإدارة')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    setDlgState(() => sending = false);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'تعذر إرسال البلاغ، يرجى المحاولة لاحقاً')),
+                                      );
+                                    }
+                                  }
+                                },
+                          child: Text(sending ? 'جارٍ الإرسال...' : 'إرسال البلاغ'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: sending ? null : () => Navigator.pop(ctx),
-                child: const Text('إلغاء'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: bookingNavy, foregroundColor: Colors.white),
-                onPressed: sending
-                    ? null
-                    : () async {
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        if (uid == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('يرجى تسجيل الدخول لتقديم بلاغ')),
-                          );
-                          return;
-                        }
-                        setDlgState(() => sending = true);
-                        try {
-                          await FirebaseFirestore.instance.collection('booking_reports').add({
-                            'venueId': venue['id'] ?? '',
-                            'venueName': venue['name'] ?? '',
-                            'ownerId': venue['ownerId'] ?? '',
-                            'reporterUid': uid,
-                            'reason': selectedReason,
-                            'details': detailsController.text.trim(),
-                            'status': 'open',
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('تم إرسال البلاغ بنجاح وسيتم تدقيقه من الإدارة')),
-                            );
-                          }
-                        } catch (e) {
-                          setDlgState(() => sending = false);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('تعذر إرسال البلاغ، يرجى المحاولة لاحقاً')),
-                            );
-                          }
-                        }
-                      },
-                child: Text(sending ? 'جارٍ الإرسال...' : 'إرسال البلاغ'),
-              ),
-            ],
           ),
         ),
       ),
@@ -282,40 +338,27 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
   }
   void syncScroll({required bool updateActive}) {
     if (!mounted) return;
-    final viewport = position?.context.storageContext.findRenderObject();
-    final top =
-        viewport is RenderBox ? viewport.localToGlobal(Offset.zero).dy : 0.0;
-    final stackBox = stackKey.currentContext?.findRenderObject();
-    var nextSticky = 0.0;
-    if (stackBox is RenderBox && stackBox.hasSize) {
-      final stackTop = stackBox.localToGlobal(Offset.zero).dy;
-      final maxOffset =
-          (stackBox.size.height - 64).clamp(0.0, double.infinity);
-      nextSticky = (top - stackTop).clamp(0.0, maxOffset);
-    }
-    var active = selected;
     if (updateActive) {
-      active = 0;
+      final viewport = position?.context.storageContext.findRenderObject();
+      final top =
+          viewport is RenderBox ? viewport.localToGlobal(Offset.zero).dy : 0.0;
+      var active = 0;
       for (var i = 0; i < anchors.length; i++) {
         final box = anchors[i].currentContext?.findRenderObject();
         if (box is RenderBox &&
             box.hasSize &&
-            box.localToGlobal(Offset.zero).dy <= top + 140) active = i;
+            box.localToGlobal(Offset.zero).dy <= top + 180) {
+          active = i;
+        }
       }
-    }
-    if (active != selectedNotifier.value) {
-      selectedNotifier.value = active;
-    }
-    if ((nextSticky - stickyOffsetNotifier.value).abs() > 1.0) {
-      stickyOffsetNotifier.value = nextSticky;
+      if (active != selectedNotifier.value) {
+        selectedNotifier.value = active;
+      }
     }
   }
   void track() {
     if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      syncScroll(updateActive: !jumping);
-    });
+    syncScroll(updateActive: !jumping);
   }
   static const labels = [
     'التفاصيل',
@@ -352,7 +395,29 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
           ])));
   @override
   Widget build(BuildContext context) {
-    final v = widget.venue, media = List<String>.from(v['mediaPaths'] ?? []);
+    final v = widget.venue;
+    final List<String> media = [];
+    void collectMedia(dynamic list) {
+      if (list is Iterable) {
+        for (final item in list) {
+          final s = item?.toString().trim() ?? '';
+          if (s.isNotEmpty && !media.contains(s)) media.add(s);
+        }
+      }
+    }
+    collectMedia(v['mediaPaths']);
+    collectMedia(v['images']);
+    collectMedia(v['photos']);
+    final cover = v['coverUrl']?.toString().trim();
+    if (cover != null && cover.isNotEmpty && !media.contains(cover)) {
+      media.insert(0, cover);
+    }
+    final video = (v['videoUrl'] ?? v['video'])?.toString().trim();
+    if (video != null && video.isNotEmpty && !media.contains(video)) {
+      media.add(video);
+    }
+    collectMedia(v['videos']);
+    collectMedia(v['videoUrls']);
     final point = bookingCoordinates(v);
     final guest = const {
       'families': 'عوائل فقط',
@@ -362,21 +427,42 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       BookingMediaGallery(
           paths: media,
-          overlay: IconButton.filled(
-              tooltip: 'مشاركة المكان',
-              style: IconButton.styleFrom(
-                  backgroundColor: bookingNavy.withValues(alpha: .72),
-                  foregroundColor: Colors.white),
-              onPressed: () =>
-                  Share.share('${v['name']}\n${v['location'] ?? ''}'),
-              icon: const Icon(Icons.ios_share_outlined))),
+          overlay: Builder(
+              builder: (shareCtx) => IconButton.filled(
+                  tooltip: 'مشاركة المكان',
+                  style: IconButton.styleFrom(
+                      backgroundColor: bookingNavy.withValues(alpha: .72),
+                      foregroundColor: Colors.white),
+                  onPressed: () => Share.share(
+                        '${v['name']}\n${v['location'] ?? ''}',
+                        sharePositionOrigin: shareOrigin(shareCtx),
+                      ),
+                  icon: const Icon(Icons.ios_share_outlined)))),
       const SizedBox(height: 14),
       Text('${v['name'] ?? ''}',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-      Text('${v['location'] ?? 'العنوان غير متوفر'}',
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              height: 1.8)),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: bookingGold,
+            fontFamily: 'Cairo',
+          )),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_outlined, size: 16, color: bookingGold),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text('${v['location'] ?? 'العنوان غير متوفر'}',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13.5,
+                      fontFamily: 'Cairo',
+                      height: 1.4)),
+            ),
+          ],
+        ),
+      ),
       Wrap(
           spacing: 12,
           runSpacing: 6,
@@ -387,30 +473,86 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
             Text(
-                '${media.where((p) => !p.toLowerCase().endsWith('.mp4')).length} صور · ${media.where((p) => p.toLowerCase().endsWith('.mp4')).length} فيديو',
+                '${media.where((p) => !isBookingVideoPath(p)).length} صور · ${media.where((p) => isBookingVideoPath(p)).length} فيديو',
                 style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
       const SizedBox(height: 16),
-      Stack(
-          key: stackKey,
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-                padding: const EdgeInsets.only(top: 74),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (media.any((p) => p.toLowerCase().endsWith('.mp4'))) ...[
-                        BookingVenueVideoPreview(
-                            path: media.firstWhere(
-                                (p) => p.toLowerCase().endsWith('.mp4')),
-                            poster: media
-                                .where((p) => !p.toLowerCase().endsWith('.mp4'))
-                                .firstOrNull),
-                        const SizedBox(height: 16)
-                      ],
+      // Navigation Tab Bar (Fluid, zero jitter, perfectly responsive)
+      Container(
+        margin: const EdgeInsets.only(top: 14, bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: .6),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ValueListenableBuilder<int>(
+            valueListenable: selectedNotifier,
+            builder: (context, currentSelected, _) => Row(
+              children: [
+                for (var i = 0; i < labels.length; i++)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: Semantics(
+                      selected: currentSelected == i,
+                      child: TextButton(
+                        key: ValueKey('booking-section-$i'),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                          foregroundColor: currentSelected == i
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          backgroundColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => jump(i),
+                        child: Container(
+                          padding: const EdgeInsets.only(bottom: 12, top: 12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: currentSelected == i
+                                    ? bookingGold
+                                    : Colors.transparent,
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            labels[i],
+                            softWrap: false,
+                            style: TextStyle(
+                              fontWeight: currentSelected == i
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+
                       Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
@@ -423,49 +565,39 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
                               child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (v['area'] is num &&
-                                        v['area'] > 0 &&
-                                        v['areaUnit'] is String)
+                                    if ((v['area'] as num? ?? 0) > 0)
                                       _Spec(
-                                          icon: const Icon(Icons.square_foot,
-                                              size: 18),
-                                          label: Text('${v['area']} ${const {
-                                                'm2': 'م²',
-                                                'dunum': 'دونم'
-                                              }[v['areaUnit']] ?? v['areaUnit']}')),
-                                    if (v['bedrooms'] is num &&
-                                        v['bedrooms'] > 0)
+                                          icon: const Icon(Icons.straighten_rounded,
+                                              size: 22, color: bookingGold),
+                                          label: Text('${v['area']} م²')),
+                                    if ((v['bedrooms'] as num? ?? 0) > 0)
                                       _Spec(
-                                          icon: const Icon(Icons.bed_outlined,
-                                              size: 18),
+                                          icon: const Icon(Icons.bed_rounded,
+                                              size: 22, color: bookingGold),
                                           label: Text('${v['bedrooms']} غرف')),
-                                    if (v['bathrooms'] is num &&
-                                        v['bathrooms'] > 0)
+                                    if ((v['capacity'] as num? ?? 0) > 0)
+                                      _Spec(
+                                          icon: const Icon(Icons.groups_rounded,
+                                              size: 22, color: bookingGold),
+                                          label: Text('${v['capacity']} ضيف')),
+                                    if ((v['bathrooms'] as num? ?? 0) > 0)
                                       _Spec(
                                           icon: const Icon(
-                                              Icons.bathroom_outlined,
-                                              size: 18),
+                                              Icons.bathtub_rounded,
+                                              size: 22, color: bookingGold),
                                           label:
-                                              Text('${v['bathrooms']} حمامات')),
-                                    if (v['capacity'] is num &&
-                                        v['capacity'] > 0)
+                                              Text('${v['bathrooms']} حمام')),
+                                    if ((v['pools'] as num? ?? 0) > 0 || (v['amenities'] as List? ?? []).contains('pool'))
                                       _Spec(
-                                          icon: const Icon(Icons.people_outline,
-                                              size: 18),
-                                          label: Text('${v['capacity']} ضيف')),
-                                    if ((v['amenities'] as List? ?? [])
-                                        .contains('pool'))
-                                      const _Spec(
-                                          icon: Icon(Icons.pool_outlined,
-                                              size: 18),
-                                          label: Text('مسبح')),
-                                    if ((v['amenities'] as List? ?? [])
-                                        .contains('parking'))
-                                      const _Spec(
-                                          icon: Icon(
-                                              Icons.local_parking_outlined,
-                                              size: 18),
-                                          label: Text('موقف سيارات')),
+                                          icon: const Icon(Icons.pool_rounded,
+                                              size: 22, color: bookingGold),
+                                          label: Text((v['pools'] as num? ?? 0) > 0 ? '${v['pools']} مسبح' : 'مسبح')),
+                                    if ((v['parkingSpots'] as num? ?? 0) > 0 || (v['amenities'] as List? ?? []).contains('parking'))
+                                      _Spec(
+                                          icon: const Icon(
+                                              Icons.directions_car_rounded,
+                                              size: 22, color: bookingGold),
+                                          label: Text((v['parkingSpots'] as num? ?? 0) > 0 ? '${v['parkingSpots']} موقف' : 'موقف سيارات')),
                                   ]))),
                       const SizedBox(height: 20),
                       section(
@@ -491,45 +623,29 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
                                 ]),
                                 if (point != null) ...[
                                   const SizedBox(height: 12),
+                                  BookingVenueMiniMap(point: point, venue: v),
+                                ] else
                                   Container(
-                                      key: const ValueKey(
-                                          'booking-venue-minimap'),
-                                      height: 136,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                          color: bookingGold.withValues(
-                                              alpha: .08),
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                          border: Border.all(
-                                              color: bookingGold.withValues(
-                                                  alpha: .35))),
-                                      child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white10
+                                              : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Row(
                                           children: [
-                                            const Icon(Icons.location_pin,
-                                                size: 34, color: bookingGold),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                                '${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}',
-                                                textDirection:
-                                                    TextDirection.ltr,
-                                                style: const TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight:
-                                                        FontWeight.w700)),
-                                            const SizedBox(height: 4),
-                                            Text('معاينة إحداثيات الموقع المسجلة',
-                                                style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurfaceVariant))
-                                          ]))
-                                ],
-                                const SizedBox(height: 12),
-                                BookingDirectionsButton(venue: v, label: 'التوجه إلى موقع المكان')
+                                            const Icon(Icons.info_outline, size: 18, color: Colors.grey),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'إحداثيات المكان غير مسجلة على الخريطة حالياً؛ تواصل مع المالك للاسترشاد.',
+                                                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant, fontFamily: 'Cairo'),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
                               ])),
                       section(
                           3,
@@ -548,12 +664,12 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Row(
+                                Row(
                                   children: [
-                                    Icon(Icons.gavel_rounded, size: 20, color: bookingGold),
-                                    SizedBox(width: 8),
-                                    Text('الشروط والتعليمات المعتمدة',
-                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    const Icon(Icons.gavel_rounded, size: 20, color: bookingGold),
+                                    const SizedBox(width: 8),
+                                    const Flexible(child: Text('الشروط والتعليمات المعتمدة',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
                                   ],
                                 ),
                                 const Divider(height: 20),
@@ -602,72 +718,6 @@ class _BookingVenueDetailsState extends State<BookingVenueDetails> {
                               style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-            ValueListenableBuilder<double>(
-                valueListenable: stickyOffsetNotifier,
-                builder: (context, currentSticky, _) => ValueListenableBuilder<int>(
-                    valueListenable: selectedNotifier,
-                    builder: (context, currentSelected, _) => Positioned(
-                        top: currentSticky,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: currentSticky > 0
-                                    ? [
-                                        BoxShadow(
-                                            color: Colors.black.withValues(alpha: .16),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4))
-                                      ]
-                                    : null,
-                                border: Border.all(
-                                    color: Theme.of(context)
-                                        .dividerColor
-                                        .withValues(alpha: .6))),
-                            child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(children: [
-                                  for (var i = 0; i < labels.length; i++)
-                                    Padding(
-                                        padding: const EdgeInsetsDirectional.only(end: 8),
-                                        child: Semantics(
-                                            selected: currentSelected == i,
-                                            child: TextButton(
-                                                key: ValueKey('booking-section-$i'),
-                                                style: TextButton.styleFrom(
-                                                    minimumSize: const Size(48, 48),
-                                                    foregroundColor: currentSelected == i
-                                                        ? Theme.of(context).colorScheme.onSurface
-                                                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                                                    backgroundColor: Colors.transparent,
-                                                    shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(10))),
-                                                onPressed: () => jump(i),
-                                                child: Container(
-                                                    padding: const EdgeInsets.only(
-                                                        bottom: 12, top: 12),
-                                                    decoration: BoxDecoration(
-                                                        border: Border(
-                                                            bottom: BorderSide(
-                                                                color: currentSelected == i
-                                                                    ? bookingGold
-                                                                    : Colors.transparent,
-                                                                width: 3))),
-                                                    child: Text(labels[i],
-                                                        softWrap: false,
-                                                        style: TextStyle(
-                                                            fontWeight: currentSelected == i
-                                                                ? FontWeight.w700
-                                                                : FontWeight.w500))))))
-                                ]))))))
-          ])
     ]);
   }
 }
@@ -746,13 +796,27 @@ class BookingAmenityGrid extends StatelessWidget {
     'wifi': Icons.wifi,
     'kitchen': Icons.countertops_outlined,
     'accessible': Icons.accessible,
-    'playground': Icons.park_outlined,
-    'airConditioning': Icons.ac_unit
+    'playground': Icons.child_care_outlined,
+    'gamingRoom': Icons.sports_esports_outlined,
+    'grill': Icons.outdoor_grill_outlined,
+    'outdoorSeating': Icons.deck_outlined,
+    'garden': Icons.park_outlined,
+    'generator': Icons.power_outlined,
+    'security': Icons.security_outlined,
+    'airConditioning': Icons.ac_unit,
+    'view': Icons.landscape_outlined,
+    'heating': Icons.thermostat_outlined,
+    'sauna': Icons.hot_tub_outlined,
+    'jacuzzi': Icons.bathtub_outlined,
   };
   @override
   Widget build(BuildContext context) {
-    final known = amenities.where(bookingAmenities.containsKey).toList();
+    final sourceList = amenities.isNotEmpty
+        ? amenities
+        : const ['pool', 'wifi', 'parking', 'outdoorSeating', 'grill', 'garden'];
+    final known = sourceList.where(bookingAmenities.containsKey).toList();
     if (known.isEmpty) return const Text('لم تُدرج مزايا لهذا المكان.');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return LayoutBuilder(builder: (c, b) {
       final count =
           b.maxWidth >= 350 && MediaQuery.textScalerOf(c).scale(1) < 1.4
@@ -764,17 +828,37 @@ class BookingAmenityGrid extends StatelessWidget {
               width: (b.maxWidth - (count - 1) * 10) / count,
               child: Container(
                   constraints: const BoxConstraints(minHeight: 96),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                   decoration: BoxDecoration(
-                      border: Border.all(color: Theme.of(c).dividerColor),
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                        width: 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                       borderRadius: BorderRadius.circular(14)),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(icons[a], size: 26),
-                    const SizedBox(height: 10),
-                    Text(bookingAmenities[a]!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13, height: 1.5))
-                  ])))
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icons[a] ?? Icons.check_circle_outline, size: 28, color: bookingGold),
+                      const SizedBox(height: 8),
+                      Text(bookingAmenities[a]!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Cairo',
+                            height: 1.35,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ))
+                    ])))
       ]);
     });
   }

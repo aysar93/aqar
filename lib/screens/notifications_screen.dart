@@ -135,24 +135,83 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               tooltip: "حذف جميع التنبيهات",
               icon: const Icon(Icons.delete_sweep),
               onPressed: () async {
-                final snapshot = await FirebaseFirestore.instance
-                    .collection('notifications')
-                    .where(
-                      'userId',
-                      isEqualTo: uid,
-                    )
-                    .get();
-
-                for (final doc in snapshot.docs) {
-                  await doc.reference.delete();
-                }
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("تم حذف جميع التنبيهات"),
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.delete_sweep, color: Color(0xFFEF4444)),
+                          SizedBox(width: 8),
+                          Text(
+                            "حذف كافة التنبيهات",
+                            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      content: const Text(
+                        "هل أنت متأكد من رغبتك في حذف جميع التنبيهات نهائياً؟",
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text("إلغاء", style: TextStyle(fontFamily: 'Cairo')),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4444),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text("تأكيد الحذف", style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ),
-                  );
+                  ),
+                );
+
+                if (confirm != true || !context.mounted) return;
+
+                try {
+                  final snapshot = await FirebaseFirestore.instance
+                      .collection('notifications')
+                      .where('userId', isEqualTo: uid)
+                      .get();
+
+                  if (snapshot.docs.isNotEmpty) {
+                    final batch = FirebaseFirestore.instance.batch();
+                    final deletedIds = <String>{};
+                    for (final doc in snapshot.docs) {
+                      batch.delete(doc.reference);
+                      deletedIds.add(doc.id);
+                    }
+                    await batch.commit();
+                    if (mounted) {
+                      setState(() => _locallyDeleted.addAll(deletedIds));
+                      _pageKey.currentState?.refresh();
+                    }
+                  }
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("تم حذف جميع التنبيهات بنجاح"),
+                        backgroundColor: Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("تعذر حذف التنبيهات، يرجى المحاولة لاحقاً"),
+                        backgroundColor: Color(0xFFEF4444),
+                      ),
+                    );
+                  }
                 }
               }),
         ],
@@ -177,13 +236,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             if (snapshot.hasError) {
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    snapshot.error.toString(),
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 14,
-                    ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.notifications_off_outlined, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "لا توجد إشعارات جديدة حالياً",
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Colors.white70,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFD4AF37),
+                          side: const BorderSide(color: Color(0xFFD4AF37)),
+                        ),
+                        onPressed: () => _pageKey.currentState?.refresh(),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text("تحديث", style: TextStyle(fontFamily: 'Cairo')),
+                      ),
+                    ],
                   ),
                 ),
               );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'booking_filters.dart';
 import 'booking_widgets.dart';
 import 'booking_extras.dart';
 import 'booking_management.dart';
@@ -121,10 +122,8 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
 
                 const SizedBox(height: 14),
 
-                // 4. Favorites Rose/Gold Card
-                _buildFavoritesCard(context, isDark),
-
-                const SizedBox(height: 18),
+                // 4. Favorites integrated into options section below
+                const SizedBox(height: 8),
 
                 // 5. Sleek Options List
                 _buildOptionsSection(context, isDark, uid),
@@ -257,22 +256,7 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
                   ),
                 ),
               ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.edit_rounded, color: Colors.white, size: 13),
-                  ),
-                ),
-              ),
+              // Read-only avatar without edit badge
             ],
           ),
           const SizedBox(height: 12),
@@ -523,70 +507,7 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
     );
   }
 
-  /// 4. Favorites Rose/Pink Card
-  Widget _buildFavoritesCard(BuildContext context, bool isDark) {
-    return InkWell(
-      onTap: () => _showSavedReelsSheet(context),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFF43F5E), Color(0xFFE11D48)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFE11D48).withValues(alpha: 0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-            const Spacer(),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'المفضلة',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'الشاليهات والمقاطع التي حفظتها',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 14),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 24),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   /// 5. Sleek Options List (Image 1 style)
   Widget _buildOptionsSection(BuildContext context, bool isDark, String? uid) {
@@ -609,6 +530,18 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
+          // 0. المفضلة (متسقة RTL)
+          _buildOptionTile(
+            context: context,
+            icon: Icons.favorite_outline_rounded,
+            iconBg: const Color(0xFFE11D48).withValues(alpha: 0.12),
+            iconColor: const Color(0xFFE11D48),
+            title: 'المفضلة',
+            subtitle: 'الشاليهات والمقاطع التي حفظتها',
+            onTap: () => _showSavedReelsSheet(context),
+          ),
+          _buildDivider(borderColor),
+
           // 1. الإشعارات
           _buildOptionTile(
             context: context,
@@ -710,8 +643,8 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
           _buildOptionTile(
             context: context,
             icon: Icons.info_outline_rounded,
-            iconBg: const Color(0xFF64748B).withValues(alpha: 0.12),
-            iconColor: const Color(0xFF475569),
+            iconBg: bookingGold.withValues(alpha: 0.14),
+            iconColor: bookingGold,
             title: 'عن نظام الحجوزات',
             subtitle: 'الإصدار والشروط القانونية ومعلومات النظام',
             onTap: () => _showAboutDialog(context),
@@ -773,14 +706,20 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
   Widget _buildOptionTile({
     required BuildContext context,
     required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
+    Color? iconBg,
+    Color? iconColor,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
     int badgeCount = 0,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unifiedBg = isDark
+        ? const Color(0xFF334155).withValues(alpha: 0.45)
+        : const Color(0xFFF1F5F9);
+    final unifiedIconColor = isDark
+        ? const Color(0xFFCBD5E1)
+        : const Color(0xFF64748B);
 
     return InkWell(
       onTap: onTap,
@@ -788,15 +727,19 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            // Rounded Icon Square
+            // Rounded Icon Square in Unified Silver/Glass Tone
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: iconBg,
+                color: unifiedBg,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                  width: 0.8,
+                ),
               ),
-              child: Icon(icon, color: iconColor, size: 21),
+              child: Icon(icon, color: unifiedIconColor, size: 21),
             ),
             const SizedBox(width: 14),
 
@@ -845,15 +788,7 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
             ],
-
-            // Chevron
-            Icon(
-              Icons.chevron_left_rounded,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-              size: 22,
-            ),
           ],
         ),
       ),
@@ -1085,7 +1020,11 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
                                           .collection('booking_venues')
                                           .doc(venueId)
                                           .get();
-                                      if (!doc.exists || doc.data() == null) {
+                                      final venueData = doc.data();
+                                      if (!doc.exists ||
+                                          venueData == null ||
+                                          !isPubliclyEligibleBookingVenue(
+                                              venueData)) {
                                         if (context.mounted) _showVenueUnavailableDialog(context);
                                         return;
                                       }
@@ -1216,11 +1155,12 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
           actions: [
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0F172A),
+                backgroundColor: bookingGold,
+                foregroundColor: const Color(0xFF0F172A),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('إغلاق', style: TextStyle(fontFamily: 'Cairo')),
+              child: const Text('إغلاق', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
             ),
           ],
         ),

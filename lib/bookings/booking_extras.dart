@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'booking_filters.dart';
 import 'booking_screen.dart';
 import 'booking_widgets.dart';
 
@@ -27,17 +28,19 @@ class _PublishedReviewsState extends State<BookingPublishedReviews> {
       builder: (context, s) {
         if (s.hasError) return const Text('تعذر تحميل التقييمات');
         if (!s.hasData) return const LinearProgressIndicator();
+        final count = (s.data?['count'] as num?)?.toInt() ?? 0;
+        final avg = (s.data?['average'] as num?)?.toDouble() ?? 0.0;
         return ExpansionTile(
-            title: Text(s.data!['count'] == 0
+            title: Text(count == 0
                 ? 'لا توجد تقييمات منشورة بعد'
-                : 'تقييمات حجوزات مكتملة: ${s.data!['count']} — ${(s.data!['average'] as num).toStringAsFixed(1)} / 5'),
+                : 'تقييمات حجوزات مكتملة: $count — ${avg.toStringAsFixed(1)} / 5'),
             children: [
-              if (s.data!['count'] == 0)
+              if (count == 0)
                 const ListTile(title: Text('لا توجد تقييمات منشورة بعد')),
-              for (final r in s.data!['reviews'] as List)
+              for (final r in (s.data?['reviews'] as List? ?? []))
                 BookingReviewCard(
                     rating: r['rating'],
-                    comment: '${r['comment']}',
+                    comment: '${r['comment'] ?? ''}',
                     verified: true)
             ]);
       });
@@ -153,6 +156,16 @@ class _SupportState extends State<BookingSupportScreen> {
       });
   }
 
+  Future<void> addReply(String id) async {
+    final value = await showDialog<String>(
+        context: context, builder: (_) => const BookingSupportResponseDialog());
+    if (value != null && mounted)
+      await bookingRun(context, () async {
+        await bookingCall('addBookingSupportMessage',
+            {'ticketId': id, 'message': value});
+      });
+  }
+
   @override
   Widget build(BuildContext context) {
     Query<Map<String, dynamic>> query =
@@ -209,7 +222,13 @@ class _SupportState extends State<BookingSupportScreen> {
                 return Column(children: [
                   for (final d in docs)
                     BookingSupportTicket(data: d.data(), actions: [
-                      if (widget.admin) ...[
+                      if (d.data()['status'] != 'resolved' && d.data()['status'] != 'closed') ...[
+                        TextButton.icon(
+                            icon: const Icon(Icons.reply),
+                            onPressed: () => addReply(d.id),
+                            label: const Text('إضافة رد')),
+                      ],
+                      if (widget.admin && d.data()['status'] != 'resolved' && d.data()['status'] != 'closed') ...[
                         TextButton(
                             onPressed: () => respond(d.id, 'in_progress'),
                             child: const Text('تولي التذكرة والرد')),
@@ -344,15 +363,16 @@ class _AvailabilitySearchState extends State<BookingAvailabilitySearchScreen> {
                       searched = false;
                     });
                     await bookingRun(context, () async {
-                      final venues = await FirebaseFirestore.instance
-                          .collection('booking_venues')
-                          .where('active', isEqualTo: true)
+                      final venues = await publicBookingVenuesQuery()
                           .get(const GetOptions(source: Source.server));
+                      final eligibleDocs = venues.docs
+                          .where((d) => isPubliclyEligibleBookingVenue(d.data()))
+                          .toList();
                       final free = <String>{};
                       for (var offset = 0;
-                          offset < venues.docs.length;
+                          offset < eligibleDocs.length;
                           offset += 50) {
-                        final ids = venues.docs
+                        final ids = eligibleDocs
                             .skip(offset)
                             .take(50)
                             .map((d) => d.id)

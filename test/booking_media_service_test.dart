@@ -85,6 +85,55 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+      'untrusted external domains never receive authorization token header',
+      (tester) async {
+    for (final untrustedUrl in [
+      'https://attacker.com/malicious.jpg',
+      'https://evil-storage.googleapis.com.attacker.com/photo.png',
+      'https://thirdparty-cdn.com/venue_image.png',
+      'http://insecure-domain.org/image.jpg',
+    ]) {
+      final token = Completer<String?>();
+      await tester.pumpWidget(MaterialApp(
+          home: BookingMediaImage(
+              url: untrustedUrl,
+              token: token.future)));
+      token.complete('super-secret-firebase-id-token');
+      await tester.pump();
+      final image = tester.widget<Image>(find.byType(Image));
+      final headers = (image.image as NetworkImage).headers;
+      expect(headers, isNull,
+          reason: 'Untrusted url $untrustedUrl must never receive headers');
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    }
+  });
+  testWidgets(
+      'trusted project domains receive authorization token header',
+      (tester) async {
+    for (final trustedUrl in [
+      'https://image.test/bookingImage?mediaId=123',
+      'https://firebasestorage.googleapis.com/v0/b/aqar-bookings-test.appspot.com/o/photo.jpg',
+      'https://storage.googleapis.com/aqar-bookings-test.appspot.com/photo.jpg',
+      'https://us-central1-aqar-bookings-test-20261009.cloudfunctions.net/bookingMediaContent?mediaId=456',
+    ]) {
+      final token = Completer<String?>();
+      await tester.pumpWidget(MaterialApp(
+          home: BookingMediaImage(
+              url: trustedUrl,
+              token: token.future)));
+      token.complete('approved-firebase-token');
+      await tester.pump();
+      final image = tester.widget<Image>(find.byType(Image));
+      final headers = (image.image as NetworkImage).headers;
+      expect(headers, isNotNull,
+          reason: 'Trusted url $trustedUrl must receive headers');
+      expect(headers!['Authorization'], 'Bearer approved-firebase-token');
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    }
+  });
   test('images use booking server callable with venue association', () async {
     String? name;
     Map<String, dynamic>? payload;

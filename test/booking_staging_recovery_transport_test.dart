@@ -14,5 +14,5 @@ void main(){test('original recovery HEAD then GET use fresh clients; upload fenc
    final get=await http.get(url);expect(get.bodyBytes,payload);
   },()=>stagingClientForPhase(recovery:true,upload:upload));
   expect(received,['HEAD','GET']);expect(upload.sent,isFalse);expect(upload.events,isEmpty);
- }finally{upload.close();await sub.cancel();await server.close(force:true);}
+ }finally{upload.close();await server.close(force:true);await sub.cancel();}
 });}

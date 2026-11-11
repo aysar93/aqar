@@ -5,9 +5,16 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 LatLng? bookingCoordinates(Map<String, dynamic> venue) {
-  final lat = venue['latitude'], lon = venue['longitude'];
-  if (lat is! num ||
-      lon is! num ||
+  double? _parse(dynamic val) {
+    if (val is num) return val.toDouble();
+    if (val is String) return double.tryParse(val.trim());
+    return null;
+  }
+
+  final lat = _parse(venue['latitude']) ?? _parse(venue['lat']);
+  final lon = _parse(venue['longitude']) ?? _parse(venue['lng']) ?? _parse(venue['lon']);
+  if (lat == null ||
+      lon == null ||
       !lat.isFinite ||
       !lon.isFinite ||
       lat < -90 ||
@@ -16,7 +23,7 @@ LatLng? bookingCoordinates(Map<String, dynamic> venue) {
       lon > 180) {
     return null;
   }
-  return LatLng(lat.toDouble(), lon.toDouble());
+  return LatLng(lat, lon);
 }
 
 String? bookingCoordinateError(String latitude, String longitude) {

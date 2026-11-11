@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aqar/bookings/booking_pricing_draft.dart';
 import 'package:aqar/bookings/booking_widgets.dart';
 
 void main() {
@@ -66,6 +67,7 @@ void main() {
           onSelect: (_) {});
       expect(calendar.state(DateTime(2030, 1, 1)), 'confirmed');
       expect(calendar.state(DateTime(2030, 1, 2)), 'available');
+      expect(calendar.state(DateTime(2020, 1, 1)), 'unavailable');
       await tester.pumpWidget(MaterialApp(
           builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context)
@@ -115,5 +117,88 @@ void main() {
     expect(tappedDay!.year, 2030);
     expect(tappedDay!.month, 4);
     expect(tappedDay!.day, 15);
+  });
+
+  testWidgets('BookingStatusLegend renders canonical 4 statuses with zero duplication', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: BookingStatusLegend(),
+        ),
+      ),
+    ));
+
+    expect(find.text('متاح'), findsOneWidget);
+    expect(find.text('قيد المراجعة'), findsOneWidget);
+    expect(find.text('محجوز'), findsOneWidget);
+    expect(find.text('غير متاح'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('BookingCalendar showLegend=false does not render status badges internally', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: BookingCalendar(
+            month: DateTime(2030, 5),
+            slots: const [],
+            intervalForDay: (day) => [day, day.add(const Duration(days: 1))],
+            onSelect: (_) {},
+            showLegend: false,
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.text('متاح'), findsNothing);
+    expect(find.text('قيد المراجعة'), findsNothing);
+    expect(find.text('محجوز'), findsNothing);
+    expect(find.text('غير متاح'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('BookingVenueOverview and safeVenueDeposit handle null, string and mismatched deposit without crash', (tester) async {
+    // 1. null deposit with price computes default 50% deposit, and zero deposit yields 0
+    expect(BookingPricingDraft.safeVenueDeposit({'price': 100000}), 50000);
+    expect(BookingPricingDraft.safeVenueDeposit({'deposit': 0}), 0);
+
+    // 2. string deposit
+    expect(BookingPricingDraft.safeVenueDeposit({'deposit': '25000'}), 25000);
+
+    // 3. invalid string deposit
+    expect(BookingPricingDraft.safeVenueDeposit({'deposit': 'invalid'}), 0);
+
+    // 4. num deposit
+    expect(BookingPricingDraft.safeVenueDeposit({'deposit': 30000}), 30000);
+
+    // 5. Render BookingVenueOverview with null and string deposits safely
+    await tester.pumpWidget(MaterialApp(
+      home: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                BookingVenueOverview(
+                  venue: const {'name': 'مكان 1', 'price': 50000, 'deposit': '10000'},
+                  total: 50000,
+                ),
+                BookingVenueOverview(
+                  venue: const {'name': 'مكان 2', 'price': 80000, 'deposit': null},
+                  total: 80000,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.pumpAndSettle();
+    expect(find.text('مكان 1'), findsOneWidget);
+    expect(find.text('مكان 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
