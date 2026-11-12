@@ -127,6 +127,7 @@ workflows:
 
     environment:
       groups:
+        - appstore_credentials
         - media_full_test
       vars:
         BOOKINGS_APP_FLAVOR: "bookingsStaging"
@@ -466,10 +467,10 @@ workflows:
 
           echo "=== Post-Profile Build Settings Verification Completed Successfully ==="
 
-      - name: Build Staging TestFlight IPA (Artifact Only)
+      - name: Build Staging TestFlight IPA
         script: |
           set -e
-          BUILD_NUMBER=3
+          BUILD_NUMBER=4
           echo "Using local fixed staging build number: $BUILD_NUMBER"
 
           flutter build ipa --release \
@@ -629,4 +630,11 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
 
