@@ -469,7 +469,7 @@ workflows:
       - name: Build Staging TestFlight IPA (Artifact Only)
         script: |
           set -e
-          BUILD_NUMBER=2
+          BUILD_NUMBER=3
           echo "Using local fixed staging build number: $BUILD_NUMBER"
 
           flutter build ipa --release \
