@@ -1,0 +1,12 @@
+{
+  "functions": [
+    {
+      "source": "media-server",
+      "codebase": "media"
+    }
+  ],
+  "storage": {
+    "target": "media-canary",
+    "rules": "storage.media.production.rules"
+  }
+}

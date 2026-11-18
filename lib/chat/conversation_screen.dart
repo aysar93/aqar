@@ -1,8 +1,9 @@
+import '../widgets/media_image.dart';
+import '../services/media_store.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -502,7 +503,7 @@ class _ConversationScreenState extends State<ConversationScreen>
             await ChatImageService.uploadAttachment(_chatId!, File(image.path));
         if (!mounted || _accountChanged) {
           if ((imageData['path'] ?? '').isNotEmpty) {
-            await FirebaseStorage.instance.ref(imageData['path']).delete();
+            await MediaStore.instance.deletePath(imageData['path']!);
           }
           return;
         }
@@ -513,7 +514,7 @@ class _ConversationScreenState extends State<ConversationScreen>
             imagePath: imageData['path']!);
         if (!sent) {
           if ((imageData['path'] ?? '').isNotEmpty) {
-            await FirebaseStorage.instance.ref(imageData['path']).delete();
+            await MediaStore.instance.deletePath(imageData['path']!);
           }
         }
       } else if (kind == 'location') {
@@ -566,9 +567,8 @@ class _ConversationScreenState extends State<ConversationScreen>
         if (!mounted || _accountChanged) {
           try {
             if ((_uploadedAudio!['audioPath'] ?? '').toString().isNotEmpty) {
-              await FirebaseStorage.instance
-                  .ref(_uploadedAudio!['audioPath'])
-                  .delete();
+              await MediaStore.instance
+                  .deletePath(_uploadedAudio!['audioPath']);
             }
           } finally {
             if (await File(recording.path).exists()) {
@@ -612,7 +612,7 @@ class _ConversationScreenState extends State<ConversationScreen>
         await File(recording.path).delete();
       }
       if (remote != null && (remote['audioPath'] ?? '').toString().isNotEmpty) {
-        await FirebaseStorage.instance.ref(remote['audioPath']).delete();
+        await MediaStore.instance.deletePath(remote['audioPath']);
       }
     } catch (_) {
       debugPrint('Pending audio cleanup deferred');
@@ -893,7 +893,7 @@ class _ConversationScreenState extends State<ConversationScreen>
           }
           if (remote != null &&
               (remote['audioPath'] ?? '').toString().isNotEmpty) {
-            await FirebaseStorage.instance.ref(remote['audioPath']).delete();
+            await MediaStore.instance.deletePath(remote['audioPath']);
           }
         } catch (_) {}
       }());
@@ -966,7 +966,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                             child: (_settings['logoUrl'] ?? '')
                                     .toString()
                                     .isNotEmpty
-                                ? Image.network(_settings['logoUrl'].toString(),
+                                ? MediaImage(_settings['logoUrl'].toString(),
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) =>
                                         Image.asset('assets/images/logo.png'))

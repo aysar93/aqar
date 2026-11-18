@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-import '../../services/cloudinary_service.dart';
+import '../../services/media_store.dart';
 import '../models/subscription_package_model.dart';
 import '../../office/models/office_subscription_model.dart';
 import '../../office/services/office_subscription_service.dart';
@@ -185,9 +185,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _uploadingReceipt = true;
         });
 
-        receiptUrl = await uploadToCloudinary(
-          _receiptFile!,
-        );
+        receiptUrl = await uploadMediaImage(
+          _receiptFile!, purpose: MediaPurpose.receipt);
 
         setState(() {
           _uploadingReceipt = false;

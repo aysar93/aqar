@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/media_image.dart';
 import 'package:aqar/moderation/user_blocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -232,7 +234,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
                 child: CircleAvatar(
                   backgroundColor: _background,
                   backgroundImage: widget.publisherPhotoUrl.trim().isNotEmpty
-                      ? NetworkImage(widget.publisherPhotoUrl.trim())
+                      ? CachedNetworkImageProvider(widget.publisherPhotoUrl.trim())
                       : null,
                   child: widget.publisherPhotoUrl.trim().isEmpty
                       ? const Icon(
@@ -843,7 +845,7 @@ class _PropertyImage extends StatelessWidget {
       );
     }
 
-    return Image.network(
+    return MediaImage(
       image,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Image.asset(

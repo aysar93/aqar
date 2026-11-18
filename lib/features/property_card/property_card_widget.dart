@@ -180,7 +180,7 @@ class PropertyCardWidget extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _buildNetworkImage(mainUrl),
+                _buildCachedNetworkImageProvider(mainUrl),
                 if (total > 1)
                   Positioned(
                     bottom: 4,
@@ -214,7 +214,7 @@ class PropertyCardWidget extends StatelessWidget {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(6),
-                    child: _buildNetworkImage(extra1),
+                    child: _buildCachedNetworkImageProvider(extra1),
                   ),
                 ),
                 if (extra2 != null) ...[
@@ -222,7 +222,7 @@ class PropertyCardWidget extends StatelessWidget {
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(6),
-                      child: _buildNetworkImage(extra2),
+                      child: _buildCachedNetworkImageProvider(extra2),
                     ),
                   ),
                 ],
@@ -234,7 +234,7 @@ class PropertyCardWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildNetworkImage(String? url) {
+  Widget _buildCachedNetworkImageProvider(String? url) {
     if (url == null || url.isEmpty) {
       return Container(
         color: _slate,

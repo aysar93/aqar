@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../banners/banner_model.dart';
 import '../../banners/banner_service.dart';
-import '../../services/cloudinary_service.dart';
+import '../../services/media_store.dart';
 
 class AddBannerScreen extends StatefulWidget {
   final BannerModel? banner;
@@ -166,7 +167,7 @@ class _AddBannerScreenState extends State<AddBannerScreen> {
       String? imageUrl = existingImage;
 
       if (_selectedImage != null) {
-        imageUrl = await uploadToCloudinary(_selectedImage!);
+        imageUrl = await uploadMediaImage(_selectedImage!, purpose: MediaPurpose.banner);
       }
 
       if (imageUrl == null || imageUrl.isEmpty) {
@@ -942,7 +943,7 @@ class _ImagePickerCard extends StatelessWidget {
                           imageFile!,
                           fit: BoxFit.cover,
                         )
-                      : Image.network(
+                      : MediaImage(
                           imageUrl!,
                           fit: BoxFit.cover,
                         )

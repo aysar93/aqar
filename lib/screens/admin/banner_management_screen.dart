@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -127,7 +128,7 @@ class _BannerManagementCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(
+              child: MediaImage(
                 banner.imageUrl,
                 width: 96,
                 height: 76,

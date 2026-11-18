@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /uploads/public/{purpose}/{uid}/{name} {
+      allow get: if purpose in ['property', 'avatar', 'office', 'banner', 'appLogo'];
+      allow create: if false; // All uploads require bounded broker authorization.
+      allow delete: if false; // Server cleanup only after reference and recovery checks.
+      allow update, list: if false;
+    }
+    match /uploads/private/{purpose}/{uid}/{name} {
+      allow get: if false; // Read through authenticated GCS broker; no Firebase metadata token minting.
+      allow create: if false; // Private writes go through the authorized GCS broker.
+      allow list, update, delete: if false;
+    }
+    match /uploads/private/chat_images/{chat}/{uid}/{name} {
+      allow get: if false; // Read through authenticated GCS broker; no Firebase metadata token minting.
+      allow create: if false; // Private writes go through the authorized GCS broker.
+      allow delete: if false; // Server audit and reference check required.
+      allow list, update: if false;
+    }
+    match /uploads/private/chat_audio/{chat}/{uid}/{name} {
+      allow get: if false; // Read through authenticated GCS broker; no Firebase metadata token minting.
+      allow create: if false; // Private writes go through the authorized GCS broker.
+      allow delete: if false; // Server audit and reference check required.
+      allow list, update: if false;
+    }
+    match /booking_receipts/{bookingId}/{authorUid}/{fileName} {
+      allow get: if false; // Read through authenticated GCS broker; no Firebase metadata token minting.
+      allow create: if false; // Private writes go through the authorized GCS broker.
+      allow list, update, delete: if false;
+    }
+    // Imported originals remain immutable and denied except the five approved pilot paths.
+    match /pilot/public/20261017/{asset}/{version}/{name} { allow get: if bucket == 'aqar-9f3f9-media-canary' && (asset + '/' + version + '/' + name) in ['bff2fa9c9abdea12df425acbdfa7b68e/v1786852662/qctctnwbuye3gnpxjuza.jpg', 'f354e26cd3039caa31a6a40b20d0951c/v1787692322/odcexpf9ddcqukufdlle.jpg', '3797f977bdda169ea631b58296a5a1a2/v1791465251/p6f6juqjqjjsw8ygbcs6.png', '1b60486052d23f82613a7a35fac7a01b/v1791099290/nweqbykqmvgeaipwvgxm.jpg', '163ca5471771dd6cc5a0376c076df763/v1787411580/cwznssquz8rwghjqnqvt.jpg']; }
+    match /{rest=**} { allow read, write: if false; }
+  }
+}

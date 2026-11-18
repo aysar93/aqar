@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,33 +26,21 @@ class _BannerSliderState extends State<BannerSlider>
   late final Stream<List<BannerModel>> _bannersStream;
 
   int _currentIndex = 0;
+  List<BannerModel> _lastBanners = const [];
 
   @override
   void initState() {
     super.initState();
 
-    _bannersStream = (widget.stream ?? BannerService.activeBanners())
-        .asyncMap((banners) async {
-      final valid = await Future.wait(banners.map((banner) async {
-        final uri = Uri.tryParse(banner.imageUrl.trim());
-        if (uri == null ||
-            !['http', 'https'].contains(uri.scheme) ||
-            uri.host.isEmpty ||
-            !mounted) {
-          return false;
-        }
-        var loaded = true;
-        await precacheImage(NetworkImage(banner.imageUrl.trim()), context,
-            onError: (_, __) {
-          loaded = false;
-        });
-        return loaded;
-      }));
-      return [
-        for (var i = 0; i < banners.length; i++)
-          if (valid[i]) banners[i]
-      ];
-    });
+    // Retain metadata offline; public image widgets persist bytes and retry.
+    _bannersStream = (widget.stream ?? BannerService.activeBanners()).map(
+      (banners) => banners.where((b) {
+        final uri = Uri.tryParse(b.imageUrl.trim());
+        return uri != null &&
+            ['https', 'http'].contains(uri.scheme) &&
+            uri.host.isNotEmpty;
+      }).toList(),
+    );
   }
 
   Future<void> _openBanner(BannerModel banner) async {
@@ -167,10 +156,15 @@ class _BannerSliderState extends State<BannerSlider>
     return StreamBuilder<List<BannerModel>>(
       stream: _bannersStream,
       builder: (context, snapshot) {
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+        // A transient stream error must not discard known public metadata.
+        // A successful empty snapshot still removes deleted/deactivated banners.
+        if (snapshot.hasData && !snapshot.hasError) {
+          _lastBanners = snapshot.data!;
+        }
+        final banners = _lastBanners;
+        if (banners.isEmpty) {
           return const SizedBox.shrink();
         }
-        final banners = snapshot.data!;
 
         // حماية المؤشر من الخروج عن عدد البنرات.
         if (banners.length <= 1) {
@@ -411,7 +405,7 @@ class _BannerImage extends StatelessWidget {
       );
     }
 
-    return Image.network(
+    return MediaImage(
       imageUrl,
       fit: BoxFit.cover,
       filterQuality: FilterQuality.high,

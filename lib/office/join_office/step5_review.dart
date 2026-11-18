@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../models/join_office_data.dart';
@@ -291,7 +292,7 @@ class Step5Review extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         child: isNetworkImage
-            ? Image.network(
+            ? MediaImage(
                 imageUrl,
                 width: double.infinity,
                 fit: BoxFit.contain,

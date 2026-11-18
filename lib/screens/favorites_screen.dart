@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:async';
 
@@ -368,7 +369,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 color: Colors.black26,
                                 child: Icon(Icons.play_circle_rounded,
                                     color: Color(0xffD4AF37), size: 38))
-                            : Image.network(reel.thumbnailUrl,
+                            : MediaImage(reel.thumbnailUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => const Icon(
                                     Icons.play_circle_rounded,

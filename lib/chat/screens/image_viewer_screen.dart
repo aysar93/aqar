@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 
 class ImageViewerScreen extends StatelessWidget {
@@ -23,7 +24,7 @@ class ImageViewerScreen extends StatelessWidget {
         child: InteractiveViewer(
           minScale: 0.8,
           maxScale: 4.0,
-          child: Image.network(
+          child: MediaImage(
             imageUrl,
             fit: BoxFit.contain,
             loadingBuilder: (context, child, loadingProgress) {

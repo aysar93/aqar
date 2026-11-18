@@ -1,3 +1,4 @@
+import '../../widgets/media_image.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -312,7 +313,7 @@ class _HeroImage extends StatelessWidget {
     } else if (projFile.existsSync()) {
       return Image.memory(projFile.readAsBytesSync(), fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
     } else if (path.startsWith('http://') || path.startsWith('https://')) {
-      return Image.network(
+      return MediaImage(
         path,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _placeholder(),

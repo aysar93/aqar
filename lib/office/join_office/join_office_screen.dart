@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/join_office_data.dart';
-import '../../services/cloudinary_service.dart';
+import '../../services/media_store.dart';
 import 'step1_office_info.dart';
 import 'step2_contact.dart';
 import 'step3_location.dart';
@@ -200,7 +200,7 @@ class _JoinOfficeScreenState extends State<JoinOfficeScreen> {
           FirebaseFirestore.instance.collection('officeRequests').doc();
 
       // =========================================================
-// رفع صورة الترخيص إلى Cloudinary قبل حفظ الطلب
+// رفع صورة الترخيص إلى Firebase Storage قبل حفظ الطلب
 // =========================================================
       final licenseImagePath = _data.licenseImageUrl.trim();
 
@@ -213,15 +213,14 @@ class _JoinOfficeScreenState extends State<JoinOfficeScreen> {
           throw Exception('لم يتم العثور على صورة الترخيص');
         }
 
-        final uploadedLicenseUrl = await uploadToCloudinary(
-          licenseFile,
-        );
+        final uploadedLicenseUrl = await uploadMediaImage(
+          licenseFile, purpose: MediaPurpose.license);
 
         if (uploadedLicenseUrl == null || uploadedLicenseUrl.trim().isEmpty) {
           throw Exception('فشل رفع صورة الترخيص');
         }
 
-        // استبدال المسار المحلي برابط Cloudinary
+        // استبدال المسار المحلي برابط Firebase Storage
         _data.licenseImageUrl = uploadedLicenseUrl;
       }
 

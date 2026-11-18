@@ -12,7 +12,8 @@ import 'package:audioplayers/audioplayers.dart';
 import '../../app_updates/app_update_gate.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final AudioPlayer? audioPlayer;
+  const SplashScreen({super.key, this.audioPlayer});
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -20,13 +21,14 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _controller;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  late final AudioPlayer _audioPlayer;
   bool _started = false;
   bool _navigating = false;
 
   @override
   void initState() {
     super.initState();
+    _audioPlayer = widget.audioPlayer ?? AudioPlayer();
     WidgetsBinding.instance.addObserver(this);
     _controller =
         AnimationController(vsync: this, duration: PremiumSplash.duration)
@@ -45,30 +47,38 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _start() async {
-    await precacheImage(const AssetImage('assets/images/logo.png'), context);
+    // Optional image/audio preparation must not hold navigation indefinitely.
+    try {
+      await precacheImage(const AssetImage('assets/images/logo.png'), context)
+          .timeout(const Duration(seconds: 2));
+    } catch (_) {/* Keep the animation/navigation usable without preloading. */}
     if (!mounted) return;
+    _controller.forward();
+    unawaited(_prepareAudio());
+  }
+
+  Future<void> _prepareAudio() async {
     try {
       await _audioPlayer.setAudioContext(
         AudioContext(
           iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
-          android:
-              const AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
+          android: const AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
         ),
-      );
-      await _audioPlayer.setVolume(.32);
-      await _audioPlayer.setSource(AssetSource('audio/premium_splash.wav'));
-    } catch (_) {
-      /* Audio is optional; never block startup on audio failure. */
-    }
-    if (!mounted) return;
-    _controller.forward();
-    unawaited(_audioPlayer.resume().catchError((Object _) {}));
+      ).timeout(const Duration(seconds: 2));
+      if (!mounted || _navigating) return;
+      await _audioPlayer.setVolume(.32).timeout(const Duration(seconds: 2));
+      if (!mounted || _navigating) return;
+      await _audioPlayer.setSource(AssetSource('audio/premium_splash.wav'))
+          .timeout(const Duration(seconds: 2));
+      if (!mounted || _navigating || _controller.isCompleted) return;
+      await _audioPlayer.resume().timeout(const Duration(seconds: 2));
+    } catch (_) {/* Audio is optional; animation already runs independently. */}
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _started && !_navigating) {
-      if (_controller.value > 0 && !_controller.isCompleted) {
+      if (!_controller.isCompleted) {
         _controller.forward();
         unawaited(
           _audioPlayer
@@ -110,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
-    unawaited(_audioPlayer.dispose());
+    unawaited(_audioPlayer.dispose().catchError((Object _) {}));
     super.dispose();
   }
 

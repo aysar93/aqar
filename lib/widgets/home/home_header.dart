@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/design/aqar_sizes.dart';
 import '../../core/design/aqar_spacing.dart';
@@ -68,7 +69,7 @@ class HomeHeader extends StatelessWidget {
               radius: AqarSizes.avatarRadius(context),
               backgroundColor: _gold,
               backgroundImage: (photoUrl != null && photoUrl!.isNotEmpty)
-                  ? NetworkImage(photoUrl!)
+                  ? CachedNetworkImageProvider(photoUrl!)
                   : null,
               child: (photoUrl == null || photoUrl!.isEmpty)
                   ? Icon(

@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/media_image.dart';
 import '../services/trusted_inbox.dart';
 import '../core/data/shared_stream.dart';
 import '../moderation/content_policy.dart';
@@ -522,7 +524,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                   child: CircleAvatar(
                     backgroundColor: const Color(0xff0F172A),
                     backgroundImage:
-                        photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                        photoUrl.isNotEmpty ? CachedNetworkImageProvider(photoUrl) : null,
                     child: photoUrl.isEmpty
                         ? Icon(
                             isOffice
@@ -879,7 +881,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                                 ? widget.imageUrl
                                 : widget.images[index],
                           )
-                        : NetworkImage(
+                        : CachedNetworkImageProvider(
                             widget.images.isEmpty
                                 ? widget.imageUrl
                                 : widget.images[index],
@@ -1423,7 +1425,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
             radius: 24,
             backgroundColor: const Color(0xffD4AF37),
             backgroundImage: (data["userPhoto"] ?? "").toString().isNotEmpty
-                ? NetworkImage(data["userPhoto"])
+                ? CachedNetworkImageProvider(data["userPhoto"])
                 : null,
             child: (data["userPhoto"] ?? "").toString().isEmpty
                 ? const Icon(Icons.person, color: Colors.black)
@@ -1738,7 +1740,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                                       (reply["userPhoto"] ?? "")
                                                               .toString()
                                                               .isNotEmpty
-                                                          ? NetworkImage(
+                                                          ? CachedNetworkImageProvider(
                                                               reply[
                                                                   "userPhoto"],
                                                             )
@@ -1947,7 +1949,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         width: double.infinity,
                                         fit: BoxFit.cover,
                                       )
-                                    : Image.network(
+                                    : MediaImage(
                                         widget.images.isEmpty
                                             ? widget.imageUrl
                                             : widget.images[index],
@@ -1974,7 +1976,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     width: double.infinity,
                                     fit: BoxFit.cover,
                                   )
-                                : Image.network(
+                                : MediaImage(
                                     widget.images.isEmpty
                                         ? widget.imageUrl
                                         : widget.images[index],
@@ -3420,7 +3422,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                             : 22,
                                     backgroundColor: const Color(0xffD4AF37),
                                     backgroundImage: photo.isNotEmpty
-                                        ? NetworkImage(photo)
+                                        ? CachedNetworkImageProvider(photo)
                                         : null,
                                     child: photo.isEmpty
                                         ? const Icon(

@@ -1,3 +1,4 @@
+import '../../../widgets/media_image.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -237,7 +238,7 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
     int index,
   ) {
     return _imageContainer(
-      child: Image.network(
+      child: MediaImage(
         imageUrl,
         width: double.infinity,
         height: double.infinity,

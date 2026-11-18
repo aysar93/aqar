@@ -1,0 +1,25 @@
+diff --git a/lib/bookings/booking_screen.dart b/lib/bookings/booking_screen.dart
+index c658f3d..63f4e8a 100644
+--- a/lib/bookings/booking_screen.dart
++++ b/lib/bookings/booking_screen.dart
+@@ -5 +5,2 @@ import 'package:firebase_auth/firebase_auth.dart';
+-import 'package:firebase_storage/firebase_storage.dart';
++import 'dart:io';
++import '../services/media_store.dart';
+@@ -325,4 +326,3 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+-                          final bytes = await FirebaseStorage.instance
+-                              .ref(b['receiptPath'])
+-                              .getData(10 * 1024 * 1024);
+-                          if (context.mounted && bytes != null) {
++                          final bytes = await MediaStore.instance
++                              .readPrivatePath(b['receiptPath']);
++                          if (context.mounted) {
+@@ -379,5 +379,3 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+-                              final path =
+-                                  'booking_receipts/${widget.bookingId}/$uid/${DateTime.now().microsecondsSinceEpoch}.jpg';
+-                              await FirebaseStorage.instance.ref(path).putData(
+-                                  await image.readAsBytes(),
+-                                  SettableMetadata(contentType: 'image/jpeg'));
++                              final path = await MediaStore.instance
++                                  .uploadBookingReceipt(
++                                      File(image.path), widget.bookingId);

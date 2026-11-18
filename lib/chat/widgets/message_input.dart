@@ -58,14 +58,14 @@ class _MessageInputState extends State<MessageInput> {
 
     if (image == null) return;
 
-    final url = await ChatImageService.uploadImage(
-      File(image.path),
-    );
+    final attachment = await ChatImageService.uploadAttachment(
+        widget.chatId, File(image.path));
 
     await ChatService().sendMessage(
       chatId: widget.chatId,
       message: "",
-      imageUrl: url,
+      imageUrl: attachment['url']!,
+      imagePath: attachment['path']!,
       senderType: widget.senderType,
       type: "image",
     );

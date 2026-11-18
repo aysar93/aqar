@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -58,8 +59,9 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: const Color(0xFFD4AF37),
-                backgroundImage:
-                    logoUrl.isNotEmpty ? NetworkImage(logoUrl) : null,
+                backgroundImage: logoUrl.isNotEmpty
+                    ? CachedNetworkImageProvider(logoUrl)
+                    : null,
                 child: logoUrl.isEmpty
                     ? const Icon(
                         Icons.support_agent,

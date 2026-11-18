@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "aqar-9f3f9"
+  },
+  "targets": {
+    "aqar-9f3f9": {
+      "storage": {
+        "media-canary": [
+          "aqar-9f3f9-media-canary"
+        ]
+      }
+    }
   }
 }

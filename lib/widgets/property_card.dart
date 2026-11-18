@@ -1,3 +1,4 @@
+import '../widgets/media_image.dart';
 import 'package:flutter/material.dart';
 import 'property_image.dart';
 
@@ -178,7 +179,7 @@ class _PropertyCardState extends State<PropertyCard> {
           ),
           child: ClipOval(
             child: photoUrl.trim().isNotEmpty
-                ? Image.network(
+                ? MediaImage(
                     photoUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) {
@@ -532,7 +533,7 @@ class _PropertyCardState extends State<PropertyCard> {
       ),
       child: ClipOval(
         child: photo.isNotEmpty
-            ? Image.network(
+            ? MediaImage(
                 photo,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(

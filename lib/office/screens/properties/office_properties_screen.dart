@@ -1,3 +1,4 @@
+import '../../../widgets/media_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -1140,7 +1141,7 @@ class _PropertyImage extends StatelessWidget {
       );
     }
 
-    return Image.network(
+    return MediaImage(
       image,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Image.asset(
