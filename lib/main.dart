@@ -19,6 +19,34 @@ import 'services/deep_link_service.dart';
 import 'screens/onboarding/splash_screen.dart';
 
 Future<void> main() async {
+  const stagingProject = String.fromEnvironment('STAGING_PROJECT_ID');
+  const mediaBucket = String.fromEnvironment('MEDIA_STORAGE_BUCKET');
+  if (mediaBucket.isNotEmpty &&
+      mediaBucket != 'aqar-9f3f9-media-canary' &&
+      stagingProject.isEmpty) {
+    throw StateError(
+        'Non-production MEDIA_STORAGE_BUCKET requires explicit STAGING_PROJECT_ID to prevent accidental production Firebase attachment');
+  }
+  if (stagingProject.isNotEmpty) {
+    const apiKey = String.fromEnvironment('STAGING_API_KEY');
+    const appId = String.fromEnvironment('STAGING_APP_ID');
+    const sender = String.fromEnvironment('STAGING_SENDER_ID');
+    if (apiKey.isEmpty || appId.isEmpty || sender.isEmpty) {
+      throw StateError(
+          'STAGING_PROJECT_ID requires STAGING_API_KEY, STAGING_APP_ID, and STAGING_SENDER_ID');
+    }
+    await startAqar(
+        FirebaseOptions(
+          apiKey: apiKey,
+          appId: appId,
+          messagingSenderId: sender,
+          projectId: stagingProject,
+          storageBucket: mediaBucket.isNotEmpty ? mediaBucket : null,
+          iosBundleId: 'com.andalus.aqar.staging',
+        ),
+        isolated: true);
+    return;
+  }
   await startAqar(DefaultFirebaseOptions.currentPlatform);
 }
 

@@ -1,0 +1,11 @@
+{
+  "MEDIA_STORAGE_BUCKET": "demo-aqar-media-test",
+  "MEDIA_UPLOAD_URL": "http://127.0.0.1:9396/uploadMedia",
+  "MEDIA_PRIVATE_READ_URL": "http://127.0.0.1:9396/readPrivateMedia",
+  "MEDIA_CLEANUP_URL": "http://127.0.0.1:9396/requestMediaCleanup",
+  "STAGING_PROJECT_ID": "demo-aqar-media-test",
+  "STAGING_APP_ID": "1:123:android:0123456789abcdef",
+  "STAGING_API_KEY": "demo-fake-api-key",
+  "STAGING_SENDER_ID": "123",
+  "BRIDGE_ONESIGNAL_APP_ID": "2ef06b79-ae17-4ae0-afd1-3c2a766de0f4"
+}
