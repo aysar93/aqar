@@ -1,11 +1,11 @@
 {
   "MEDIA_STORAGE_BUCKET": "aqar-media-test-20261018-media",
   "MEDIA_UPLOAD_URL": "https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/uploadMedia",
-  "MEDIA_PRIVATE_READ_URL": "https://us-central1-aqar-media-test-20261018.cloudfunctions.net/readPrivateMedia",
-  "MEDIA_CLEANUP_URL": "https://us-central1-aqar-media-test-20261018.cloudfunctions.net/requestMediaCleanup",
+  "MEDIA_PRIVATE_READ_URL": "https://us-central1-aqar-media-test-20261018.cloudfunctions.net/mediaBrokerTest/readPrivateMedia",
+  "MEDIA_CLEANUP_URL": "",
   "STAGING_PROJECT_ID": "aqar-media-test-20261018",
-  "STAGING_APP_ID": "1:371338154133:android:310ff431d875fdf26dcb9c",
-  "STAGING_API_KEY": "AIzaSyDvK4Lgv63Ho7CIdciqlf2ocLogVflvjh8",
-  "STAGING_SENDER_ID": "371338154133",
+  "STAGING_APP_ID": "1:935194200707:android:ee8d6e8d416cba77dce9b6",
+  "STAGING_API_KEY": "AIzaSyDOYGvFsHqeBgJMTJlV6qnkji_1GGlJrDk",
+  "STAGING_SENDER_ID": "935194200707",
   "BRIDGE_ONESIGNAL_APP_ID": "2ef06b79-ae17-4ae0-afd1-3c2a766de0f4"
 }

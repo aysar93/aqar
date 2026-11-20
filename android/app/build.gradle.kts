@@ -16,7 +16,7 @@ val keystoreProperties = Properties().apply {
 }
 if (fcmStaging) {
     val config = file("google-services.json").readText()
-    require(!config.contains("aqar-9f3f9") && config.contains("aqar-fcm-test-") && config.contains("com.andalus.aqar.staging")) {
+    require(!config.contains("aqar-9f3f9") && (config.contains("aqar-fcm-test-") || config.contains("aqar-media-test-")) && config.contains("com.andalus.aqar.staging")) {
         "Install isolated staging google-services.json before building"
     }
 }

@@ -25,7 +25,8 @@ Future<void> main() async {
       mediaBucket != 'aqar-9f3f9-media-canary' &&
       stagingProject.isEmpty) {
     throw StateError(
-        'Non-production MEDIA_STORAGE_BUCKET requires explicit STAGING_PROJECT_ID to prevent accidental production Firebase attachment');
+      'Non-production MEDIA_STORAGE_BUCKET requires explicit STAGING_PROJECT_ID to prevent accidental production Firebase attachment',
+    );
   }
   if (stagingProject.isNotEmpty) {
     const apiKey = String.fromEnvironment('STAGING_API_KEY');
@@ -33,26 +34,32 @@ Future<void> main() async {
     const sender = String.fromEnvironment('STAGING_SENDER_ID');
     if (apiKey.isEmpty || appId.isEmpty || sender.isEmpty) {
       throw StateError(
-          'STAGING_PROJECT_ID requires STAGING_API_KEY, STAGING_APP_ID, and STAGING_SENDER_ID');
+        'STAGING_PROJECT_ID requires STAGING_API_KEY, STAGING_APP_ID, and STAGING_SENDER_ID',
+      );
     }
     await startAqar(
-        FirebaseOptions(
-          apiKey: apiKey,
-          appId: appId,
-          messagingSenderId: sender,
-          projectId: stagingProject,
-          storageBucket: mediaBucket.isNotEmpty ? mediaBucket : null,
-          iosBundleId: 'com.andalus.aqar.staging',
-        ),
-        isolated: true);
+      FirebaseOptions(
+        apiKey: apiKey,
+        appId: appId,
+        messagingSenderId: sender,
+        projectId: stagingProject,
+        storageBucket: mediaBucket.isNotEmpty ? mediaBucket : null,
+        iosBundleId: 'com.andalus.aqar.staging',
+      ),
+      isolated: true,
+    );
     return;
   }
   await startAqar(DefaultFirebaseOptions.currentPlatform);
 }
 
-Future<void> startAqar(FirebaseOptions options,
-    {bool isolated = false, bool bridgeCandidate = false}) async {
-  final approvedCandidate = bridgeCandidate &&
+Future<void> startAqar(
+  FirebaseOptions options, {
+  bool isolated = false,
+  bool bridgeCandidate = false,
+}) async {
+  final approvedCandidate =
+      bridgeCandidate &&
       PushMigration.bridgeEnabled &&
       !PushMigration.isolated &&
       options.projectId == 'aqar-9f3f9' &&
@@ -65,16 +72,33 @@ Future<void> startAqar(FirebaseOptions options,
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.light,
-      systemNavigationBarContrastEnforced: false,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarContrastEnforced: false,
+      ),
+    );
   }
-  await Firebase.initializeApp(options: options);
+  FirebaseApp app;
+  try {
+    app = await Firebase.initializeApp(options: options);
+  } on FirebaseException catch (e) {
+    if (e.code == 'duplicate-app') {
+      app = Firebase.app();
+    } else {
+      rethrow;
+    }
+  }
+  if (app.options.projectId != options.projectId) {
+    throw StateError(
+      'Firebase [DEFAULT] app is attached to ${app.options.projectId} '
+      'which does not match requested ${options.projectId}',
+    );
+  }
 
   // Anonymous sessions created by older app versions are persisted by Firebase.
   // Remove only those sessions; real users remain signed in across app restarts.
@@ -89,11 +113,17 @@ Future<void> startAqar(FirebaseOptions options,
     return true;
   };
   UserBlocks.instance.initialize();
-  runApp(MultiProvider(providers: [
-    ChangeNotifierProvider(
-        create: (_) => AppSettingsProvider()..loadSettings()),
-    ChangeNotifierProvider(create: (_) => UserProvider()),
-  ], child: const AqarApp()));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AppSettingsProvider()..loadSettings(),
+        ),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: const AqarApp(),
+    ),
+  );
 
   // Observe auth immediately, independently of notification initialization.
   unawaited(AppActivityService.instance.initialize());
@@ -124,10 +154,10 @@ class AqarApp extends StatelessWidget {
   const AqarApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        builder: (context, child) => BlockScope(child: child!),
-        theme: AppTheme.lightTheme,
-        navigatorKey: NotificationNavigationService.navigatorKey,
-        home: const SplashScreen(),
-      );
+    debugShowCheckedModeBanner: false,
+    builder: (context, child) => BlockScope(child: child!),
+    theme: AppTheme.lightTheme,
+    navigatorKey: NotificationNavigationService.navigatorKey,
+    home: const SplashScreen(),
+  );
 }
