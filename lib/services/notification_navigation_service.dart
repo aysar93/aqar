@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'notification_route_coordinator.dart';
 import 'push_migration.dart';
+import '../bookings/booking_screen.dart';
 import '../bookings/booking_notification.dart';
 
 import '../chat/chat_screen.dart';
@@ -21,8 +22,9 @@ class NotificationNavigationService {
 
   static final routes = NotificationRouteCoordinator(navigatorKey);
 
-  /// Optional builder wired to BookingDetailsScreen when booking UI is mounted.
-  static Widget Function(String bookingId)? bookingDetailsScreenBuilder;
+  /// Builder wired to BookingDetailsScreen (overridable in unit tests if needed).
+  static Widget Function(String bookingId)? bookingDetailsScreenBuilder =
+      (bookingId) => BookingDetailsScreen(bookingId: bookingId);
 
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 

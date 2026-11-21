@@ -1,0 +1,498 @@
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'booking_decision_ui.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'booking_widgets.dart';
+import 'booking_filters.dart';
+
+class BookingSection extends StatelessWidget {
+  const BookingSection(
+      {super.key, required this.title, required this.child, this.subtitle});
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Card(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Padding(
+          padding:
+              EdgeInsets.all(MediaQuery.sizeOf(context).width < 360 ? 16 : 20),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
+            if (subtitle != null)
+              Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(subtitle!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.7))),
+            const SizedBox(height: 16),
+            child,
+          ])));
+}
+
+class BookingVenueIdentity extends StatelessWidget {
+  const BookingVenueIdentity({super.key, required this.venue});
+  final Map<String, dynamic> venue;
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('${venueCategory(venue['category'])} · ${venue['location'] ?? ''}',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.8)),
+        Text('${venue['name'] ?? ''}',
+            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          if ((venue['capacity'] as num? ?? 0) > 0)
+            Chip(
+                avatar: const Icon(Icons.people_outline, size: 18),
+                label: Text('${venue['capacity']} ضيف')),
+          if ((venue['bedrooms'] as num? ?? 0) > 0)
+            Chip(
+                avatar: const Icon(Icons.bed_outlined, size: 18),
+                label: Text('${venue['bedrooms']} غرف')),
+          for (final amenity in venue['amenities'] as List? ?? [])
+            if (bookingAmenities.containsKey(amenity))
+              Chip(label: Text(bookingAmenities[amenity]!)),
+        ]),
+        const SizedBox(height: 20),
+      ]);
+}
+
+class BookingCheckoutHeader extends StatelessWidget {
+  const BookingCheckoutHeader({super.key, required this.step});
+  final int step;
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const stages = [
+      {'title': 'اختيار الموعد', 'sub': 'اليوم والفترة'},
+      {'title': 'بيانات الحجز', 'sub': 'الأسعار والشروط'},
+      {'title': 'التأكيد', 'sub': 'إرسال الطلب'},
+    ];
+    final activeStage = step.clamp(0, 2);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                for (var i = 0; i < stages.length; i++) ...[
+                  // Step Indicator Node
+                  Semantics(
+                    label: 'الخطوة ${i + 1} من 3، ${stages[i]['title']}${i == activeStage ? '، الحالية' : (i < activeStage ? '، مكتملة' : '')}',
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i < activeStage
+                            ? const Color(0xFF16A34A)
+                            : i == activeStage
+                                ? bookingNavy
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                          color: i == activeStage
+                              ? bookingGold
+                              : (i < activeStage ? const Color(0xFF16A34A) : Colors.transparent),
+                          width: i == activeStage ? 2.5 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: i < activeStage
+                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            : Text(
+                                '${i + 1}',
+                                style: TextStyle(
+                                  color: i == activeStage
+                                      ? bookingGold
+                                      : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  // Connecting Progress Line
+                  if (i < stages.length - 1)
+                    Expanded(
+                      child: Container(
+                        height: 3,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: i < activeStage
+                              ? const Color(0xFF16A34A)
+                              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Step Labels Row
+            Row(
+              children: [
+                for (var i = 0; i < stages.length; i++)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: i == 0
+                          ? CrossAxisAlignment.start
+                          : (i == stages.length - 1
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.center),
+                      children: [
+                        Text(
+                          stages[i]['title']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11.5,
+                            fontWeight: i == activeStage ? FontWeight.bold : FontWeight.w500,
+                            color: i == activeStage
+                                ? (isDark ? bookingGold : bookingNavy)
+                                : (i < activeStage
+                                    ? (isDark ? Colors.white70 : const Color(0xFF334155))
+                                    : (isDark ? Colors.white38 : const Color(0xFF94A3B8))),
+                          ),
+                        ),
+                        Text(
+                          stages[i]['sub']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 9.5,
+                            color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+DateTime? bookingHoldDeadline(dynamic value) {
+  if (value is! num || !value.isFinite || value != value.truncateToDouble())
+    return null;
+  try {
+    return DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true);
+  } on RangeError {
+    return null;
+  }
+}
+
+/// Local presentation timer only. Server deadlines and authorization are unchanged.
+class BookingHoldNotice extends StatefulWidget {
+  const BookingHoldNotice(
+      {super.key,
+      required this.until,
+      required this.onExpired,
+      this.now = DateTime.now,
+      this.compact = false});
+  final DateTime until;
+  final VoidCallback onExpired;
+  final DateTime Function() now;
+  final bool compact;
+  @override
+  State<BookingHoldNotice> createState() => _BookingHoldNoticeState();
+}
+
+class _BookingHoldNoticeState extends State<BookingHoldNotice> {
+  Timer? timer;
+  bool notified = false;
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => tick());
+    WidgetsBinding.instance.addPostFrameCallback((_) => tick());
+  }
+
+  @override
+  void didUpdateWidget(covariant BookingHoldNotice old) {
+    super.didUpdateWidget(old);
+    if (old.until != widget.until) notified = false;
+  }
+
+  void tick() {
+    if (!mounted) return;
+    final expired = !widget.until.isAfter(widget.now());
+    setState(() {});
+    if (expired && !notified) {
+      notified = true;
+      widget.onExpired();
+    }
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = widget.until.difference(widget.now()).inMilliseconds;
+    final seconds = ((remaining + 999) ~/ 1000).clamp(0, 1 << 31);
+    if (widget.compact)
+      return Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(18)),
+          child: Row(children: [
+            Icon(Icons.timer_outlined,
+                color: Theme.of(context).colorScheme.onSurface),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(
+                      seconds == 0
+                          ? 'انتهت مهلة العربون'
+                          : 'الحجز مؤقت · أرسل العربون قبل انتهاء المهلة',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(
+                      seconds == 0
+                          ? 'بانتظار تحديث حالة الخادم'
+                          : 'المتبقي ${(seconds ~/ 3600).toString().padLeft(2, '0')}:${(seconds % 3600 ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                          fontSize: 19, fontWeight: FontWeight.w700)),
+                ]))
+          ]));
+    return BookingSection(
+        title: seconds == 0 ? 'انتهت مهلة العربون' : 'مكانك محفوظ مؤقتًا',
+        subtitle: seconds == 0
+            ? 'حدّث الحجز للتحقق من الحالة. لا ترسل دفعة اعتمادًا على مهلة منتهية.'
+            : 'أرسل الإيصال قبل انتهاء المهلة؛ تأكيد الحجز يتطلب مراجعة الإدارة.',
+        child: Row(children: [
+          const Icon(Icons.timer_outlined, color: bookingGold),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Text(
+                  seconds == 0
+                      ? 'بانتظار تحديث حالة الخادم'
+                      : 'المتبقي ${(seconds ~/ 3600).toString().padLeft(2, '0')}:${(seconds % 3600 ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.w700)))
+        ]));
+  }
+}
+
+/// Rendered inside the authenticated booking details screen; callbacks keep the
+/// existing verified-upload and server authorization path.
+class BookingPaymentPanel extends StatelessWidget {
+  const BookingPaymentPanel(
+      {super.key,
+      required this.deposit,
+      required this.accounts,
+      required this.method,
+      required this.transaction,
+      required this.busy,
+      required this.onMethod,
+      required this.onSubmit,
+      this.receiptBytes,
+      this.onPickReceipt});
+  final dynamic deposit;
+  final Map<String, dynamic> accounts;
+  final String method;
+  final TextEditingController transaction;
+  final bool busy;
+  final ValueChanged<String> onMethod;
+  final VoidCallback? onSubmit, onPickReceipt;
+  final Uint8List? receiptBytes;
+  @override
+  Widget build(BuildContext context) {
+    final selected = accounts[method];
+    final number = selected is Map &&
+            selected['number'] is String &&
+            (selected['number'] as String).trim().isNotEmpty
+        ? selected['number'] as String
+        : null;
+    return BookingSection(
+        title: 'دفع عربون الحجز',
+        subtitle:
+            'راجع المستلم، ثم حوّل العربون وأرفق الإيصال قبل إرساله للمراجعة.',
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  color: bookingNavy, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('العربون المطلوب',
+                        style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 8),
+                    Text(bookingMoney(deposit),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold))
+                  ])),
+          const SizedBox(height: 20),
+          const Text('١ · اختر وسيلة التحويل',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          for (final entry in accounts.entries)
+            RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: entry.key,
+                groupValue: method,
+                title: Text(entry.key == 'qicard' ? 'كي كارد' : 'زين كاش'),
+                subtitle: Text('${entry.value['number'] ?? 'رقم غير متاح'}',
+                    textDirection: TextDirection.ltr),
+                onChanged: busy
+                    ? null
+                    : (value) {
+                        if (value != null) onMethod(value);
+                      }),
+          if (number != null)
+            Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('بيانات المستلم المعتمدة',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      SelectableText(number,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(
+                              fontSize: 23, fontWeight: FontWeight.bold)),
+                      const Text(
+                          'اسم صاحب الحساب غير محفوظ في إعدادات الدفع؛ تحقق من الاسم الظاهر في تطبيق التحويل.',
+                          style: TextStyle(height: 1.7)),
+                      OutlinedButton.icon(
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  await Clipboard.setData(
+                                      ClipboardData(text: number));
+                                  if (context.mounted)
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content:
+                                                Text('تم نسخ رقم المستلم')));
+                                },
+                          icon: const Icon(Icons.copy_outlined),
+                          label: const Text('نسخ رقم المستلم')),
+                    ])),
+          const SizedBox(height: 20),
+          const Text('٢ · بيانات التحويل والإيصال',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          TextField(
+              controller: transaction,
+              enabled: !busy,
+              maxLength: 200,
+              decoration: const InputDecoration(
+                  labelText: 'رقم التحويل',
+                  prefixIcon: Icon(Icons.receipt_long_outlined))),
+          OutlinedButton.icon(
+              onPressed: busy ? null : onPickReceipt,
+              icon: const Icon(Icons.attach_file_outlined),
+              label: Text(receiptBytes == null
+                  ? 'اختيار إيصال للمعاينة'
+                  : 'تغيير الإيصال')),
+          if (receiptBytes != null) ...[
+            const SizedBox(height: 12),
+            const Text('معاينة الإيصال قبل الإرسال'),
+            const SizedBox(height: 8),
+            ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.memory(receiptBytes!,
+                    height: 200,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) =>
+                        const Text('تعذر عرض الإيصال. اختر صورة واضحة أخرى.'))),
+            TextButton(
+                onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                        child: InteractiveViewer(
+                            child: Image.memory(receiptBytes!)))),
+                child: const Text('تكبير الإيصال')),
+          ],
+          const SizedBox(height: 16),
+          ValueListenableBuilder<TextEditingValue>(
+              valueListenable: transaction,
+              builder: (context, value, _) {
+                final reason = busy
+                    ? 'الإرسال معطل أثناء التحقق من عملية سابقة.'
+                    : !bookingKnownMoney(deposit) || deposit <= 0
+                        ? 'الإرسال معطل: العربون غير متحقق منه.'
+                        : number == null
+                            ? 'الإرسال معطل: لا توجد بيانات مستلم معتمدة.'
+                            : value.text.trim().isEmpty
+                                ? 'أدخل رقم التحويل لتفعيل الإرسال.'
+                                : receiptBytes == null
+                                    ? 'اختر الإيصال وراجع صورته قبل إرسال الطلب.'
+                                    : onSubmit == null
+                                        ? 'الإرسال غير متاح الآن؛ تحقق من المهلة والاتصال.'
+                                        : null;
+                return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (reason != null) BookingActionReason(reason: reason),
+                      FilledButton.icon(
+                          onPressed: reason == null ? onSubmit : null,
+                          icon: const Icon(Icons.upload_file_outlined),
+                          label: Text(busy
+                              ? 'جارٍ التحقق من الإيصال…'
+                              : 'إرسال الإيصال للمراجعة'))
+                    ]);
+              }),
+          const SizedBox(height: 8),
+          Text('إرسال الإيصال لا يؤكد الحجز. انتظر اعتماد المراجع المالي.',
+              style: TextStyle(
+                  height: 1.8,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ]));
+  }
+}
