@@ -68,7 +68,6 @@ class StatisticsTextStyles {
   // ============================================================
 
   static const TextStyle pageTitle = TextStyle(
-    color: primaryText,
     fontSize: pageTitleSize,
     fontWeight: FontWeight.w900,
     height: 1.25,
@@ -86,7 +85,6 @@ class StatisticsTextStyles {
   // ============================================================
 
   static const TextStyle sectionTitle = TextStyle(
-    color: primaryText,
     fontSize: sectionTitleSize,
     fontWeight: FontWeight.w800,
     height: 1.3,
@@ -104,14 +102,12 @@ class StatisticsTextStyles {
   // ============================================================
 
   static const TextStyle cardTitle = TextStyle(
-    color: primaryText,
     fontSize: cardTitleSize,
     fontWeight: FontWeight.w800,
     height: 1.35,
   );
 
   static const TextStyle body = TextStyle(
-    color: primaryText,
     fontSize: bodySize,
     fontWeight: FontWeight.w500,
     height: 1.55,
@@ -136,14 +132,12 @@ class StatisticsTextStyles {
   // ============================================================
 
   static const TextStyle metric = TextStyle(
-    color: primaryText,
     fontSize: metricSize,
     fontWeight: FontWeight.w800,
     height: 1.2,
   );
 
   static const TextStyle largeMetric = TextStyle(
-    color: primaryText,
     fontSize: largeMetricSize,
     fontWeight: FontWeight.w900,
     height: 1.2,

@@ -1,6 +1,9 @@
+import 'bookings_staging_main.dart' as bookings_staging;
 import 'moderation/user_blocks.dart';
+import 'bookings_test_main.dart' as bookings_test;
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -19,6 +22,14 @@ import 'services/deep_link_service.dart';
 import 'screens/onboarding/splash_screen.dart';
 
 Future<void> main() async {
+  if (appFlavor == 'bookingsStaging') {
+    await bookings_staging.main();
+    return;
+  }
+  if (appFlavor == 'bookingsTest') {
+    await bookings_test.main();
+    return;
+  }
   const stagingProject = String.fromEnvironment('STAGING_PROJECT_ID');
   const mediaBucket = String.fromEnvironment('MEDIA_STORAGE_BUCKET');
   if (mediaBucket.isNotEmpty &&
@@ -153,11 +164,22 @@ Future<void> _initializeBackgroundServices() async {
 class AqarApp extends StatelessWidget {
   const AqarApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    builder: (context, child) => BlockScope(child: child!),
-    theme: AppTheme.lightTheme,
-    navigatorKey: NotificationNavigationService.navigatorKey,
-    home: const SplashScreen(),
-  );
+  Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsProvider>();
+    return MaterialApp(
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      debugShowCheckedModeBanner: false,
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: BlockScope(child: child!),
+      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: settings.themeMode,
+      navigatorKey: NotificationNavigationService.navigatorKey,
+      home: const SplashScreen(),
+    );
+  }
 }
