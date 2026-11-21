@@ -13,8 +13,8 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
-    <meta-data android:name="com.facebook.sdk.AutoInitEnabled" android:value="false" />
-    <meta-data android:name="com.facebook.sdk.AutoLogAppEventsEnabled" android:value="false" />
+    <meta-data android:name="com.facebook.sdk.AutoInitEnabled" android:value="false" tools:replace="android:value" />
+    <meta-data android:name="com.facebook.sdk.AutoLogAppEventsEnabled" android:value="false" tools:replace="android:value" />
     <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
     <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
     <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
