@@ -6,8 +6,6 @@ import '../../services/favorites_service.dart';
 
 import '../../core/design/aqar_sizes.dart';
 import '../../core/design/aqar_spacing.dart';
-import '../../core/design/aqar_radius.dart';
-import '../../core/design/aqar_text.dart';
 
 class HorizontalPropertiesSection extends StatefulWidget {
   final String title;
@@ -31,14 +29,15 @@ class _HorizontalPropertiesSectionState
     extends State<HorizontalPropertiesSection> {
   late PageController _pageController;
   bool _controllerInitialized = false;
+  double _lastWidth = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (_controllerInitialized) return;
-
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
+    if (_controllerInitialized && (width - _lastWidth).abs() < 2) return;
+    _lastWidth = width;
 
     final viewportFraction = width < 360
         ? 0.82
@@ -48,12 +47,26 @@ class _HorizontalPropertiesSectionState
                 ? 0.48
                 : 0.34;
 
-    _pageController = PageController(
-      viewportFraction: viewportFraction,
-      keepPage: true,
-    );
+    final initialPage = _controllerInitialized && _pageController.hasClients
+        ? (_pageController.page?.round() ?? _currentPage)
+        : _currentPage;
 
-    _controllerInitialized = true;
+    if (_controllerInitialized) {
+      final old = _pageController;
+      _pageController = PageController(
+        viewportFraction: viewportFraction,
+        initialPage: initialPage,
+        keepPage: true,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    } else {
+      _pageController = PageController(
+        viewportFraction: viewportFraction,
+        initialPage: initialPage,
+        keepPage: true,
+      );
+      _controllerInitialized = true;
+    }
   }
 
   int _currentPage = 0;
@@ -116,17 +129,19 @@ class _HorizontalPropertiesSectionState
             bottom: AqarSpacing.xs(context),
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: const Color(0xFFD4AF37).withValues(alpha: 0.10),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFC5A16B).withValues(alpha: 0.10)
+                  : const Color(0xFFE2E8F0),
               width: 1,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.black.withValues(alpha: .04),
                 blurRadius: 14,
-                offset: Offset(0, 6),
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -149,8 +164,8 @@ class _HorizontalPropertiesSectionState
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Color(0xffF8D66D),
-                                Color(0xffD4AF37),
+                                Color(0xffD8BD95),
+                                Color(0xffC5A16B),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(10),
@@ -165,8 +180,8 @@ class _HorizontalPropertiesSectionState
                               Text(
                                 _sectionTitle,
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: .3,
@@ -176,8 +191,8 @@ class _HorizontalPropertiesSectionState
                               Text(
                                 _sectionDescription,
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF64748B),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -200,7 +215,7 @@ class _HorizontalPropertiesSectionState
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: const Color(0xffD4AF37)
+                                    color: const Color(0xffC5A16B)
                                         .withValues(alpha: 0.35),
                                     width: 1,
                                   ),
@@ -208,7 +223,7 @@ class _HorizontalPropertiesSectionState
                                 child: const Text(
                                   'عرض الكل',
                                   style: TextStyle(
-                                    color: Color(0xffD4AF37),
+                                    color: Color(0xffC5A16B),
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -318,7 +333,7 @@ class _HorizontalPropertiesSectionState
                                       width: 16,
                                       height: 6,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xffD4AF37),
+                                        color: const Color(0xffC5A16B),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                     ),

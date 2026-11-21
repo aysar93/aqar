@@ -17,7 +17,7 @@ class PropertyRequestHomeCard extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _card = Color(0xff1E293B);
 
   @override
@@ -39,14 +39,18 @@ class PropertyRequestHomeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: Container(
             decoration: BoxDecoration(
-              color: _card,
+              color: Theme.of(context).brightness == Brightness.dark ? _card : Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: _gold.withValues(alpha: .24),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? _gold.withValues(alpha: .24)
+                    : const Color(0xFFE2E8F0),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: .22),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withValues(alpha: .22)
+                      : Colors.black.withValues(alpha: .04),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -112,8 +116,8 @@ class PropertyRequestHomeCard extends StatelessWidget {
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -136,11 +140,13 @@ class PropertyRequestHomeCard extends StatelessWidget {
                         const SizedBox(height: 10),
                         if (location.isNotEmpty)
                           _infoRow(
+                            context,
                             icon: Icons.location_on_rounded,
                             title: location,
                           ),
                         if (location.isNotEmpty) const SizedBox(height: 8),
                         _infoRow(
+                          context,
                           icon: Icons.square_foot_rounded,
                           title: _range(
                             data['minArea'],
@@ -150,6 +156,7 @@ class PropertyRequestHomeCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         _infoRow(
+                          context,
                           icon: Icons.account_balance_wallet_rounded,
                           title: _range(
                             data['minPrice'],
@@ -208,14 +215,15 @@ class PropertyRequestHomeCard extends StatelessWidget {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
         return Directionality(
           textDirection: ui.TextDirection.rtl,
           child: AlertDialog(
-            backgroundColor: const Color(0xff1E293B),
-            title: const Text(
+            backgroundColor: isDark ? const Color(0xff1E293B) : Colors.white,
+            title: Text(
               'حذف الطلب',
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -223,8 +231,8 @@ class PropertyRequestHomeCard extends StatelessWidget {
               'هل أنت متأكد من حذف طلب $propertyType نهائيًا؟\n\n'
               'سيختفي الطلب من قسم مطلوب على عقارات الانبار، '
               'ولا يمكن التراجع عن الحذف',
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
                 height: 1.6,
               ),
             ),
@@ -236,10 +244,10 @@ class PropertyRequestHomeCard extends StatelessWidget {
                     false,
                   );
                 },
-                child: const Text(
+                child: Text(
                   'إلغاء',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
                   ),
                 ),
               ),
@@ -330,17 +338,19 @@ class PropertyRequestHomeCard extends StatelessWidget {
     );
   }
 
-  Widget _infoRow({
+  Widget _infoRow(
+    BuildContext context, {
     required IconData icon,
     required String title,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .04),
+            color: isDark ? Colors.white.withValues(alpha: .04) : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(11),
           ),
           child: Icon(
@@ -355,8 +365,8 @@ class PropertyRequestHomeCard extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),

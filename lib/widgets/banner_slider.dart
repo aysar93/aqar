@@ -1,18 +1,29 @@
 import '../widgets/media_image.dart';
+import '../bookings/booking_page_indicator.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../banners/banner_model.dart';
+import '../bookings/booking_media_image.dart';
 import '../banners/banner_service.dart';
 import '../office/screens/office_profile_screen.dart';
 import '../services/property_service.dart';
 import '../screens/property_details.dart';
 
 class BannerSlider extends StatefulWidget {
-  const BannerSlider({super.key, this.stream});
+  const BannerSlider(
+      {super.key,
+      this.stream,
+      this.onBookingVenue,
+      this.imageBuilder,
+      this.accentColor});
+
+  final Future<void> Function(String id, String category)? onBookingVenue;
 
   final Stream<List<BannerModel>>? stream;
+  final Widget Function(BannerModel)? imageBuilder;
+  final Color? accentColor;
 
   @override
   State<BannerSlider> createState() => _BannerSliderState();
@@ -27,6 +38,8 @@ class _BannerSliderState extends State<BannerSlider>
 
   int _currentIndex = 0;
   List<BannerModel> _lastBanners = const [];
+  final _pages = CarouselSliderController();
+  bool _bookingFocused = false;
 
   @override
   void initState() {
@@ -35,6 +48,9 @@ class _BannerSliderState extends State<BannerSlider>
     // Retain metadata offline; public image widgets persist bytes and retry.
     _bannersStream = (widget.stream ?? BannerService.activeBanners()).map(
       (banners) => banners.where((b) {
+        if (widget.imageBuilder != null || widget.onBookingVenue != null) {
+          return true;
+        }
         final uri = Uri.tryParse(b.imageUrl.trim());
         return uri != null &&
             ['https', 'http'].contains(uri.scheme) &&
@@ -45,6 +61,66 @@ class _BannerSliderState extends State<BannerSlider>
 
   Future<void> _openBanner(BannerModel banner) async {
     final target = banner.targetId.trim();
+    if (target.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('الرابط غير متوفر حالياً'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+      }
+      return;
+    }
+
+    if (widget.onBookingVenue != null) {
+      if (['chalet', 'hall', 'farm'].contains(banner.type)) {
+        try {
+          await widget.onBookingVenue!(target, banner.type);
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                const SnackBar(
+                  content: Text('المكان غير متاح حالياً'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+          }
+        }
+        return;
+      }
+      if (banner.type != 'external') {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('الرابط غير متوفر حالياً'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+        }
+        return;
+      }
+      final uri = Uri.tryParse(target);
+      if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('الرابط غير متوفر حالياً'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+        }
+        return;
+      }
+    }
 
     switch (banner.type) {
       case 'external':
@@ -148,10 +224,8 @@ class _BannerSliderState extends State<BannerSlider>
     final width = MediaQuery.sizeOf(context).width;
 
     // الارتفاع الأصلي للبنر.
+    // ارتفاع موحد يطابق البنر الأساسي
     final bannerHeight = (width * 0.32).clamp(115.0, 155.0);
-
-    // ارتفاع البنر + المؤشر.
-    final totalHeight = bannerHeight + 19.0;
 
     return StreamBuilder<List<BannerModel>>(
       stream: _bannersStream,
@@ -165,6 +239,8 @@ class _BannerSliderState extends State<BannerSlider>
         if (banners.isEmpty) {
           return const SizedBox.shrink();
         }
+        final double measuredHeight = bannerHeight;
+        // final totalHeight = measuredHeight + (banners.length > 1 ? 38.0 : 0.0);
 
         // حماية المؤشر من الخروج عن عدد البنرات.
         if (banners.length <= 1) {
@@ -173,81 +249,112 @@ class _BannerSliderState extends State<BannerSlider>
           _currentIndex = 0;
         }
 
-        return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                height: totalHeight,
-                width: double.infinity,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      height: bannerHeight,
-                      width: double.infinity,
-                      child: CarouselSlider.builder(
-                        itemCount: banners.length,
-                        itemBuilder: (
-                          context,
-                          index,
-                          realIndex,
-                        ) {
-                          final banner = banners[index];
+        return Focus(
+            onFocusChange: (focus) {
+              if (mounted && widget.onBookingVenue != null)
+                setState(() => _bookingFocused = focus);
+            },
+            child: Padding(
+                padding: widget.onBookingVenue != null
+                    ? const EdgeInsets.only(top: 10, bottom: 4)
+                    : EdgeInsets.symmetric(
+                        vertical: MediaQuery.sizeOf(context).width >
+                                MediaQuery.sizeOf(context).height
+                            ? 10.0
+                            : 24.0,
+                      ),
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    // height: totalHeight,
+                    width: double.infinity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: measuredHeight,
+                          width: double.infinity,
+                          child: CarouselSlider.builder(
+                            carouselController: _pages,
+                            itemCount: banners.length,
+                            itemBuilder: (
+                              context,
+                              index,
+                              realIndex,
+                            ) {
+                              final banner = banners[index];
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                            ),
-                            child: _ReferenceBannerCard(
-                              banner: banner,
-                              onTap: () => _openBanner(banner),
-                            ),
-                          );
-                        },
-                        options: CarouselOptions(
-                          height: bannerHeight,
-                          viewportFraction: banners.length > 1 ? 0.91 : 1.0,
-                          enlargeCenterPage: false,
-                          padEnds: true,
-                          enableInfiniteScroll: banners.length > 1,
-                          autoPlay: banners.length > 1,
-                          autoPlayInterval: const Duration(seconds: 5),
-                          autoPlayAnimationDuration:
-                              const Duration(milliseconds: 650),
-                          autoPlayCurve: Curves.easeOutCubic,
-                          onPageChanged: (
-                            index,
-                            reason,
-                          ) {
-                            if (!mounted) return;
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                ),
+                                child: _ReferenceBannerCard(
+                                  banner: banner,
+                                  imageBuilder: widget.imageBuilder,
+                                  accentColor: widget.accentColor,
+                                  onTap: () => _openBanner(banner),
+                                ),
+                              );
+                            },
+                            options: CarouselOptions(
+                              height: measuredHeight,
+                              viewportFraction: banners.length > 1 ? 0.91 : 1.0,
+                              enlargeCenterPage: false,
+                              padEnds: true,
+                              enableInfiniteScroll: banners.length > 1,
+                              autoPlay: banners.length > 1 &&
+                                  (widget.onBookingVenue == null ||
+                                      (!MediaQuery.disableAnimationsOf(
+                                              context) &&
+                                          !_bookingFocused)),
+                              autoPlayInterval: const Duration(seconds: 5),
+                              autoPlayAnimationDuration:
+                                  const Duration(milliseconds: 650),
+                              autoPlayCurve: Curves.easeOutCubic,
+                              onPageChanged: (
+                                index,
+                                reason,
+                              ) {
+                                if (!mounted) return;
 
-                            if (_currentIndex != index) {
-                              setState(() {
-                                _currentIndex = index;
-                              });
-                            }
-                          },
+                                if (_currentIndex != index) {
+                                  setState(() {
+                                    _currentIndex = index;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
                         ),
-                      ),
+
+                        // ==================================================
+                        // المؤشر
+                        // ==================================================
+                        if (banners.length > 1) const SizedBox(height: 7),
+
+                        if (banners.length > 1 && widget.onBookingVenue != null)
+                          BookingPageIndicator(
+                              count: banners.length,
+                              page: _currentIndex,
+                              accent:
+                                  widget.accentColor ?? const Color(0xFFC5A16B),
+                              onPage: (i) => _pages.animateToPage(i,
+                                  duration:
+                                      MediaQuery.disableAnimationsOf(context)
+                                          ? Duration.zero
+                                          : const Duration(milliseconds: 250)))
+                        else if (banners.length > 1)
+                          _ReferenceIndicator(
+                            count: banners.length,
+                            currentIndex: _currentIndex,
+                            accentColor: widget.accentColor,
+                          ),
+                      ],
                     ),
-
-                    // ==================================================
-                    // المؤشر
-                    // ==================================================
-                    if (banners.length > 1) const SizedBox(height: 7),
-
-                    if (banners.length > 1)
-                      _ReferenceIndicator(
-                        count: banners.length,
-                        currentIndex: _currentIndex,
-                      ),
-                  ],
-                ),
-              ),
-            ));
+                  ),
+                )));
       },
     );
   }
@@ -257,9 +364,13 @@ class _ReferenceBannerCard extends StatelessWidget {
   const _ReferenceBannerCard({
     required this.banner,
     required this.onTap,
+    this.imageBuilder,
+    this.accentColor,
   });
 
   final BannerModel banner;
+  final Widget Function(BannerModel)? imageBuilder;
+  final Color? accentColor;
   final VoidCallback onTap;
 
   String get _label {
@@ -300,9 +411,12 @@ class _ReferenceBannerCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _BannerImage(
-                  imageUrl: banner.imageUrl,
-                ),
+                if (imageBuilder != null)
+                  imageBuilder!(banner)
+                else if (banner.mediaId != null)
+                  BookingMediaImage(url: banner.imageUrl)
+                else
+                  _BannerImage(imageUrl: banner.imageUrl),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -343,13 +457,15 @@ class _ReferenceBannerCard extends StatelessWidget {
                             if (banner.title.trim().isNotEmpty)
                               Text(
                                 banner.title.trim(),
-                                maxLines: 2,
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFFD4AF37),
-                                  fontSize: 17,
-                                  height: 1.1,
-                                  fontWeight: FontWeight.w900,
+                                style: TextStyle(
+                                  color: const Color(0xFFC5A16B),
+                                  fontSize: accentColor != null ? 15 : 17,
+                                  height: 1.25,
+                                  fontWeight: accentColor != null
+                                      ? FontWeight.w700
+                                      : FontWeight.w900,
                                 ),
                               ),
                             if (banner.subtitle.trim().isNotEmpty) ...[
@@ -396,11 +512,18 @@ class _BannerImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (imageUrl.trim().isEmpty) {
       return Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         alignment: Alignment.center,
         child: const Icon(
-          Icons.image_outlined,
-          size: 34,
+          Icons.holiday_village_rounded,
+          size: 48,
+          color: Color(0xFFC5A16B),
         ),
       );
     }
@@ -411,11 +534,18 @@ class _BannerImage extends StatelessWidget {
       filterQuality: FilterQuality.high,
       errorBuilder: (_, __, ___) {
         return Container(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           alignment: Alignment.center,
           child: const Icon(
-            Icons.broken_image_outlined,
-            size: 34,
+            Icons.holiday_village_rounded,
+            size: 48,
+            color: Color(0xFFC5A16B),
           ),
         );
       },
@@ -524,10 +654,12 @@ class _ReferenceIndicator extends StatelessWidget {
   const _ReferenceIndicator({
     required this.count,
     required this.currentIndex,
+    this.accentColor,
   });
 
   final int count;
   final int currentIndex;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -547,7 +679,7 @@ class _ReferenceIndicator extends StatelessWidget {
             height: 5,
             decoration: BoxDecoration(
               color: selected
-                  ? const Color(0xFFD4AF37)
+                  ? accentColor ?? const Color(0xFFC5A16B)
                   : Theme.of(context).colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(20),
             ),
