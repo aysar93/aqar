@@ -432,8 +432,9 @@ class _PropertyDetailsState extends State<PropertyDetails> {
   }
 
   Widget _buildPublisherCard() {
-    const gold = Color(0xffD4AF37);
-    const cardColor = Color(0xff1E293B);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const gold = Color(0xffC5A16B);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
 
     // أثناء تحميل بيانات الناشر
     if (publisherLoading) {
@@ -497,7 +498,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
           border: Border.all(color: gold.withValues(alpha: .28)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: .12),
+              color: Colors.black.withValues(alpha: isDark ? .12 : .05),
               blurRadius: 14,
               offset: const Offset(0, 5),
             ),
@@ -518,7 +519,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                     border: Border.all(color: gold, width: 1.5),
                   ),
                   child: CircleAvatar(
-                    backgroundColor: const Color(0xff0F172A),
+                    backgroundColor: isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9),
                     backgroundImage:
                         photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
                     child: photoUrl.isEmpty
@@ -549,7 +550,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 fontSize:
                                     MediaQuery.of(context).size.width < 380
                                         ? 14
@@ -576,7 +577,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                                 ? Icons.business_center_rounded
                                 : Icons.campaign_rounded,
                             size: 15,
-                            color: Colors.white54,
+                            color: isDark ? Colors.white54 : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 5),
                           Flexible(
@@ -587,7 +588,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.white60,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
                                 fontSize:
                                     MediaQuery.of(context).size.width < 380
                                         ? 9
@@ -673,7 +674,10 @@ class _PropertyDetailsState extends State<PropertyDetails> {
 
             const SizedBox(height: 14),
 
-            Container(height: 1, color: Colors.white.withValues(alpha: .07)),
+            Container(
+              height: 1,
+              color: isDark ? Colors.white.withValues(alpha: .07) : const Color(0xFFE2E8F0),
+            ),
 
             const SizedBox(height: 14),
 
@@ -702,11 +706,11 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: gold,
-                        disabledForegroundColor: Colors.white24,
+                        disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFF94A3B8),
                         side: BorderSide(
                           color: contactPhone.trim().isNotEmpty
                               ? gold.withValues(alpha: .45)
-                              : Colors.white12,
+                              : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
@@ -739,8 +743,8 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: gold,
                         foregroundColor: Colors.black,
-                        disabledBackgroundColor: Colors.white10,
-                        disabledForegroundColor: Colors.white24,
+                        disabledBackgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                        disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFF94A3B8),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
@@ -780,7 +784,7 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                                 })));
                   },
                   style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
                       padding: const EdgeInsets.symmetric(vertical: 12)),
                   child: const Text('استفسر عن هذا العقار مع الإدارة'),
                 )),
@@ -1074,6 +1078,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
   }
 
   Widget infoTile(IconData icon, String title, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1083,7 +1088,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
             textDirection: TextDirection.rtl,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, color: const Color(0xffD4AF37), size: 21),
+              Icon(icon, color: const Color(0xffC5A16B), size: 21),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -1092,7 +1097,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
                     fontSize: AqarText.detailsLabel(context),
                   ),
                 ),
@@ -1103,7 +1108,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   value,
                   textAlign: TextAlign.left,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontSize: AqarText.detailsValue(context),
                     fontWeight: FontWeight.bold,
                   ),
@@ -1117,28 +1122,29 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
           thickness: 1,
           indent: 14,
           endIndent: 14,
-          color: Colors.white.withValues(alpha: .08),
+          color: isDark ? Colors.white.withValues(alpha: .08) : const Color(0xFFE2E8F0),
         ),
       ],
     );
   }
 
   Widget infoChip(IconData icon, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 160),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xff1E293B),
+          color: isDark ? const Color(0xff1E293B) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xffD4AF37).withValues(alpha: 0.35),
+            color: const Color(0xffC5A16B).withValues(alpha: 0.35),
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Colors.black26,
+              color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -1146,7 +1152,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
           mainAxisSize: MainAxisSize.min,
           textDirection: TextDirection.rtl,
           children: [
-            Icon(icon, size: 16, color: const Color(0xffD4AF37)),
+            Icon(icon, size: 16, color: const Color(0xffC5A16B)),
             const SizedBox(width: 8),
             Flexible(
               child: FittedBox(
@@ -1155,8 +1161,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 child: Text(
                   text,
                   maxLines: 1,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1170,22 +1176,27 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
   }
 
   Widget locationChip(IconData icon, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xffD4AF37).withValues(alpha: 0.35),
+          color: const Color(0xffC5A16B).withValues(alpha: 0.35),
         ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
         textDirection: TextDirection.rtl,
         children: [
-          Icon(icon, size: 16, color: const Color(0xffD4AF37)),
+          Icon(icon, size: 16, color: const Color(0xffC5A16B)),
           const SizedBox(width: 6),
           Expanded(
             child: FittedBox(
@@ -1195,8 +1206,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 text,
                 maxLines: 1,
                 softWrap: false,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1384,22 +1395,23 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
   Widget commentItem(Map<String, dynamic> data, String commentId) {
     if (hiddenForViewer(context, data)) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: data["isPinned"] == true
-              ? const Color(0xffD4AF37)
-              : Colors.white.withValues(alpha: .05),
+              ? const Color(0xffC5A16B)
+              : (isDark ? Colors.white.withValues(alpha: .05) : const Color(0xFFE2E8F0)),
           width: data["isPinned"] == true ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .18),
+            color: Colors.black.withValues(alpha: isDark ? .18 : .04),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -1410,7 +1422,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: const Color(0xffD4AF37),
+            backgroundColor: const Color(0xffC5A16B),
             backgroundImage: (data["userPhoto"] ?? "").toString().isNotEmpty
                 ? NetworkImage(data["userPhoto"])
                 : null,
@@ -1429,7 +1441,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
           if (FirebaseAuth.instance.currentUser?.email ==
               "aysar.aliraqe@gmail.com")
             PopupMenuButton(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(
+                Icons.more_vert,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: "hide",
@@ -1479,8 +1494,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       data["userName"] ?? "مستخدم",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -1517,7 +1532,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xffD4AF37),
+                              color: const Color(0xffC5A16B),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
@@ -1548,7 +1563,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   const Text(
                     "📌 تعليق مثبت",
                     style: TextStyle(
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1556,7 +1571,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 const SizedBox(height: 6),
                 Text(
                   data["text"] ?? "",
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -1574,11 +1592,11 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     icon: const Icon(
                       Icons.reply,
                       size: 18,
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                     ),
                     label: const Text(
                       "رد",
-                      style: TextStyle(color: Color(0xffD4AF37)),
+                      style: TextStyle(color: Color(0xffC5A16B)),
                     ),
                   ),
                 if (replyingToCommentId == commentId)
@@ -1589,10 +1607,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xff0F172A),
+                      color: isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .20),
+                        color: const Color(0xffC5A16B).withValues(alpha: .20),
                       ),
                     ),
                     child: Row(
@@ -1600,10 +1618,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         Expanded(
                           child: TextField(
                             controller: replyController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(
+                            style: TextStyle(
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            decoration: InputDecoration(
                               hintText: "اكتب ردك...",
-                              hintStyle: TextStyle(color: Colors.white54),
+                              hintStyle: TextStyle(
+                                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                              ),
                               border: InputBorder.none,
                             ),
                           ),
@@ -1611,7 +1633,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         Container(
                           margin: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
@@ -1657,7 +1679,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   expanded
                                       ? Icons.keyboard_arrow_up
                                       : Icons.keyboard_arrow_down,
-                                  color: const Color(0xffD4AF37),
+                                  color: const Color(0xffC5A16B),
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
@@ -1665,7 +1687,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       ? "إخفاء الردود"
                                       : "عرض الردود (${replies.length})",
                                   style: const TextStyle(
-                                    color: Color(0xffD4AF37),
+                                    color: Color(0xffC5A16B),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1703,12 +1725,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         ),
                                         padding: const EdgeInsets.all(14),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xff0F172A),
+                                          color: isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
                                           borderRadius:
                                               BorderRadius.circular(16),
                                           border: Border.all(
                                             color: const Color(
-                                              0xffD4AF37,
+                                              0xffC5A16B,
                                             ).withValues(alpha: .15),
                                           ),
                                         ),
@@ -1721,7 +1743,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                                 CircleAvatar(
                                                   radius: 12,
                                                   backgroundColor: const Color(
-                                                    0xffD4AF37,
+                                                    0xffC5A16B,
                                                   ),
                                                   backgroundImage:
                                                       (reply["userPhoto"] ?? "")
@@ -1749,7 +1771,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                                     reply["userName"] ??
                                                         "مستخدم",
                                                     style: const TextStyle(
-                                                      color: Color(0xffD4AF37),
+                                                      color: Color(0xffC5A16B),
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       fontSize: 13,
@@ -1761,8 +1783,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                             const SizedBox(height: 4),
                                             Text(
                                               reply["text"] ?? "",
-                                              style: const TextStyle(
-                                                color: Colors.white70,
+                                              style: TextStyle(
+                                                color: isDark ? Colors.white70 : const Color(0xFF334155),
                                                 fontSize: 14,
                                               ),
                                             ),
@@ -2188,7 +2210,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                             children: [
                               const Icon(
                                 Icons.payments_rounded,
-                                color: Color(0xffD4AF37),
+                                color: Color(0xffC5A16B),
                                 size: 14,
                               ),
                               const SizedBox(width: 6),
@@ -2214,7 +2236,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         "قابل للتفاوض",
                                         textAlign: TextAlign.right,
                                         style: TextStyle(
-                                          color: Color(0xffD4AF37),
+                                          color: Color(0xffC5A16B),
                                           fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -2329,10 +2351,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xff1E293B),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xff1E293B)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xffD4AF37).withValues(alpha: .20),
+                  color: const Color(0xffC5A16B).withValues(alpha: .20),
                 ),
               ),
               child: SingleChildScrollView(
@@ -2388,7 +2412,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     children: [
                       const Icon(
                         Icons.location_on_rounded,
-                        color: Color(0xffD4AF37),
+                        color: Color(0xffC5A16B),
                         size: 18,
                       ),
                       const SizedBox(width: 6),
@@ -2396,9 +2420,11 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         child: Text(
                           widget.city,
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
-                            color: Colors.white70,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : const Color(0xFF475569),
                           ),
                         ),
                       ),
@@ -2414,10 +2440,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       vertical: 9,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xff162033),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xff162033)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .25),
+                        color: const Color(0xffC5A16B).withValues(alpha: .25),
                       ),
                     ),
                     child: Row(
@@ -2425,7 +2453,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       children: [
                         const Icon(
                           Icons.payments_rounded,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           size: 19,
                         ),
                         const SizedBox(width: 8),
@@ -2434,11 +2462,13 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                             crossAxisAlignment: CrossAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text(
+                              Text(
                                 "السعر",
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  color: Colors.white60,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white60
+                                      : const Color(0xFF64748B),
                                   fontSize: 11,
                                 ),
                               ),
@@ -2449,7 +2479,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 style: TextStyle(
                                   fontSize: AqarText.detailsPrice(context),
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xffD4AF37),
+                                  color: const Color(0xffC5A16B),
                                 ),
                               ),
                               if (widget.negotiable) ...[
@@ -2458,7 +2488,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   "قابل للتفاوض",
                                   textAlign: TextAlign.right,
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : const Color(0xFF475569),
                                     fontSize: AqarText.detailsStatus(context),
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -2477,10 +2509,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1E293B),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xff1E293B)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .20),
+                        color: const Color(0xffC5A16B).withValues(alpha: .20),
                       ),
                     ),
                     child: Column(
@@ -2493,7 +2527,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   vertical: 16,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xffD4AF37),
+                                  color: const Color(0xffC5A16B),
                                   borderRadius: BorderRadius.circular(18),
                                 ),
                                 child: Column(
@@ -2530,11 +2564,13 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   vertical: 16,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xff162033),
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xff162033)
+                                      : const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
                                     color: const Color(
-                                      0xffD4AF37,
+                                      0xffC5A16B,
                                     ).withValues(alpha: .25),
                                   ),
                                 ),
@@ -2542,21 +2578,25 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   children: [
                                     const Icon(
                                       Icons.home_work_rounded,
-                                      color: Color(0xffD4AF37),
+                                      color: Color(0xffC5A16B),
                                       size: 28,
                                     ),
                                     const SizedBox(height: 8),
-                                    const Text(
+                                    Text(
                                       "نوع العقار",
                                       style: TextStyle(
-                                        color: Colors.white60,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white60
+                                            : const Color(0xFF64748B),
                                         fontSize: 13,
                                       ),
                                     ),
                                     Text(
                                       widget.propertyType,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : const Color(0xFF0F172A),
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -2615,7 +2655,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       children: [
                         Icon(
                           Icons.home_work_rounded,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           size: 24,
                         ),
                         SizedBox(width: 10),
@@ -2635,10 +2675,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     width: double.infinity,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: const Color(0xff1E293B),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xff1E293B)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .20),
+                        color: const Color(0xffC5A16B).withValues(alpha: .20),
                       ),
                     ),
                     child: Column(
@@ -2721,7 +2763,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       children: [
                         Icon(
                           Icons.info_outline_rounded,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           size: 24,
                         ),
                         SizedBox(width: 10),
@@ -2742,10 +2784,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     width: double.infinity,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: const Color(0xff1E293B),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xff1E293B)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .20),
+                        color: const Color(0xffC5A16B).withValues(alpha: .20),
                       ),
                     ),
                     child: Column(
@@ -2792,10 +2836,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     width: double.infinity,
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1A2434),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xff1A2434)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .20),
+                        color: const Color(0xffC5A16B).withValues(alpha: .20),
                       ),
                     ),
                     child: Row(
@@ -2806,7 +2852,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           width: 5,
                           height: expandedDescription ? 180 : 120,
                           decoration: BoxDecoration(
-                            color: const Color(0xffD4AF37),
+                            color: const Color(0xffC5A16B),
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
@@ -2820,14 +2866,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 children: [
                                   Icon(
                                     Icons.description_rounded,
-                                    color: Color(0xffD4AF37),
+                                    color: Color(0xffC5A16B),
                                     size: AqarSizes.detailsTopIcon(context),
                                   ),
                                   SizedBox(width: 8),
                                   Text(
                                     "تفاصيل العقار",
                                     style: TextStyle(
-                                      color: Color(0xffD4AF37),
+                                      color: Color(0xffC5A16B),
                                       fontSize: AqarText.detailsSubTitle(
                                         context,
                                       ),
@@ -2843,7 +2889,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     : widget.description,
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : const Color(0xFF0F172A),
                                   fontSize: AqarText.detailsBody(context),
                                   height: 1.9,
                                 ),
@@ -2866,14 +2914,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       expandedDescription
                                           ? Icons.keyboard_arrow_up_rounded
                                           : Icons.keyboard_arrow_down_rounded,
-                                      color: const Color(0xffD4AF37),
+                                      color: const Color(0xffC5A16B),
                                     ),
                                     label: Text(
                                       expandedDescription
                                           ? "إخفاء"
                                           : "عرض المزيد",
                                       style: const TextStyle(
-                                        color: Color(0xffD4AF37),
+                                        color: Color(0xffC5A16B),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -2896,7 +2944,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       children: [
                         Icon(
                           Icons.workspace_premium_rounded,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           size: AqarSizes.detailsTopIcon(context),
                         ),
                         SizedBox(width: 10),
@@ -2917,10 +2965,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     width: double.infinity,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: const Color(0xff1E293B),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xff1E293B)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .20),
+                        color: const Color(0xffC5A16B).withValues(alpha: .20),
                       ),
                     ),
                     child: Column(
@@ -2962,7 +3012,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 children: [
                                   Icon(
                                     icon,
-                                    color: const Color(0xffD4AF37),
+                                    color: const Color(0xffC5A16B),
                                     size: 18,
                                   ),
                                   const SizedBox(width: 10),
@@ -2971,15 +3021,19 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       text,
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : const Color(0xFF0F172A),
                                         fontSize: AqarText.featureText(context),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                  const Icon(
+                                  Icon(
                                     Icons.check_rounded,
-                                    color: Colors.white38,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white38
+                                        : const Color(0xFF94A3B8),
                                     size: 16,
                                   ),
                                 ],
@@ -2991,7 +3045,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 thickness: 1,
                                 indent: 14,
                                 endIndent: 14,
-                                color: Colors.white.withValues(alpha: .08),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: .08)
+                                    : const Color(0xFFE2E8F0),
                               ),
                           ],
                         );
@@ -3017,7 +3073,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         children: [
                           Icon(
                             Icons.location_on_rounded,
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                             size: AqarSizes.detailsTopIcon(context),
                           ),
                           SizedBox(width: 10),
@@ -3039,10 +3095,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         vertical: 16,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xff1E293B),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xff1E293B)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xffD4AF37).withValues(alpha: .20),
+                          color: const Color(0xffC5A16B).withValues(alpha: .20),
                         ),
                       ),
                       child: Column(
@@ -3061,7 +3119,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                             Divider(
                               height: 1,
-                              color: Colors.white.withValues(alpha: .06),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withValues(alpha: .06)
+                                  : const Color(0xFFE2E8F0),
                             ),
 
                             const SizedBox(height: 12),
@@ -3079,7 +3139,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                             Divider(
                               height: 1,
-                              color: Colors.white.withValues(alpha: .06),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withValues(alpha: .06)
+                                  : const Color(0xFFE2E8F0),
                             ),
 
                             const SizedBox(height: 12),
@@ -3128,10 +3190,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xffD4AF37),
+                                foregroundColor: const Color(0xffC5A16B),
                                 side: BorderSide(
                                   color: const Color(
-                                    0xffD4AF37,
+                                    0xffC5A16B,
                                   ).withValues(alpha: .45),
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -3159,14 +3221,16 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       children: [
                         Icon(
                           Icons.account_circle_rounded,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           size: AqarSizes.detailsTopIcon(context),
                         ),
                         SizedBox(width: 10),
                         Text(
                           "معلومات الناشر",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
                             fontSize: AqarText.detailsSectionTitle(context),
                             fontWeight: FontWeight.bold,
                           ),
@@ -3191,10 +3255,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xff1E293B),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xff1E293B)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: const Color(0xffD4AF37).withValues(alpha: .18),
+                          color: const Color(0xffC5A16B).withValues(alpha: .18),
                         ),
                       ),
                       child: Column(
@@ -3204,14 +3270,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                             children: [
                               Icon(
                                 Icons.admin_panel_settings_rounded,
-                                color: Color(0xffD4AF37),
+                                color: Color(0xffC5A16B),
                                 size: 18,
                               ),
                               SizedBox(width: 7),
                               Text(
                                 "معلومات الإدارة",
                                 style: TextStyle(
-                                  color: Color(0xffD4AF37),
+                                  color: Color(0xffC5A16B),
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -3239,6 +3305,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   StreamBuilder<QuerySnapshot>(
                     stream: _comments,
                     builder: (context, snapshot) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
                       int count = 0;
 
                       if (snapshot.hasData) {
@@ -3263,7 +3330,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                               children: [
                                 const Icon(
                                   Icons.forum_rounded,
-                                  color: Color(0xffD4AF37),
+                                  color: Color(0xffC5A16B),
                                   size: 28,
                                 ),
                                 const SizedBox(width: 10),
@@ -3276,7 +3343,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         context,
                                       ),
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     ),
                                   ),
                                 ),
@@ -3285,7 +3352,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   duration: const Duration(milliseconds: 250),
                                   child: const Icon(
                                     Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xffD4AF37),
+                                    color: Color(0xffC5A16B),
                                     size: 30,
                                   ),
                                 ),
@@ -3299,8 +3366,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xff1E293B),
+                                color: isDark ? const Color(0xff1E293B) : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                border: isDark ? null : Border.all(color: const Color(0xFFE2E8F0)),
                               ),
                               child: Row(
                                 textDirection: TextDirection.rtl,
@@ -3310,7 +3378,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       "$count ${count == 1 ? "تعليق" : "تعليقات"}",
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
-                                        color: Colors.white70,
+                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
                                         fontSize: AqarText.body(context),
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -3322,7 +3390,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         ? "إخفاء التعليقات"
                                         : "عرض التعليقات",
                                     style: const TextStyle(
-                                      color: Color(0xffD4AF37),
+                                      color: Color(0xffC5A16B),
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -3334,7 +3402,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                             Container(
                               width: double.infinity,
                               height: 1,
-                              color: Colors.white12,
+                              color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                             ),
                           ],
                         ),
@@ -3349,16 +3417,20 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         MediaQuery.of(context).size.width < 360 ? 8 : 12,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xff1E293B),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xff1E293B)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xffD4AF37).withValues(alpha: .25),
+                          color: const Color(0xffC5A16B).withValues(alpha: .25),
                         ),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black26,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black26
+                                : Colors.black.withValues(alpha: .05),
                             blurRadius: 16,
-                            offset: Offset(0, 6),
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -3378,7 +3450,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       MediaQuery.of(context).size.width < 360
                                           ? 18
                                           : 22,
-                                  backgroundColor: Color(0xffD4AF37),
+                                  backgroundColor: Color(0xffC5A16B),
                                   child: Icon(
                                     Icons.person_outline_rounded,
                                     color: Colors.black,
@@ -3407,7 +3479,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         MediaQuery.of(context).size.width < 360
                                             ? 18
                                             : 22,
-                                    backgroundColor: const Color(0xffD4AF37),
+                                    backgroundColor: const Color(0xffC5A16B),
                                     backgroundImage: photo.isNotEmpty
                                         ? NetworkImage(photo)
                                         : null,
@@ -3433,7 +3505,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: const Color(0xff0F172A),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xff0F172A)
+                                    : const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: TextField(
@@ -3443,14 +3517,18 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 textDirection: TextDirection.rtl,
                                 textAlign: TextAlign.right,
                                 textInputAction: TextInputAction.newline,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : const Color(0xFF0F172A),
                                   fontSize: 15,
                                 ),
                                 decoration: InputDecoration(
                                   hintText: "شارك رأيك حول هذا العقار",
                                   hintStyle: TextStyle(
-                                    color: Colors.white.withValues(alpha: .45),
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white.withValues(alpha: .45)
+                                        : const Color(0xFF94A3B8),
                                   ),
                                   border: InputBorder.none,
                                   contentPadding: const EdgeInsets.symmetric(
@@ -3462,7 +3540,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                           ? null
                                           : const Icon(
                                               Icons.mode_comment_outlined,
-                                              color: Color(0xffD4AF37),
+                                              color: Color(0xffC5A16B),
                                             ),
                                 ),
                               ),
@@ -3480,7 +3558,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                             width: AqarSizes.detailsTopButton(context),
                             height: AqarSizes.detailsTopButton(context),
                             decoration: const BoxDecoration(
-                              color: Color(0xffD4AF37),
+                              color: Color(0xffC5A16B),
                               shape: BoxShape.circle,
                             ),
                             child: Material(
@@ -3507,26 +3585,34 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         vertical: 16,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xff1E293B),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xff1E293B)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: .08),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withValues(alpha: .08)
+                              : const Color(0xFFE2E8F0),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         textDirection: TextDirection.rtl,
                         children: [
                           Icon(
                             Icons.comments_disabled_rounded,
-                            color: Colors.white54,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white54
+                                : const Color(0xFF94A3B8),
                           ),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               "التعليقات متوقفة حاليًا من إدارة التطبيق",
                               textAlign: TextAlign.right,
                               style: TextStyle(
-                                color: Colors.white60,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white60
+                                    : const Color(0xFF64748B),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -3607,11 +3693,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
   }
 
   Widget detailRow(IconData icon, String title, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Icon(
           icon,
-          color: const Color(0xffD4AF37),
+          color: const Color(0xffC5A16B),
           size: AqarSizes.detailsTopIcon(context),
         ),
         const SizedBox(width: 15),
@@ -3619,15 +3706,15 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
           child: Text(
             title,
             style: TextStyle(
-              color: Colors.white70,
+              color: isDark ? Colors.white70 : Colors.black54,
               fontSize: AqarText.body(context),
             ),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -3637,9 +3724,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
   }
 
   Widget detailDivider() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
-      child: Divider(color: Colors.white24, height: 1),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Divider(color: isDark ? Colors.white24 : Colors.black12, height: 1),
     );
   }
 }
@@ -3657,6 +3745,7 @@ class _PropertyLocationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       textDirection: TextDirection.rtl,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -3665,13 +3754,13 @@ class _PropertyLocationRow extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xff0F172A),
+            color: isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xffD4AF37).withValues(alpha: .15),
+              color: const Color(0xffC5A16B).withValues(alpha: .15),
             ),
           ),
-          child: Icon(icon, color: const Color(0xffD4AF37), size: 20),
+          child: Icon(icon, color: const Color(0xffC5A16B), size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -3681,8 +3770,8 @@ class _PropertyLocationRow extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white54,
+                style: TextStyle(
+                  color: isDark ? Colors.white54 : Colors.black54,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -3693,8 +3782,8 @@ class _PropertyLocationRow extends StatelessWidget {
                 textAlign: TextAlign.right,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),

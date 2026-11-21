@@ -43,13 +43,18 @@ class ChatMessageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final deleted = data['deletedAt'] != null;
     final time = (data['createdAt'] as Timestamp?)?.toDate();
-    final color = isMe ? const Color(0xFF293449) : const Color(0xFF1E293B);
+    final color = isMe
+        ? (isDark ? const Color(0xFF293449) : const Color(0xFFFBF7F0))
+        : (isDark ? const Color(0xFF1E293B) : Colors.white);
     Widget content;
     if (deleted) {
-      content = const Text('تم حذف هذه الرسالة',
-          style: TextStyle(color: Colors.white54, fontStyle: FontStyle.italic));
+      content = Text('تم حذف هذه الرسالة',
+          style: TextStyle(
+              color: isDark ? Colors.white54 : Colors.black45,
+              fontStyle: FontStyle.italic));
     } else if (data['type'] == 'property' && data['property'] is Map) {
       content = PropertyChatCard(
           property: Map<String, dynamic>.from(data['property']));
@@ -69,10 +74,10 @@ class ChatMessageTile extends StatelessWidget {
               child: Image.network(data['imageUrl'] ?? '',
                   width: 240,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Padding(
-                      padding: EdgeInsets.all(24),
+                  errorBuilder: (_, __, ___) => Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Icon(Icons.broken_image_outlined,
-                          color: Colors.white54)))));
+                          color: isDark ? Colors.white54 : Colors.black45)))));
     } else if (data['type'] == 'location') {
       content = TextButton.icon(
           onPressed: () async {
@@ -88,11 +93,13 @@ class ChatMessageTile extends StatelessWidget {
           icon: const Icon(Icons.location_on_outlined),
           label: const Text('عرض الموقع'),
           style:
-              TextButton.styleFrom(foregroundColor: const Color(0xFFD4AF37)));
+              TextButton.styleFrom(foregroundColor: const Color(0xFFC5A16B)));
     } else {
       content = Text(data['message'] ?? '',
-          style:
-              const TextStyle(color: Colors.white, height: 1.5, fontSize: 15));
+          style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+              height: 1.5,
+              fontSize: 15));
     }
     return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -109,10 +116,11 @@ class ChatMessageTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                     color: highlighted
-                        ? const Color(0xFFD4AF37)
+                        ? const Color(0xFFC5A16B)
                         : isMe
-                            ? const Color(0xFFD4AF37).withValues(alpha: .22)
-                            : Colors.white10)),
+                            ? const Color(0xFFC5A16B)
+                                .withValues(alpha: isDark ? .22 : .40)
+                            : (isDark ? Colors.white10 : Colors.black12))),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -131,8 +139,9 @@ class ChatMessageTile extends StatelessWidget {
                         time == null
                             ? 'جارٍ الإرسال'
                             : DateFormat('HH:mm').format(time),
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                        style: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.black45,
+                            fontSize: 10)),
                     if (isMe) ...[
                       const SizedBox(width: 5),
                       Icon(
@@ -141,8 +150,8 @@ class ChatMessageTile extends StatelessWidget {
                               : Icons.done_all,
                           size: 14,
                           color: data['status'] == 'read'
-                              ? const Color(0xFFD4AF37)
-                              : Colors.white38)
+                              ? const Color(0xFFC5A16B)
+                              : (isDark ? Colors.white38 : Colors.black45))
                     ],
                   ]),
                 ]),

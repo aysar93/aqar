@@ -74,34 +74,37 @@ class _EditStep5PriceState extends State<EditStep5Price> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
+        Text(
           'السعر',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'راجع سعر العقار وعدّله عند الحاجة',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white60,
+            color: onSurface.withValues(alpha: 0.60),
             fontSize: 15,
           ),
         ),
         const SizedBox(height: 30),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xff1E293B),
+            color: cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white10,
+              color: onSurface.withValues(alpha: 0.10),
             ),
           ),
           child: TextField(
@@ -112,27 +115,27 @@ class _EditStep5PriceState extends State<EditStep5Price> {
             ],
             onChanged: _updatePrice,
             textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onSurface,
               fontSize: 19,
               fontWeight: FontWeight.w600,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'السعر',
               labelStyle: TextStyle(
-                color: Colors.white60,
+                color: onSurface.withValues(alpha: 0.60),
               ),
-              prefixIcon: Icon(
+              prefixIcon: const Icon(
                 Icons.payments_rounded,
-                color: Color(0xffD4AF37),
+                color: Color(0xffC5A16B),
               ),
               suffixText: 'د.ع',
-              suffixStyle: TextStyle(
-                color: Color(0xffD4AF37),
+              suffixStyle: const TextStyle(
+                color: Color(0xffC5A16B),
                 fontWeight: FontWeight.bold,
               ),
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 18,
                 vertical: 20,
               ),
@@ -145,20 +148,20 @@ class _EditStep5PriceState extends State<EditStep5Price> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xff1E293B),
+              color: cardColor,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: const Color(0xffD4AF37).withValues(alpha: .20),
+                color: const Color(0xffC5A16B).withValues(alpha: .20),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text(
+                Text(
                   'السعر كتابةً',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: onSurface.withValues(alpha: 0.54),
                     fontSize: 12,
                   ),
                 ),
@@ -169,7 +172,7 @@ class _EditStep5PriceState extends State<EditStep5Price> {
                   ),
                   textAlign: TextAlign.right,
                   style: const TextStyle(
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     height: 1.5,
@@ -181,12 +184,12 @@ class _EditStep5PriceState extends State<EditStep5Price> {
         const SizedBox(height: 25),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xff1E293B),
+            color: cardColor,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: widget.property.negotiable
-                  ? const Color(0xffD4AF37).withValues(alpha: .35)
-                  : Colors.white10,
+                  ? const Color(0xffC5A16B).withValues(alpha: .35)
+                  : onSurface.withValues(alpha: 0.10),
             ),
           ),
           child: Material(
@@ -200,11 +203,11 @@ class _EditStep5PriceState extends State<EditStep5Price> {
 
                 widget.onChanged();
               },
-              title: const Text(
+              title: Text(
                 'السعر قابل للتفاوض',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -213,12 +216,12 @@ class _EditStep5PriceState extends State<EditStep5Price> {
                     ? 'سيظهر للمستخدم أن السعر قابل للتفاوض'
                     : 'السعر المعروض غير محدد كقابل للتفاوض',
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white54,
+                style: TextStyle(
+                  color: onSurface.withValues(alpha: 0.54),
                   fontSize: 12,
                 ),
               ),
-              activeThumbColor: const Color(0xffD4AF37),
+              activeThumbColor: const Color(0xffC5A16B),
             ),
           ),
         ),

@@ -1,3 +1,4 @@
+import '../bookings/booking_discovery_design.dart';
 import '../widgets/home/keep_alive_section.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -104,27 +105,35 @@ class _HomeScreenState extends State<HomeScreen> {
     debugPrint("HOME_SCREEN BUILD");
 
     return Scaffold(
-      endDrawer: const AppDrawer(),
-      backgroundColor: const Color(0xFF0F172A),
+      drawer: const AppDrawer(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: AqarRefreshIndicator(
         onRefresh: _refreshHome,
-        child: SafeArea(
-          child: ListView(
-            key: const PageStorageKey<String>('home-scroll'),
-            controller: _scrollController,
-            primary: false,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              AqarSpacing.screen(context),
-              AqarSpacing.sm(context),
-              AqarSpacing.screen(context),
-              AqarSpacing.lg(context),
-            ),
-            children: [
-              // Header
-              StreamBuilder<DocumentSnapshot>(
+        child: ListView(
+          key: const PageStorageKey<String>('home-scroll'),
+          controller: _scrollController,
+          primary: false,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          padding: EdgeInsets.only(bottom: AqarSpacing.lg(context)),
+          children: [
+            // Top Golden Header Surface (Reused directly from Bookings system)
+            BookingGoldenHeaderContainer(
+              padding: EdgeInsetsDirectional.fromSTEB(
+                20,
+                MediaQuery.sizeOf(context).width >
+                        MediaQuery.sizeOf(context).height
+                    ? MediaQuery.viewPaddingOf(context).top + 6
+                    : MediaQuery.viewPaddingOf(context).top + 16,
+                20,
+                16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  StreamBuilder<DocumentSnapshot>(
                 key: ValueKey(_actor),
                 stream: _headerUser,
                 builder: (context, userSnapshot) {
@@ -164,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           photoUrl: photoUrl,
                           notificationCount: notificationCount,
                           onMenuPressed: () {
-                            Scaffold.maybeOf(context)?.openEndDrawer();
+                            Scaffold.maybeOf(context)?.openDrawer();
                           },
                           onNotificationPressed: () async {
                             await Navigator.push(
@@ -212,40 +221,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Search
               SearchSection(
-                controller: searchController,
-                onChanged: (value) {
-                  setState(() {
-                    search = value.toLowerCase();
-                  });
-                },
-                onSubmitted: (value) {
-                  final text = value.trim();
+                    controller: searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        search = value.toLowerCase();
+                      });
+                    },
+                    onSubmitted: (value) {
+                      final text = value.trim();
 
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AllPropertiesScreen(
-                        initialSearch: text,
-                      ),
-                    ),
-                  );
-                },
-                onFilterTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PropertyMapScreen(),
-                    ),
-                  );
-                },
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AllPropertiesScreen(
+                            initialSearch: text,
+                          ),
+                        ),
+                      );
+                    },
+                    onFilterTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PropertyMapScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
+            ),
 
-              const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
-              CategoriesSection(
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: CategoriesSection(
                 responsiveAndroidHome: true,
                 selectedCategory: selectedCategory,
                 onCategorySelected: (category) {
@@ -274,10 +290,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
+            ),
 
-              const KeepAliveSection(child: BannerSlider()),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: const KeepAliveSection(child: BannerSlider()),
+            ),
 
-              KeepAliveSection(
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: KeepAliveSection(
                   child: HorizontalPropertiesSection(
                 title: "⭐ العقارات المميزة",
                 stream: featuredStream,
@@ -292,8 +318,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               )),
+            ),
 
-              KeepAliveSection(
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: KeepAliveSection(
                   child: HorizontalPropertiesSection(
                 title: "🆕 أحدث العقارات",
                 stream: latestStream,
@@ -308,8 +339,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               )),
+            ),
 
-              KeepAliveSection(
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: KeepAliveSection(
                   child: HorizontalPropertiesSection(
                 title: "🔥 الأكثر مشاهدة",
                 stream: mostViewedStream,
@@ -324,15 +360,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               )),
-              const KeepAliveSection(child: PropertyRequestsSection()),
+            ),
 
-              const KeepAliveSection(child: FeaturedOfficesSection()),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: const KeepAliveSection(child: PropertyRequestsSection()),
+            ),
 
-              const WhyAqarSection(),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: const KeepAliveSection(child: FeaturedOfficesSection()),
+            ),
 
-              const SizedBox(height: 4),
-            ],
-          ),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AqarSpacing.screen(context),
+              ),
+              child: const WhyAqarSection(),
+            ),
+
+            const SizedBox(height: 4),
+          ],
         ),
       ),
     );

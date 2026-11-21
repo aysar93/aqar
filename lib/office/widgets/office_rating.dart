@@ -108,13 +108,13 @@ class OfficeRating extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.12),
+            color: const Color(0xFFC5A16B).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(
             Icons.star_rounded,
             size: 20,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
           ),
         ),
       ],
@@ -142,7 +142,7 @@ class OfficeRating extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC5A16B),
                 ),
               ),
               const SizedBox(height: 5),
@@ -196,17 +196,17 @@ class OfficeRating extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: const Color(0xFFD4AF37).withValues(alpha: 0.55),
+          color: const Color(0xFFC5A16B).withValues(alpha: 0.55),
           width: 2,
         ),
-        color: const Color(0xFFD4AF37).withValues(alpha: 0.06),
+        color: const Color(0xFFC5A16B).withValues(alpha: 0.06),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
             Icons.star_rounded,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
             size: 27,
           ),
           const SizedBox(height: 2),
@@ -251,7 +251,7 @@ class OfficeRating extends StatelessWidget {
           return Icon(
             icon,
             size: starSize,
-            color: const Color(0xFFD4AF37),
+            color: const Color(0xFFC5A16B),
           );
         },
       ),
@@ -297,7 +297,7 @@ class OfficeRating extends StatelessWidget {
                 const Icon(
                   Icons.star_rounded,
                   size: 14,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC5A16B),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -346,7 +346,7 @@ class OfficeRating extends StatelessWidget {
             .outlineVariant
             .withValues(alpha: 0.25),
         valueColor: const AlwaysStoppedAnimation<Color>(
-          Color(0xFFD4AF37),
+          Color(0xFFC5A16B),
         ),
       ),
     );

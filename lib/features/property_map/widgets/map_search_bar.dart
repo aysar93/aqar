@@ -19,22 +19,25 @@ class MapSearchBar extends StatelessWidget {
     this.enabled = true,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _card = Color(0xFF1E293B);
   static const Color _secondary = Color(0xFF94A3B8);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryColor = isDark ? _secondary : const Color(0xFF64748B);
     return Row(
       children: [
         Expanded(
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              color: _card,
+              color: isDark ? _card : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.06,
                 ),
               ),
@@ -53,14 +56,14 @@ class MapSearchBar extends StatelessWidget {
               enabled: enabled,
               onChanged: onChanged,
               textInputAction: TextInputAction.search,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontSize: 13,
               ),
               decoration: InputDecoration(
                 hintText: 'ابحث بالمنطقة أو اسم العقار أو رقم الإعلان',
-                hintStyle: const TextStyle(
-                  color: _secondary,
+                hintStyle: TextStyle(
+                  color: secondaryColor,
                   fontSize: 12,
                 ),
                 prefixIcon: const Icon(
@@ -75,9 +78,9 @@ class MapSearchBar extends StatelessWidget {
                           onChanged('');
                           onClear?.call();
                         },
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: _secondary,
+                          color: secondaryColor,
                           size: 19,
                         ),
                       )
@@ -113,6 +116,8 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -125,19 +130,19 @@ class _FilterButton extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: count > 0
-                      ? const Color(0xFFD4AF37)
-                      : Colors.white.withValues(
+                      ? const Color(0xFFC5A16B)
+                      : onSurface.withValues(
                           alpha: 0.06,
                         ),
                 ),
               ),
               child: const Icon(
                 Icons.tune_rounded,
-                color: Color(0xFFD4AF37),
+                color: Color(0xFFC5A16B),
                 size: 23,
               ),
             ),
@@ -156,7 +161,7 @@ class _FilterButton extends StatelessWidget {
                 horizontal: 5,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFD4AF37),
+                color: const Color(0xFFC5A16B),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: const Color(0xFF0F172A),

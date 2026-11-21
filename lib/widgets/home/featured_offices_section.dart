@@ -14,7 +14,7 @@ class FeaturedOfficesSection extends StatefulWidget {
 }
 
 class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
-  static const Color gold = Color(0xFFD4AF37);
+  static const Color gold = Color(0xFFC5A16B);
   static const Color sectionBackground = Color(0xFF0F172A);
 
   final PageController _pageController = PageController();
@@ -52,6 +52,7 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
           return const SizedBox.shrink();
         }
 
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Directionality(
           textDirection: TextDirection.rtl,
           child: Container(
@@ -63,17 +64,17 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
               bottom: 12,
             ),
             decoration: BoxDecoration(
-              color: sectionBackground,
+              color: isDark ? sectionBackground : Colors.white,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: gold.withValues(alpha: 0.10),
+                color: isDark ? gold.withValues(alpha: 0.10) : const Color(0xFFE2E8F0),
                 width: 1,
               ),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black26,
+                  color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
                   blurRadius: 14,
-                  offset: Offset(0, 6),
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
@@ -137,6 +138,7 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -151,7 +153,7 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
             ),
           ),
           const SizedBox(width: 9),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -160,17 +162,17 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
                   'المكاتب المميزة',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'أفضل المكاتب العقارية المختارة لك',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -220,6 +222,7 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
   }
 
   Widget _buildPageIndicator(int count) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final visibleDots = count > 5 ? 5 : count;
     final activeIndex = _currentPage.clamp(0, visibleDots - 1);
 
@@ -237,7 +240,9 @@ class _FeaturedOfficesSectionState extends State<FeaturedOfficesSection> {
             width: active ? 18 : 6,
             height: 6,
             decoration: BoxDecoration(
-              color: active ? gold : Colors.white.withValues(alpha: 0.18),
+              color: active
+                  ? gold
+                  : (isDark ? Colors.white.withValues(alpha: 0.18) : const Color(0xFFCBD5E1)),
               borderRadius: BorderRadius.circular(10),
             ),
           );

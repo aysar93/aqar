@@ -23,7 +23,7 @@ class SearchSection extends StatefulWidget {
 }
 
 class _SearchSectionState extends State<SearchSection> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   VoidCallback? _controllerListener;
 
@@ -50,28 +50,42 @@ class _SearchSectionState extends State<SearchSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: AqarSizes.buttonHeight(context),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xff263548),
-            Color(0xff1E293B),
-          ],
+          colors: isDark
+              ? const [
+                  Color(0xff263548),
+                  Color(0xff1E293B),
+                ]
+              : const [
+                  Colors.white,
+                  Color(0xFFF8FAFC),
+                ],
         ),
         borderRadius: AqarRadius.dialog(context),
         border: Border.all(
-          color: _gold.withValues(alpha: 0.12),
+          color: isDark ? _gold.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.30),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Row(
         children: [
@@ -113,7 +127,7 @@ class _SearchSectionState extends State<SearchSection> {
                 widget.onSubmitted?.call(value);
               },
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: AqarText.searchInput(context),
               ),
               decoration: InputDecoration(
@@ -123,7 +137,7 @@ class _SearchSectionState extends State<SearchSection> {
                 ),
                 hintText: "ابحث عن عقار، منطقة، رقم إعلان",
                 hintStyle: TextStyle(
-                  color: Colors.white54,
+                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                   fontSize: AqarText.searchHint(context),
                 ),
                 suffixIcon: AnimatedSwitcher(
@@ -133,9 +147,9 @@ class _SearchSectionState extends State<SearchSection> {
                   child: widget.controller.text.isNotEmpty
                       ? IconButton(
                           key: const ValueKey('clear'),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.close_rounded,
-                            color: Colors.white54,
+                            color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                             size: 20,
                           ),
                           onPressed: () {
@@ -164,17 +178,17 @@ class _SearchSectionState extends State<SearchSection> {
                 child: Ink(
                   width: AqarSizes.filterButton(context),
                   height: AqarSizes.filterButton(context),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0xffF8D86B),
-                        Color(0xffD4AF37),
+                        Color(0xffD8BD95),
+                        Color(0xffC5A16B),
                       ],
                     ),
-                    boxShadow: const [],
+                    boxShadow: [],
                   ),
                   child: Icon(
                     Icons.tune_rounded,

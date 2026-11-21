@@ -32,9 +32,11 @@ class MapFilterSheet extends StatefulWidget {
 }
 
 class _MapFilterSheetState extends State<MapFilterSheet> {
-  static const Color _gold = Color(0xFFD4AF37);
-  static const Color _background = Color(0xFF0F172A);
-  static const Color _card = Color(0xFF1E293B);
+  static const Color _gold = Color(0xFFC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   late String? _city;
   late String? _district;
@@ -80,9 +82,9 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
     final districts = AnbarLocations.areasForCity(_city);
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _background,
-        borderRadius: BorderRadius.vertical(
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(28),
         ),
       ),
@@ -93,7 +95,7 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
             width: 42,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(
+              color: _onSurface.withValues(
                 alpha: 0.18,
               ),
               borderRadius: BorderRadius.circular(20),
@@ -108,11 +110,11 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'فلترة العقارات',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: _onSurface,
                       fontSize: 19,
                       fontWeight: FontWeight.w800,
                     ),
@@ -257,7 +259,7 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
                       color: _card,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withValues(
+                        color: _onSurface.withValues(
                           alpha: 0.06,
                         ),
                       ),
@@ -266,18 +268,18 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
                       color: Colors.transparent,
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text(
+                        title: Text(
                           'العقارات المميزة فقط',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: _onSurface,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        subtitle: const Text(
+                        subtitle: Text(
                           'إظهار الإعلانات المميزة فقط',
                           style: TextStyle(
-                            color: Color(0xFF94A3B8),
+                            color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                             fontSize: 11,
                           ),
                         ),
@@ -306,7 +308,7 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
               color: _card,
               border: Border(
                 top: BorderSide(
-                  color: Colors.white.withValues(
+                  color: _onSurface.withValues(
                     alpha: 0.06,
                   ),
                 ),
@@ -319,7 +321,7 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
                 onPressed: _apply,
                 style: FilledButton.styleFrom(
                   backgroundColor: _gold,
-                  foregroundColor: _background,
+                  foregroundColor: const Color(0xFF0F172A),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -473,10 +475,12 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Text(
       title,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: onSurface,
         fontSize: 14,
         fontWeight: FontWeight.w800,
       ),
@@ -497,6 +501,8 @@ class _SelectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -507,20 +513,22 @@ class _SelectionButton extends StatelessWidget {
           height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFD4AF37) : const Color(0xFF1E293B),
+            color: selected
+                ? const Color(0xFFC5A16B)
+                : (isDark ? const Color(0xFF1E293B) : Colors.white),
             borderRadius: BorderRadius.circular(13),
             border: Border.all(
               color: selected
-                  ? const Color(0xFFD4AF37)
-                  : Colors.white.withValues(
-                      alpha: 0.06,
+                  ? const Color(0xFFC5A16B)
+                  : onSurface.withValues(
+                      alpha: 0.08,
                     ),
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? const Color(0xFF0F172A) : Colors.white,
+              color: selected ? const Color(0xFF0F172A) : onSurface,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -548,23 +556,26 @@ class _DropdownField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      dropdownColor: const Color(0xFF1E293B),
-      iconEnabledColor: const Color(0xFFD4AF37),
-      style: const TextStyle(
-        color: Colors.white,
+      dropdownColor: cardColor,
+      iconEnabledColor: const Color(0xFFC5A16B),
+      style: TextStyle(
+        color: onSurface,
         fontSize: 13,
       ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: Color(0xFF94A3B8),
+        labelStyle: TextStyle(
+          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           fontSize: 12,
         ),
         filled: true,
-        fillColor: const Color(0xFF1E293B),
+        fillColor: cardColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -572,15 +583,15 @@ class _DropdownField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: Colors.white.withValues(
-              alpha: 0.06,
+            color: onSurface.withValues(
+              alpha: 0.08,
             ),
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
           ),
         ),
       ),
@@ -611,28 +622,31 @@ class _PriceField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
       textDirection: TextDirection.ltr,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: onSurface,
         fontSize: 13,
       ),
       decoration: InputDecoration(
         labelText: label,
         suffixText: 'د.ع',
         suffixStyle: const TextStyle(
-          color: Color(0xFFD4AF37),
+          color: Color(0xFFC5A16B),
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
-        labelStyle: const TextStyle(
-          color: Color(0xFF94A3B8),
+        labelStyle: TextStyle(
+          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           fontSize: 12,
         ),
         filled: true,
-        fillColor: const Color(0xFF1E293B),
+        fillColor: cardColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -640,15 +654,15 @@ class _PriceField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: Colors.white.withValues(
-              alpha: 0.06,
+            color: onSurface.withValues(
+              alpha: 0.08,
             ),
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
           ),
         ),
       ),

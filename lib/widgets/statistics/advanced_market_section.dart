@@ -9,11 +9,14 @@ class AdvancedMarketSection extends StatelessWidget {
 
   const AdvancedMarketSection({super.key, required this.analytics});
 
-  static const _gold = Color(0xFFD4AF37);
+  static const _gold = Color(0xFFC5A16B);
   static const _surface = Color(0xFF162033);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final surfaceColor = isDark ? _surface : Colors.white;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -34,36 +37,48 @@ class AdvancedMarketSection extends StatelessWidget {
                   'متوسط المساحة',
                   _decimal(analytics.averageArea, 'م²'),
                   Icons.square_foot_rounded,
+                  surfaceColor,
+                  onSurface,
                 ),
                 _metric(
                   itemWidth,
                   'متوسط الغرف',
                   _decimal(analytics.averageRooms, 'غرفة'),
                   Icons.bedroom_parent_outlined,
+                  surfaceColor,
+                  onSurface,
                 ),
                 _metric(
                   itemWidth,
                   'متوسط الحمامات',
                   _decimal(analytics.averageBathrooms, 'حمام'),
                   Icons.bathtub_outlined,
+                  surfaceColor,
+                  onSurface,
                 ),
                 _metric(
                   itemWidth,
                   'إجمالي المشاهدات',
                   _integer(analytics.totalViews),
                   Icons.visibility_outlined,
+                  surfaceColor,
+                  onSurface,
                 ),
                 _metric(
                   itemWidth,
                   'متوسط الصالات',
                   _decimal(analytics.averageLivingRooms, 'صالة'),
                   Icons.weekend_outlined,
+                  surfaceColor,
+                  onSurface,
                 ),
                 _metric(
                   itemWidth,
                   'متوسط المواقف',
                   _decimal(analytics.averageParking, 'موقف'),
                   Icons.local_parking_outlined,
+                  surfaceColor,
+                  onSurface,
                 ),
               ],
             );
@@ -167,15 +182,22 @@ class AdvancedMarketSection extends StatelessWidget {
     );
   }
 
-  Widget _metric(double width, String title, String value, IconData icon) {
+  Widget _metric(
+    double width,
+    String title,
+    String value,
+    IconData icon,
+    Color surfaceColor,
+    Color onSurface,
+  ) {
     return SizedBox(
       width: width,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _surface,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: .06)),
+          border: Border.all(color: onSurface.withValues(alpha: .06)),
         ),
         child: Row(
           children: [
@@ -185,7 +207,12 @@ class AdvancedMarketSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: StatisticsTextStyles.caption),
+                  Text(
+                    title,
+                    style: StatisticsTextStyles.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     value,
@@ -215,6 +242,11 @@ class _SegmentsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final captionStyle = StatisticsTextStyles.caption.copyWith(
+      color: onSurface.withValues(alpha: 0.55),
+    );
     return _Panel(
       title: 'إحصائيات البيع والإيجار',
       child: LayoutBuilder(
@@ -231,10 +263,10 @@ class _SegmentsCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .035),
+                    color: onSurface.withValues(alpha: .035),
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: .06),
+                      color: onSurface.withValues(alpha: .06),
                     ),
                   ),
                   child: Column(
@@ -256,14 +288,14 @@ class _SegmentsCard extends StatelessWidget {
                           ),
                           Text(
                             '${segment.propertyCount}',
-                            style: StatisticsTextStyles.caption,
+                            style: captionStyle,
                           ),
                         ],
                       ),
                       const SizedBox(height: 10),
                       Text(
                         'متوسط السعر',
-                        style: StatisticsTextStyles.caption,
+                        style: captionStyle,
                       ),
                       const SizedBox(height: 3),
                       Text(
@@ -277,7 +309,7 @@ class _SegmentsCard extends StatelessWidget {
                         'الوسيط: ${_compactPrice(segment.medianPrice)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: StatisticsTextStyles.caption,
+                        style: captionStyle,
                       ),
                       if (segment.pricePerSquareMeterSampleCount > 0) ...[
                         const SizedBox(height: 4),
@@ -285,7 +317,7 @@ class _SegmentsCard extends StatelessWidget {
                           'المتر: ${_compactPrice(segment.averagePricePerSquareMeter)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: StatisticsTextStyles.caption,
+                          style: captionStyle,
                         ),
                       ],
                     ],
@@ -321,6 +353,8 @@ class _DataCleaningNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -343,7 +377,9 @@ class _DataCleaningNote extends StatelessWidget {
           Expanded(
             child: Text(
               'تم استبعاد $count ${count == 1 ? 'قيمة سعرية شاذة' : 'قيم سعرية شاذة'} بعد توفر عينة كافية، لتحسين دقة المؤشرات.',
-              style: StatisticsTextStyles.caption,
+              style: StatisticsTextStyles.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
+              ),
             ),
           ),
         ],
@@ -357,25 +393,27 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
+        const Icon(
           Icons.query_stats_rounded,
           color: AdvancedMarketSection._gold,
           size: 25,
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('خصائص السوق', style: StatisticsTextStyles.sectionTitle),
-              SizedBox(height: 3),
+              const Text('خصائص السوق', style: StatisticsTextStyles.sectionTitle),
+              const SizedBox(height: 3),
               Text(
                 'قراءة أوسع للمساحات والمواصفات وتوزيع العقارات',
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: onSurface.withValues(alpha: 0.54),
                   fontSize: StatisticsTextStyles.sectionSubtitleSize,
                   height: 1.45,
                 ),
@@ -401,6 +439,8 @@ class _DistributionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final entries = values.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return _Panel(
@@ -412,11 +452,13 @@ class _DistributionCard extends StatelessWidget {
           final percentage =
               total <= 0 ? 0 : (entry.value / total * 100).round();
           return Chip(
-            backgroundColor: Colors.white.withValues(alpha: .05),
-            side: BorderSide(color: Colors.white.withValues(alpha: .07)),
+            backgroundColor: onSurface.withValues(alpha: .05),
+            side: BorderSide(color: onSurface.withValues(alpha: .07)),
             label: Text(
               '${entry.key}  ${entry.value} ($percentage٪)',
-              style: StatisticsTextStyles.chip,
+              style: StatisticsTextStyles.chip.copyWith(
+                color: onSurface.withValues(alpha: 0.72),
+              ),
             ),
           );
         }).toList(growable: false),
@@ -433,6 +475,8 @@ class _RankingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return _Panel(
       title: title,
       child: Column(
@@ -459,7 +503,9 @@ class _RankingCard extends StatelessWidget {
                 ),
                 Text(
                   '${item.propertyCount} عقار',
-                  style: StatisticsTextStyles.caption,
+                  style: StatisticsTextStyles.caption.copyWith(
+                    color: onSurface.withValues(alpha: 0.55),
+                  ),
                 ),
               ],
             ),
@@ -485,6 +531,8 @@ class _TrendAreasCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return _Panel(
       title: title,
       child: Column(
@@ -510,7 +558,9 @@ class _TrendAreasCard extends StatelessWidget {
                       ),
                       Text(
                         '${item.currentPropertyCount} حاليًا • ${item.previousPropertyCount} سابقًا',
-                        style: StatisticsTextStyles.caption,
+                        style: StatisticsTextStyles.caption.copyWith(
+                          color: onSurface.withValues(alpha: 0.55),
+                        ),
                       ),
                     ],
                   ),
@@ -541,6 +591,8 @@ class _InsufficientAreasCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return _Panel(
       title: 'بيانات غير كافية للاتجاه',
       child: Column(
@@ -548,7 +600,9 @@ class _InsufficientAreasCard extends StatelessWidget {
         children: [
           Text(
             'تحتاج المنطقة إلى 5 عقارات على الأقل في كل فترة قبل وصفها بالصعود أو الهبوط.',
-            style: StatisticsTextStyles.caption,
+            style: StatisticsTextStyles.caption.copyWith(
+              color: onSurface.withValues(alpha: 0.55),
+            ),
           ),
           const SizedBox(height: 9),
           Wrap(
@@ -556,15 +610,17 @@ class _InsufficientAreasCard extends StatelessWidget {
             runSpacing: 7,
             children: items.map((item) {
               return Chip(
-                backgroundColor: Colors.white.withValues(alpha: .04),
+                backgroundColor: onSurface.withValues(alpha: .04),
                 side: BorderSide(
-                  color: Colors.white.withValues(alpha: .06),
+                  color: onSurface.withValues(alpha: .06),
                 ),
                 label: Text(
                   item.displayName.isEmpty
                       ? 'منطقة غير محددة'
                       : item.displayName,
-                  style: StatisticsTextStyles.chip,
+                  style: StatisticsTextStyles.chip.copyWith(
+                    color: onSurface.withValues(alpha: 0.72),
+                  ),
                 ),
               );
             }).toList(growable: false),
@@ -582,6 +638,11 @@ class _MostViewedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final captionStyle = StatisticsTextStyles.caption.copyWith(
+      color: onSurface.withValues(alpha: 0.55),
+    );
     return _Panel(
       title: 'العقارات الأكثر مشاهدة',
       child: Column(
@@ -633,7 +694,7 @@ class _MostViewedCard extends StatelessWidget {
                           location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: StatisticsTextStyles.caption,
+                          style: captionStyle,
                         ),
                       ],
                     ],
@@ -663,7 +724,7 @@ class _MostViewedCard extends StatelessWidget {
                     Text(
                       _SegmentsCard._compactPrice(property.price),
                       textDirection: TextDirection.rtl,
-                      style: StatisticsTextStyles.caption,
+                      style: captionStyle,
                     ),
                   ],
                 ),
@@ -684,13 +745,15 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AdvancedMarketSection._surface,
+        color: isDark ? AdvancedMarketSection._surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: .06)),
+        border: Border.all(color: onSurface.withValues(alpha: .06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

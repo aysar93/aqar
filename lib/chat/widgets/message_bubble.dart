@@ -46,6 +46,9 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final peerText = isDark ? Colors.white : const Color(0xFF0F172A);
+    final peerMuted = isDark ? Colors.white54 : Colors.black45;
     final timeText = time == null ? "" : DateFormat("hh:mm a").format(time!);
 
     return Align(
@@ -66,7 +69,12 @@ class MessageBubble extends StatelessWidget {
             maxWidth: MediaQuery.of(context).size.width * .75,
           ),
           decoration: BoxDecoration(
-            color: isMe ? const Color(0xffD4AF37) : const Color(0xff1E293B),
+            color: isMe
+                ? const Color(0xffC5A16B)
+                : (isDark ? const Color(0xff1E293B) : Colors.white),
+            border: !isMe && !isDark
+                ? Border.all(color: Colors.black12)
+                : null,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(18),
               topRight: const Radius.circular(18),
@@ -118,7 +126,7 @@ class MessageBubble extends StatelessWidget {
                         Text(
                           "فتح الموقع",
                           style: TextStyle(
-                            color: isMe ? Colors.black : Colors.white,
+                            color: isMe ? Colors.black : peerText,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -131,7 +139,7 @@ class MessageBubble extends StatelessWidget {
                   message,
                   onTap: onActions,
                   style: TextStyle(
-                    color: isMe ? Colors.black : Colors.white,
+                    color: isMe ? Colors.black : peerText,
                     fontSize: 15,
                   ),
                 ),
@@ -142,7 +150,7 @@ class MessageBubble extends StatelessWidget {
                   Text(
                     timeText,
                     style: TextStyle(
-                      color: isMe ? Colors.black54 : Colors.white54,
+                      color: isMe ? Colors.black54 : peerMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -153,7 +161,7 @@ class MessageBubble extends StatelessWidget {
                       size: 16,
                       color: status == "read"
                           ? Colors.blue
-                          : (isMe ? Colors.black54 : Colors.white54),
+                          : (isMe ? Colors.black54 : peerMuted),
                     ),
                   ],
                 ],

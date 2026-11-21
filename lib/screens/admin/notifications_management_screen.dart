@@ -24,10 +24,14 @@ class _NotificationsManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: bgColor,
         appBar: AppBar(
           title: const Text(
             "إدارة الإشعارات",
@@ -35,12 +39,12 @@ class _NotificationsManagementScreenState
               fontWeight: FontWeight.bold,
             ),
           ),
-          backgroundColor: const Color(0xff1E293B),
+          backgroundColor: cardColor,
           actions: [
             IconButton(
               icon: const Icon(
                 Icons.add_alert,
-                color: Color(0xffD4AF37),
+                color: Color(0xffC5A16B),
               ),
               onPressed: () {
                 Navigator.push(
@@ -75,11 +79,11 @@ class _NotificationsManagementScreenState
                         .toList();
 
                     if (docs.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           "لا توجد إشعارات",
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: onSurface.withValues(alpha: 0.70),
                           ),
                         ),
                       );
@@ -91,12 +95,12 @@ class _NotificationsManagementScreenState
                         final data = docs[index].data();
 
                         return Card(
-                          color: const Color(0xff1E293B),
+                          color: cardColor,
                           child: ListTile(
                             title: Text(
                               data["title"] ?? "",
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: onSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -105,8 +109,8 @@ class _NotificationsManagementScreenState
                               children: [
                                 Text(
                                   data["message"] ?? "",
-                                  style: const TextStyle(
-                                    color: Colors.white70,
+                                  style: TextStyle(
+                                    color: onSurface.withValues(alpha: 0.70),
                                   ),
                                 ),
                                 const SizedBox(height: 5),
@@ -117,7 +121,7 @@ class _NotificationsManagementScreenState
                                           ? "👤 حساب"
                                           : "📢 عام",
                                   style: const TextStyle(
-                                    color: Color(0xffD4AF37),
+                                    color: Color(0xffC5A16B),
                                     fontSize: 12,
                                   ),
                                 ),

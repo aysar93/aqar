@@ -26,7 +26,7 @@ class PublisherPropertiesScreen extends StatefulWidget {
 }
 
 class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _background = Color(0xff0F172A);
   static const Color _card = Color(0xff1E293B);
   static const Color _muted = Color(0xff94A3B8);
@@ -54,16 +54,17 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: _background,
+        backgroundColor: isDark ? _background : Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: _background,
+          backgroundColor: isDark ? _background : Theme.of(context).scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
-          foregroundColor: Colors.white,
+          foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
           title: const Text(
             'عقارات الناشر',
             style: TextStyle(
@@ -200,16 +201,19 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
     required int totalViews,
     required int featuredCount,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: _card,
+        color: isDark ? _card : Colors.white,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: _gold.withValues(alpha: .20)),
+        border: Border.all(
+          color: isDark ? _gold.withValues(alpha: .20) : const Color(0xFFE2E8F0),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .20),
+            color: Colors.black.withValues(alpha: isDark ? .20 : .05),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -230,7 +234,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
                   ),
                 ),
                 child: CircleAvatar(
-                  backgroundColor: _background,
+                  backgroundColor: isDark ? _background : const Color(0xFFF1F5F9),
                   backgroundImage: widget.publisherPhotoUrl.trim().isNotEmpty
                       ? NetworkImage(widget.publisherPhotoUrl.trim())
                       : null,
@@ -257,8 +261,8 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
                                 : 'ناشر العقار',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                               fontSize: 19,
                               fontWeight: FontWeight.w800,
                             ),
@@ -331,6 +335,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
     required int total,
     required String query,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: TextField(
@@ -338,7 +343,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
         onChanged: (value) {
           _queryNotifier.value = value;
         },
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: 'ابحث باسم العقار، الرقم أو المنطقة',
@@ -371,7 +376,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
                   ),
                 ),
           filled: true,
-          fillColor: _card,
+          fillColor: isDark ? _card : Colors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 15,
@@ -383,7 +388,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
             borderSide: BorderSide(
-              color: Colors.white.withValues(alpha: .06),
+              color: isDark ? Colors.white.withValues(alpha: .06) : const Color(0xFFE2E8F0),
             ),
           ),
           focusedBorder: OutlineInputBorder(
@@ -462,6 +467,7 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
     required String title,
     required String subtitle,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -484,8 +490,8 @@ class _PublisherPropertiesScreenState extends State<PublisherPropertiesScreen> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 19,
                 fontWeight: FontWeight.w800,
               ),
@@ -533,7 +539,7 @@ class _StatBox extends StatelessWidget {
     required this.label,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _muted = Color(0xff94A3B8);
 
   final IconData icon;
@@ -542,14 +548,15 @@ class _StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 6),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: .13),
+          color: isDark ? Colors.black.withValues(alpha: .13) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.white.withValues(alpha: .05),
+            color: isDark ? Colors.white.withValues(alpha: .05) : const Color(0xFFE2E8F0),
           ),
         ),
         child: Column(
@@ -560,8 +567,8 @@ class _StatBox extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -588,7 +595,7 @@ class _PropertyCard extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _card = Color(0xff1E293B);
   static const Color _muted = Color(0xff94A3B8);
 
@@ -598,6 +605,7 @@ class _PropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final image = (data['imageUrl'] ?? '').toString().trim();
     final propertyType = (data['propertyType'] ?? '').toString();
 
@@ -616,16 +624,16 @@ class _PropertyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Ink(
           decoration: BoxDecoration(
-            color: _card,
+            color: isDark ? _card : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isFeatured
                   ? _gold.withValues(alpha: .32)
-                  : Colors.white.withValues(alpha: .06),
+                  : (isDark ? Colors.white.withValues(alpha: .06) : const Color(0xFFE2E8F0)),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .18),
+                color: Colors.black.withValues(alpha: isDark ? .18 : .05),
                 blurRadius: 20,
                 offset: const Offset(0, 9),
               ),
@@ -877,7 +885,7 @@ class _GlassTag extends StatelessWidget {
     required this.label,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   final IconData icon;
   final String label;
@@ -925,10 +933,11 @@ class _InfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .12),
+        color: isDark ? Colors.black.withValues(alpha: .12) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

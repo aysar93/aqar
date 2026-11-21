@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 void showFaqSheet(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -13,9 +14,9 @@ void showFaqSheet(BuildContext context) {
       textDirection: TextDirection.rtl,
       child: Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xff1E293B),
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xff1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(24),
           ),
         ),
@@ -37,7 +38,7 @@ void showFaqSheet(BuildContext context) {
             const Center(
               child: Icon(
                 Icons.quiz_rounded,
-                color: Color(0xffD4AF37),
+                color: Color(0xffC5A16B),
                 size: 45,
               ),
             ),
@@ -48,17 +49,17 @@ void showFaqSheet(BuildContext context) {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xffD4AF37),
+                  color: Color(0xffC5A16B),
                 ),
               ),
             ),
             const SizedBox(height: 10),
-            const Center(
+            Center(
               child: Text(
                 "إليك أكثر الأسئلة شيوعاً حول استخدام تطبيق عقارات الانبار",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: isDark ? Colors.white70 : Colors.black54,
                   height: 1.6,
                 ),
               ),
@@ -121,11 +122,11 @@ void showFaqSheet(BuildContext context) {
               ),
             ),
             const SizedBox(height: 12),
-            const Center(
+            Center(
               child: Text(
                 "آخر تحديث: يوليو 2026",
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: isDark ? Colors.white54 : Colors.black54,
                   fontSize: 13,
                 ),
               ),
@@ -159,12 +160,16 @@ class _FaqTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
-      color: const Color(0xff27364A),
+      color: isDark ? const Color(0xff27364A) : const Color(0xFFF8FAFC),
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isDark ? Colors.transparent : Colors.black12,
+        ),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(
@@ -173,12 +178,12 @@ class _FaqTile extends StatelessWidget {
           highlightColor: Colors.transparent,
         ),
         child: ExpansionTile(
-          collapsedIconColor: const Color(0xffD4AF37),
-          iconColor: const Color(0xffD4AF37),
+          collapsedIconColor: const Color(0xffC5A16B),
+          iconColor: const Color(0xffC5A16B),
           title: Text(
             question,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -188,8 +193,8 @@ class _FaqTile extends StatelessWidget {
               child: Text(
                 answer,
                 textAlign: TextAlign.justify,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black87,
                   height: 1.7,
                   fontSize: 14,
                 ),

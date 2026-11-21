@@ -109,6 +109,7 @@ class _PropertyCardState extends State<PropertyCard> {
     IconData icon,
     String value,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Column(
         children: [
@@ -116,20 +117,20 @@ class _PropertyCardState extends State<PropertyCard> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xff0F172A),
+              color: isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              color: const Color(0xffD4AF37),
+              color: const Color(0xffC5A16B),
               size: 20,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
               fontSize: 12,
             ),
           ),
@@ -172,7 +173,7 @@ class _PropertyCardState extends State<PropertyCard> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: const Color(0xffD4AF37),
+              color: const Color(0xffC5A16B),
               width: 1.5,
             ),
           ),
@@ -186,13 +187,13 @@ class _PropertyCardState extends State<PropertyCard> {
                         showOffice
                             ? Icons.business_rounded
                             : Icons.person_rounded,
-                        color: const Color(0xffD4AF37),
+                        color: const Color(0xffC5A16B),
                       );
                     },
                   )
                 : Icon(
                     showOffice ? Icons.business_rounded : Icons.person_rounded,
-                    color: const Color(0xffD4AF37),
+                    color: const Color(0xffC5A16B),
                   ),
           ),
         ),
@@ -203,8 +204,10 @@ class _PropertyCardState extends State<PropertyCard> {
             children: [
               Text(
                 showOffice ? 'المكتب العقاري' : 'صاحب العقار',
-                style: const TextStyle(
-                  color: Colors.white54,
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white54
+                      : const Color(0xFF64748B),
                   fontSize: 11,
                 ),
               ),
@@ -213,8 +216,10 @@ class _PropertyCardState extends State<PropertyCard> {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : const Color(0xFF0F172A),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -225,7 +230,7 @@ class _PropertyCardState extends State<PropertyCard> {
         if (showOffice)
           const Icon(
             Icons.verified_rounded,
-            color: Color(0xffD4AF37),
+            color: Color(0xffC5A16B),
             size: 18,
           ),
       ],
@@ -265,19 +270,22 @@ class _PropertyCardState extends State<PropertyCard> {
                       ? 128.0
                       : 172.0;
 
+              final isDark = Theme.of(context).brightness == Brightness.dark;
               return Container(
                 width: double.infinity,
                 height: cardHeight,
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xff1E293B),
+                  color: isDark ? const Color(0xff1E293B) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: const Color(0xffD4AF37).withValues(alpha: .10),
+                    color: isDark
+                        ? const Color(0xffC5A16B).withValues(alpha: .10)
+                        : const Color(0xFFE2E8F0),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: .12),
+                      color: Colors.black.withValues(alpha: isDark ? .12 : .05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -325,8 +333,8 @@ class _PropertyCardState extends State<PropertyCard> {
                                             : widget.title,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w800,
                                           height: 1.02,
@@ -351,7 +359,7 @@ class _PropertyCardState extends State<PropertyCard> {
                                           size: 18,
                                           color: widget.isFavorite
                                               ? Colors.redAccent
-                                              : Colors.white54,
+                                              : (isDark ? Colors.white54 : const Color(0xFF94A3B8)),
                                         ),
                                       ),
                                     ),
@@ -362,7 +370,7 @@ class _PropertyCardState extends State<PropertyCard> {
                                   children: [
                                     const Icon(
                                       Icons.location_on_outlined,
-                                      color: Color(0xffD4AF37),
+                                      color: Color(0xffC5A16B),
                                       size: 13,
                                     ),
                                     const SizedBox(width: 3),
@@ -372,8 +380,9 @@ class _PropertyCardState extends State<PropertyCard> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          color: Colors.white
-                                              .withValues(alpha: .58),
+                                          color: isDark
+                                              ? Colors.white.withValues(alpha: .58)
+                                              : const Color(0xFF64748B),
                                           fontSize: 9.5,
                                         ),
                                       ),
@@ -386,7 +395,7 @@ class _PropertyCardState extends State<PropertyCard> {
                                   children: [
                                     const Icon(
                                       Icons.confirmation_number_outlined,
-                                      color: Color(0xffD4AF37),
+                                      color: Color(0xffC5A16B),
                                       size: 12,
                                     ),
                                     const SizedBox(width: 3),
@@ -396,9 +405,11 @@ class _PropertyCardState extends State<PropertyCard> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          color: Colors.white.withValues(
-                                            alpha: .60,
-                                          ),
+                                          color: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: .60,
+                                                )
+                                              : const Color(0xFF64748B),
                                           fontSize: 9,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -417,8 +428,8 @@ class _PropertyCardState extends State<PropertyCard> {
                                         _publisherDisplayName(),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -430,7 +441,7 @@ class _PropertyCardState extends State<PropertyCard> {
                                         padding: EdgeInsets.only(right: 3),
                                         child: Icon(
                                           Icons.verified_rounded,
-                                          color: Color(0xffD4AF37),
+                                          color: Color(0xffC5A16B),
                                           size: 14,
                                         ),
                                       ),
@@ -446,7 +457,7 @@ class _PropertyCardState extends State<PropertyCard> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          color: Color(0xffD4AF37),
+                                          color: Color(0xffC5A16B),
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w900,
                                         ),
@@ -496,7 +507,7 @@ class _PropertyCardState extends State<PropertyCard> {
       child: Container(
         height: 0.6,
         width: double.infinity,
-        color: const Color(0xffD4AF37).withValues(alpha: .18),
+        color: const Color(0xffC5A16B).withValues(alpha: .18),
       ),
     );
   }
@@ -526,7 +537,7 @@ class _PropertyCardState extends State<PropertyCard> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: const Color(0xffD4AF37).withValues(alpha: .65),
+          color: const Color(0xffC5A16B).withValues(alpha: .65),
           width: 1,
         ),
       ),
@@ -537,13 +548,13 @@ class _PropertyCardState extends State<PropertyCard> {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(
                   showOffice ? Icons.business_rounded : Icons.person_rounded,
-                  color: const Color(0xffD4AF37),
+                  color: const Color(0xffC5A16B),
                   size: 12,
                 ),
               )
             : Icon(
                 showOffice ? Icons.business_rounded : Icons.person_rounded,
-                color: const Color(0xffD4AF37),
+                color: const Color(0xffC5A16B),
                 size: 13,
               ),
       ),

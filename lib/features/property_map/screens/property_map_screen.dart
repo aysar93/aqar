@@ -35,7 +35,7 @@ class PropertyMapScreen extends StatefulWidget {
 
 class _PropertyMapScreenState extends State<PropertyMapScreen> {
   static const Color _background = Color(0xFF0F172A);
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   late final PropertyMapController _controller;
   late final TextEditingController _searchController;
@@ -257,11 +257,12 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final state = _controller.state;
     final selectedProperty = _controller.selectedProperty;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: isDark ? _background : const Color(0xFFF8FAFC),
       body: Stack(
         children: [
           Positioned.fill(
@@ -435,6 +436,8 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -444,10 +447,10 @@ class _BackButton extends StatelessWidget {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.06,
               ),
             ),
@@ -483,13 +486,15 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 14,
         vertical: 11,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: const Color(0xFFEF4444).withValues(alpha: 0.35),
@@ -517,8 +522,8 @@ class _ErrorBanner extends StatelessWidget {
               message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -530,7 +535,7 @@ class _ErrorBanner extends StatelessWidget {
             child: const Text(
               'إعادة المحاولة',
               style: TextStyle(
-                color: Color(0xFFD4AF37),
+                color: Color(0xFFC5A16B),
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),

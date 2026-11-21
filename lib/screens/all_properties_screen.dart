@@ -145,10 +145,11 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -159,8 +160,8 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                   : widget.mode == "latest"
                       ? "🆕 أحدث العقارات"
                       : "جميع العقارات",
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -177,11 +178,11 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
         child: _catalogBuilder(
           (context, snapshot) {
             if (snapshot.hasError) {
-              return const Center(
+              return Center(
                 child: Text(
                   "حدث خطأ أثناء تحميل العقارات",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
                 ),
               );
@@ -190,7 +191,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
             if (!snapshot.hasData) {
               return const Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC5A16B),
                 ),
               );
             }
@@ -330,15 +331,15 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       vertical: 16,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xff162033),
+                      color: isDark ? const Color(0xff162033) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xffD4AF37).withValues(alpha: .45),
+                        color: const Color(0xffC5A16B).withValues(alpha: .45),
                         width: 1.2,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: .20),
+                          color: Colors.black.withValues(alpha: isDark ? .20 : .05),
                           blurRadius: 14,
                           offset: const Offset(0, 6),
                         ),
@@ -348,14 +349,14 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       children: [
                         const Icon(
                           Icons.tune_rounded,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             showFilters ? "إخفاء الفلاتر" : "الفلاتر",
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
                               letterSpacing: .2,
@@ -367,7 +368,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                           duration: const Duration(milliseconds: 250),
                           child: const Icon(
                             Icons.keyboard_arrow_down_rounded,
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                           ),
                         ),
                       ],
@@ -388,7 +389,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                           child: Text(
                             "ترتيب النتائج",
                             style: TextStyle(
-                              color: Color(0xFFD4AF37),
+                              color: Color(0xFFC5A16B),
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                             ),
@@ -413,17 +414,17 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                       style: TextStyle(
                                         color: selected
                                             ? Colors.black
-                                            : Colors.white,
+                                            : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     selected: selected,
-                                    selectedColor: const Color(0xffD4AF37),
-                                    backgroundColor: const Color(0xff162033),
+                                    selectedColor: const Color(0xffC5A16B),
+                                    backgroundColor: isDark ? const Color(0xff162033) : Colors.white,
                                     side: BorderSide(
                                       color: selected
-                                          ? const Color(0xffD4AF37)
-                                          : const Color(0xff2D3A55),
+                                          ? const Color(0xffC5A16B)
+                                          : (isDark ? const Color(0xff2D3A55) : const Color(0xFFE2E8F0)),
                                       width: selected ? 1.8 : 1,
                                     ),
                                     shape: RoundedRectangleBorder(
@@ -454,7 +455,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                         child: Text(
                           "نوع الإعلان",
                           style: TextStyle(
-                            color: Color(0xFFD4AF37),
+                            color: Color(0xFFC5A16B),
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
@@ -476,18 +477,19 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                 label: Text(
                                   item,
                                   style: TextStyle(
-                                    color:
-                                        selected ? Colors.black : Colors.white,
+                                    color: selected
+                                        ? Colors.black
+                                        : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 selected: selected,
-                                selectedColor: const Color(0xffD4AF37),
-                                backgroundColor: const Color(0xff162033),
+                                selectedColor: const Color(0xffC5A16B),
+                                backgroundColor: isDark ? const Color(0xff162033) : Colors.white,
                                 side: BorderSide(
                                   color: selected
-                                      ? const Color(0xffD4AF37)
-                                      : const Color(0xff2D3A55),
+                                      ? const Color(0xffC5A16B)
+                                      : (isDark ? const Color(0xff2D3A55) : const Color(0xFFE2E8F0)),
                                   width: selected ? 1.8 : 1,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -513,15 +515,15 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xff162033),
+                    color: isDark ? const Color(0xff162033) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xffD4AF37).withValues(alpha: .45),
+                      color: const Color(0xffC5A16B).withValues(alpha: .45),
                       width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: .18),
+                        color: Colors.black.withValues(alpha: isDark ? .18 : .05),
                         blurRadius: 12,
                         offset: const Offset(0, 5),
                       ),
@@ -531,7 +533,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                     children: [
                       const Icon(
                         Icons.home_work_rounded,
-                        color: Color(0xffD4AF37),
+                        color: Color(0xffC5A16B),
                         size: 22,
                       ),
                       const SizedBox(width: 8),
@@ -540,8 +542,8 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                           _catalog == null
                               ? "تم العثور على ${filteredDocs.length} عقار"
                               : "تم تحميل ${filteredDocs.length} عقار",
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
@@ -550,7 +552,7 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       Text(
                         sortBy,
                         style: const TextStyle(
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -576,12 +578,12 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                       },
                       icon: const Icon(
                         Icons.refresh_rounded,
-                        color: Color(0xffD4AF37),
+                        color: Color(0xffC5A16B),
                       ),
                       label: const Text(
                         "إعادة تعيين الفلاتر",
                         style: TextStyle(
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -600,15 +602,15 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                 ? Icons.search_off_rounded
                                 : Icons.home_work_outlined,
                             size: 70,
-                            color: const Color(0xFFD4AF37),
+                            color: const Color(0xFFC5A16B),
                           ),
                           const SizedBox(height: 18),
                           Text(
                             search.isNotEmpty
                                 ? "لم يتم العثور على نتائج"
                                 : "لا توجد عقارات حالياً",
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -619,8 +621,8 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                 ? "جرّب كلمة بحث أخرى أو غيّر التصنيف."
                                 : "ستظهر العقارات هنا فور إضافتها",
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : const Color(0xFF64748B),
                               fontSize: 15,
                               height: 1.5,
                             ),
@@ -817,13 +819,14 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                   child: PopupMenuButton<String>(
                                     tooltip: 'إدارة العقار',
                                     offset: const Offset(0, -6),
-                                    color: const Color(0xff1E293B),
+                                    color: isDark ? const Color(0xff1E293B) : Colors.white,
                                     elevation: 10,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                       side: BorderSide(
-                                        color: const Color(0xffD4AF37)
-                                            .withValues(alpha: .16),
+                                        color: isDark
+                                            ? const Color(0xffC5A16B).withValues(alpha: .16)
+                                            : const Color(0xFFE2E8F0),
                                       ),
                                     ),
                                     padding: EdgeInsets.zero,
@@ -831,17 +834,18 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                       width: 34,
                                       height: 34,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xff0F172A)
-                                            .withValues(alpha: .90),
+                                        color: isDark
+                                            ? const Color(0xff0F172A).withValues(alpha: .90)
+                                            : Colors.white.withValues(alpha: .92),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: const Color(0xffD4AF37)
+                                          color: const Color(0xffC5A16B)
                                               .withValues(alpha: .25),
                                         ),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.more_horiz_rounded,
-                                        color: Colors.white,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                                         size: 19,
                                       ),
                                     ),
@@ -865,19 +869,20 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                               Directionality(
                                             textDirection: TextDirection.rtl,
                                             child: AlertDialog(
-                                              backgroundColor:
-                                                  const Color(0xff1E293B),
-                                              title: const Text(
+                                              backgroundColor: isDark
+                                                  ? const Color(0xff1E293B)
+                                                  : Colors.white,
+                                              title: Text(
                                                 'حذف العقار',
                                                 style: TextStyle(
-                                                  color: Colors.white,
+                                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                                                   fontWeight: FontWeight.w800,
                                                 ),
                                               ),
-                                              content: const Text(
+                                              content: Text(
                                                 'هل أنت متأكد من حذف هذا العقار؟ لا يمكن التراجع عن هذه العملية',
                                                 style: TextStyle(
-                                                  color: Colors.white70,
+                                                  color: isDark ? Colors.white70 : const Color(0xFF475569),
                                                   height: 1.5,
                                                 ),
                                               ),
@@ -888,10 +893,10 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                                     dialogContext,
                                                     false,
                                                   ),
-                                                  child: const Text(
+                                                  child: Text(
                                                     'إلغاء',
                                                     style: TextStyle(
-                                                      color: Colors.white70,
+                                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
                                                     ),
                                                   ),
                                                 ),
@@ -934,21 +939,21 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                         }
                                       }
                                     },
-                                    itemBuilder: (_) => const [
+                                    itemBuilder: (_) => [
                                       PopupMenuItem<String>(
                                         value: 'edit',
                                         child: Row(
                                           children: [
-                                            Icon(
+                                            const Icon(
                                               Icons.edit_outlined,
                                               size: 18,
                                               color: Color(0xff60A5FA),
                                             ),
-                                            SizedBox(width: 9),
+                                            const SizedBox(width: 9),
                                             Text(
                                               'تعديل العقار',
                                               style: TextStyle(
-                                                color: Colors.white,
+                                                color: isDark ? Colors.white : const Color(0xFF0F172A),
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -960,16 +965,16 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                                         value: 'delete',
                                         child: Row(
                                           children: [
-                                            Icon(
+                                            const Icon(
                                               Icons.delete_outline_rounded,
                                               size: 18,
                                               color: Colors.redAccent,
                                             ),
-                                            SizedBox(width: 9),
+                                            const SizedBox(width: 9),
                                             Text(
                                               'حذف العقار',
                                               style: TextStyle(
-                                                color: Colors.white,
+                                                color: isDark ? Colors.white : const Color(0xFF0F172A),
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -1006,9 +1011,9 @@ class _AllPropertiesScreenState extends State<AllPropertiesScreen> {
                         'عرض المزيد',
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xffD4AF37),
+                        foregroundColor: const Color(0xffC5A16B),
                         side: BorderSide(
-                          color: const Color(0xffD4AF37).withValues(alpha: .35),
+                          color: const Color(0xffC5A16B).withValues(alpha: .35),
                         ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 18,

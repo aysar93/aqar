@@ -263,7 +263,12 @@ class _BannerSliderState extends State<BannerSlider>
             child: Padding(
                 padding: widget.onBookingVenue != null
                     ? const EdgeInsets.only(top: 10, bottom: 4)
-                    : const EdgeInsets.symmetric(vertical: 24),
+                    : EdgeInsets.symmetric(
+                        vertical: MediaQuery.sizeOf(context).width >
+                                MediaQuery.sizeOf(context).height
+                            ? 10.0
+                            : 24.0,
+                      ),
                 child: AnimatedSize(
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOutCubic,
@@ -461,7 +466,7 @@ class _ReferenceBannerCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: const Color(0xFFD4AF37),
+                                  color: const Color(0xFFC5A16B),
                                   fontSize: accentColor != null ? 15 : 17,
                                   height: 1.25,
                                   fontWeight: accentColor != null
@@ -680,7 +685,7 @@ class _ReferenceIndicator extends StatelessWidget {
             height: 5,
             decoration: BoxDecoration(
               color: selected
-                  ? accentColor ?? const Color(0xFFD4AF37)
+                  ? accentColor ?? const Color(0xFFC5A16B)
                   : Theme.of(context).colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(20),
             ),

@@ -36,31 +36,34 @@ class _Step5PriceState extends State<Step5Price> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "السعر",
               style: TextStyle(
-                color: Colors.white,
+                color: onSurface,
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               "أدخل سعر العقار بالدينار العراقي",
               style: TextStyle(
-                color: Colors.white60,
+                color: onSurface.withValues(alpha: 0.60),
               ),
             ),
             const SizedBox(height: 30),
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xff1E293B),
+                color: cardColor,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: TextField(
@@ -80,25 +83,25 @@ class _Step5PriceState extends State<Step5Price> {
 
                   setState(() {});
                 },
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: 18,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "السعر",
                   labelStyle: TextStyle(
-                    color: Colors.white60,
+                    color: onSurface.withValues(alpha: 0.60),
                   ),
-                  prefixIcon: Icon(
+                  prefixIcon: const Icon(
                     Icons.payments,
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                   ),
                   suffixText: "د.ع",
-                  suffixStyle: TextStyle(
-                    color: Color(0xffD4AF37),
+                  suffixStyle: const TextStyle(
+                    color: Color(0xffC5A16B),
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(18),
+                  contentPadding: const EdgeInsets.all(18),
                 ),
               ),
             ),
@@ -107,13 +110,13 @@ class _Step5PriceState extends State<Step5Price> {
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: const Color(0xff1E293B),
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Text(
                   amountToArabicWords(priceController.text),
                   style: const TextStyle(
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -129,13 +132,13 @@ class _Step5PriceState extends State<Step5Price> {
 
                 widget.onChanged();
               },
-              title: const Text(
+              title: Text(
                 "السعر قابل للتفاوض",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: onSurface,
                 ),
               ),
-              activeThumbColor: const Color(0xffD4AF37),
+              activeThumbColor: const Color(0xffC5A16B),
             ),
           ],
         ),

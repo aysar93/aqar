@@ -62,7 +62,7 @@ class LatestPropertiesSection extends StatelessWidget {
                   child: const Text(
                     "عرض الكل",
                     style: TextStyle(
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                       fontWeight: FontWeight.bold,
                     ),
                   ),

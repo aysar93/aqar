@@ -20,11 +20,13 @@ class Step4Location extends StatefulWidget {
 }
 
 class _Step4LocationState extends State<Step4Location> {
-  static const Color _gold = Color(0xFFD4AF37);
-  static const Color _background = Color(0xFF0F172A);
-  static const Color _card = Color(0xFF1E293B);
-  static const Color _secondary = Color(0xFF94A3B8);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _success = Color(0xFF22C55E);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _secondary => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
   static const String _otherOption = 'أخرى';
   static const List<String> _availableFeatures = [
     'حديقة',
@@ -244,8 +246,8 @@ class _Step4LocationState extends State<Step4Location> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: _onSurface,
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                 ),
@@ -253,7 +255,7 @@ class _Step4LocationState extends State<Step4Location> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _secondary,
                   fontSize: 14,
                   height: 1.5,
@@ -280,8 +282,8 @@ class _Step4LocationState extends State<Step4Location> {
       isExpanded: true,
       dropdownColor: _card,
       iconEnabledColor: _gold,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: _onSurface,
         fontSize: 15,
         fontWeight: FontWeight.w600,
       ),
@@ -350,8 +352,8 @@ class _Step4LocationState extends State<Step4Location> {
       controller: _customCityController,
       textInputAction: TextInputAction.next,
       textAlign: TextAlign.right,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: _onSurface,
         fontSize: 15,
         fontWeight: FontWeight.w600,
       ),
@@ -389,23 +391,23 @@ class _Step4LocationState extends State<Step4Location> {
           color: _card,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: _onSurface.withValues(alpha: 0.06),
           ),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.holiday_village_rounded,
               color: _gold,
               size: 22,
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'المنطقة / الحي — إدخال يدوي',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -429,8 +431,8 @@ class _Step4LocationState extends State<Step4Location> {
       isExpanded: true,
       dropdownColor: _card,
       iconEnabledColor: _gold,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: _onSurface,
         fontSize: 15,
         fontWeight: FontWeight.w600,
       ),
@@ -492,8 +494,8 @@ class _Step4LocationState extends State<Step4Location> {
       controller: _customAreaController,
       textInputAction: TextInputAction.done,
       textAlign: TextAlign.right,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: _onSurface,
         fontSize: 15,
         fontWeight: FontWeight.w600,
       ),
@@ -576,8 +578,8 @@ class _Step4LocationState extends State<Step4Location> {
                       _hasMapLocation
                           ? 'تم تحديد الموقع'
                           : 'الموقع على الخريطة',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
@@ -590,7 +592,7 @@ class _Step4LocationState extends State<Step4Location> {
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _secondary,
                         fontSize: 14,
                         height: 1.4,
@@ -624,7 +626,7 @@ class _Step4LocationState extends State<Step4Location> {
                   Container(
                     width: 1,
                     height: 30,
-                    color: Colors.white.withValues(
+                    color: _onSurface.withValues(
                       alpha: 0.08,
                     ),
                   ),
@@ -647,8 +649,8 @@ class _Step4LocationState extends State<Step4Location> {
                   city != null && area != null ? _openLocationPicker : null,
               style: FilledButton.styleFrom(
                 backgroundColor: _hasMapLocation ? _background : _gold,
-                foregroundColor: _hasMapLocation ? _gold : _background,
-                disabledBackgroundColor: const Color(0xFF334155),
+                foregroundColor: _hasMapLocation ? _gold : const Color(0xFF0F172A),
+                disabledBackgroundColor: _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                 disabledForegroundColor: const Color(0xFF64748B),
                 side: _hasMapLocation
                     ? const BorderSide(
@@ -711,8 +713,8 @@ class _Step4LocationState extends State<Step4Location> {
         widget.property.landmark = value.trim();
         widget.onChanged?.call();
       },
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: _onSurface,
         fontSize: 15,
       ),
       decoration: _inputDecoration(
@@ -735,8 +737,8 @@ class _Step4LocationState extends State<Step4Location> {
         widget.property.description = value.trim();
         widget.onChanged?.call();
       },
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: _onSurface,
         fontSize: 15,
         height: 1.6,
       ),
@@ -768,12 +770,12 @@ class _Step4LocationState extends State<Step4Location> {
               ? const Icon(
                   Icons.check_rounded,
                   size: 16,
-                  color: _background,
+                  color: Color(0xFF0F172A),
                 )
               : null,
           label: Text(feature),
           labelStyle: TextStyle(
-            color: selected ? _background : Colors.white,
+            color: selected ? const Color(0xFF0F172A) : _onSurface,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -782,8 +784,8 @@ class _Step4LocationState extends State<Step4Location> {
           side: BorderSide(
             color: selected
                 ? _gold
-                : Colors.white.withValues(
-                    alpha: 0.07,
+                : _onSurface.withValues(
+                    alpha: 0.08,
                   ),
           ),
           shape: RoundedRectangleBorder(
@@ -813,7 +815,7 @@ class _Step4LocationState extends State<Step4Location> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(
+      labelStyle: TextStyle(
         color: _secondary,
         fontSize: 14,
       ),
@@ -839,7 +841,7 @@ class _Step4LocationState extends State<Step4Location> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: BorderSide(
-          color: Colors.white.withValues(
+          color: _onSurface.withValues(
             alpha: 0.06,
           ),
         ),
@@ -854,7 +856,7 @@ class _Step4LocationState extends State<Step4Location> {
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: BorderSide(
-          color: Colors.white.withValues(
+          color: _onSurface.withValues(
             alpha: 0.03,
           ),
         ),
@@ -866,7 +868,7 @@ class _Step4LocationState extends State<Step4Location> {
     return Container(
       width: double.infinity,
       height: 1,
-      color: Colors.white.withValues(
+      color: _onSurface.withValues(
         alpha: 0.06,
       ),
     );
@@ -957,6 +959,8 @@ class _CoordinateItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Column(
       children: [
         Text(
@@ -969,8 +973,8 @@ class _CoordinateItem extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           value.toStringAsFixed(6),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: onSurface,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),

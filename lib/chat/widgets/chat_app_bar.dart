@@ -15,8 +15,10 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor:
+          isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       elevation: 0,
       centerTitle: false,
       actions: [
@@ -24,7 +26,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             tooltip: 'إعدادات المحادثة',
             onPressed: onSettings,
-            icon: const Icon(Icons.more_vert, color: Color(0xFFD4AF37)),
+            icon: const Icon(Icons.more_vert, color: Color(0xFFC5A16B)),
           )
       ],
       leading: IconButton(
@@ -32,7 +34,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: onBack,
         icon: const Icon(
           Icons.arrow_back_ios_new_rounded,
-          color: Color(0xFFD4AF37),
+          color: Color(0xFFC5A16B),
           size: 22,
         ),
       ),
@@ -57,7 +59,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: const Color(0xFFD4AF37),
+                backgroundColor: const Color(0xFFC5A16B),
                 backgroundImage:
                     logoUrl.isNotEmpty ? NetworkImage(logoUrl) : null,
                 child: logoUrl.isEmpty
@@ -75,8 +77,8 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                   children: [
                     Text(
                       officeName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                         fontWeight: FontWeight.bold,
                         fontSize: 17,
                       ),

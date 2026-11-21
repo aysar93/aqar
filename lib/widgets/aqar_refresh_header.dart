@@ -157,16 +157,18 @@ class _AqarRefreshHeaderState extends State<AqarRefreshHeader>
                         height: 40,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF162033),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF162033)
+                              : Colors.white,
                           border: Border.all(
                             color: widget.success
                                 ? const Color(0xFFFFF176)
-                                : const Color(0xFFD4AF37),
+                                : const Color(0xFFC5A16B),
                             width: widget.success ? 2.0 : 1.2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFD4AF37).withValues(
+                              color: const Color(0xFFC5A16B).withValues(
                                 alpha: widget.refreshing ? .20 : .10,
                               ),
                               blurRadius: widget.refreshing ? 12 : 7,
@@ -198,7 +200,7 @@ class _AqarRefreshHeaderState extends State<AqarRefreshHeader>
                                   end: Alignment.bottomRight,
                                   colors: [
                                     Color(0xFFFFF4C2),
-                                    Color(0xFFD4AF37),
+                                    Color(0xFFC5A16B),
                                     Color(0xFF8C6A00),
                                   ],
                                 ),

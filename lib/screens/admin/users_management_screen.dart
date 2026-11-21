@@ -57,9 +57,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         key: _pageKey, query: _usersQuery, pageSize: 30, builder: builder);
   }
 
-  static const _bg = Color(0xff0F172A);
-  static const _card = Color(0xff1E293B);
-  static const _gold = Color(0xffD4AF37);
+  static const _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _bg => _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   final TextEditingController searchController = TextEditingController();
 
@@ -415,10 +417,10 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
       selectedColor: _gold,
       backgroundColor: _card,
       side: BorderSide(
-        color: selected ? _gold : Colors.white.withValues(alpha: .08),
+        color: selected ? _gold : _onSurface.withValues(alpha: .08),
       ),
       labelStyle: TextStyle(
-        color: selected ? Colors.black : Colors.white70,
+        color: selected ? Colors.black : _onSurface.withValues(alpha: 0.70),
         fontWeight: FontWeight.w800,
         fontSize: 11,
       ),
@@ -547,11 +549,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                 const SizedBox(height: 4),
                 Expanded(
                   child: docs.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'لا توجد نتائج مطابقة',
                             style: TextStyle(
-                              color: Colors.white60,
+                              color: _onSurface.withValues(alpha: 0.60),
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                             ),
@@ -577,11 +579,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                 border: Border.all(
                                   color: isAdmin
                                       ? _gold.withValues(alpha: .24)
-                                      : Colors.white.withValues(alpha: .06),
+                                      : _onSurface.withValues(alpha: .06),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: .12),
+                                    color: Colors.black.withValues(alpha: _isDark ? .12 : .05),
                                     blurRadius: 12,
                                     offset: const Offset(0, 5),
                                   ),
@@ -608,8 +610,8 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
+                                                  style: TextStyle(
+                                                    color: _onSurface,
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w900,
                                                   ),
@@ -627,7 +629,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                                       ? _gold.withValues(
                                                           alpha: .14,
                                                         )
-                                                      : Colors.white.withValues(
+                                                      : _onSurface.withValues(
                                                           alpha: .06,
                                                         ),
                                                   borderRadius:
@@ -638,7 +640,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                                   style: TextStyle(
                                                     color: isAdmin
                                                         ? _gold
-                                                        : Colors.white54,
+                                                        : _onSurface.withValues(alpha: 0.54),
                                                     fontSize: 9,
                                                     fontWeight: FontWeight.w800,
                                                   ),
@@ -652,8 +654,8 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                               phone,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: Colors.white70,
+                                              style: TextStyle(
+                                                color: _onSurface.withValues(alpha: 0.70),
                                                 fontSize: 11,
                                               ),
                                             ),
@@ -664,8 +666,8 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                               email,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: Colors.white38,
+                                              style: TextStyle(
+                                                color: _onSurface.withValues(alpha: 0.45),
                                                 fontSize: 10,
                                               ),
                                             ),
@@ -678,9 +680,9 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                       tooltip: 'إدارة المستخدم',
                                       color: _card,
                                       enabled: !_busy,
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.more_vert_rounded,
-                                        color: Colors.white60,
+                                        color: _onSurface.withValues(alpha: 0.60),
                                       ),
                                       onSelected: (value) {
                                         if (value == 'admin') {
@@ -780,13 +782,15 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xffD4AF37).withValues(alpha: .10),
+          color: const Color(0xffC5A16B).withValues(alpha: .10),
         ),
       ),
       child: Row(
@@ -794,7 +798,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(width: 2),
           Icon(
             icon,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
             size: 20,
           ),
           const SizedBox(width: 8),
@@ -806,8 +810,8 @@ class _StatCard extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: onSurface.withValues(alpha: 0.54),
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                   ),
@@ -815,8 +819,8 @@ class _StatCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: onSurface,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                   ),

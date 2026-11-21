@@ -32,10 +32,12 @@ class PriceTrendChart extends StatefulWidget {
 }
 
 class _PriceTrendChartState extends State<PriceTrendChart> {
-  static const Color _gold = Color(0xFFD4AF37);
-  static const Color _cardColor = Color(0xFF1E293B);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _red = Color(0xFFEF4444);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   int? _selectedIndex;
 
@@ -69,10 +71,10 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: _onSurface.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
+            color: Colors.black.withValues(alpha: _isDark ? 0.10 : 0.05),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -112,6 +114,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
                     painter: _PriceTrendPainter(
                       points: points,
                       selectedIndex: selectedIndex,
+                      isDark: _isDark,
                     ),
                     size: Size(constraints.maxWidth, constraints.maxHeight),
                   ),
@@ -125,7 +128,9 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
             const SizedBox(height: 10),
             Text(
               'الفجوات في الخط تمثل فترات لا تحتوي على بيانات كافية، ولا يتم وصلها حتى لا يظهر اتجاه مضلل.',
-              style: StatisticsTextStyles.caption,
+              style: StatisticsTextStyles.caption.copyWith(
+                color: _onSurface.withValues(alpha: 0.48),
+              ),
             ),
           ],
           const SizedBox(height: 14),
@@ -174,10 +179,10 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'حركة الأسعار',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _onSurface,
                   fontSize: StatisticsTextStyles.sectionTitleSize,
                   fontWeight: FontWeight.w800,
                 ),
@@ -186,7 +191,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
               Text(
                 'متوسط سعر العقارات خلال الفترة المحددة',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.48),
+                  color: _onSurface.withValues(alpha: 0.48),
                   fontSize: StatisticsTextStyles.captionSize,
                   fontWeight: FontWeight.w500,
                 ),
@@ -229,7 +234,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
         child: Text(
           _formatDate(points.first.date),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.42),
+            color: _onSurface.withValues(alpha: 0.42),
             fontSize: StatisticsTextStyles.captionSize,
             fontWeight: FontWeight.w500,
           ),
@@ -242,7 +247,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
         Text(
           _formatDate(points.first.date),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.42),
+            color: _onSurface.withValues(alpha: 0.42),
             fontSize: StatisticsTextStyles.captionSize,
             fontWeight: FontWeight.w500,
           ),
@@ -251,7 +256,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
         Text(
           _formatDate(points.last.date),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.42),
+            color: _onSurface.withValues(alpha: 0.42),
             fontSize: StatisticsTextStyles.captionSize,
             fontWeight: FontWeight.w500,
           ),
@@ -272,7 +277,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.035),
+        color: _onSurface.withValues(alpha: 0.035),
         borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
@@ -288,7 +293,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
             width: 1,
             height: 30,
             margin: const EdgeInsets.symmetric(horizontal: 8),
-            color: Colors.white.withValues(alpha: 0.06),
+            color: _onSurface.withValues(alpha: 0.06),
           ),
           Expanded(
             child: _ChartMetric(
@@ -309,7 +314,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: _onSurface.withValues(alpha: 0.06)),
       ),
       child: Column(
         children: [
@@ -327,10 +332,10 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'لا تتوفر حركة أسعار',
             style: TextStyle(
-              color: Colors.white,
+              color: _onSurface,
               fontSize: StatisticsTextStyles.cardTitleSize,
               fontWeight: FontWeight.w700,
             ),
@@ -340,7 +345,7 @@ class _PriceTrendChartState extends State<PriceTrendChart> {
             'لا توجد بيانات زمنية كافية لإنشاء المخطط ضمن الفلاتر الحالية',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.45),
+              color: _onSurface.withValues(alpha: 0.45),
               fontSize: StatisticsTextStyles.captionSize,
               fontWeight: FontWeight.w500,
               height: 1.5,
@@ -438,10 +443,12 @@ class _SelectedPointCard extends StatelessWidget {
 
   const _SelectedPointCard({required this.point});
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -461,7 +468,7 @@ class _SelectedPointCard extends StatelessWidget {
                 Text(
                   _formatDate(point.date),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.55),
+                    color: onSurface.withValues(alpha: 0.55),
                     fontSize: StatisticsTextStyles.captionSize,
                     fontWeight: FontWeight.w500,
                   ),
@@ -470,8 +477,8 @@ class _SelectedPointCard extends StatelessWidget {
                 Text(
                   '${_formatFullPrice(point.averagePrice)} د.ع',
                   textDirection: TextDirection.rtl,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: onSurface,
                     fontSize: StatisticsTextStyles.bodySize,
                     fontWeight: FontWeight.w800,
                   ),
@@ -482,13 +489,13 @@ class _SelectedPointCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '${point.propertyCount} عقار',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.62),
+                color: onSurface.withValues(alpha: 0.62),
                 fontSize: StatisticsTextStyles.captionSize,
                 fontWeight: FontWeight.w600,
               ),
@@ -536,10 +543,12 @@ class _ChartMetric extends StatelessWidget {
     required this.icon,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Row(
       children: [
         Icon(icon, color: _gold, size: 15),
@@ -551,7 +560,7 @@ class _ChartMetric extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.38),
+                  color: onSurface.withValues(alpha: 0.42),
                   fontSize: StatisticsTextStyles.captionSize,
                   fontWeight: FontWeight.w500,
                 ),
@@ -561,8 +570,8 @@ class _ChartMetric extends StatelessWidget {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: StatisticsTextStyles.secondarySize,
                   fontWeight: FontWeight.w700,
                 ),
@@ -578,10 +587,15 @@ class _ChartMetric extends StatelessWidget {
 class _PriceTrendPainter extends CustomPainter {
   final List<PriceHistoryPoint> points;
   final int? selectedIndex;
+  final bool isDark;
 
-  const _PriceTrendPainter({required this.points, required this.selectedIndex});
+  const _PriceTrendPainter({
+    required this.points,
+    required this.selectedIndex,
+    this.isDark = true,
+  });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -617,8 +631,9 @@ class _PriceTrendPainter extends CustomPainter {
       maximum += padding;
     }
 
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.055)
+      ..color = onSurface.withValues(alpha: 0.06)
       ..strokeWidth = 1;
 
     for (var i = 0; i <= 4; i++) {
@@ -685,7 +700,7 @@ class _PriceTrendPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final pointBorderPaint = Paint()
-      ..color = const Color(0xFF1E293B)
+      ..color = isDark ? const Color(0xFF1E293B) : Colors.white
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -721,6 +736,7 @@ class _PriceTrendPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PriceTrendPainter oldDelegate) {
     return oldDelegate.points != points ||
-        oldDelegate.selectedIndex != selectedIndex;
+        oldDelegate.selectedIndex != selectedIndex ||
+        oldDelegate.isDark != isDark;
   }
 }

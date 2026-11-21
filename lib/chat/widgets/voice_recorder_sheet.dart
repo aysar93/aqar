@@ -112,23 +112,30 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-      child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.mic_none_rounded,
-                color: Color(0xFFD4AF37), size: 42),
-            const SizedBox(height: 12),
-            Text(_recording ? 'جارٍ التسجيل' : 'معاينة الرسالة الصوتية',
-                style: const TextStyle(color: Colors.white, fontSize: 18)),
-            Text(
-                '${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} / ${widget.maxSeconds ~/ 60}:${(widget.maxSeconds % 60).toString().padLeft(2, '0')}',
-                style: const TextStyle(color: Colors.white60)),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.white70)),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SafeArea(
+        child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.mic_none_rounded,
+                  color: Color(0xFFC5A16B), size: 42),
+              const SizedBox(height: 12),
+              Text(_recording ? 'جارٍ التسجيل' : 'معاينة الرسالة الصوتية',
+                  style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontSize: 18)),
+              Text(
+                  '${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')} / ${widget.maxSeconds ~/ 60}:${(widget.maxSeconds % 60).toString().padLeft(2, '0')}',
+                  style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.black54)),
+              if (_error != null)
+                Text(_error!,
+                    style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54)),
             const SizedBox(height: 16),
             if (_busy)
-              const CircularProgressIndicator(color: Color(0xFFD4AF37))
+              const CircularProgressIndicator(color: Color(0xFFC5A16B))
             else if (_recording)
               OutlinedButton.icon(
                   onPressed: _stop,
@@ -160,8 +167,9 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
                     icon: const Icon(Icons.send),
                     label: const Text('إرسال')),
               ]),
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('إلغاء')),
-          ])));
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('إلغاء')),
+            ])));
+  }
 }

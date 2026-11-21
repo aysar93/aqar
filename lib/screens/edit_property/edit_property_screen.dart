@@ -372,30 +372,33 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
     final progress = (currentStep + 1) / totalSteps;
 
     return PopScope(
       canPop: !saving,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: bgColor,
         appBar: AppBar(
           elevation: 0,
           centerTitle: true,
-          backgroundColor: const Color(0xff0F172A),
+          backgroundColor: bgColor,
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
             onPressed: saving ? null : previousStep,
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
+              color: onSurface,
             ),
           ),
           title: Column(
             children: [
-              const Text(
+              Text(
                 'تعديل العقار',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: onSurface,
                   fontSize: 19,
                   fontWeight: FontWeight.bold,
                 ),
@@ -403,8 +406,8 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
               const SizedBox(height: 2),
               Text(
                 stepTitle,
-                style: const TextStyle(
-                  color: Colors.white54,
+                style: TextStyle(
+                  color: onSurface.withValues(alpha: 0.54),
                   fontSize: 11,
                 ),
               ),
@@ -419,7 +422,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
                 child: Text(
                   '${currentStep + 1}/$totalSteps',
                   style: const TextStyle(
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -447,9 +450,9 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 5,
-                    backgroundColor: Colors.white10,
+                    backgroundColor: onSurface.withValues(alpha: 0.10),
                     valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xffD4AF37),
+                      Color(0xffC5A16B),
                     ),
                   ),
                 ),
@@ -483,6 +486,8 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
   // =========================
 
   Widget _bottomNavigation() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final isLastStep = currentStep == totalSteps - 1;
 
     return Container(
@@ -493,15 +498,15 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         16,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: Colors.white.withValues(alpha: .06),
+            color: onSurface.withValues(alpha: .06),
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .20),
+            color: Colors.black.withValues(alpha: isDark ? .20 : .06),
             blurRadius: 18,
             offset: const Offset(0, -4),
           ),
@@ -528,9 +533,9 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
                   currentStep == 0 ? 'إلغاء' : 'السابق',
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white70,
-                  side: const BorderSide(
-                    color: Colors.white24,
+                  foregroundColor: onSurface.withValues(alpha: 0.70),
+                  side: BorderSide(
+                    color: onSurface.withValues(alpha: 0.24),
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -555,10 +560,10 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
                           ? saveChanges
                           : nextStep,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xffD4AF37),
+                    backgroundColor: const Color(0xffC5A16B),
                     foregroundColor: Colors.black,
                     disabledBackgroundColor:
-                        const Color(0xffD4AF37).withValues(alpha: .45),
+                        const Color(0xffC5A16B).withValues(alpha: .45),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(

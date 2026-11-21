@@ -19,28 +19,30 @@ class AreaStatisticsCard extends StatelessWidget {
     this.onTap,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _red = Color(0xFFEF4444);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final content = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
+          color: onSurface.withValues(
             alpha: 0.06,
           ),
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
-              alpha: 0.10,
+              alpha: isDark ? 0.10 : 0.05,
             ),
             blurRadius: 14,
             offset: const Offset(0, 6),
@@ -50,17 +52,17 @@ class AreaStatisticsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
+          _buildHeader(onSurface),
           const SizedBox(height: 15),
           Divider(
             height: 1,
             thickness: 1,
-            color: Colors.white.withValues(
+            color: onSurface.withValues(
               alpha: 0.06,
             ),
           ),
           const SizedBox(height: 15),
-          _buildAveragePrice(),
+          _buildAveragePrice(onSurface),
           const SizedBox(height: 15),
           Row(
             children: [
@@ -79,7 +81,7 @@ class AreaStatisticsCard extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(
                   horizontal: 10,
                 ),
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.06,
                 ),
               ),
@@ -94,13 +96,13 @@ class AreaStatisticsCard extends StatelessWidget {
           ),
           if (statistics.hasPreviousPeriodData) ...[
             const SizedBox(height: 15),
-            _buildTrend(),
+            _buildTrend(onSurface),
           ],
           if (statistics.hasPricePerSquareMeter &&
               statistics.pricePerSquareMeterSampleCount <
                   statistics.propertyCount) ...[
             const SizedBox(height: 11),
-            _buildPricePerMeterSampleNote(),
+            _buildPricePerMeterSampleNote(onSurface),
           ],
         ],
       ),
@@ -120,7 +122,7 @@ class AreaStatisticsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Color onSurface) {
     return Row(
       children: [
         Container(
@@ -148,8 +150,8 @@ class AreaStatisticsCard extends StatelessWidget {
                 statistics.areaName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: StatisticsTextStyles.sectionTitleSize,
                   fontWeight: FontWeight.w800,
                 ),
@@ -160,7 +162,7 @@ class AreaStatisticsCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.45,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
@@ -178,7 +180,7 @@ class AreaStatisticsCard extends StatelessWidget {
           const SizedBox(width: 6),
           Icon(
             Icons.keyboard_arrow_left_rounded,
-            color: Colors.white.withValues(
+            color: onSurface.withValues(
               alpha: 0.42,
             ),
             size: 21,
@@ -188,7 +190,7 @@ class AreaStatisticsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAveragePrice() {
+  Widget _buildAveragePrice(Color onSurface) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -199,7 +201,7 @@ class AreaStatisticsCard extends StatelessWidget {
               Text(
                 'متوسط سعر العقار',
                 style: TextStyle(
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.45,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
@@ -214,8 +216,8 @@ class AreaStatisticsCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                 ),
@@ -224,7 +226,7 @@ class AreaStatisticsCard extends StatelessWidget {
               Text(
                 'دينار عراقي',
                 style: TextStyle(
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.38,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
@@ -242,7 +244,7 @@ class AreaStatisticsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTrend() {
+  Widget _buildTrend(Color onSurface) {
     final increasing = statistics.isPriceIncreasing;
     final decreasing = statistics.isPriceDecreasing;
 
@@ -289,7 +291,7 @@ class AreaStatisticsCard extends StatelessWidget {
             child: Text(
               description,
               style: TextStyle(
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.58,
                 ),
                 fontSize: StatisticsTextStyles.secondarySize,
@@ -311,14 +313,14 @@ class AreaStatisticsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPricePerMeterSampleNote() {
+  Widget _buildPricePerMeterSampleNote(Color onSurface) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           Icons.info_outline_rounded,
-          color: Colors.white.withValues(
-            alpha: 0.34,
+          color: onSurface.withValues(
+            alpha: 0.42,
           ),
           size: 14,
         ),
@@ -329,8 +331,8 @@ class AreaStatisticsCard extends StatelessWidget {
             '${statistics.pricePerSquareMeterSampleCount} '
             'من أصل ${statistics.propertyCount} عقار',
             style: TextStyle(
-              color: Colors.white.withValues(
-                alpha: 0.36,
+              color: onSurface.withValues(
+                alpha: 0.44,
               ),
               fontSize: StatisticsTextStyles.captionSize,
               fontWeight: FontWeight.w500,
@@ -435,10 +437,12 @@ class _AreaMetric extends StatelessWidget {
     required this.icon,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Row(
       children: [
         Container(
@@ -466,8 +470,8 @@ class _AreaMetric extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withValues(
-                    alpha: 0.38,
+                  color: onSurface.withValues(
+                    alpha: 0.44,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
                   fontWeight: FontWeight.w500,
@@ -479,8 +483,8 @@ class _AreaMetric extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: StatisticsTextStyles.secondarySize,
                   fontWeight: FontWeight.w700,
                 ),
@@ -500,7 +504,7 @@ class _TrendBadge extends StatelessWidget {
     required this.percentage,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _red = Color(0xFFEF4444);
 
@@ -570,7 +574,7 @@ class _RankBadge extends StatelessWidget {
     required this.rank,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {

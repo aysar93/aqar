@@ -13,6 +13,8 @@ class ChangeAvailabilitySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final statuses = {
       "available": "متاح",
       "reserved": "محجوز",
@@ -26,9 +28,10 @@ class ChangeAvailabilitySheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               "حالة العقار",
               style: TextStyle(
+                color: onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -40,9 +43,12 @@ class ChangeAvailabilitySheet extends StatelessWidget {
                   item.key == currentStatus
                       ? Icons.radio_button_checked
                       : Icons.radio_button_off,
-                  color: const Color(0xffD4AF37),
+                  color: const Color(0xffC5A16B),
                 ),
-                title: Text(item.value),
+                title: Text(
+                  item.value,
+                  style: TextStyle(color: onSurface),
+                ),
                 onTap: () async {
                   await FirebaseFirestore.instance
                       .collection("properties")

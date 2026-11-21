@@ -17,12 +17,12 @@ class OfficeVerifiedBadge extends StatelessWidget {
         vertical: 5,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFD4AF37).withValues(
+        color: const Color(0xFFC5A16B).withValues(
           alpha: 0.12,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFD4AF37).withValues(
+          color: const Color(0xFFC5A16B).withValues(
             alpha: 0.45,
           ),
           width: 0.8,
@@ -35,7 +35,7 @@ class OfficeVerifiedBadge extends StatelessWidget {
             width: 17,
             height: 17,
             decoration: const BoxDecoration(
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC5A16B),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -48,7 +48,7 @@ class OfficeVerifiedBadge extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC5A16B),
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),

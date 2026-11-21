@@ -24,9 +24,15 @@ class PropertyRequestDetailsScreen extends StatefulWidget {
 
 class _PropertyRequestDetailsScreenState
     extends State<PropertyRequestDetailsScreen> {
-  static const Color _gold = Color(0xffD4AF37);
-  static const Color _background = Color(0xff0F172A);
-  static const Color _card = Color(0xff1E293B);
+  static const Color _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? Colors.white70 : Colors.black54;
+  Color get _textMuted => _isDark ? Colors.white54 : Colors.black45;
+  Color get _borderSubtle => _isDark ? Colors.white10 : Colors.black12;
 
   bool _isAdmin = false;
 
@@ -80,10 +86,10 @@ class _PropertyRequestDetailsScreenState
           textDirection: ui.TextDirection.rtl,
           child: AlertDialog(
             backgroundColor: _card,
-            title: const Text(
+            title: Text(
               'حذف الطلب',
               style: TextStyle(
-                color: Colors.white,
+                color: _textPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -91,8 +97,8 @@ class _PropertyRequestDetailsScreenState
               'هل أنت متأكد من حذف طلب $propertyType نهائيًا؟\n\n'
               'سيختفي الطلب من قسم مطلوب على عقارات الانبار، '
               'ولا يمكن التراجع عن الحذف',
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: _textSecondary,
                 height: 1.6,
               ),
             ),
@@ -104,10 +110,10 @@ class _PropertyRequestDetailsScreenState
                     false,
                   );
                 },
-                child: const Text(
+                child: Text(
                   'إلغاء',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: _textSecondary,
                   ),
                 ),
               ),
@@ -193,11 +199,12 @@ class _PropertyRequestDetailsScreenState
           backgroundColor: _background,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
-          foregroundColor: Colors.white,
+          foregroundColor: _textPrimary,
           centerTitle: true,
-          title: const Text(
+          title: Text(
             "تفاصيل الطلب",
             style: TextStyle(
+              color: _textPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -207,9 +214,9 @@ class _PropertyRequestDetailsScreenState
               PopupMenuButton<String>(
                 tooltip: 'إدارة الطلب',
                 color: _card,
-                icon: const Icon(
+                icon: Icon(
                   Icons.more_vert_rounded,
-                  color: Colors.white,
+                  color: _textPrimary,
                 ),
                 onSelected: (value) {
                   if (value == 'delete') {
@@ -317,8 +324,8 @@ class _PropertyRequestDetailsScreenState
                       ),
                       child: Text(
                         description,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: _textSecondary,
                           fontSize: 14,
                           height: 1.8,
                         ),
@@ -343,8 +350,8 @@ class _PropertyRequestDetailsScreenState
                       ),
                     ),
                   if (phone.isNotEmpty && whatsapp.isNotEmpty)
-                    const Divider(
-                      color: Colors.white10,
+                    Divider(
+                      color: _borderSubtle,
                       height: 1,
                     ),
                   if (whatsapp.isNotEmpty)
@@ -358,14 +365,14 @@ class _PropertyRequestDetailsScreenState
                       ),
                     ),
                   if (phone.isEmpty && whatsapp.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
                         vertical: 12,
                       ),
                       child: Text(
                         "لا توجد معلومات تواصل متاحة",
                         style: TextStyle(
-                          color: Colors.white54,
+                          color: _textMuted,
                           fontSize: 13,
                         ),
                       ),
@@ -377,8 +384,8 @@ class _PropertyRequestDetailsScreenState
                 Center(
                   child: Text(
                     "رقم الطلب: #${_toArabicDigits(requestNumber)}",
-                    style: const TextStyle(
-                      color: Colors.white38,
+                    style: TextStyle(
+                      color: _textMuted,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -457,8 +464,8 @@ class _PropertyRequestDetailsScreenState
                         requestType,
                         propertyType,
                       ),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _textPrimary,
                         fontSize: 21,
                         fontWeight: FontWeight.w800,
                       ),
@@ -478,9 +485,9 @@ class _PropertyRequestDetailsScreenState
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(
-                  alpha: .12,
-                ),
+                color: _isDark
+                    ? Colors.black.withValues(alpha: .12)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Row(
@@ -494,8 +501,8 @@ class _PropertyRequestDetailsScreenState
                   Expanded(
                     child: Text(
                       location,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: _textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -599,7 +606,7 @@ class _PropertyRequestDetailsScreenState
         color: _card,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: Colors.white.withValues(alpha: .06),
+          color: _borderSubtle,
         ),
       ),
       child: Column(
@@ -623,8 +630,8 @@ class _PropertyRequestDetailsScreenState
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: _textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -655,8 +662,8 @@ class _PropertyRequestDetailsScreenState
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: _textMuted,
                     fontSize: 13,
                   ),
                 ),
@@ -666,8 +673,8 @@ class _PropertyRequestDetailsScreenState
                 child: Text(
                   value,
                   textAlign: TextAlign.left,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: _textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -677,8 +684,8 @@ class _PropertyRequestDetailsScreenState
           ),
         ),
         if (showDivider)
-          const Divider(
-            color: Colors.white10,
+          Divider(
+            color: _borderSubtle,
             height: 1,
           ),
       ],
@@ -720,8 +727,8 @@ class _PropertyRequestDetailsScreenState
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: _textMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -730,8 +737,8 @@ class _PropertyRequestDetailsScreenState
                     value,
                     textDirection: ui.TextDirection.ltr,
                     textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: _textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),

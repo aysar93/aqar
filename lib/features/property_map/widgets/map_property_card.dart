@@ -17,11 +17,13 @@ class MapPropertyCard extends StatelessWidget {
     this.onClose,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _card = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -30,7 +32,7 @@ class MapPropertyCard extends StatelessWidget {
         child: Ink(
           height: 132,
           decoration: BoxDecoration(
-            color: _card,
+            color: isDark ? _card : Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: _gold.withValues(alpha: 0.35),
@@ -88,8 +90,8 @@ class MapPropertyCard extends StatelessWidget {
                                   : property.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: onSurface,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -99,11 +101,11 @@ class MapPropertyCard extends StatelessWidget {
                             InkWell(
                               onTap: onClose,
                               borderRadius: BorderRadius.circular(20),
-                              child: const Padding(
-                                padding: EdgeInsets.all(3),
+                              child: Padding(
+                                padding: const EdgeInsets.all(3),
                                 child: Icon(
                                   Icons.close_rounded,
-                                  color: Color(0xFF94A3B8),
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                   size: 18,
                                 ),
                               ),
@@ -124,8 +126,8 @@ class MapPropertyCard extends StatelessWidget {
                               property.location.displayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF94A3B8),
+                              style: TextStyle(
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 fontSize: 11,
                               ),
                             ),
@@ -239,7 +241,7 @@ class _PropertyImage extends StatelessWidget {
             height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC5A16B),
             ),
           ),
         ),
@@ -270,7 +272,7 @@ class _PropertyImage extends StatelessWidget {
       alignment: Alignment.center,
       child: const Icon(
         Icons.home_work_rounded,
-        color: Color(0xFFD4AF37),
+        color: Color(0xFFC5A16B),
         size: 38,
       ),
     );

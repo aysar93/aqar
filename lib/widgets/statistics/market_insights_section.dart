@@ -21,13 +21,15 @@ class MarketInsightsSection extends StatelessWidget {
     this.maxVisibleItems,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     if (insights.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(isDark, onSurface);
     }
 
     final visibleInsights = _visibleInsights;
@@ -35,7 +37,7 @@ class MarketInsightsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(),
+        _buildHeader(onSurface),
         const SizedBox(height: 14),
         ...List.generate(
           visibleInsights.length,
@@ -56,7 +58,7 @@ class MarketInsightsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Color onSurface) {
     return Row(
       children: [
         Container(
@@ -80,10 +82,10 @@ class MarketInsightsSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'مؤشرات السوق',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: onSurface,
                   fontSize: StatisticsTextStyles.sectionTitleSize,
                   fontWeight: FontWeight.w800,
                 ),
@@ -92,7 +94,7 @@ class MarketInsightsSection extends StatelessWidget {
               Text(
                 'قراءة مبسطة للبيانات ضمن الفلاتر الحالية',
                 style: TextStyle(
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.46,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
@@ -124,7 +126,7 @@ class MarketInsightsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isDark, Color onSurface) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -132,10 +134,10 @@ class MarketInsightsSection extends StatelessWidget {
         vertical: 26,
       ),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
+          color: onSurface.withValues(
             alpha: 0.06,
           ),
         ),
@@ -148,10 +150,10 @@ class MarketInsightsSection extends StatelessWidget {
             color: _gold.withValues(alpha: 0.60),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'لا توجد مؤشرات متاحة',
             style: TextStyle(
-              color: Colors.white,
+              color: onSurface,
               fontSize: StatisticsTextStyles.cardTitleSize,
               fontWeight: FontWeight.w700,
             ),
@@ -161,7 +163,7 @@ class MarketInsightsSection extends StatelessWidget {
             'ستظهر مؤشرات السوق عند توفر بيانات كافية للتحليل',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.44,
               ),
               fontSize: StatisticsTextStyles.captionSize,
@@ -192,7 +194,7 @@ class _MarketInsightCard extends StatelessWidget {
     required this.insight,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _red = Color(0xFFEF4444);
   static const Color _orange = Color(0xFFF59E0B);
@@ -200,6 +202,8 @@ class _MarketInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final accent = _accentColor;
 
     return Container(
@@ -248,8 +252,8 @@ class _MarketInsightCard extends StatelessWidget {
                 Text(
                   insight.description,
                   style: TextStyle(
-                    color: Colors.white.withValues(
-                      alpha: 0.60,
+                    color: onSurface.withValues(
+                      alpha: 0.65,
                     ),
                     fontSize: StatisticsTextStyles.secondarySize,
                     fontWeight: FontWeight.w500,
@@ -475,18 +479,20 @@ class _MetadataChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 7,
         vertical: 5,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(
+        color: onSurface.withValues(
           alpha: 0.04,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
+          color: onSurface.withValues(
             alpha: 0.055,
           ),
         ),
@@ -497,16 +503,16 @@ class _MetadataChip extends StatelessWidget {
           Icon(
             icon,
             size: 12,
-            color: Colors.white.withValues(
-              alpha: 0.40,
+            color: onSurface.withValues(
+              alpha: 0.45,
             ),
           ),
           const SizedBox(width: 4),
           Text(
             text,
             style: TextStyle(
-              color: Colors.white.withValues(
-                alpha: 0.50,
+              color: onSurface.withValues(
+                alpha: 0.55,
               ),
               fontSize: StatisticsTextStyles.captionSize,
               fontWeight: FontWeight.w600,

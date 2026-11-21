@@ -217,63 +217,67 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget build(BuildContext context) {
     final user = _user;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (user == null) {
       return Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
           centerTitle: true,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          title: const Text(
+          title: Text(
             "المفضلة",
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
             ),
           ),
         ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 35),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffD4AF37).withValues(alpha: .10),
-                    shape: BoxShape.circle,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 35),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: const Color(0xffC5A16B).withValues(alpha: .10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.favorite_border_rounded,
+                      size: 52,
+                      color: Color(0xffC5A16B),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.favorite_border_rounded,
-                    size: 52,
-                    color: Color(0xffD4AF37),
+                  const SizedBox(height: 25),
+                  Text(
+                    "المفضلة خاصة بالمستخدمين المسجلين",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 25),
-                const Text(
-                  "المفضلة خاصة بالمستخدمين المسجلين",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 12),
+                  Text(
+                    "سجل الدخول لحفظ العقارات المفضلة والرجوع إليها في أي وقت",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      fontSize: 15,
+                      height: 1.7,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "سجل الدخول لحفظ العقارات المفضلة والرجوع إليها في أي وقت",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 15,
-                    height: 1.7,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -283,18 +287,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
           centerTitle: true,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          title: const Text("المفضلة",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          bottom: const TabBar(
-            indicatorColor: Color(0xffD4AF37),
-            labelColor: Color(0xffD4AF37),
-            unselectedLabelColor: Colors.white60,
+          title: Text("المفضلة",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              )),
+          bottom: TabBar(
+            indicatorColor: const Color(0xffC5A16B),
+            labelColor: const Color(0xffC5A16B),
+            unselectedLabelColor:
+                isDark ? Colors.white60 : const Color(0xFF64748B),
             tabs: [
               Tab(text: 'العقارات', icon: Icon(Icons.home_work_rounded)),
               Tab(text: 'الريلز', icon: Icon(Icons.video_collection_rounded)),
@@ -313,32 +322,40 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         key: ValueKey(_actor),
         stream: _savedReels,
         builder: (context, snapshot) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           if (snapshot.hasError) {
             return const Center(child: Text('تعذر تحميل الريلز المحفوظة'));
           }
           if (!snapshot.hasData) {
             return const Center(
-                child: CircularProgressIndicator(color: Color(0xffD4AF37)));
+                child: CircularProgressIndicator(color: Color(0xffC5A16B)));
           }
           final reels = snapshot.data!;
           if (reels.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.bookmark_border_rounded,
-                      size: 78, color: Colors.white24),
-                  SizedBox(height: 18),
-                  Text('لا توجد ريلز محفوظة',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  Text('اضغط زر الحفظ داخل أي ريل وسيظهر هنا تلقائيًا',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60)),
-                ]),
+            return Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.bookmark_border_rounded,
+                        size: 78,
+                        color: isDark ? Colors.white24 : const Color(0xFF94A3B8)),
+                    const SizedBox(height: 18),
+                    Text('لا توجد ريلز محفوظة',
+                        style: TextStyle(
+                            color:
+                                isDark ? Colors.white : const Color(0xFF0F172A),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('اضغط زر الحفظ داخل أي ريل وسيظهر هنا تلقائيًا',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: isDark
+                                ? Colors.white60
+                                : const Color(0xFF64748B))),
+                  ]),
+                ),
               ),
             );
           }
@@ -349,7 +366,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             itemBuilder: (context, index) {
               final reel = reels[index];
               return Card(
-                color: const Color(0xff1E293B),
+                color: isDark ? const Color(0xff1E293B) : Colors.white,
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: () => Navigator.push(
@@ -367,12 +384,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             ? const ColoredBox(
                                 color: Colors.black26,
                                 child: Icon(Icons.play_circle_rounded,
-                                    color: Color(0xffD4AF37), size: 38))
+                                    color: Color(0xffC5A16B), size: 38))
                             : Image.network(reel.thumbnailUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => const Icon(
                                     Icons.play_circle_rounded,
-                                    color: Color(0xffD4AF37))),
+                                    color: Color(0xffC5A16B))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -383,13 +400,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             Text(reel.title,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
+                                style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white
+                                        : const Color(0xFF0F172A),
                                     fontWeight: FontWeight.bold)),
                             const SizedBox(height: 6),
                             Text(reel.category,
                                 style:
-                                    const TextStyle(color: Color(0xffD4AF37))),
+                                    const TextStyle(color: Color(0xffC5A16B))),
                           ],
                         ),
                       ),
@@ -398,7 +417,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         onPressed: () =>
                             ReelService.instance.toggleSave(reel.id),
                         icon: const Icon(Icons.bookmark_remove_rounded,
-                            color: Color(0xffD4AF37)),
+                            color: Color(0xffC5A16B)),
                       ),
                     ]),
                   ),
@@ -410,6 +429,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       );
 
   Widget _buildBody() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_loading) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -417,7 +437,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           SizedBox(height: 220),
           Center(
             child: CircularProgressIndicator(
-              color: Color(0xffD4AF37),
+              color: Color(0xffC5A16B),
             ),
           ),
         ],
@@ -435,27 +455,29 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           Icon(
             Icons.favorite_border_rounded,
             size: 90,
-            color: Colors.white.withValues(alpha: .15),
+            color: isDark
+                ? Colors.white.withValues(alpha: .15)
+                : const Color(0xFF64748B).withValues(alpha: .25),
           ),
           const SizedBox(height: 24),
-          const Center(
+          Center(
             child: Text(
               "لا توجد عقارات مفضلة",
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           const SizedBox(height: 10),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               "اضغط على أيقونة القلب داخل أي عقار\nوسيظهر هنا تلقائياً",
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white60,
+                color: isDark ? Colors.white60 : const Color(0xFF64748B),
                 fontSize: 15,
                 height: 1.6,
               ),
@@ -477,14 +499,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   children: [
                     Icon(
                       Icons.explore_rounded,
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                       size: 22,
                     ),
                     SizedBox(width: 10),
                     Text(
                       "استكشف العقارات",
                       style: TextStyle(
-                        color: Color(0xffD4AF37),
+                        color: Color(0xffC5A16B),
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         letterSpacing: .3,
@@ -527,7 +549,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                         ),
                       )
                     : const Icon(Icons.expand_more_rounded),
@@ -537,9 +559,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       : "عرض المزيد (${(_favoriteIds.length - _visibleCount).clamp(0, _pageSize)})",
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xffD4AF37),
+                  foregroundColor: const Color(0xffC5A16B),
                   side: BorderSide(
-                    color: const Color(0xffD4AF37).withValues(alpha: .45),
+                    color: const Color(0xffC5A16B).withValues(alpha: .45),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 22,

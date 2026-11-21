@@ -96,7 +96,7 @@ class OfficeLocationCard extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37).withValues(
+            color: const Color(0xFFC5A16B).withValues(
               alpha: 0.12,
             ),
             borderRadius: BorderRadius.circular(10),
@@ -104,7 +104,7 @@ class OfficeLocationCard extends StatelessWidget {
           child: const Icon(
             Icons.location_on_outlined,
             size: 19,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
           ),
         ),
       ],
@@ -215,7 +215,7 @@ class OfficeLocationCard extends StatelessWidget {
           Icon(
             icon,
             size: 19,
-            color: const Color(0xFFD4AF37),
+            color: const Color(0xFFC5A16B),
           ),
         ],
       ),
@@ -247,7 +247,7 @@ class OfficeLocationCard extends StatelessWidget {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFD4AF37),
+          backgroundColor: const Color(0xFFC5A16B),
           foregroundColor: const Color(0xFF0F172A),
           elevation: 0,
           shape: RoundedRectangleBorder(

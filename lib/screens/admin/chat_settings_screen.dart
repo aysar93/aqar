@@ -124,7 +124,11 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37), surface = Color(0xFF1E293B);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const gold = Color(0xFFC5A16B);
+    final surface = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final days = [
       'الاثنين',
       'الثلاثاء',
@@ -138,13 +142,16 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         textDirection: TextDirection.rtl,
         child: Theme(
             data: Theme.of(context).copyWith(
-                colorScheme: const ColorScheme.dark(
-                    primary: gold, secondary: gold, surface: surface)),
+                colorScheme: isDark
+                    ? ColorScheme.dark(
+                        primary: gold, secondary: gold, surface: surface)
+                    : ColorScheme.light(
+                        primary: gold, secondary: gold, surface: surface)),
             child: Scaffold(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: bgColor,
               appBar: AppBar(
-                  backgroundColor: const Color(0xFF0F172A),
-                  foregroundColor: Colors.white,
+                  backgroundColor: bgColor,
+                  foregroundColor: onSurface,
                   title: const Text('إعدادات المحادثات')),
               bottomNavigationBar: _loading || _error != null
                   ? null

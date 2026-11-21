@@ -18,7 +18,7 @@ class _ContentReportsScreenState extends State<ContentReportsScreen> {
   final _groups = <bool, List<ContentReport>>{};
   final _errors = <bool>{};
   String _type = 'all', _status = 'open', _search = '';
-  static const _gold = Color(0xffD4AF37);
+  static const _gold = Color(0xffC5A16B);
   @override
   void initState() {
     super.initState();

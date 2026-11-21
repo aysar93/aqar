@@ -14,24 +14,26 @@ class Step1AdType extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "نوع الإعلان",
             style: TextStyle(
-              color: Colors.white,
+              color: onSurface,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "اختر نوع الإعلان",
             style: TextStyle(
-              color: Colors.white60,
+              color: onSurface.withValues(alpha: 0.60),
               fontSize: 15,
             ),
           ),
@@ -47,19 +49,19 @@ class Step1AdType extends StatelessWidget {
 
                       onChanged();
                     },
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.sell_rounded,
                           size: 55,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                         ),
-                        SizedBox(height: 15),
+                        const SizedBox(height: 15),
                         Text(
                           "للبيع",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: onSurface,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
@@ -77,19 +79,19 @@ class Step1AdType extends StatelessWidget {
 
                       onChanged();
                     },
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.key_rounded,
                           size: 55,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                         ),
-                        SizedBox(height: 15),
+                        const SizedBox(height: 15),
                         Text(
                           "للإيجار",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: onSurface,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),

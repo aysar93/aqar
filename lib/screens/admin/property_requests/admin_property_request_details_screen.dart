@@ -19,7 +19,7 @@ class AdminPropertyRequestDetailsScreen extends StatefulWidget {
 
 class _AdminPropertyRequestDetailsScreenState
     extends State<AdminPropertyRequestDetailsScreen> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _background = Color(0xff0F172A);
   static const Color _card = Color(0xff1E293B);
 
@@ -1064,7 +1064,7 @@ class _SectionCard extends StatelessWidget {
     required this.child,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   static const Color _card = Color(0xff1E293B);
 

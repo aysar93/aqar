@@ -38,8 +38,10 @@ class AreasRankingSection extends StatefulWidget {
 }
 
 class _AreasRankingSectionState extends State<AreasRankingSection> {
-  static const Color _gold = Color(0xFFD4AF37);
-  static const Color _cardColor = Color(0xFF1E293B);
+  static const Color _gold = Color(0xFFC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   AreasRankingType _rankingType = AreasRankingType.averagePrice;
 
@@ -116,10 +118,10 @@ class _AreasRankingSectionState extends State<AreasRankingSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'ترتيب المناطق',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _onSurface,
                   fontSize: StatisticsTextStyles.sectionTitleSize,
                   fontWeight: FontWeight.w800,
                 ),
@@ -128,7 +130,7 @@ class _AreasRankingSectionState extends State<AreasRankingSection> {
               Text(
                 'مقارنة $count منطقة حسب بيانات السوق الحالية',
                 style: TextStyle(
-                  color: Colors.white.withValues(
+                  color: _onSurface.withValues(
                     alpha: 0.46,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
@@ -150,7 +152,7 @@ class _AreasRankingSectionState extends State<AreasRankingSection> {
         color: _cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(
+          color: _onSurface.withValues(
             alpha: 0.06,
           ),
         ),
@@ -256,7 +258,7 @@ class _AreasRankingSectionState extends State<AreasRankingSection> {
         color: _cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
+          color: _onSurface.withValues(
             alpha: 0.06,
           ),
         ),
@@ -269,10 +271,10 @@ class _AreasRankingSectionState extends State<AreasRankingSection> {
             size: 31,
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'لا توجد مناطق للمقارنة',
             style: TextStyle(
-              color: Colors.white,
+              color: _onSurface,
               fontSize: StatisticsTextStyles.cardTitleSize,
               fontWeight: FontWeight.w700,
             ),
@@ -282,7 +284,7 @@ class _AreasRankingSectionState extends State<AreasRankingSection> {
             'ستظهر مقارنة المناطق عند توفر بيانات كافية ضمن الفلاتر الحالية',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(
+              color: _onSurface.withValues(
                 alpha: 0.44,
               ),
               fontSize: StatisticsTextStyles.captionSize,
@@ -393,10 +395,12 @@ class _RankingButton extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -428,7 +432,7 @@ class _RankingButton extends StatelessWidget {
                 size: 17,
                 color: selected
                     ? _gold
-                    : Colors.white.withValues(
+                    : onSurface.withValues(
                         alpha: 0.45,
                       ),
               ),
@@ -441,7 +445,7 @@ class _RankingButton extends StatelessWidget {
                 style: TextStyle(
                   color: selected
                       ? _gold
-                      : Colors.white.withValues(
+                      : onSurface.withValues(
                           alpha: 0.55,
                         ),
                   fontSize: StatisticsTextStyles.secondarySize,

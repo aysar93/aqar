@@ -15,9 +15,11 @@ class AdminChatListScreen extends StatefulWidget {
 }
 
 class _AdminChatListScreenState extends State<AdminChatListScreen> {
-  static const _background = Color(0xff0F172A);
-  static const _card = Color(0xff1E293B);
-  static const _gold = Color(0xffD4AF37);
+  static const _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background => _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   String _search = '';
   int _tab = 0;
@@ -244,22 +246,22 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
                     MaterialPageRoute(
                         builder: (_) => const ChatSettingsScreen())))
           ],
-          title: const Column(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'المحادثات',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _onSurface,
                   fontSize: 21,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
                 'إدارة محادثات المستخدمين',
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: _onSurface.withValues(alpha: 0.54),
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -369,17 +371,17 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
         onChanged: (value) => setState(() => _search = value),
         textDirection: TextDirection.rtl,
         textInputAction: TextInputAction.search,
-        style: const TextStyle(color: Colors.white, fontSize: 13),
+        style: TextStyle(color: _onSurface, fontSize: 13),
         decoration: InputDecoration(
           hintText: 'ابحث باسم المستخدم أو رقم الهاتف',
-          hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+          hintStyle: TextStyle(color: _onSurface.withValues(alpha: 0.38), fontSize: 12),
           prefixIcon: const Icon(Icons.search_rounded, color: _gold, size: 21),
           suffixIcon: _search.isEmpty
               ? null
               : IconButton(
                   onPressed: () => setState(() => _search = ''),
-                  icon: const Icon(Icons.clear_rounded,
-                      color: Colors.white38, size: 19),
+                  icon: Icon(Icons.clear_rounded,
+                      color: _onSurface.withValues(alpha: 0.38), size: 19),
                   tooltip: 'مسح البحث',
                 ),
           filled: true,
@@ -388,11 +390,11 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
               const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.white.withValues(alpha: .06)),
+            borderSide: BorderSide(color: _onSurface.withValues(alpha: .06)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.white.withValues(alpha: .06)),
+            borderSide: BorderSide(color: _onSurface.withValues(alpha: .06)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -427,17 +429,17 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
             avatar: Icon(
               icons[index],
               size: 16,
-              color: selected ? Colors.black : Colors.white60,
+              color: selected ? Colors.black : _onSurface.withValues(alpha: 0.60),
             ),
             labelStyle: TextStyle(
-              color: selected ? Colors.black : Colors.white70,
+              color: selected ? Colors.black : _onSurface.withValues(alpha: 0.70),
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),
             selectedColor: _gold,
             backgroundColor: _card,
             side: BorderSide(
-              color: selected ? _gold : Colors.white.withValues(alpha: .07),
+              color: selected ? _gold : _onSurface.withValues(alpha: .07),
             ),
             onSelected: (_) => setState(() => _tab = index),
           );
@@ -470,8 +472,8 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
             const SizedBox(height: 14),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: _onSurface,
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
@@ -480,8 +482,8 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: _onSurface.withValues(alpha: 0.54),
                 fontSize: 11,
                 height: 1.5,
               ),
@@ -507,7 +509,7 @@ class _ChatTile extends StatelessWidget {
   });
 
   static const _card = Color(0xff1E293B);
-  static const _gold = Color(0xffD4AF37);
+  static const _gold = Color(0xffC5A16B);
 
   String _firstNonEmpty(Iterable<dynamic> values, [String fallback = '']) {
     for (final value in values) {
@@ -547,6 +549,9 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? _card : Colors.white;
     final data = doc.data();
     final userId = (data['userId'] ?? doc.id).toString();
     final user = users[userId];
@@ -571,16 +576,16 @@ class _ChatTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
           decoration: BoxDecoration(
-            color: _card,
+            color: cardColor,
             borderRadius: BorderRadius.circular(17),
             border: Border.all(
               color: unread > 0
                   ? _gold.withValues(alpha: .24)
-                  : Colors.white.withValues(alpha: .055),
+                  : onSurface.withValues(alpha: .06),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .10),
+                color: Colors.black.withValues(alpha: isDark ? .10 : .05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -611,8 +616,8 @@ class _ChatTile extends StatelessWidget {
                                 name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: onSurface,
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -636,8 +641,8 @@ class _ChatTile extends StatelessWidget {
                             phone,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 9.5),
+                            style: TextStyle(
+                                color: onSurface.withValues(alpha: 0.45), fontSize: 9.5),
                           ),
                         ],
                         const SizedBox(height: 4),
@@ -646,7 +651,9 @@ class _ChatTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: unread > 0 ? Colors.white70 : Colors.white54,
+                            color: unread > 0
+                                ? onSurface.withValues(alpha: 0.78)
+                                : onSurface.withValues(alpha: 0.54),
                             fontSize: 10.5,
                             fontWeight:
                                 unread > 0 ? FontWeight.w700 : FontWeight.w500,
@@ -697,8 +704,8 @@ class _ChatTile extends StatelessWidget {
                         time,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 8.5),
+                        style: TextStyle(
+                            color: onSurface.withValues(alpha: 0.45), fontSize: 8.5),
                       ),
                     const SizedBox(height: 5),
                     if (unread > 0)
@@ -727,9 +734,9 @@ class _ChatTile extends StatelessWidget {
                       tooltip: 'خيارات المحادثة',
                       padding: EdgeInsets.zero,
                       iconSize: 19,
-                      icon: const Icon(Icons.more_vert_rounded,
-                          color: Colors.white38),
-                      color: _card,
+                      icon: Icon(Icons.more_vert_rounded,
+                          color: onSurface.withValues(alpha: 0.45)),
+                      color: cardColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(13),
                         side: BorderSide(color: _gold.withValues(alpha: .16)),
@@ -741,7 +748,7 @@ class _ChatTile extends StatelessWidget {
                         PopupMenuItem(
                           value: 'profile',
                           child: _menuRow(Icons.person_search_outlined,
-                              'عرض صفحة المستخدم'),
+                              'عرض صفحة المستخدم', color: onSurface.withValues(alpha: 0.78)),
                         ),
                         PopupMenuItem(
                           value: 'pin',
@@ -750,6 +757,7 @@ class _ChatTile extends StatelessWidget {
                                 ? Icons.push_pin_outlined
                                 : Icons.push_pin_rounded,
                             pinned ? 'إلغاء تثبيت المحادثة' : 'تثبيت المحادثة',
+                            color: onSurface.withValues(alpha: 0.78),
                           ),
                         ),
                         PopupMenuItem(
@@ -759,6 +767,7 @@ class _ChatTile extends StatelessWidget {
                                 ? Icons.unarchive_outlined
                                 : Icons.archive_outlined,
                             archived ? 'إلغاء الأرشفة' : 'أرشفة المحادثة',
+                            color: onSurface.withValues(alpha: 0.78),
                           ),
                         ),
                         PopupMenuItem(
@@ -768,6 +777,7 @@ class _ChatTile extends StatelessWidget {
                                 ? Icons.notifications_active_outlined
                                 : Icons.notifications_off_outlined,
                             muted ? 'إلغاء الكتم' : 'كتم المحادثة',
+                            color: onSurface.withValues(alpha: 0.78),
                           ),
                         ),
                         PopupMenuItem(
@@ -778,7 +788,7 @@ class _ChatTile extends StatelessWidget {
                                 : Icons.block_outlined,
                             blocked ? 'إلغاء حظر المستخدم' : 'حظر المستخدم',
                             color:
-                                blocked ? Colors.greenAccent : Colors.redAccent,
+                                blocked ? Colors.green : Colors.redAccent,
                           ),
                         ),
                       ],
@@ -910,7 +920,7 @@ class _UserAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: const Color(0xff0F172A),
         border: Border.all(
-          color: const Color(0xffD4AF37).withValues(alpha: .35),
+          color: const Color(0xffC5A16B).withValues(alpha: .35),
         ),
       ),
       child: ClipOval(
@@ -931,7 +941,7 @@ class _UserAvatar extends StatelessWidget {
       child: Text(
         first,
         style: const TextStyle(
-          color: Color(0xffD4AF37),
+          color: Color(0xffC5A16B),
           fontSize: 18,
           fontWeight: FontWeight.w900,
         ),

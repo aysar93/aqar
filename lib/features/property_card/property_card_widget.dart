@@ -17,8 +17,8 @@ class PropertyCardWidget extends StatelessWidget {
   static const _navy = Color(0xFF0F172A);
   static const _darkSlate = Color(0xFF1E293B);
   static const _slate = Color(0xFF29384F);
-  static const _gold = Color(0xFFD4AF37);
-  static const _brightGold = Color(0xFFFFD700);
+  static const _gold = Color(0xFFC5A16B);
+  static const _brightGold = Color(0xFFD8BD95);
 
   @override
   Widget build(BuildContext context) {

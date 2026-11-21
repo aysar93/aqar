@@ -72,13 +72,17 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
           borderRadius: AqarRadius.dialog(context),
           onTap: onTap,
           child: Card(
-            color: const Color(0xff1E293B),
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xff1E293B) : Colors.white,
             elevation: 10,
-            shadowColor: Colors.black.withValues(alpha: .35),
+            shadowColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withValues(alpha: .35)
+                : Colors.black.withValues(alpha: .06),
             shape: RoundedRectangleBorder(
               borderRadius: AqarRadius.dialog(context),
-              side: const BorderSide(
-                color: Color(0x22D4AF37),
+              side: BorderSide(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0x22C5A16B)
+                    : const Color(0xFFE2E8F0),
                 width: 1,
               ),
             ),
@@ -95,7 +99,7 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                               AqarRadius.dialog(context).topLeft.x),
                         ),
                         border: Border.all(
-                          color: const Color(0x30D4AF37),
+                          color: const Color(0x30C5A16B),
                           width: 1,
                         ),
                       ),
@@ -127,7 +131,7 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                                       height: 26,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Color(0xffD4AF37),
+                                        color: Color(0xffC5A16B),
                                       ),
                                     ),
                                   ),
@@ -276,7 +280,7 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xffD4AF37),
+                                color: const Color(0xffC5A16B),
                                 borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
@@ -327,7 +331,7 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                                     children: [
                                       const Icon(
                                         Icons.location_on_rounded,
-                                        color: Color(0xffD4AF37),
+                                        color: Color(0xffC5A16B),
                                         size: 15,
                                       ),
                                       const SizedBox(width: 4),
@@ -352,7 +356,7 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                                     iqd(property.price),
                                     textAlign: TextAlign.right,
                                     style: TextStyle(
-                                      color: const Color(0xffF8D86B),
+                                      color: const Color(0xffC5A16B),
                                       fontWeight: FontWeight.bold,
                                       fontSize: AqarText.price(context),
                                     ),

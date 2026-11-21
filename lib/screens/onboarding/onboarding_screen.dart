@@ -202,7 +202,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     width: currentPage == index ? 28 : 8,
                     decoration: BoxDecoration(
                       color: currentPage == index
-                          ? const Color(0xffD4AF37)
+                          ? const Color(0xffC5A16B)
                           : Colors.white24,
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -222,9 +222,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       child: OutlinedButton(
                         onPressed: finishIntro,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xffD4AF37),
+                          foregroundColor: const Color(0xffC5A16B),
                           side: const BorderSide(
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                             width: 1.5,
                           ),
                           minimumSize: const Size.fromHeight(56),
@@ -235,7 +235,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         child: const Text(
                           "تخطي",
                           style: TextStyle(
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                             fontSize: 18,
                           ),
                         ),
@@ -251,9 +251,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           );
                         },
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xffD4AF37),
+                          foregroundColor: const Color(0xffC5A16B),
                           side: const BorderSide(
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                             width: 1.5,
                           ),
                           minimumSize: const Size.fromHeight(56),
@@ -264,7 +264,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         child: const Text(
                           "السابق",
                           style: TextStyle(
-                            color: Color(0xffD4AF37),
+                            color: Color(0xffC5A16B),
                           ),
                         ),
                       ),
@@ -284,10 +284,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xffD4AF37),
+                        backgroundColor: const Color(0xffC5A16B),
                         foregroundColor: Colors.black,
                         elevation: 8,
-                        shadowColor: const Color(0xffD4AF37),
+                        shadowColor: const Color(0xffC5A16B),
                         minimumSize: const Size.fromHeight(56),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

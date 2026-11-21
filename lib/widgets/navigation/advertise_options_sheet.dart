@@ -10,17 +10,18 @@ class AdvertiseOptionsSheet extends StatelessWidget {
     required this.onRequestProperty,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _background = Color(0xff0F172A);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SafeArea(
       top: false,
       child: Container(
-        decoration: const BoxDecoration(
-          color: _background,
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: isDark ? _background : Colors.white,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(30),
           ),
         ),
@@ -42,9 +43,11 @@ class AdvertiseOptionsSheet extends StatelessWidget {
                 width: 46,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(
-                    alpha: 0.18,
-                  ),
+                  color: isDark
+                      ? Colors.white.withValues(
+                          alpha: 0.18,
+                        )
+                      : const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
@@ -78,11 +81,11 @@ class AdvertiseOptionsSheet extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              const Text(
+              Text(
                 "ماذا تريد أن تعلن؟",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 21,
                   fontWeight: FontWeight.bold,
                 ),
@@ -90,11 +93,11 @@ class AdvertiseOptionsSheet extends StatelessWidget {
 
               const SizedBox(height: 6),
 
-              const Text(
+              Text(
                 "اختر نوع الإعلان الذي تريد نشره",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white60,
+                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
                   fontSize: 13,
                 ),
               ),
@@ -147,12 +150,13 @@ class _AdvertiseOptionCard extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   static const Color _card = Color(0xff1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -165,12 +169,14 @@ class _AdvertiseOptionCard extends StatelessWidget {
             vertical: 17,
           ),
           decoration: BoxDecoration(
-            color: _card,
+            color: isDark ? _card : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withValues(
-                alpha: 0.06,
-              ),
+              color: isDark
+                  ? Colors.white.withValues(
+                      alpha: 0.06,
+                    )
+                  : const Color(0xFFE2E8F0),
             ),
           ),
           child: Row(
@@ -212,8 +218,8 @@ class _AdvertiseOptionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
@@ -221,8 +227,8 @@ class _AdvertiseOptionCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Colors.white60,
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
                         fontSize: 13,
                         height: 1.4,
                       ),

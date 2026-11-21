@@ -19,7 +19,7 @@ class Step5Contact extends StatefulWidget {
 }
 
 class _Step5ContactState extends State<Step5Contact> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   late final TextEditingController _phoneController;
   late final TextEditingController _whatsappController;
@@ -46,22 +46,26 @@ class _Step5ContactState extends State<Step5Contact> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary = isDark ? Colors.white60 : Colors.black54;
+    final textMuted = isDark ? Colors.white54 : Colors.black54;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       children: [
-        const Text(
+        Text(
           "كيف يمكن التواصل معك؟",
           style: TextStyle(
-            color: Colors.white,
+            color: textPrimary,
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           "أدخل معلومات التواصل ليتمكن أصحاب العقارات المناسبة من التواصل معك",
           style: TextStyle(
-            color: Colors.white60,
+            color: textSecondary,
             fontSize: 14,
             height: 1.5,
           ),
@@ -76,10 +80,10 @@ class _Step5ContactState extends State<Step5Contact> {
                 title: "رقم الهاتف",
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 "رقم الهاتف مطلوب لنشر الطلب",
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: textMuted,
                   fontSize: 12,
                 ),
               ),
@@ -98,8 +102,8 @@ class _Step5ContactState extends State<Step5Contact> {
                   widget.onChanged();
                   setState(() {});
                 },
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 15,
                 ),
                 decoration: _inputDecoration(
@@ -128,10 +132,10 @@ class _Step5ContactState extends State<Step5Contact> {
                 title: "واتساب",
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 "اختياري — اتركه فارغًا إذا كان رقم واتساب هو نفس رقم الهاتف",
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: textMuted,
                   fontSize: 12,
                   height: 1.5,
                 ),
@@ -151,8 +155,8 @@ class _Step5ContactState extends State<Step5Contact> {
                   widget.onChanged();
                   setState(() {});
                 },
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 15,
                 ),
                 decoration: _inputDecoration(
@@ -255,11 +259,11 @@ class _Step5ContactState extends State<Step5Contact> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   "تأكد من صحة معلومات التواصل قبل إرسال الطلب للمراجعة",
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: isDark ? Colors.white70 : Colors.black54,
                     fontSize: 13,
                     height: 1.6,
                   ),
@@ -277,11 +281,12 @@ class _Step5ContactState extends State<Step5Contact> {
     required IconData icon,
     String? hint,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(
-        color: Colors.white60,
+      labelStyle: TextStyle(
+        color: isDark ? Colors.white60 : Colors.black54,
         fontSize: 14,
       ),
       hintStyle: const TextStyle(
@@ -294,9 +299,9 @@ class _Step5ContactState extends State<Step5Contact> {
         size: 21,
       ),
       filled: true,
-      fillColor: const Color(0xff0F172A).withValues(
-        alpha: 0.55,
-      ),
+      fillColor: isDark
+          ? const Color(0xff0F172A).withValues(alpha: 0.55)
+          : const Color(0xFFF1F5F9),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 14,
         vertical: 15,
@@ -308,7 +313,9 @@ class _Step5ContactState extends State<Step5Contact> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black12,
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -374,10 +381,11 @@ class _SectionTitle extends StatelessWidget {
     required this.title,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Icon(
@@ -389,8 +397,8 @@ class _SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),

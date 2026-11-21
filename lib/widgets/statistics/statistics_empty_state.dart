@@ -60,12 +60,14 @@ class StatisticsEmptyState extends StatelessWidget {
         onRetry = null;
 
   static const Color _background = Color(0xFF1E293B);
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _red = Color(0xFFEF4444);
   static const Color _orange = Color(0xFFF59E0B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final accent = _accentColor;
 
     return Container(
@@ -75,7 +77,7 @@ class StatisticsEmptyState extends StatelessWidget {
         vertical: 30,
       ),
       decoration: BoxDecoration(
-        color: _background,
+        color: isDark ? _background : Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: accent.withValues(alpha: 0.14),
@@ -98,8 +100,8 @@ class StatisticsEmptyState extends StatelessWidget {
           Text(
             title ?? _defaultTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onSurface,
               fontSize: StatisticsTextStyles.sectionTitleSize,
               fontWeight: FontWeight.w800,
             ),
@@ -109,7 +111,7 @@ class StatisticsEmptyState extends StatelessWidget {
             message ?? _defaultMessage,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.52,
               ),
               fontSize: StatisticsTextStyles.secondarySize,

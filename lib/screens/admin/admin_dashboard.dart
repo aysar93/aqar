@@ -31,12 +31,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       .snapshots();
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xff0F172A),
+          backgroundColor: bgColor,
           elevation: 0,
           centerTitle: true,
           title: const Text(
@@ -50,18 +54,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         body: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            const Text(
+            Text(
               "مرحباً بك",
               style: TextStyle(
-                color: Colors.white70,
+                color: onSurface.withValues(alpha: 0.70),
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               "لوحة التحكم",
               style: TextStyle(
-                color: Colors.white,
+                color: onSurface,
                 fontSize: 30,
                 fontWeight: FontWeight.bold,
               ),
@@ -93,7 +97,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: Icons.video_collection_rounded,
                 title: 'إدارة الريلز',
                 subtitle: 'النشر والجدولة والإحصائيات والبلاغات',
-                color: const Color(0xffD4AF37),
+                color: const Color(0xffC5A16B),
                 page: const ReelsAdminScreen(),
                 badgeCount: snapshot.data?.docs.length ?? 0,
               ),
@@ -134,7 +138,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   subtitle: count > 0
                       ? '$count طلب انضمام بانتظار المراجعة'
                       : 'إدارة واعتماد المكاتب العقارية',
-                  color: const Color(0xffD4AF37),
+                  color: const Color(0xffC5A16B),
                   page: const OfficeManagementScreen(),
                   badgeCount: count,
                 );
@@ -154,7 +158,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   subtitle: count > 0
                       ? '$count طلب حجز بانتظار المراجعة'
                       : 'الأماكن والحجوزات والمدفوعات والتقارير',
-                  color: const Color(0xffD4AF37),
+                  color: const Color(0xffC5A16B),
                   page: const BookingAdminDashboardScreen(),
                   badgeCount: count,
                 );
@@ -179,7 +183,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   subtitle: pendingRequests > 0
                       ? "$pendingRequests طلب بانتظار المراجعة"
                       : "لا توجد طلبات بانتظار المراجعة",
-                  color: const Color(0xffD4AF37),
+                  color: const Color(0xffC5A16B),
                   page: const AdminPropertyRequestsScreen(),
                   badgeCount: pendingRequests,
                 );
@@ -226,7 +230,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Material(
-                    color: const Color(0xff1E293B),
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(20),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(20),
@@ -261,10 +265,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Text(
+                                      Text(
                                         "المحادثات",
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: onSurface,
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -297,19 +301,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   const SizedBox(
                                     height: 5,
                                   ),
-                                  const Text(
+                                  Text(
                                     "محادثات المستخدمين",
                                     style: TextStyle(
-                                      color: Colors.white60,
+                                      color: onSurface.withValues(alpha: 0.60),
                                       fontSize: 14,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(
+                            Icon(
                               Icons.arrow_forward_ios,
-                              color: Colors.white38,
+                              color: onSurface.withValues(alpha: 0.38),
                             ),
                           ],
                         ),
@@ -355,7 +359,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               icon: Icons.system_update_rounded,
               title: "تحديثات التطبيق",
               subtitle: "إدارة الإصدارات وتنبيه المستخدمين بالتحديث",
-              color: const Color(0xffD4AF37),
+              color: const Color(0xffC5A16B),
               page: const AppUpdatesManagementScreen(),
             ),
           ],
@@ -373,10 +377,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required Widget page,
     int badgeCount = 0,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
@@ -408,8 +414,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: onSurface,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -417,8 +423,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 5),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          color: Colors.white60,
+                        style: TextStyle(
+                          color: onSurface.withValues(alpha: 0.60),
                           fontSize: 14,
                         ),
                       ),
@@ -454,9 +460,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(width: 10),
                     ],
-                    const Icon(
+                    Icon(
                       Icons.arrow_forward_ios,
-                      color: Colors.white38,
+                      color: onSurface.withValues(alpha: 0.38),
                     ),
                   ],
                 ),

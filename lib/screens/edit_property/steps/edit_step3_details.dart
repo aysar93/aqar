@@ -106,22 +106,24 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
+        Text(
           'تفاصيل العقار',
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'راجع معلومات العقار وعدّل ما تحتاج إليه',
           style: TextStyle(
-            color: Colors.white60,
+            color: onSurface.withValues(alpha: 0.60),
             fontSize: 15,
           ),
         ),
@@ -216,11 +218,11 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
           },
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'نوع السند',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -237,11 +239,11 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
           },
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'حالة التأثيث',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -291,12 +293,14 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
     List<TextInputFormatter>? inputFormatters,
     String? suffixText,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white10,
+          color: onSurface.withValues(alpha: 0.10),
         ),
       ),
       child: TextField(
@@ -305,22 +309,22 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
         inputFormatters: inputFormatters,
         onChanged: onChanged,
         textAlign: TextAlign.right,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: onSurface,
           fontSize: 16,
         ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.white60,
+          labelStyle: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
           ),
           prefixIcon: Icon(
             icon,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
           ),
           suffixText: suffixText,
           suffixStyle: const TextStyle(
-            color: Color(0xffD4AF37),
+            color: Color(0xffC5A16B),
           ),
           border: InputBorder.none,
           counterText: '',
@@ -338,6 +342,8 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
     required String? selected,
     required ValueChanged<String> onSelected,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Wrap(
       alignment: WrapAlignment.end,
       spacing: 10,
@@ -350,13 +356,15 @@ class _EditStep3DetailsState extends State<EditStep3Details> {
           selected: isSelected,
           onSelected: (_) => onSelected(value),
           showCheckmark: false,
-          backgroundColor: const Color(0xff1E293B),
-          selectedColor: const Color(0xffD4AF37),
+          backgroundColor: isDark ? const Color(0xff1E293B) : Colors.white,
+          selectedColor: const Color(0xffC5A16B),
           side: BorderSide(
-            color: isSelected ? const Color(0xffD4AF37) : Colors.white10,
+            color: isSelected
+                ? const Color(0xffC5A16B)
+                : onSurface.withValues(alpha: 0.10),
           ),
           labelStyle: TextStyle(
-            color: isSelected ? Colors.black : Colors.white,
+            color: isSelected ? Colors.black : onSurface,
             fontWeight: FontWeight.w600,
           ),
           shape: RoundedRectangleBorder(

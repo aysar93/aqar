@@ -63,25 +63,30 @@ class _AudioMessageState extends State<AudioMessage> {
   }
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-      width: 240,
-      child: Row(children: [
-        IconButton(
-            tooltip: _playing ? 'إيقاف مؤقت' : 'تشغيل التسجيل',
-            onPressed: _busy ? null : _toggle,
-            icon: Icon(
-                _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: const Color(0xFFD4AF37))),
-        Expanded(
-            child: LinearProgressIndicator(
-                value: widget.seconds <= 0
-                    ? 0
-                    : (_position.inSeconds / widget.seconds).clamp(0, 1),
-                color: const Color(0xFFD4AF37),
-                backgroundColor: Colors.white12)),
-        const SizedBox(width: 8),
-        Text(
-            '${widget.seconds ~/ 60}:${(widget.seconds % 60).toString().padLeft(2, '0')}',
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      ]));
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+        width: 240,
+        child: Row(children: [
+          IconButton(
+              tooltip: _playing ? 'إيقاف مؤقت' : 'تشغيل التسجيل',
+              onPressed: _busy ? null : _toggle,
+              icon: Icon(
+                  _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: const Color(0xFFC5A16B))),
+          Expanded(
+              child: LinearProgressIndicator(
+                  value: widget.seconds <= 0
+                      ? 0
+                      : (_position.inSeconds / widget.seconds).clamp(0, 1),
+                  color: const Color(0xFFC5A16B),
+                  backgroundColor: isDark ? Colors.white12 : Colors.black12)),
+          const SizedBox(width: 8),
+          Text(
+              '${widget.seconds ~/ 60}:${(widget.seconds % 60).toString().padLeft(2, '0')}',
+              style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  fontSize: 12)),
+        ]));
+  }
 }

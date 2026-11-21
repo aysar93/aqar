@@ -90,15 +90,20 @@ Future<void> _initializeBackgroundServices() async {
 class AqarApp extends StatelessWidget {
   const AqarApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        locale: const Locale('ar'),
-        supportedLocales: const [Locale('ar'), Locale('en')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        debugShowCheckedModeBanner: false,
-        builder: (context, child) => Directionality(
-            textDirection: TextDirection.rtl, child: BlockScope(child: child!)),
-        theme: AppTheme.lightTheme,
-        navigatorKey: NotificationNavigationService.navigatorKey,
-        home: const SplashScreen(),
-      );
+  Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsProvider>();
+    return MaterialApp(
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      debugShowCheckedModeBanner: false,
+      builder: (context, child) => Directionality(
+          textDirection: TextDirection.rtl, child: BlockScope(child: child!)),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: settings.themeMode,
+      navigatorKey: NotificationNavigationService.navigatorKey,
+      home: const SplashScreen(),
+    );
+  }
 }

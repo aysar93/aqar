@@ -10,6 +10,7 @@ class TypingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(
         left: 18,
@@ -25,8 +26,9 @@ class TypingIndicator extends StatelessWidget {
               vertical: 10,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(18),
+              border: isDark ? null : Border.all(color: Colors.black12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -41,8 +43,8 @@ class TypingIndicator extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   text,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
                     fontSize: 13,
                   ),
                 ),
