@@ -9,8 +9,133 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function bookingFinance() { return activeUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
+    match /booking_venue_staff/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.userId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_closures/{entry} {
+      allow read: if activeUser() && (isAdmin() ||
+        get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.ownerId == request.auth.uid ||
+        (get(/databases/$(database)/documents/booking_venue_staff/$(resource.data.venueId + '_' + request.auth.uid)).data.ownerId == get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.ownerId &&
+         get(/databases/$(database)/documents/booking_venue_staff/$(resource.data.venueId + '_' + request.auth.uid)).data.scopes.hasAny(['calendar'])));
+      allow write: if false;
+    }
+    match /booking_payment_references/{entry} { allow read, write: if false; }
+    match /booking_checkin_codes/{entry} { allow read, write: if false; }
+    match /booking_message_limits/{entry} { allow read, write: if false; }
+    match /booking_messages/{bookingId}/messages/{messageId} {
+      allow read: if activeUser() && (
+        get(/databases/$(database)/documents/bookings/$(bookingId)).data.customerId == request.auth.uid ||
+        get(/databases/$(database)/documents/bookings/$(bookingId)).data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_ownership_proofs/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_legacy_media_retained/{entry} { allow read: if activeUser() && isAdmin(); allow write: if false; }
+    match /booking_legacy_media_deletions/{entry} { allow read, write: if false; }
+    match /booking_media_limits/{entry} { allow read, write: if false; }
+    match /booking_media_reviews/{entry} {
+      allow read: if (activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid)) ||
+        (resource.data.status == 'approved' && resource.data.get('kind', 'venue') == 'venue' &&
+         get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.active == true &&
+         get(/databases/$(database)/documents/booking_venues/$(resource.data.venueId)).data.ownerId == resource.data.ownerId &&
+         get(/databases/$(database)/documents/users/$(resource.data.ownerId)).data.get('isBlocked', false) == false);
+      allow write: if false;
+    }
+    match /booking_ledger/{entry} {
+      allow read: if activeUser() && (isAdmin() || bookingFinance() || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_ownership_transfers/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.ownerId == request.auth.uid || resource.data.newOwnerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_reviews/{entry} {
+      allow read: if activeUser() && (isAdmin() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /booking_support/{entry} {
+      allow read: if activeUser() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        (resource != null && (resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid))
+      );
+      allow write: if false;
+    }
+    match /booking_action_audit/{entry} {
+      allow read: if activeUser() && isAdmin();
+      allow write: if false;
+    }
+    match /booking_finance_audit/{entry} {
+      allow read: if activeUser() && isAdmin();
+      allow write: if false;
+    }
+    match /booking_venue_audit/{entry} {
+      allow read: if activeUser() && isAdmin();
+      allow write: if false;
+    }
+    match /booking_venues/{venueId} {
+      allow get: if resource == null || isAdmin() || (resource.data.active == true && resource.data.verificationStatus in ['verified', 'approved']) || (activeUser() && resource.data.ownerId == request.auth.uid);
+      allow list: if isAdmin() || (resource.data.active == true && resource.data.verificationStatus in ['verified', 'approved']) || (activeUser() && resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /bookings/{bookingId} {
+      allow read: if activeUser() && (isAdmin() || bookingFinance() || resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+
+      match /admin_notes/{noteId} {
+        allow read: if activeUser() && isAdmin();
+        allow write: if false;
+      }
+    }
+    match /booking_reports/{reportId} {
+      allow read: if isAdmin();
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'resolved';
+      allow create, delete: if false;
+    }
+    match /booking_disputes/{disputeId} {
+      allow read: if activeUser() && (
+        isAdmin() ||
+        (resource != null && (resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid))
+      );
+      allow write: if false;
+    }
+    match /booking_reels/{reelId} {
+      allow read: if true;
+      allow create, delete: if activeUser() && (isAdmin() || (resource != null && resource.data.ownerId == request.auth.uid) || (request.resource != null && request.resource.data.ownerId == request.auth.uid));
+      allow update: if activeUser() && (
+        isAdmin() ||
+        (resource != null && resource.data.ownerId == request.auth.uid) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharesCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+      );
+
+      match /likes/{userId} {
+        allow read: if true;
+        allow write: if activeUser() && request.auth.uid == userId;
+      }
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if activeUser() && request.resource.data.userId == request.auth.uid && cleanContent(request.resource.data);
+        allow update, delete: if activeUser() && (resource.data.userId == request.auth.uid || isAdmin());
+      }
+    }
+    match /users/{userId}/saved_booking_reels/{reelId} {
+      allow read, write: if activeUser() && request.auth.uid == userId;
+    }
+    match /booking_reel_reports/{reportId} {
+      allow create: if activeUser() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
     function isAdmin() {
-      return isSignedIn() &&
+      return activeUser() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
@@ -426,8 +551,8 @@ match /office_subscriptions/{subscriptionId} {
       after.featuredSubscriptionId == subscriptionId;
   }
 
-  // الحذف للإدارة فقط.
-  allow delete: if isAdmin();
+  // Keep subscription contracts and their financial links for historical review.
+  allow delete: if false;
 }
 match /office_events/{eventId} {
   allow create: if isSignedIn();
@@ -450,16 +575,19 @@ match /subscription_payments/{paymentId} {
     );
 
   // صاحب المكتب يستطيع إنشاء عملية دفع خاصة باشتراكه فقط.
-  allow create: if isSignedIn() &&
-    request.resource.data.ownerUid == request.auth.uid &&
-    request.resource.data.officeId != null &&
-    request.resource.data.subscriptionId != null;
+  allow create: if false; // Created only by the validated callable.
 
   // الإدارة فقط تستطيع اعتماد أو رفض عملية الدفع.
-  allow update: if isAdmin();
+  allow update: if activeUser() && isAdmin() &&
+    resource.data.ownerUid != request.auth.uid &&
+    get(/databases/$(database)/documents/offices/$(resource.data.officeId)).data.ownerId != request.auth.uid &&
+    resource.data.status == 'pending' && request.resource.data.status in ['approved', 'rejected'] &&
+    request.resource.data.approvedBy == request.auth.uid && request.resource.data.updatedAt == request.time &&
+    (request.resource.data.status != 'approved' || request.resource.data.approvedAt == request.time) &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','approvedAt','approvedBy','updatedAt']);
 
   // الإدارة فقط تستطيع حذف عملية الدفع.
-  allow delete: if isAdmin();
+  allow delete: if false; // Financial records must survive account/configuration changes.
 }
 
 // ==================================================
@@ -579,6 +707,8 @@ match /users/{userId} {
   allow create: if isSignedIn() &&
     request.auth.uid == userId &&
     request.resource.data.isAdmin == false &&
+    request.resource.data.get('canReviewBookingPayments', false) == false &&
+    request.resource.data.get('canManagePaymentAccounts', false) == false &&
     request.resource.data.isBlocked == false &&
     request.resource.data.accountType == 'user' &&
     request.resource.data.accountMode == 'user';
@@ -724,7 +854,7 @@ match /auth_rate_limits/{document=**} {
     match /notifications/{notificationId} {
 
       // الإنشاء للمستخدمين المسجلين والأدمن
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.get('type', '') != 'booking' && !request.resource.data.keys().hasAny(['bookingId']) && !notificationId.matches('booking_.*');
 
       // القراءة للأدمن أو لصاحب الإشعار أو للتنبيهات العامة
 allow read: if isSignedIn() &&
@@ -735,6 +865,8 @@ allow read: if isSignedIn() &&
 
       // التحديث لصاحب الإشعار أو الأدمن
       allow update: if isSignedIn() &&
+        ((resource.data.get('type', '') != 'booking' && request.resource.data.get('type', '') != 'booking' && !request.resource.data.keys().hasAny(['bookingId'])) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])) &&
         (
           resource.data.userId == request.auth.uid ||
           isAdmin()
@@ -763,6 +895,12 @@ allow delete: if isSignedIn() &&
 // ==================================================
 // البنرات الإعلانية
 // ==================================================
+match /booking_banners/{bannerId} {
+  allow read: if true;
+  // All booking banner writes use authenticated server lifecycle callables.
+  allow write: if false;
+}
+
 match /banners/{bannerId} {
 
   // الجميع يستطيع مشاهدة البنرات
@@ -775,6 +913,23 @@ match /banners/{bannerId} {
     // ==================================================
 // إعدادات التطبيق
 // ==================================================
+match /payment_accounts/{scope} {
+  allow get: if activeUser() && scope == 'shared';
+  allow list, write: if false;
+}
+match /payment_configuration/{scope} { allow read, write: if false; }
+match /subscription_payment_audit/{entry} {
+  allow read: if activeUser() && isAdmin();
+  allow write: if false;
+}
+match /subscription_review_audit/{entry} {
+  allow read: if activeUser() && isAdmin();
+  allow write: if false;
+}
+match /payment_account_audit/{entry} {
+  allow read: if activeUser() && isAdmin() && request.auth.token.get('canManagePaymentAccounts', false) == true;
+  allow write: if false;
+}
 match /settings/{document} {
 
   // الجميع يستطيع قراءة الإعدادات
