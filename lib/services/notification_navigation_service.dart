@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'notification_route_coordinator.dart';
 import 'push_migration.dart';
+import '../bookings/booking_notification.dart';
 
 import '../chat/chat_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -19,6 +20,9 @@ class NotificationNavigationService {
       GlobalKey<NavigatorState>();
 
   static final routes = NotificationRouteCoordinator(navigatorKey);
+
+  /// Optional builder wired to BookingDetailsScreen when booking UI is mounted.
+  static Widget Function(String bookingId)? bookingDetailsScreenBuilder;
 
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -56,6 +60,7 @@ class NotificationNavigationService {
 
     return [
       (data['type'] ?? 'general').toString(),
+      (data['bookingId'] ?? '').toString(),
       (data['propertyId'] ?? '').toString(),
       (data['officeId'] ?? '').toString(),
       (data['chatId'] ?? '').toString(),
@@ -95,6 +100,27 @@ class NotificationNavigationService {
     }
     _lastHandledKey = notificationKey;
     _lastHandledAt = now;
+    final bookingId = bookingNotificationId(normalized);
+    if (bookingId != null) {
+      await routes.open((context) async {
+        if ((PushMigration.enabled || TrustedInbox.enabled)) {
+          if (normalized['userId'] != null &&
+              normalized['userId'] != FirebaseAuth.instance.currentUser?.uid) {
+            return;
+          }
+          await TrustedInbox.markEventRead(normalized);
+          if (!context.mounted) return;
+        }
+        final builder = bookingDetailsScreenBuilder;
+        if (builder != null) {
+          await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => builder(bookingId)));
+        } else {
+          await _openNotifications(context);
+        }
+      });
+      return;
+    }
     // External taps open the existing notifications inbox. Its items retain
     // their normal property/office/chat destinations.
     await routes.open((context) async {
@@ -154,6 +180,14 @@ class NotificationNavigationService {
       );
 
       switch (type) {
+        case 'booking':
+          final bookingId = bookingNotificationId(data);
+          final builder = bookingDetailsScreenBuilder;
+          if (bookingId != null && builder != null && context.mounted) {
+            await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => builder(bookingId)));
+          }
+          break;
         // ============================
         // عقار تمت الموافقة عليه
         // ============================

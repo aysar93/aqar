@@ -22,7 +22,10 @@ class NotificationBadge extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: TrustedInbox.enabled
           ? TrustedInbox.forUser(uid).snapshots()
-          : FirebaseFirestore.instance.collection('notifications').snapshots(),
+          : FirebaseFirestore.instance
+              .collection('notifications')
+              .where('userId', isEqualTo: uid)
+              .snapshots(),
       builder: (context, snapshot) {
         int count = 0;
 
