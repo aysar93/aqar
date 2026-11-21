@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../screens/login_screen.dart';
+import '../chat/chat_screen.dart';
 
 const Color _navy = Color(0xFF0F172A);
 const Color _surface = Color(0xFF172033);
-const Color _gold = Color(0xFFD4AF37);
+const Color _gold = Color(0xFFC5A16B);
 const Color _whatsAppGreen = Color(0xFF25D366);
 
 Future<void> _openContactUrl(BuildContext context, Uri uri) async {
@@ -63,6 +66,10 @@ class _ContactSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary =
+        isDark ? Colors.white.withOpacity(0.66) : Colors.black54;
     final double bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Directionality(
@@ -71,10 +78,10 @@ class _ContactSheet extends StatelessWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.92,
         ),
-        decoration: const BoxDecoration(
-          color: _navy,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          border: Border(top: BorderSide(color: Color(0x33D4AF37))),
+        decoration: BoxDecoration(
+          color: isDark ? _navy : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          border: const Border(top: BorderSide(color: Color(0x33C5A16B))),
         ),
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomInset),
@@ -88,17 +95,19 @@ class _ContactSheet extends StatelessWidget {
                     width: 44,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.20),
+                      color: isDark
+                          ? Colors.white.withOpacity(0.20)
+                          : Colors.black26,
                       borderRadius: BorderRadius.circular(100),
                     ),
                   ),
                   const SizedBox(height: 24),
                   const _HeaderIcon(),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'تواصل معنا',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
@@ -109,7 +118,7 @@ class _ContactSheet extends StatelessWidget {
                     'للدعم وبلاغات الإساءة: +9647838081677. نراجع بلاغات السلامة خلال 24 ساعة.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.66),
+                      color: textSecondary,
                       fontSize: 14,
                       height: 1.7,
                     ),
@@ -118,8 +127,25 @@ class _ContactSheet extends StatelessWidget {
                   LayoutBuilder(
                     builder:
                         (BuildContext context, BoxConstraints constraints) {
-                      final bool stackButtons = constraints.maxWidth < 350;
                       final List<Widget> buttons = <Widget>[
+                        _ContactButton(
+                          label: 'الدردشة المباشرة',
+                          backgroundColor: const Color(0xFF1E293B),
+                          foregroundColor: _gold,
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22, color: _gold),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            final user = FirebaseAuth.instance.currentUser;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => user == null
+                                    ? const LoginScreen()
+                                    : const ChatScreen(),
+                              ),
+                            );
+                          },
+                        ),
                         _ContactButton(
                           label: 'تواصل عبر واتساب',
                           backgroundColor: _whatsAppGreen,
@@ -137,21 +163,17 @@ class _ContactSheet extends StatelessWidget {
                         ),
                       ];
 
-                      if (stackButtons) {
-                        return Column(
-                          children: <Widget>[
-                            buttons.first,
-                            const SizedBox(height: 12),
-                            buttons.last,
-                          ],
-                        );
-                      }
-
-                      return Row(
+                      return Column(
                         children: <Widget>[
-                          Expanded(child: buttons.first),
-                          const SizedBox(width: 12),
-                          Expanded(child: buttons.last),
+                          buttons[0],
+                          const SizedBox(height: 12),
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: buttons[1]),
+                              const SizedBox(width: 12),
+                              Expanded(child: buttons[2]),
+                            ],
+                          ),
                         ],
                       );
                     },
@@ -163,7 +185,9 @@ class _ContactSheet extends StatelessWidget {
                     '© 2026 جميع الحقوق محفوظة — عقارات الانبار',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.38),
+                      color: isDark
+                          ? Colors.white.withOpacity(0.38)
+                          : Colors.black45,
                       fontSize: 11.5,
                     ),
                   ),
@@ -248,26 +272,32 @@ class _DetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _surface,
+        color: isDark ? _surface : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.06) : Colors.black12,
+        ),
       ),
-      child: const Column(
+      child: Column(
         children: <Widget>[
-          _InfoRow(
+          const _InfoRow(
             icon: Icons.location_on_outlined,
             title: 'موقعنا',
             value: 'الأنبار — الرمادي',
           ),
           Padding(
-            padding: EdgeInsets.symmetric(vertical: 14),
-            child: Divider(height: 1, color: Color(0x14FFFFFF)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Divider(
+              height: 1,
+              color: isDark ? const Color(0x14FFFFFF) : Colors.black12,
+            ),
           ),
-          _InfoRow(
+          const _InfoRow(
             icon: Icons.schedule_rounded,
             title: 'ساعات العمل',
             value: 'السبت إلى الخميس  •  9:00 ص — 11:00 م',
@@ -291,6 +321,7 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -311,15 +342,16 @@ class _InfoRow extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.52),
+                  color:
+                      isDark ? Colors.white.withOpacity(0.52) : Colors.black54,
                   fontSize: 12,
                 ),
               ),
               const SizedBox(height: 3),
               Text(
                 value,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   height: 1.45,
