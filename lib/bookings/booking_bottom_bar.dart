@@ -78,7 +78,10 @@ class BookingBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: MediaQuery.sizeOf(context).width >
+                  MediaQuery.sizeOf(context).height
+              ? 50
+              : 64,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(items.length, (index) {

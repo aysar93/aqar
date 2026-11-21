@@ -47,9 +47,19 @@ class BookingReceiptService {
         booking['phone']?.toString() ??
         '';
 
-    final total = booking['price'] ?? booking['totalPrice'] ?? 0;
-    final deposit = booking['deposit'] ?? 0;
-    final remaining = (total is num && deposit is num) ? (total - deposit).clamp(0, double.infinity) : 0;
+    final dynamic totalRaw = booking['total'] ?? booking['price'] ?? booking['totalPrice'] ?? 0;
+    final num total = totalRaw is num
+        ? totalRaw
+        : (num.tryParse(totalRaw.toString().replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0);
+
+    final dynamic depositRaw = booking['deposit'] ?? 0;
+    final num deposit = depositRaw is num
+        ? depositRaw
+        : (num.tryParse(depositRaw.toString().replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0);
+
+    // Ensure deposit does not exceed total and remaining balance is never negative
+    final num effectiveDeposit = (deposit > total && total > 0) ? total : deposit;
+    final num remaining = (total - effectiveDeposit).clamp(0, double.infinity);
     final securityDeposit = booking['securityDeposit'] ?? venue?['securityDeposit'] ?? 0;
     final status = booking['status']?.toString() ?? 'confirmed';
     final statusArabic = {
@@ -91,7 +101,7 @@ class BookingReceiptService {
           return pw.Container(
             padding: const pw.EdgeInsets.all(28),
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColor.fromHex('#D4AF37'), width: 2),
+              border: pw.Border.all(color: PdfColor.fromHex('#C5A16B'), width: 2),
               borderRadius: pw.BorderRadius.circular(16),
             ),
             child: pw.Column(
@@ -118,7 +128,7 @@ class BookingReceiptService {
                     pw.Container(
                       padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: pw.BoxDecoration(
-                        color: PdfColor.fromHex('#D4AF37'),
+                        color: PdfColor.fromHex('#C5A16B'),
                         borderRadius: pw.BorderRadius.circular(8),
                       ),
                       child: pw.Text('إيصال حجز إلكتروني',
@@ -202,7 +212,7 @@ class BookingReceiptService {
                                 style: pw.TextStyle(
                                     fontSize: 12,
                                     fontWeight: pw.FontWeight.bold,
-                                    color: PdfColor.fromHex('#D4AF37'))),
+                                    color: PdfColor.fromHex('#C5A16B'))),
                             pw.SizedBox(height: 8),
                             pw.Text(vName,
                                 style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
@@ -235,7 +245,7 @@ class BookingReceiptService {
                                 style: pw.TextStyle(
                                     fontSize: 12,
                                     fontWeight: pw.FontWeight.bold,
-                                    color: PdfColor.fromHex('#D4AF37'))),
+                                    color: PdfColor.fromHex('#C5A16B'))),
                             pw.SizedBox(height: 8),
                             pw.Text('الاسم: $customerName',
                                 style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
@@ -293,7 +303,7 @@ class BookingReceiptService {
                     pw.TableRow(
                       children: [
                         pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('العربون المدفوع (مقدم الحجز)', style: const pw.TextStyle(fontSize: 11))),
-                        pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(bookingMoney(deposit), style: pw.TextStyle(color: PdfColor.fromHex('#16A34A'), fontWeight: pw.FontWeight.bold, fontSize: 11))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(bookingMoney(effectiveDeposit), style: pw.TextStyle(color: PdfColor.fromHex('#16A34A'), fontWeight: pw.FontWeight.bold, fontSize: 11))),
                         pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('تم السداد إلكترونياً', style: pw.TextStyle(color: PdfColor.fromHex('#16A34A'), fontSize: 10))),
                       ],
                     ),

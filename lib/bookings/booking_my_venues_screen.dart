@@ -602,6 +602,7 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
                         try {
                           return FirebaseFirestore.instance
                               .collection('bookings')
+                              .where('ownerId', isEqualTo: _currentUid)
                               .where('venueId', isEqualTo: venueId)
                               .where('status', isEqualTo: 'requested')
                               .snapshots();
@@ -748,7 +749,7 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
       MaterialPageRoute(
         builder: (_) => BookingVenueEditor(
           ownerMode: true,
-          data: {'ownerId': _currentUid, 'active': false},
+          data: {'ownerId': _currentUid, 'active': false, 'deposit': 50000},
         ),
       ),
     );
@@ -814,6 +815,7 @@ class _BookingMyVenuesScreenState extends State<BookingMyVenuesScreen> {
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: FirebaseFirestore.instance
                         .collection('bookings')
+                        .where('ownerId', isEqualTo: _currentUid)
                         .where('venueId', isEqualTo: venueId)
                         .snapshots(),
                     builder: (context, snapshot) {

@@ -29,7 +29,7 @@ class BookingMapScreen extends StatefulWidget {
 
 class _BookingMapScreenState extends State<BookingMapScreen> {
   static const Color _navy = Color(0xFF0F172A);
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardBg = Color(0xFF1E293B);
 
   final filters = BookingFilters();
@@ -378,7 +378,7 @@ class _BookingMapScreenState extends State<BookingMapScreen> {
                                                 ? FontWeight.bold
                                                 : FontWeight.w500,
                                         color: filters.category == entry.key
-                                            ? const Color(0xFFE6C894)
+                                            ? const Color(0xFFC5A16B)
                                             : Colors.white70,
                                       ),
                                     ),

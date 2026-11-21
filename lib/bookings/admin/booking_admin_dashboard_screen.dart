@@ -8,6 +8,9 @@ import 'tabs/booking_admin_reels_tab.dart';
 import 'tabs/booking_admin_payments_tab.dart';
 import 'tabs/booking_admin_reports_tab.dart';
 import 'tabs/booking_admin_audit_tab.dart';
+import 'tabs/booking_admin_disputes_tab.dart';
+import 'tabs/booking_admin_calendar_tab.dart';
+import 'booking_admin_deposit_policy_screen.dart';
 
 class BookingAdminDashboardScreen extends StatefulWidget {
   final Stream<QuerySnapshot<Map<String, dynamic>>>? bookingsStream;
@@ -26,14 +29,16 @@ class BookingAdminDashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<BookingAdminDashboardScreen> createState() => _BookingAdminDashboardScreenState();
+  State<BookingAdminDashboardScreen> createState() =>
+      _BookingAdminDashboardScreenState();
 }
 
-class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScreen> {
+class _BookingAdminDashboardScreenState
+    extends State<BookingAdminDashboardScreen> {
   int _currentTabIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _pillScrollController = ScrollController();
-  final List<GlobalKey> _tabKeys = List.generate(7, (_) => GlobalKey());
+  final List<GlobalKey> _tabKeys = List.generate(9, (_) => GlobalKey());
 
   final List<Map<String, dynamic>> _tabs = const [
     {
@@ -47,9 +52,19 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
       'badgeKey': 'bookings',
     },
     {
+      'title': 'التقويم المركزي للإشغال',
+      'icon': Icons.date_range_outlined,
+      'badgeKey': 'calendar',
+    },
+    {
       'title': 'إدارة الأماكن',
       'icon': Icons.villa_outlined,
       'badgeKey': 'venues',
+    },
+    {
+      'title': 'التحكيم والنزاعات',
+      'icon': Icons.gavel_rounded,
+      'badgeKey': 'disputes',
     },
     {
       'title': 'إدارة ريلز الحجوزات',
@@ -62,7 +77,7 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
       'badgeKey': 'payments',
     },
     {
-      'title': 'التقارير والتحليل',
+      'title': 'التقارير المالية والتحليل',
       'icon': Icons.bar_chart_outlined,
       'badgeKey': 'reports',
     },
@@ -121,8 +136,15 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                 onNavigateToTab: _onTabSelected,
               ),
               BookingAdminBookingsTab(bookingsStream: widget.bookingsStream),
+              BookingAdminCalendarTab(
+                bookingsStream: widget.bookingsStream,
+                venuesStream: widget.venuesStream,
+              ),
               BookingAdminVenuesTab(venuesStream: widget.venuesStream),
-              BookingAdminReelsTab(reelsStream: widget.reelsStream, reportsStream: widget.reportsStream),
+              const BookingAdminDisputesTab(),
+              BookingAdminReelsTab(
+                  reelsStream: widget.reelsStream,
+                  reportsStream: widget.reportsStream),
               BookingAdminPaymentsTab(bookingsStream: widget.bookingsStream),
               BookingAdminReportsTab(bookingsStream: widget.bookingsStream),
               BookingAdminAuditTab(auditStream: widget.auditStream),
@@ -153,7 +175,9 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
           Text(
             _tabs[_currentTabIndex]['title'] as String,
             style: TextStyle(
-              color: dark ? BookingAdminTheme.textPrimary : const Color(0xFF0F172A),
+              color: dark
+                  ? BookingAdminTheme.textPrimary
+                  : const Color(0xFF0F172A),
               fontSize: 16,
               fontWeight: FontWeight.bold,
               fontFamily: 'Cairo',
@@ -171,6 +195,19 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
         ],
       ),
       actions: [
+        IconButton(
+          icon: Icon(
+            Icons.tune_rounded,
+            color: dark ? BookingAdminTheme.iconColor : const Color(0xFF0F172A),
+          ),
+          tooltip: 'سياسة العربون المركزية',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const BookingAdminDepositPolicyScreen(),
+            ),
+          ),
+        ),
         IconButton(
           icon: Icon(
             Icons.menu_rounded,
@@ -194,7 +231,8 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                 controller: _pillScrollController,
                 scrollDirection: Axis.horizontal,
                 cacheExtent: 1200,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 itemCount: _tabs.length,
                 itemBuilder: (context, i) {
                   final isSelected = _currentTabIndex == i;
@@ -204,7 +242,8 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
 
                   return Padding(
                     key: _tabKeys[i],
-                    padding: EdgeInsets.only(left: i == _tabs.length - 1 ? 0 : 8),
+                    padding:
+                        EdgeInsets.only(left: i == _tabs.length - 1 ? 0 : 8),
                     child: ChoiceChip(
                       selected: isSelected,
                       showCheckmark: false,
@@ -216,20 +255,27 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                         size: 15,
                         color: isSelected
                             ? BookingAdminTheme.gold
-                            : (dark ? BookingAdminTheme.iconMuted : const Color(0xFF64748B)),
+                            : (dark
+                                ? BookingAdminTheme.iconMuted
+                                : const Color(0xFF64748B)),
                       ),
                       label: Text(title),
                       onSelected: (s) {
                         if (s) _onTabSelected(i);
                       },
                       selectedColor: BookingAdminTheme.goldSubtle,
-                      backgroundColor: dark ? BookingAdminTheme.surfaceAlt : const Color(0xFFF1F5F9),
+                      backgroundColor: dark
+                          ? BookingAdminTheme.surfaceAlt
+                          : const Color(0xFFF1F5F9),
                       labelStyle: TextStyle(
                         color: isSelected
                             ? BookingAdminTheme.gold
-                            : (dark ? BookingAdminTheme.textSecondary : const Color(0xFF334155)),
+                            : (dark
+                                ? BookingAdminTheme.textSecondary
+                                : const Color(0xFF334155)),
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w500,
                         fontFamily: 'Cairo',
                       ),
                       side: BorderSide(
@@ -237,7 +283,8 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                             ? BookingAdminTheme.gold
                             : BookingAdminTheme.border(context),
                       ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                     ),
                   );
                 },
@@ -260,7 +307,9 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: BookingAdminTheme.border(context))),
+                border: Border(
+                    bottom:
+                        BorderSide(color: BookingAdminTheme.border(context))),
               ),
               child: Row(
                 children: [
@@ -270,9 +319,11 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                     decoration: BoxDecoration(
                       color: BookingAdminTheme.goldSubtle,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: BookingAdminTheme.gold.withValues(alpha: 0.3)),
+                      border: Border.all(
+                          color: BookingAdminTheme.gold.withValues(alpha: 0.3)),
                     ),
-                    child: const Icon(Icons.event_available, color: BookingAdminTheme.gold, size: 24),
+                    child: const Icon(Icons.event_available,
+                        color: BookingAdminTheme.gold, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -282,7 +333,9 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                         Text(
                           'عقارات الأنبار',
                           style: TextStyle(
-                            color: dark ? BookingAdminTheme.textPrimary : const Color(0xFF0F172A),
+                            color: dark
+                                ? BookingAdminTheme.textPrimary
+                                : const Color(0xFF0F172A),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
@@ -291,7 +344,9 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                         Text(
                           'وحدة إدارة الحجوزات المعتمدة',
                           style: TextStyle(
-                            color: dark ? BookingAdminTheme.textMuted : const Color(0xFF64748B),
+                            color: dark
+                                ? BookingAdminTheme.textMuted
+                                : const Color(0xFF64748B),
                             fontSize: 11,
                             fontFamily: 'Cairo',
                           ),
@@ -306,7 +361,8 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
             // قائمة الأقسام السبعة
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 itemCount: _tabs.length,
                 itemBuilder: (context, index) {
                   final item = _tabs[index];
@@ -317,30 +373,40 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected
-                          ? Border.all(color: BookingAdminTheme.gold.withValues(alpha: 0.5))
+                          ? Border.all(
+                              color:
+                                  BookingAdminTheme.gold.withValues(alpha: 0.5))
                           : null,
                     ),
                     child: Material(
-                      color: isSelected ? BookingAdminTheme.goldSubtle : Colors.transparent,
+                      color: isSelected
+                          ? BookingAdminTheme.goldSubtle
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       child: ListTile(
                         dense: true,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         leading: Icon(
                           item['icon'] as IconData,
                           size: 20,
                           color: isSelected
                               ? BookingAdminTheme.gold
-                              : (dark ? BookingAdminTheme.iconMuted : const Color(0xFF64748B)),
+                              : (dark
+                                  ? BookingAdminTheme.iconMuted
+                                  : const Color(0xFF64748B)),
                         ),
                         title: Text(
                           item['title'] as String,
                           style: TextStyle(
                             color: isSelected
                                 ? BookingAdminTheme.gold
-                                : (dark ? BookingAdminTheme.textSecondary : const Color(0xFF334155)),
+                                : (dark
+                                    ? BookingAdminTheme.textSecondary
+                                    : const Color(0xFF334155)),
                             fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w500,
                             fontFamily: 'Cairo',
                           ),
                         ),
@@ -355,19 +421,51 @@ class _BookingAdminDashboardScreenState extends State<BookingAdminDashboardScree
               ),
             ),
 
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.tune_rounded, color: BookingAdminTheme.gold),
+                title: const Text(
+                  'سياسة العربون المركزية',
+                  style: TextStyle(
+                    color: BookingAdminTheme.gold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BookingAdminDepositPolicyScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+
             // تذييل القائمة للرجوع للوحة الإدارة العامة
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: BookingAdminTheme.border(context))),
+                border: Border(
+                    top: BorderSide(color: BookingAdminTheme.border(context))),
               ),
               child: ListTile(
                 dense: true,
-                leading: Icon(Icons.arrow_back, color: dark ? BookingAdminTheme.iconMuted : const Color(0xFF64748B)),
+                leading: Icon(Icons.arrow_back,
+                    color: dark
+                        ? BookingAdminTheme.iconMuted
+                        : const Color(0xFF64748B)),
                 title: Text(
                   'الرجوع للوحة الإدارة العامة',
                   style: TextStyle(
-                    color: dark ? BookingAdminTheme.textMuted : const Color(0xFF64748B),
+                    color: dark
+                        ? BookingAdminTheme.textMuted
+                        : const Color(0xFF64748B),
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Cairo',

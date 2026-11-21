@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../booking_admin_theme.dart';
-import '../../booking_widgets.dart' show bookingMoney;
+import '../../booking_widgets.dart' show bookingMoney, isBookingVenueFeatured, getBookingFeaturedStatus, BookingFeaturedStatus;
 import '../../booking_screen.dart' show bookingCall;
 
 class BookingAdminVenuesTab extends StatefulWidget {
@@ -13,9 +13,11 @@ class BookingAdminVenuesTab extends StatefulWidget {
   State<BookingAdminVenuesTab> createState() => _BookingAdminVenuesTabState();
 }
 
-class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with AutomaticKeepAliveClientMixin {
+class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab>
+    with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
-  String _filterMode = 'all'; // all, published, pending, needs_revision, inactive
+  String _filterMode =
+      'all'; // all, published, pending, needs_revision, inactive
   String _searchQuery = '';
 
   @override
@@ -33,7 +35,8 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
     final dark = BookingAdminTheme.isDark(context);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: widget.venuesStream ?? FirebaseFirestore.instance.collection('booking_venues').snapshots(),
+      stream: widget.venuesStream ??
+          FirebaseFirestore.instance.collection('booking_venues').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -41,14 +44,19 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
               padding: const EdgeInsets.all(24),
               child: Text(
                 'حدث خطأ في تحميل الأماكن: ${snapshot.error}',
-                style: TextStyle(color: dark ? BookingAdminTheme.textMuted : const Color(0xFF64748B), fontFamily: 'Cairo'),
+                style: TextStyle(
+                    color: dark
+                        ? BookingAdminTheme.textMuted
+                        : const Color(0xFF64748B),
+                    fontFamily: 'Cairo'),
               ),
             ),
           );
         }
 
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator(color: BookingAdminTheme.gold));
+          return const Center(
+              child: CircularProgressIndicator(color: BookingAdminTheme.gold));
         }
 
         final rawDocs = snapshot.data!.docs.map((d) {
@@ -57,27 +65,36 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
           return map;
         }).toList();
 
-        final cleanDocs = BookingAdminDataSanitizer.prepareCleanVenuesList(rawDocs);
+        final cleanDocs =
+            BookingAdminDataSanitizer.prepareCleanVenuesList(rawDocs);
 
         final filteredDocs = cleanDocs.where((data) {
           final name = (data['name'] ?? '').toString().toLowerCase();
           final location = (data['location'] ?? '').toString().toLowerCase();
           final ownerName = (data['ownerName'] ?? '').toString().toLowerCase();
           final active = data['active'] == true;
-          final verification = (data['verificationStatus'] ?? 'pending').toString().toLowerCase();
+          final verification = (data['verificationStatus'] ?? 'pending')
+              .toString()
+              .toLowerCase();
 
           // البحث
           if (_searchQuery.isNotEmpty) {
             final q = _searchQuery.toLowerCase();
-            final matches = name.contains(q) || location.contains(q) || ownerName.contains(q);
+            final matches = name.contains(q) ||
+                location.contains(q) ||
+                ownerName.contains(q);
             if (!matches) return false;
           }
 
           // التصفية
           if (_filterMode == 'published') {
-            return active && (verification == 'verified' || verification == 'approved');
+            return active &&
+                (verification == 'verified' || verification == 'approved');
           } else if (_filterMode == 'pending') {
-            return verification == 'pending' || (verification != 'verified' && verification != 'approved' && !active);
+            return verification == 'pending' ||
+                (verification != 'verified' &&
+                    verification != 'approved' &&
+                    !active);
           } else if (_filterMode == 'needs_revision') {
             return verification == 'needs_revision';
           } else if (_filterMode == 'inactive') {
@@ -88,12 +105,16 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
         }).toList();
 
         final pendingCount = cleanDocs.where((data) {
-          final v = (data['verificationStatus'] ?? 'pending').toString().toLowerCase();
+          final v = (data['verificationStatus'] ?? 'pending')
+              .toString()
+              .toLowerCase();
           final active = data['active'] == true;
-          return v == 'pending' || (v != 'verified' && v != 'approved' && !active);
+          return v == 'pending' ||
+              (v != 'verified' && v != 'approved' && !active);
         }).length;
 
-        final publishedCount = cleanDocs.where((data) => data['active'] == true).length;
+        final publishedCount =
+            cleanDocs.where((data) => data['active'] == true).length;
 
         return Column(
           children: [
@@ -122,13 +143,18 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                   if (_searchQuery.isNotEmpty || _filterMode != 'all')
                     TextButton.icon(
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         visualDensity: VisualDensity.compact,
                       ),
-                      icon: const Icon(Icons.clear_all, size: 16, color: BookingAdminTheme.gold),
+                      icon: const Icon(Icons.clear_all,
+                          size: 16, color: BookingAdminTheme.gold),
                       label: const Text(
                         'مسح الفلاتر',
-                        style: TextStyle(color: BookingAdminTheme.gold, fontSize: 11, fontFamily: 'Cairo'),
+                        style: TextStyle(
+                            color: BookingAdminTheme.gold,
+                            fontSize: 11,
+                            fontFamily: 'Cairo'),
                       ),
                       onPressed: () {
                         setState(() {
@@ -148,8 +174,12 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                   ? BookingAdminEmptyState(
                       icon: Icons.villa_outlined,
                       title: 'لا توجد أماكن مطابقة',
-                      description: 'لم يتم العثور على أي منشأة أو شاليه يطابق معايير البحث الحالية.',
-                      actionLabel: (_searchQuery.isNotEmpty || _filterMode != 'all') ? 'إعادة ضبط الفلاتر' : null,
+                      description:
+                          'لم يتم العثور على أي منشأة أو شاليه يطابق معايير البحث الحالية.',
+                      actionLabel:
+                          (_searchQuery.isNotEmpty || _filterMode != 'all')
+                              ? 'إعادة ضبط الفلاتر'
+                              : null,
                       onAction: () {
                         setState(() {
                           _searchController.clear();
@@ -189,14 +219,22 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
           TextField(
             controller: _searchController,
             onChanged: (v) => setState(() => _searchQuery = v.trim()),
-            style: TextStyle(color: BookingAdminTheme.text(context), fontSize: 13, fontFamily: 'Cairo'),
+            style: TextStyle(
+                color: BookingAdminTheme.text(context),
+                fontSize: 13,
+                fontFamily: 'Cairo'),
             decoration: InputDecoration(
               hintText: 'ابحث باسم المكان، المدينة، الحي، أو اسم المالك...',
-              hintStyle: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 12, fontFamily: 'Cairo'),
-              prefixIcon: Icon(Icons.search, size: 20, color: BookingAdminTheme.icon(context)),
+              hintStyle: TextStyle(
+                  color: BookingAdminTheme.textMute(context),
+                  fontSize: 12,
+                  fontFamily: 'Cairo'),
+              prefixIcon: Icon(Icons.search,
+                  size: 20, color: BookingAdminTheme.icon(context)),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.close_rounded, size: 18, color: BookingAdminTheme.icon(context)),
+                      icon: Icon(Icons.close_rounded,
+                          size: 18, color: BookingAdminTheme.icon(context)),
                       onPressed: () {
                         _searchController.clear();
                         setState(() => _searchQuery = '');
@@ -205,14 +243,17 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                   : null,
               filled: true,
               fillColor: BookingAdminTheme.surfaceSecondary(context),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: BookingAdminTheme.border(context)),
+                borderSide:
+                    BorderSide(color: BookingAdminTheme.border(context)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: BookingAdminTheme.border(context)),
+                borderSide:
+                    BorderSide(color: BookingAdminTheme.border(context)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -228,7 +269,9 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                 _chip('كل الأماكن ($docsCount)', 'all'),
                 _chip('الأماكن المنشورة ($publishedCount)', 'published'),
                 _chip(
-                  pendingCount > 0 ? 'بانتظار الاعتماد ($pendingCount)' : 'بانتظار الاعتماد',
+                  pendingCount > 0
+                      ? 'بانتظار الاعتماد ($pendingCount)'
+                      : 'بانتظار الاعتماد',
                   'pending',
                   highlight: pendingCount > 0,
                 ),
@@ -304,7 +347,8 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                       decoration: BoxDecoration(
                         color: BookingAdminTheme.surfaceSecondary(context),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: BookingAdminTheme.border(context)),
+                        border: Border.all(
+                            color: BookingAdminTheme.border(context)),
                       ),
                       child: mediaPaths.isNotEmpty
                           ? ClipRRect(
@@ -351,11 +395,54 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                               BookingAdminStatusBadge(
                                 status: active
                                     ? 'approved'
-                                    : (verification == 'needs_revision' ? 'needs_revision' : 'pending'),
+                                    : (verification == 'needs_revision'
+                                        ? 'needs_revision'
+                                        : 'pending'),
                                 label: active
                                     ? 'منشور'
-                                    : (verification == 'needs_revision' ? 'بحاجة لتعديل المالك' : 'بانتظار الاعتماد'),
+                                    : (verification == 'needs_revision'
+                                        ? 'بحاجة لتعديل المالك'
+                                        : 'بانتظار الاعتماد'),
                               ),
+                              if (getBookingFeaturedStatus(v) == BookingFeaturedStatus.legacyNeedsDate) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFF59E0B)),
+                                  ),
+                                  child: const Text(
+                                    'تمييز قديم — يحتاج تحديد مدة ⚠️',
+                                    style: TextStyle(
+                                      color: Color(0xFFB45309),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                                ),
+                              ] else if (getBookingFeaturedStatus(v) == BookingFeaturedStatus.active) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF9C3),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFEAB308)),
+                                  ),
+                                  child: const Text(
+                                    'مميز ⭐',
+                                    style: TextStyle(
+                                      color: Color(0xFF854D0E),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -397,8 +484,10 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                         spacing: 12,
                         runSpacing: 4,
                         children: [
-                          _venuePricePill('السعر:', bookingMoney(price), BookingAdminTheme.text(context)),
-                          _venuePricePill('العربون:', bookingMoney(deposit), BookingAdminTheme.gold),
+                          _venuePricePill('السعر:', bookingMoney(price),
+                              BookingAdminTheme.text(context)),
+                          _venuePricePill('العربون:', bookingMoney(deposit),
+                              BookingAdminTheme.gold),
                         ],
                       ),
                     ),
@@ -416,7 +505,8 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
                           ),
                         ),
                         SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_ios_rounded, size: 11, color: BookingAdminTheme.gold),
+                        Icon(Icons.arrow_forward_ios_rounded,
+                            size: 11, color: BookingAdminTheme.gold),
                       ],
                     ),
                   ],
@@ -454,12 +544,14 @@ class _BookingAdminVenuesTabState extends State<BookingAdminVenuesTab> with Auto
     );
   }
 
-  void _openVenueInspectionSheet(BuildContext context, String venueId, Map<String, dynamic> v) {
+  void _openVenueInspectionSheet(
+      BuildContext context, String venueId, Map<String, dynamic> v) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _VenueInspectionSheet(venueId: venueId, initialData: v),
+      builder: (context) =>
+          _VenueInspectionSheet(venueId: venueId, initialData: v),
     );
   }
 
@@ -482,7 +574,8 @@ class _VenueInspectionSheet extends StatefulWidget {
   final String venueId;
   final Map<String, dynamic> initialData;
 
-  const _VenueInspectionSheet({required this.venueId, required this.initialData});
+  const _VenueInspectionSheet(
+      {required this.venueId, required this.initialData});
 
   @override
   State<_VenueInspectionSheet> createState() => _VenueInspectionSheetState();
@@ -496,7 +589,10 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
     final dark = BookingAdminTheme.isDark(context);
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('booking_venues').doc(widget.venueId).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('booking_venues')
+          .doc(widget.venueId)
+          .snapshots(),
       builder: (context, snapshot) {
         final rawData = snapshot.data?.data() ?? widget.initialData;
         final data = BookingAdminDataSanitizer.sanitizeVenueMap({
@@ -504,7 +600,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
           ...rawData,
         });
         final active = data['active'] == true;
-        final verification = (data['verificationStatus'] ?? 'pending').toString();
+        final verification =
+            (data['verificationStatus'] ?? 'pending').toString();
         final media = (data['mediaPaths'] as List?) ?? [];
         final videoUrl = data['videoUrl']?.toString();
 
@@ -529,11 +626,13 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
 
               // شريط العنوان
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.close_rounded, color: BookingAdminTheme.icon(context)),
+                      icon: Icon(Icons.close_rounded,
+                          color: BookingAdminTheme.icon(context)),
                       tooltip: 'إغلاق والرجوع للقائمة',
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -583,7 +682,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // معرض الصور والفيديو
-                    if (media.isNotEmpty || (videoUrl != null && videoUrl.isNotEmpty)) ...[
+                    if (media.isNotEmpty ||
+                        (videoUrl != null && videoUrl.isNotEmpty)) ...[
                       Text(
                         'معرض وسائط المكان المرفوعة:',
                         style: TextStyle(
@@ -605,7 +705,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                                 margin: const EdgeInsets.only(left: 8),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: BookingAdminTheme.border(context)),
+                                  border: Border.all(
+                                      color: BookingAdminTheme.border(context)),
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
@@ -613,7 +714,9 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                                     img.toString(),
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Center(
-                                      child: Icon(Icons.broken_image_outlined, color: BookingAdminTheme.icon(context)),
+                                      child: Icon(Icons.broken_image_outlined,
+                                          color:
+                                              BookingAdminTheme.icon(context)),
                                     ),
                                   ),
                                 ),
@@ -623,17 +726,25 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                                 width: 110,
                                 margin: const EdgeInsets.only(left: 8),
                                 decoration: BoxDecoration(
-                                  color: BookingAdminTheme.surfaceSecondary(context),
+                                  color: BookingAdminTheme.surfaceSecondary(
+                                      context),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: BookingAdminTheme.gold),
+                                  border:
+                                      Border.all(color: BookingAdminTheme.gold),
                                 ),
                                 child: const Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.play_circle_fill_rounded, color: BookingAdminTheme.gold, size: 36),
+                                      Icon(Icons.play_circle_fill_rounded,
+                                          color: BookingAdminTheme.gold,
+                                          size: 36),
                                       SizedBox(height: 4),
-                                      Text('فيديو المكان', style: TextStyle(color: BookingAdminTheme.gold, fontSize: 11, fontFamily: 'Cairo')),
+                                      Text('فيديو المكان',
+                                          style: TextStyle(
+                                              color: BookingAdminTheme.gold,
+                                              fontSize: 11,
+                                              fontFamily: 'Cairo')),
                                     ],
                                   ),
                                 ),
@@ -647,16 +758,23 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                     // بيانات المالك والأسعار
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: BookingAdminTheme.cardDecoration(context: context),
+                      decoration:
+                          BookingAdminTheme.cardDecoration(context: context),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _infoItem('المالك المسجل:', data['ownerName'] ?? 'غير متوفر'),
-                          _infoItem('معرف المالك (UID):', data['ownerId'] ?? 'غير متوفر'),
-                          _infoItem('السعر الأساسي:', bookingMoney(data['price'])),
-                          _infoItem('العربون المطلوب:', bookingMoney(data['deposit'])),
-                          _infoItem('العمولة (BPS):', '${data['commissionBps'] ?? 0} نقطة أساس'),
-                          _infoItem('الشروط والتعليمات:', data['terms'] ?? 'لا توجد شروط مدونة'),
+                          _infoItem('المالك المسجل:',
+                              data['ownerName'] ?? 'غير متوفر'),
+                          _infoItem('معرف المالك (UID):',
+                              data['ownerId'] ?? 'غير متوفر'),
+                          _infoItem(
+                              'السعر الأساسي:', bookingMoney(data['price'])),
+                          _infoItem('العربون المطلوب:',
+                              bookingMoney(data['deposit'])),
+                          _infoItem('العمولة (BPS):',
+                              '${data['commissionBps'] ?? 0} نقطة أساس'),
+                          _infoItem('الشروط والتعليمات:',
+                              data['terms'] ?? 'لا توجد شروط مدونة'),
                         ],
                       ),
                     ),
@@ -688,7 +806,10 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
             flex: 2,
             child: Text(
               label,
-              style: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 12, fontFamily: 'Cairo'),
+              style: TextStyle(
+                  color: BookingAdminTheme.textMute(context),
+                  fontSize: 12,
+                  fontFamily: 'Cairo'),
             ),
           ),
           const SizedBox(width: 8),
@@ -712,7 +833,10 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
 
   Widget _buildProofOfOwnershipSection() {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('booking_ownership_proofs').doc(widget.venueId).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('booking_ownership_proofs')
+          .doc(widget.venueId)
+          .snapshots(),
       builder: (context, snap) {
         final proof = snap.data?.data();
         return Container(
@@ -723,7 +847,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.verified_user_outlined, size: 18, color: BookingAdminTheme.gold),
+                  const Icon(Icons.verified_user_outlined,
+                      size: 18, color: BookingAdminTheme.gold),
                   const SizedBox(width: 8),
                   Text(
                     'وثائق وإثبات ملكية المكان',
@@ -740,7 +865,10 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
               if (proof == null)
                 Text(
                   'لم يتم رفع وثيقة إثبات ملكية منفصلة لهذا المكان بعد.',
-                  style: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 12, fontFamily: 'Cairo'),
+                  style: TextStyle(
+                      color: BookingAdminTheme.textMute(context),
+                      fontSize: 12,
+                      fontFamily: 'Cairo'),
                 )
               else ...[
                 _infoItem('حالة الوثيقة:', proof['status'] ?? 'pending'),
@@ -756,7 +884,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
     );
   }
 
-  Widget _buildVenueAdminActions(bool active, String verification, Map<String, dynamic> venue) {
+  Widget _buildVenueAdminActions(
+      bool active, String verification, Map<String, dynamic> venue) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BookingAdminTheme.cardDecoration(
@@ -768,18 +897,26 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
         children: [
           const Row(
             children: [
-              Icon(Icons.gavel_outlined, size: 18, color: BookingAdminTheme.gold),
+              Icon(Icons.gavel_outlined,
+                  size: 18, color: BookingAdminTheme.gold),
               SizedBox(width: 8),
               Text(
                 'قرارات الإدارة بشأن هذا المكان',
-                style: TextStyle(color: BookingAdminTheme.gold, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Cairo'),
+                style: TextStyle(
+                    color: BookingAdminTheme.gold,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    fontFamily: 'Cairo'),
               ),
             ],
           ),
           const SizedBox(height: 14),
-
           if (_busy)
-            const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: BookingAdminTheme.gold)))
+            const Center(
+                child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(
+                        color: BookingAdminTheme.gold)))
           else ...[
             // زر الاعتماد والتفعيل
             if (!active || verification != 'verified') ...[
@@ -792,7 +929,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                   final ok = await BookingAdminConfirmDialog.show(
                     context: context,
                     title: 'اعتماد المكان ونشره',
-                    message: 'سيتم توثيق المكان وتفعيله فورياً ليظهر في نتائج البحث لجميع المستخدمين.',
+                    message:
+                        'سيتم توثيق المكان وتفعيله فورياً ليظهر في نتائج البحث لجميع المستخدمين.',
                     confirmLabel: 'نعم، اعتمد المكان',
                   );
                   if (ok) _approveAndActivateVenue(venue);
@@ -821,7 +959,8 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                   final ok = await BookingAdminConfirmDialog.show(
                     context: context,
                     title: 'إيقاف نشر المكان',
-                    message: 'هل تريد إخفاء هذا المكان مؤقتاً من نتائج البحث للمستخدمين؟',
+                    message:
+                        'هل تريد إخفاء هذا المكان مؤقتاً من نتائج البحث للمستخدمين؟',
                     confirmLabel: 'إيقاف النشر',
                     isDestructive: true,
                   );
@@ -836,6 +975,34 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
                 onPressed: () => _toggleActiveState(venue, true),
               ),
             ],
+            const SizedBox(height: 8),
+
+            // زر تمييز المكان (Phase 4: Featured Venues)
+            const SizedBox(height: 8),
+            Builder(builder: (_) {
+              final fStatus = getBookingFeaturedStatus(venue);
+              final String label;
+              final IconData icon;
+              if (fStatus == BookingFeaturedStatus.active) {
+                label = 'إدارة تمييز المكان (مميز نشط ⭐)';
+                icon = Icons.star_rounded;
+              } else if (fStatus == BookingFeaturedStatus.legacyNeedsDate) {
+                label = 'إدارة التمييز (تمييز قديم — يحتاج تحديد مدة ⚠️)';
+                icon = Icons.warning_amber_rounded;
+              } else if (fStatus == BookingFeaturedStatus.expired) {
+                label = 'إدارة التمييز (التمييز منتهي الصلاحية ⌛)';
+                icon = Icons.star_border_rounded;
+              } else {
+                label = 'تمييز المكان وتثبيته في المقدمة ⭐';
+                icon = Icons.star_border_rounded;
+              }
+              return BookingAdminButton(
+                isFullWidth: true,
+                icon: icon,
+                label: label,
+                onPressed: () => _manageFeaturedVenue(venue),
+              );
+            }),
             const SizedBox(height: 8),
 
             // رفض المكان نهائياً
@@ -854,34 +1021,30 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
   Future<void> _approveAndActivateVenue(Map<String, dynamic> v) async {
     setState(() => _busy = true);
     try {
-      try {
-        await bookingCall('reviewBookingOwnershipProof', {
-          'venueId': widget.venueId,
-          'approved': true,
-          'reason': 'معتمد ومحقق من قبل الإدارة',
-        });
-      } catch (_) {}
-
-      await bookingCall('saveBookingVenue', {
-        'id': widget.venueId,
-        'ownerId': v['ownerId'],
-        'name': v['name'],
-        'category': v['category'] ?? 'chalet',
-        'location': v['location'] ?? 'الأنبار',
-        'price': v['price'] ?? 100000,
-        'deposit': v['deposit'] ?? 50000,
-        'active': true,
+      await bookingCall('approveBookingVenue', {
+        'venueId': widget.venueId,
+        'reason': 'اعتماد وتفعيل من لوحة الإدارة',
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم اعتماد وتفعيل نشر المكان بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+          const SnackBar(
+            content: Text(
+              'تم اعتماد وتفعيل نشر المكان بنجاح وبأمان سحابي تام',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تعذر اعتماد المكان: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+          SnackBar(
+            content: Text(
+              'تعذر اعتماد المكان: $e',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
         );
       }
     } finally {
@@ -892,29 +1055,207 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
   Future<void> _toggleActiveState(Map<String, dynamic> v, bool active) async {
     setState(() => _busy = true);
     try {
-      await bookingCall('saveBookingVenue', {
-        'id': widget.venueId,
-        'ownerId': v['ownerId'],
-        'name': v['name'],
-        'category': v['category'] ?? 'chalet',
-        'location': v['location'] ?? 'الأنبار',
-        'price': v['price'] ?? 100000,
-        'deposit': v['deposit'] ?? 50000,
+      await bookingCall('setBookingVenueActive', {
+        'venueId': widget.venueId,
         'active': active,
+        'reason':
+            active ? 'إعادة تفعيل النشر للجمهور' : 'إيقاف نشر المكان مؤقتاً',
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(active ? 'تم تفعيل المكان' : 'تم إيقاف نشر المكان', style: const TextStyle(fontFamily: 'Cairo'))),
+          SnackBar(
+            content: Text(
+              active ? 'تم تفعيل المكان بنجاح' : 'تم إيقاف نشر المكان مؤقتاً',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل تحديث الحالة: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+          SnackBar(
+            content: Text(
+              'فشل تحديث الحالة: $e',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _manageFeaturedVenue(Map<String, dynamic> v) async {
+    final isCurrentlyFeatured = isBookingVenueFeatured(v);
+    int selectedDays = 7;
+    int priority = (v['featuredPriority'] as num?)?.toInt() ?? 10;
+    bool enableFeatured = !isCurrentlyFeatured;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: BookingAdminTheme.surface(context),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.star_rounded,
+                  color: BookingAdminTheme.gold, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'إدارة تمييز المكان',
+                style: TextStyle(
+                  color: BookingAdminTheme.text(context),
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'المكان: ${v['name'] ?? ''}',
+                style: TextStyle(
+                  color: BookingAdminTheme.textMute(context),
+                  fontSize: 12,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                activeThumbColor: BookingAdminTheme.gold,
+                title: Text(
+                  'تفعيل تمييز المكان في نتائج البحث',
+                  style: TextStyle(
+                    color: BookingAdminTheme.text(context),
+                    fontSize: 13,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                value: enableFeatured,
+                onChanged: (val) => setDlgState(() => enableFeatured = val),
+              ),
+              if (enableFeatured) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'مدة التمييز:',
+                  style: TextStyle(
+                    color: BookingAdminTheme.text(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    for (final days in [3, 7, 30])
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: ChoiceChip(
+                          label: Text('$days أيام'),
+                          selected: selectedDays == days,
+                          selectedColor: BookingAdminTheme.goldSubtle,
+                          onSelected: (_) =>
+                              setDlgState(() => selectedDays = days),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'مستوى الأولوية في الظهور: $priority',
+                  style: TextStyle(
+                    color: BookingAdminTheme.text(context),
+                    fontSize: 12,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                Slider(
+                  value: priority.toDouble(),
+                  min: 0,
+                  max: 100,
+                  divisions: 10,
+                  activeColor: BookingAdminTheme.gold,
+                  onChanged: (val) => setDlgState(() => priority = val.toInt()),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'إلغاء',
+                style: TextStyle(
+                  color: BookingAdminTheme.textMute(context),
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BookingAdminTheme.gold,
+                foregroundColor: Colors.black,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                'حفظ التغييرات',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _busy = true);
+      try {
+        final until = enableFeatured
+            ? (DateTime.now().millisecondsSinceEpoch + selectedDays * 86400000)
+            : null;
+        await bookingCall('setVenueFeatured', {
+          'venueId': widget.venueId,
+          'isFeatured': enableFeatured,
+          'priority': priority,
+          if (until != null) 'featuredUntil': until,
+          'reason': enableFeatured
+              ? 'تمييز المكان لمدة $selectedDays أيام'
+              : 'إلغاء تمييز المكان',
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                enableFeatured
+                    ? 'تم تمييز المكان بنجاح ⭐'
+                    : 'تم إلغاء تمييز المكان',
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('تعذر تعديل التمييز: $e',
+                  style: const TextStyle(fontFamily: 'Cairo')),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
     }
   }
 
@@ -925,13 +1266,18 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
       builder: (ctx) => AlertDialog(
         backgroundColor: BookingAdminTheme.surface(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('طلب تعديلات من المالك', style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo')),
+        title: Text('طلب تعديلات من المالك',
+            style: TextStyle(
+                color: BookingAdminTheme.text(context), fontFamily: 'Cairo')),
         content: TextField(
           controller: ctrl,
-          style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo'),
+          style: TextStyle(
+              color: BookingAdminTheme.text(context), fontFamily: 'Cairo'),
           decoration: InputDecoration(
             hintText: 'اكتب التعديلات المطلوبة (الصور، الترخيص، الأسعار)...',
-            hintStyle: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo'),
+            hintStyle: TextStyle(
+                color: BookingAdminTheme.textMute(context),
+                fontFamily: 'Cairo'),
             filled: true,
             fillColor: BookingAdminTheme.surfaceSecondary(context),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -940,12 +1286,20 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('إلغاء', style: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo')),
+            child: Text('إلغاء',
+                style: TextStyle(
+                    color: BookingAdminTheme.textMute(context),
+                    fontFamily: 'Cairo')),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: BookingAdminTheme.gold),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: BookingAdminTheme.gold),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('إرسال للمالك', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+            child: const Text('إرسال للمالك',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo')),
           ),
         ],
       ),
@@ -954,20 +1308,27 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
     if (confirm == true && ctrl.text.trim().isNotEmpty) {
       setState(() => _busy = true);
       try {
-        await FirebaseFirestore.instance.collection('booking_venues').doc(widget.venueId).update({
+        await FirebaseFirestore.instance
+            .collection('booking_venues')
+            .doc(widget.venueId)
+            .update({
           'verificationStatus': 'needs_revision',
           'revisionReason': ctrl.text.trim(),
           'active': false,
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تمت إعادة المكان للمالك بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+            const SnackBar(
+                content: Text('تمت إعادة المكان للمالك بنجاح',
+                    style: TextStyle(fontFamily: 'Cairo'))),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('فشل الإجراء: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+            SnackBar(
+                content: Text('فشل الإجراء: $e',
+                    style: const TextStyle(fontFamily: 'Cairo'))),
           );
         }
       } finally {
@@ -983,13 +1344,17 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
       builder: (ctx) => AlertDialog(
         backgroundColor: BookingAdminTheme.surface(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('رفض المكان نهائياً', style: TextStyle(color: Colors.redAccent, fontFamily: 'Cairo')),
+        title: const Text('رفض المكان نهائياً',
+            style: TextStyle(color: Colors.redAccent, fontFamily: 'Cairo')),
         content: TextField(
           controller: ctrl,
-          style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo'),
+          style: TextStyle(
+              color: BookingAdminTheme.text(context), fontFamily: 'Cairo'),
           decoration: InputDecoration(
             hintText: 'سبب الرفض (مخالفة الشروط، وثائق غير صحيحة)...',
-            hintStyle: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo'),
+            hintStyle: TextStyle(
+                color: BookingAdminTheme.textMute(context),
+                fontFamily: 'Cairo'),
             filled: true,
             fillColor: BookingAdminTheme.surfaceSecondary(context),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -998,12 +1363,19 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('إلغاء', style: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo')),
+            child: Text('إلغاء',
+                style: TextStyle(
+                    color: BookingAdminTheme.textMute(context),
+                    fontFamily: 'Cairo')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('تأكيد الرفض', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+            child: const Text('تأكيد الرفض',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo')),
           ),
         ],
       ),
@@ -1012,20 +1384,27 @@ class _VenueInspectionSheetState extends State<_VenueInspectionSheet> {
     if (confirm == true && ctrl.text.trim().isNotEmpty) {
       setState(() => _busy = true);
       try {
-        await FirebaseFirestore.instance.collection('booking_venues').doc(widget.venueId).update({
+        await FirebaseFirestore.instance
+            .collection('booking_venues')
+            .doc(widget.venueId)
+            .update({
           'verificationStatus': 'rejected',
           'rejectReason': ctrl.text.trim(),
           'active': false,
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم تسجيل رفض المكان', style: TextStyle(fontFamily: 'Cairo'))),
+            const SnackBar(
+                content: Text('تم تسجيل رفض المكان',
+                    style: TextStyle(fontFamily: 'Cairo'))),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('فشل الإجراء: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+            SnackBar(
+                content: Text('فشل الإجراء: $e',
+                    style: const TextStyle(fontFamily: 'Cairo'))),
           );
         }
       } finally {

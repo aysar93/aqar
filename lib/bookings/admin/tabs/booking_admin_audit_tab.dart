@@ -16,9 +16,17 @@ class BookingAdminAuditTab extends StatefulWidget {
 class _BookingAdminAuditTabState extends State<BookingAdminAuditTab>
     with AutomaticKeepAliveClientMixin {
   String _auditType = 'all'; // all, venues, bookings, payments
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +73,45 @@ class _BookingAdminAuditTabState extends State<BookingAdminAuditTab>
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchController,
+                onChanged: (val) => setState(() => _searchQuery = val),
+                style: TextStyle(
+                  color: BookingAdminTheme.text(context),
+                  fontSize: 12,
+                  fontFamily: 'Cairo',
+                ),
+                decoration: InputDecoration(
+                  hintText: 'بحث برقم الحجز، المكان، المشرف، أو نوع الإجراء...',
+                  hintStyle: TextStyle(
+                    color: BookingAdminTheme.textMute(context),
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: BookingAdminTheme.gold,
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 16),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: BookingAdminTheme.surfaceSecondary(context),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: BookingAdminTheme.border(context)),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               SingleChildScrollView(
@@ -361,12 +408,24 @@ class _BookingAdminAuditTabState extends State<BookingAdminAuditTab>
               final action = (log['action'] ?? '').toString().toLowerCase();
 
               if (_auditType == 'venues') {
-                return type == 'venue' || action.contains('venue');
+                if (!(type == 'venue' || action.contains('venue'))) return false;
               } else if (_auditType == 'bookings') {
-                return type == 'action' && !action.contains('payment');
+                if (!(type == 'action' && !action.contains('payment') && !action.contains('refund') && !action.contains('settle'))) return false;
               } else if (_auditType == 'payments') {
-                return action.contains('payment') || action.contains('deposit');
+                if (!(action.contains('payment') || action.contains('deposit') || action.contains('refund') || action.contains('settle'))) return false;
               }
+
+              if (_searchQuery.trim().isNotEmpty) {
+                final q = _searchQuery.trim().toLowerCase();
+                final targetId = (log['bookingId'] ?? log['venueId'] ?? log['_id'] ?? '').toString().toLowerCase();
+                final actor = (log['actorUid'] ?? log['adminUid'] ?? log['adminEmail'] ?? '').toString().toLowerCase();
+                final reason = (log['reason'] ?? '').toString().toLowerCase();
+                final actionName = _actionLabel(log['action']).toLowerCase();
+                if (!targetId.contains(q) && !actor.contains(q) && !reason.contains(q) && !actionName.contains(q)) {
+                  return false;
+                }
+              }
+
               return true;
             }).toList();
 
@@ -376,110 +435,126 @@ class _BookingAdminAuditTabState extends State<BookingAdminAuditTab>
                 title: 'سجل العمليات فارغ',
                 description:
                     'لم تسجل أي عمليات إدارية تطابق الفلتر المختار حالياً.',
-                actionLabel: _auditType != 'all' ? 'عرض كل السجلات' : null,
-                onAction: () => setState(() => _auditType = 'all'),
+                actionLabel: _auditType != 'all' || _searchQuery.isNotEmpty ? 'عرض كل السجلات' : null,
+                onAction: () {
+                  _searchController.clear();
+                  setState(() {
+                    _auditType = 'all';
+                    _searchQuery = '';
+                  });
+                },
               );
             }
 
             return Column(
               children: [
                 for (final log in filteredLogs) ...[
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BookingAdminTheme.cardDecoration(
-                      context: context,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: BookingAdminTheme.surfaceSecondary(
-                                  context,
+                  InkWell(
+                    onTap: () => _showLogDiffDetails(log),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BookingAdminTheme.cardDecoration(
+                        context: context,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: BookingAdminTheme.surfaceSecondary(
+                                    context,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                child: Icon(
+                                  log['_type'] == 'venue'
+                                      ? Icons.villa_outlined
+                                      : Icons.bookmark_outline_rounded,
+                                  size: 16,
+                                  color: BookingAdminTheme.gold,
+                                ),
                               ),
-                              child: Icon(
-                                log['_type'] == 'venue'
-                                    ? Icons.villa_outlined
-                                    : Icons.bookmark_outline_rounded,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _actionLabel(log['action']),
+                                  softWrap: true,
+                                  style: TextStyle(
+                                    color: BookingAdminTheme.text(context),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.info_outline,
                                 size: 16,
                                 color: BookingAdminTheme.gold,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _actionLabel(log['action']),
-                                softWrap: true,
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatTime(log['createdAt'] ?? log['timestamp']),
                                 style: TextStyle(
-                                  color: BookingAdminTheme.text(context),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
+                                  color: BookingAdminTheme.textMute(context),
+                                  fontSize: 11,
                                   fontFamily: 'Cairo',
                                 ),
                               ),
-                            ),
-                            Text(
-                              _formatTime(log['createdAt'] ?? log['timestamp']),
-                              style: TextStyle(
-                                color: BookingAdminTheme.textMute(context),
-                                fontSize: 11,
-                                fontFamily: 'Cairo',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'المعرف المستهدف: ${log['bookingId'] ?? log['venueId'] ?? log['_id'] ?? 'غير محدد'}',
-                          style: TextStyle(
-                            color: BookingAdminTheme.textMute(context),
-                            fontSize: 11,
-                            fontFamily: 'monospace',
+                            ],
                           ),
-                        ),
-                        if (log['adminUid'] != null ||
-                            log['actorUid'] != null) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 8),
                           Text(
-                            'المشرف الفاعل: ${log['adminEmail'] ?? log['adminUid'] ?? log['actorUid']}',
+                            'المعرف المستهدف: ${log['bookingId'] ?? log['venueId'] ?? log['_id'] ?? 'غير محدد'}',
                             style: TextStyle(
-                              color: BookingAdminTheme.textSub(context),
+                              color: BookingAdminTheme.textMute(context),
                               fontSize: 11,
-                              fontFamily: 'Cairo',
+                              fontFamily: 'monospace',
                             ),
                           ),
-                        ],
-                        if (log['reason'] != null &&
-                            log['reason'].toString().isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: BookingAdminTheme.surfaceSecondary(
-                                context,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'السبب المسجل: ${log['reason']}',
+                          if (log['adminUid'] != null ||
+                              log['actorUid'] != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'المشرف الفاعل: ${log['adminEmail'] ?? log['adminUid'] ?? log['actorUid']}',
                               style: TextStyle(
                                 color: BookingAdminTheme.textSub(context),
                                 fontSize: 11,
                                 fontFamily: 'Cairo',
                               ),
                             ),
-                          ),
+                          ],
+                          if (log['reason'] != null &&
+                              log['reason'].toString().isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: BookingAdminTheme.surfaceSecondary(
+                                  context,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'السبب المسجل: ${log['reason']}',
+                                style: TextStyle(
+                                  color: BookingAdminTheme.textSub(context),
+                                  fontSize: 11,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -488,6 +563,99 @@ class _BookingAdminAuditTabState extends State<BookingAdminAuditTab>
           },
         );
       },
+    );
+  }
+
+  void _showLogDiffDetails(Map<String, dynamic> log) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: BookingAdminTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.history_edu, color: BookingAdminTheme.gold, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'تفاصيل العملية: ${_actionLabel(log['action'])}',
+                      style: TextStyle(
+                        color: BookingAdminTheme.text(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'المعرف المستهدف: ${log['bookingId'] ?? log['venueId'] ?? log['_id']}',
+                style: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 12, fontFamily: 'monospace'),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'المشرف الفاعل: ${log['adminEmail'] ?? log['adminUid'] ?? log['actorUid']}',
+                style: TextStyle(color: BookingAdminTheme.textSub(context), fontSize: 12, fontFamily: 'Cairo'),
+              ),
+              if (log['reason'] != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'السبب: ${log['reason']}',
+                  style: TextStyle(color: BookingAdminTheme.text(context), fontSize: 12, fontFamily: 'Cairo'),
+                ),
+              ],
+              const Divider(height: 24),
+              if (log['before'] != null) ...[
+                Text(
+                  'الحالة قبل الإجراء (Before):',
+                  style: TextStyle(color: Colors.redAccent.shade100, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo'),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: BookingAdminTheme.surfaceSecondary(context),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    log['before'].toString(),
+                    style: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 11, fontFamily: 'monospace'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (log['after'] != null) ...[
+                Text(
+                  'الحالة بعد الإجراء (After):',
+                  style: TextStyle(color: Colors.greenAccent.shade400, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo'),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: BookingAdminTheme.surfaceSecondary(context),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    log['after'].toString(),
+                    style: TextStyle(color: BookingAdminTheme.text(context), fontSize: 11, fontFamily: 'monospace'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -510,8 +678,32 @@ class _BookingAdminAuditTabState extends State<BookingAdminAuditTab>
         return 'رفض الإيصال المالي';
       case 'settlerefund':
         return 'تسوية استرداد المبلغ';
+      case 'settleowner':
+        return 'تسوية مستحقات المالك';
       case 'savebookingvenue':
         return 'حفظ وتحديث بيانات المكان';
+      case 'approvevenue':
+        return 'اعتماد المكان وتفعيل نشره سحابياً';
+      case 'activatevenue':
+        return 'تفعيل نشر المكان للجمهور';
+      case 'deactivatevenue':
+        return 'إيقاف نشر المكان مؤقتاً';
+      case 'featurevenue':
+        return 'تمييز المكان في البحث ⭐';
+      case 'unfeaturevenue':
+        return 'إلغاء تمييز المكان';
+      case 'reschedule':
+        return 'إعادة جدولة موعد الحجز';
+      case 'adminnote':
+        return 'إضافة ملاحظة إدارية داخلية';
+      case 'reviewreport':
+        return 'معالجة بلاغ إدارياً';
+      case 'reviewmedia':
+        return 'مراجعة وسائط المكان';
+      case 'staff':
+        return 'تعديل صلاحيات طاقم المكان';
+      case 'qrcheckin':
+        return 'تسجيل وصول برمز QR';
       case 'reviewbookingownershipproof':
         return 'مراجعة وتوثيق إثبات الملكية';
       default:

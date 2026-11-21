@@ -280,10 +280,15 @@ class _BookingReelsScreenState extends State<BookingReelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subTextColor = isDark ? Colors.white70 : const Color(0xFF475569);
+
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
+      return Scaffold(
+        backgroundColor: scaffoldBg,
+        body: const Center(
           child: CircularProgressIndicator(color: bookingGold),
         ),
       );
@@ -291,10 +296,11 @@ class _BookingReelsScreenState extends State<BookingReelsScreen> {
 
     if (_reels.isEmpty) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: scaffoldBg,
         appBar: AppBar(
           title: const Text('ريلز الحجوزات'),
           backgroundColor: Colors.transparent,
+          foregroundColor: textColor,
           elevation: 0,
         ),
         body: Center(
@@ -305,15 +311,15 @@ class _BookingReelsScreenState extends State<BookingReelsScreen> {
               children: [
                 Icon(Icons.video_collection_outlined, size: 64, color: bookingGold.withValues(alpha: .6)),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'لا توجد مقاطع ريلز للحجوزات حالياً',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'ستظهر هنا مقاطع الفيديو الخاصة بالشاليهات والمزارع والقاعات فور نشرها من الملاك.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+                  style: TextStyle(fontSize: 14, color: subTextColor, height: 1.5),
                 ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
@@ -330,7 +336,7 @@ class _BookingReelsScreenState extends State<BookingReelsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: scaffoldBg,
       body: Stack(
         children: [
           PageView.builder(
@@ -796,6 +802,12 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLandscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    final fallbackBg = isDark ? const Color(0xFF131B2E) : const Color(0xFFF1F5F9);
+    final fallbackTextColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final fallbackIconColor = isDark ? Colors.white54 : const Color(0xFF94A3B8);
     final rawRatio = _controller?.value.aspectRatio ?? (9 / 16);
     final safeRatio = (rawRatio.isFinite && rawRatio > 0) ? rawRatio : (9 / 16);
     return GestureDetector(
@@ -814,18 +826,18 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
             )
           else if (_hasError)
             Container(
-              color: const Color(0xFF131B2E),
+              color: fallbackBg,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.videocam_off_outlined, color: Colors.white54, size: 54),
+                      Icon(Icons.videocam_off_outlined, color: fallbackIconColor, size: 54),
                       const SizedBox(height: 12),
                       Text(
                         _errorMessage.isNotEmpty ? _errorMessage : 'تعذر تشغيل المقطع',
-                        style: const TextStyle(color: Colors.white70, fontSize: 15),
+                        style: TextStyle(color: fallbackTextColor, fontSize: 15),
                       ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
@@ -844,7 +856,7 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
             )
           else
             Container(
-              color: const Color(0xFF131B2E),
+              color: fallbackBg,
               child: const Center(
                 child: CircularProgressIndicator(color: bookingGold),
               ),
@@ -895,7 +907,7 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
           // Right Side Action Bar (Likes, Comments, Share, Save, Report)
           Positioned(
             left: 16,
-            bottom: 40,
+            bottom: isLandscape ? 10 : 40,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -905,38 +917,43 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
                   iconColor: _isLiked ? Colors.redAccent : Colors.white,
                   label: _likesCount > 0 ? '$_likesCount' : '',
                   onTap: _toggleLike,
+                  isLandscape: isLandscape,
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: isLandscape ? 5 : 10),
                 // Comments Button
                 _actionButton(
                   icon: Icons.chat_bubble_outline,
                   iconColor: Colors.white,
                   label: widget.reel.commentsCount > 0 ? '${widget.reel.commentsCount}' : '',
                   onTap: _openComments,
+                  isLandscape: isLandscape,
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: isLandscape ? 5 : 10),
                 // Share Button (Clean icon without text label)
                 _actionButton(
                   icon: Icons.share_outlined,
                   iconColor: Colors.white,
                   label: '',
                   onTap: _shareReel,
+                  isLandscape: isLandscape,
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: isLandscape ? 5 : 10),
                 // Save / Bookmark (Clean icon without text label)
                 _actionButton(
                   icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
                   iconColor: _isSaved ? bookingGold : Colors.white,
                   label: '',
                   onTap: _toggleSave,
+                  isLandscape: isLandscape,
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: isLandscape ? 5 : 10),
                 // Report (Clean icon without text label)
                 _actionButton(
                   icon: Icons.flag_outlined,
                   iconColor: Colors.white70,
                   label: '',
                   onTap: _openReportDialog,
+                  isLandscape: isLandscape,
                 ),
               ],
             ),
@@ -946,7 +963,7 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
           Positioned(
             right: 16,
             left: 76,
-            bottom: 32,
+            bottom: isLandscape ? 12 : 32,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -999,6 +1016,7 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
     required Color iconColor,
     required String label,
     required VoidCallback onTap,
+    bool isLandscape = false,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -1006,18 +1024,22 @@ class _BookingReelCardState extends State<BookingReelCard> with WidgetsBindingOb
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            padding: EdgeInsets.all(isLandscape ? 5 : 7),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: .45),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor, size: 22),
+            child: Icon(icon, color: iconColor, size: isLandscape ? 18 : 22),
           ),
           if (label.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: isLandscape ? 1 : 4),
             Text(
               label,
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isLandscape ? 10 : 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ],

@@ -382,7 +382,7 @@ class BookingRecordCard extends StatelessWidget {
                           child: Text('عرض تفاصيل الحجز',
                               style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFC5A059)))),
+                                  color: Color(0xFFC5A16B)))),
                     ]),
                   ]))));
 }

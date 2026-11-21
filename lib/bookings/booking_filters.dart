@@ -137,11 +137,13 @@ class BookingFilterBar extends StatelessWidget {
       required this.filters,
       required this.onChanged,
       this.welcome = false,
-      this.heroAction});
+      this.heroAction,
+      this.onBack});
   final bool welcome;
   final Widget? heroAction;
   final BookingFilters filters;
   final VoidCallback onChanged;
+  final VoidCallback? onBack;
   Future<void> openFilters(BuildContext context) async {
     final price =
             TextEditingController(text: filters.maxPrice?.toString() ?? ''),
@@ -155,7 +157,7 @@ class BookingFilterBar extends StatelessWidget {
         builder: (context) => StatefulBuilder(
             builder: (context, setState) {
               final isDark = Theme.of(context).brightness == Brightness.dark;
-              const gold = Color(0xFFD4AF37);
+              const gold = Color(0xFFC5A16B);
               const navy = Color(0xFF0F172A);
               return Directionality(
                 textDirection: TextDirection.rtl,
@@ -315,6 +317,7 @@ class BookingFilterBar extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
         if (welcome)
           BookingWelcomeSearch(
+              onBack: onBack,
               toolbarAction: heroAction,
               search: TextField(
                   key: const ValueKey('booking-search-field'),

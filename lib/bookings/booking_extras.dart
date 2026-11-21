@@ -1,3 +1,8 @@
+import 'dart:io' as io;
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'booking_access_guard.dart';
 import 'booking_experience.dart';
 import 'booking_decision_ui.dart';
@@ -8,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../screens/login_screen.dart';
 import 'booking_filters.dart';
 import 'booking_screen.dart';
 import 'booking_widgets.dart';
@@ -150,30 +156,88 @@ class _SupportState extends State<BookingSupportScreen> {
   Future<void> respond(String id, String status) async {
     final value = await showDialog<String>(
         context: context, builder: (_) => const BookingSupportResponseDialog());
-    if (value != null && mounted)
+    if (value != null && mounted) {
       await bookingRun(context, () async {
         await bookingCall('updateBookingSupportTicket',
             {'ticketId': id, 'status': status, 'response': value});
       });
+    }
   }
 
   Future<void> addReply(String id) async {
     final value = await showDialog<String>(
         context: context, builder: (_) => const BookingSupportResponseDialog());
-    if (value != null && mounted)
+    if (value != null && mounted) {
       await bookingRun(context, () async {
-        await bookingCall('addBookingSupportMessage',
-            {'ticketId': id, 'message': value});
+        await bookingCall(
+            'addBookingSupportMessage', {'ticketId': id, 'message': value});
       });
+    }
+  }
+
+  Future<void> attachEvidence(String id) async {
+    final value = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (_) => BookingSupportEvidenceDialog(ticketId: id));
+    if (value != null && mounted) {
+      await bookingRun(context, () async {
+        await bookingCall('attachBookingDisputeEvidence', {
+          'ticketId': id,
+          ...value,
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم رفع وإرفاق الدليل بنجاح')),
+          );
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return BookingScaffold(
+        appBar: AppBar(title: const Text('دعم الحجوزات')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.support_agent_rounded,
+                    size: 64, color: bookingGold),
+                const SizedBox(height: 16),
+                const Text(
+                  'سجل الدخول لعرض تذاكر الدعم أو فتح تذكرة جديدة',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo'),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  },
+                  child: const Text('تسجيل الدخول'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     Query<Map<String, dynamic>> query =
         FirebaseFirestore.instance.collection('booking_support');
-    if (!widget.admin)
-      query = query.where('userId',
-          isEqualTo: FirebaseAuth.instance.currentUser!.uid);
+    if (!widget.admin) {
+      query = query.where('userId', isEqualTo: currentUser.uid);
+    }
     return BookingScaffold(
         appBar: AppBar(title: const Text('دعم الحجوزات')),
         body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -185,6 +249,7 @@ class _SupportState extends State<BookingSupportScreen> {
                 onSubmit: () async {
                   if (busy) return;
                   setState(() => busy = true);
+                  final nav = Navigator.of(context);
                   await bookingRun(context, () async {
                     await bookingCall('openBookingSupportTicket', {
                       'bookingId': widget.bookingId,
@@ -192,55 +257,60 @@ class _SupportState extends State<BookingSupportScreen> {
                       'subject': subject.text,
                       'message': message.text
                     });
-                    if (mounted) Navigator.pop(context);
+                    if (mounted) nav.pop();
                   });
                   if (mounted) setState(() => busy = false);
                 }),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: query.snapshots(includeMetadataChanges: true),
               builder: (context, s) => BookingVerifiedGate(
-                hasData: s.hasData,
-                hasError: s.hasError,
-                error: s.error,
-                isFromCache: s.data?.metadata.isFromCache ?? false,
-                hasPendingWrites: s.data?.metadata.hasPendingWrites ?? false,
-                onRetry: () => setState(() {}),
-                child: Builder(builder: (_) {
-                  final docs = s.data!.docs.toList()
-                    ..sort((a, b) => ((b.data()['updatedAt'] as Timestamp?)
-                                ?.millisecondsSinceEpoch ??
-                            0)
-                        .compareTo((a.data()['updatedAt'] as Timestamp?)
-                                ?.millisecondsSinceEpoch ??
-                            0));
-                  if (docs.isEmpty) {
-                    return const Text(
-                        'لا توجد تذاكر. افتح تفاصيل الحجز لطلب الدعم.');
-                  }
-                  return Column(children: [
-                    for (final d in docs)
-                      BookingSupportTicket(data: d.data(), actions: [
-                        if (d.data()['status'] != 'resolved' &&
-                            d.data()['status'] != 'closed') ...[
-                          TextButton.icon(
-                              icon: const Icon(Icons.reply),
-                              onPressed: () => addReply(d.id),
-                              label: const Text('إضافة رد')),
-                        ],
-                        if (widget.admin &&
-                            d.data()['status'] != 'resolved' &&
-                            d.data()['status'] != 'closed') ...[
-                          TextButton(
-                              onPressed: () => respond(d.id, 'in_progress'),
-                              child: const Text('تولي التذكرة والرد')),
-                          TextButton(
-                              onPressed: () => respond(d.id, 'resolved'),
-                              child: const Text('حل وإغلاق')),
-                        ]
-                      ])
-                  ]);
-                }),
-              ))
+                    hasData: s.hasData,
+                    hasError: s.hasError,
+                    error: s.error,
+                    isFromCache: s.data?.metadata.isFromCache ?? false,
+                    hasPendingWrites:
+                        s.data?.metadata.hasPendingWrites ?? false,
+                    onRetry: () => setState(() {}),
+                    child: Builder(builder: (_) {
+                      final docs = s.data!.docs.toList()
+                        ..sort((a, b) => ((b.data()['updatedAt'] as Timestamp?)
+                                    ?.millisecondsSinceEpoch ??
+                                0)
+                            .compareTo((a.data()['updatedAt'] as Timestamp?)
+                                    ?.millisecondsSinceEpoch ??
+                                0));
+                      if (docs.isEmpty) {
+                        return const Text(
+                            'لا توجد تذاكر. افتح تفاصيل الحجز لطلب الدعم.');
+                      }
+                      return Column(children: [
+                        for (final d in docs)
+                          BookingSupportTicket(data: d.data(), actions: [
+                            if (d.data()['status'] != 'resolved' &&
+                                d.data()['status'] != 'closed') ...[
+                              TextButton.icon(
+                                  icon: const Icon(Icons.reply),
+                                  onPressed: () => addReply(d.id),
+                                  label: const Text('إضافة رد')),
+                              TextButton.icon(
+                                  icon: const Icon(Icons.attach_file),
+                                  onPressed: () => attachEvidence(d.id),
+                                  label: const Text('إرفاق دليل')),
+                            ],
+                            if (widget.admin &&
+                                d.data()['status'] != 'resolved' &&
+                                d.data()['status'] != 'closed') ...[
+                              TextButton(
+                                  onPressed: () => respond(d.id, 'in_progress'),
+                                  child: const Text('تولي التذكرة والرد')),
+                              TextButton(
+                                  onPressed: () => respond(d.id, 'resolved'),
+                                  child: const Text('حل وإغلاق')),
+                            ]
+                          ])
+                      ]);
+                    }),
+                  ))
         ]));
   }
 }
@@ -273,6 +343,297 @@ class _BookingSupportResponseDialogState
                 onPressed: () => Navigator.pop(context, response.text),
                 child: const Text('إرسال'))
           ]);
+}
+
+class BookingSupportEvidenceDialog extends StatefulWidget {
+  final String ticketId;
+  const BookingSupportEvidenceDialog({super.key, required this.ticketId});
+
+  @override
+  State<BookingSupportEvidenceDialog> createState() =>
+      _BookingSupportEvidenceDialogState();
+}
+
+class _BookingSupportEvidenceDialogState
+    extends State<BookingSupportEvidenceDialog> {
+  final noteCtrl = TextEditingController();
+  XFile? _pickedFile;
+  Uint8List? _fileBytes;
+  String? _fileName;
+  String? _fileType;
+  int _fileSize = 0;
+  bool _isUploading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 85);
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (bytes.length > 10 * 1024 * 1024) {
+        setState(() {
+          _error = 'حجم الملف يتجاوز الحد الأقصى (10 ميغابايت)';
+          _pickedFile = null;
+          _fileBytes = null;
+        });
+        return;
+      }
+      final name = picked.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\.\s]'), '_');
+      String mime = 'image/jpeg';
+      final lowerName = name.toLowerCase();
+      if (lowerName.endsWith('.png')) {
+        mime = 'image/png';
+      } else if (lowerName.endsWith('.webp')) {
+        mime = 'image/webp';
+      }
+
+      setState(() {
+        _pickedFile = picked;
+        _fileBytes = bytes;
+        _fileName = name;
+        _fileSize = bytes.length;
+        _fileType = mime;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() => _error = 'تعذر اختيار الملف: $e');
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      Uint8List? bytes = file.bytes;
+      if ((bytes == null || bytes.isEmpty) &&
+          file.path != null &&
+          file.path!.isNotEmpty) {
+        try {
+          final ioFile = io.File(file.path!);
+          if (await ioFile.exists()) {
+            bytes = await ioFile.readAsBytes();
+          }
+        } catch (_) {}
+      }
+      if (bytes == null || bytes.isEmpty) {
+        setState(() => _error = 'تعذر قراءة محتوى ملف PDF');
+        return;
+      }
+      if (bytes.length > 10 * 1024 * 1024) {
+        setState(() {
+          _error = 'حجم الملف يتجاوز الحد الأقصى (10 ميغابايت)';
+          _pickedFile = null;
+          _fileBytes = null;
+        });
+        return;
+      }
+      final name = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\.\s]'), '_');
+      if (!name.toLowerCase().endsWith('.pdf')) {
+        setState(() => _error = 'يجب اختيار ملف PDF بصيغة صحيحة');
+        return;
+      }
+
+      setState(() {
+        _pickedFile = XFile.fromData(bytes!, name: name);
+        _fileBytes = bytes;
+        _fileName = name;
+        _fileSize = bytes.length;
+        _fileType = 'application/pdf';
+        _error = null;
+      });
+    } catch (e) {
+      setState(() => _error = 'تعذر اختيار ملف PDF: $e');
+    }
+  }
+
+  Future<void> _uploadAndSubmit() async {
+    if (_fileBytes == null || _fileName == null || _fileType == null) return;
+    setState(() => _isUploading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw StateError('يجب تسجيل الدخول أولاً');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeName = '${timestamp}_$_fileName';
+      final storagePath =
+          'booking_dispute_evidence/${widget.ticketId}/${user.uid}/$safeName';
+
+      final storageRef = FirebaseStorage.instance.ref(storagePath);
+      await storageRef.putData(
+          _fileBytes!, SettableMetadata(contentType: _fileType));
+
+      if (!mounted) return;
+      // Zero-Token Architecture:
+      // We deliberately do NOT call getDownloadURL() to prevent public bearer token generation.
+      // Access is strictly mediated via Firebase Storage SDK using authenticated session.
+      Navigator.pop(context, {
+        'fileName': _fileName,
+        'fileUrl': '',
+        'storagePath': storagePath,
+        'fileType': _fileType,
+        'fileSize': _fileSize,
+        'note': noteCtrl.text.trim(),
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _error = 'فشل الرفع: $e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('إرفاق دليل حقيقي للنزاع'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFEF4444)),
+                  ),
+                  child: Text(
+                    _error!,
+                    style:
+                        const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_pickedFile == null) ...[
+                const Text(
+                    'اختر ملف الدليل من جهازك (صور JPEG/PNG/WEBP أو مستندات PDF حتى 10 ميغابايت):',
+                    style: TextStyle(fontSize: 13, fontFamily: 'Cairo')),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text('المعرض'),
+                        onPressed: () => _pickImage(ImageSource.gallery),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('الكاميرا'),
+                        onPressed: () => _pickImage(ImageSource.camera),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text('PDF'),
+                        onPressed: _pickDocument,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.insert_drive_file,
+                              color: Color(0xFF3B82F6)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _fileName ?? '',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: _isUploading
+                                ? null
+                                : () => setState(() {
+                                      _pickedFile = null;
+                                      _fileBytes = null;
+                                    }),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'الحجم: ${(_fileSize / 1024).toStringAsFixed(1)} كيلوبايت | النوع: $_fileType',
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  maxLength: 500,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'ملاحظة توضيحية حول الدليل (اختياري)',
+                  ),
+                ),
+              ],
+              if (_isUploading) ...[
+                const SizedBox(height: 16),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 12),
+                    Text('جارٍ رفع الملف والتحقق من التخزين...',
+                        style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isUploading ? null : () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          if (_pickedFile != null)
+            ElevatedButton(
+              onPressed: _isUploading ? null : _uploadAndSubmit,
+              child: const Text('رفع وإرفاق الدليل'),
+            ),
+        ],
+      );
 }
 
 class BookingAvailabilitySearchScreen extends StatefulWidget {
@@ -368,7 +729,8 @@ class _AvailabilitySearchState extends State<BookingAvailabilitySearchScreen> {
                       final venues = await publicBookingVenuesQuery()
                           .get(const GetOptions(source: Source.server));
                       final eligibleDocs = venues.docs
-                          .where((d) => isPubliclyEligibleBookingVenue(d.data()))
+                          .where(
+                              (d) => isPubliclyEligibleBookingVenue(d.data()))
                           .toList();
                       final free = <String>{};
                       for (var offset = 0;

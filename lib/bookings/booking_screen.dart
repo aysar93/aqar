@@ -1,4 +1,5 @@
 import 'booking_access_guard.dart';
+import '../screens/login_screen.dart';
 import 'booking_form_validator.dart';
 import '../features/property_map/models/property_location.dart';
 import '../features/property_map/screens/location_picker_screen.dart';
@@ -199,10 +200,13 @@ Future<void> bookingRun(
 
 class BookingScreen extends StatefulWidget {
   final bool admin;
+  final bool embedded;
   final List<Map<String, dynamic>> diagnosticFeatured;
   const BookingScreen(
       {super.key,
       this.admin = false,
+      this.embedded = false,
+      this.onBackToMain,
       this.records,
       this.diagnosticFeatured = const [],
       this.currentUserId,
@@ -216,6 +220,7 @@ class BookingScreen extends StatefulWidget {
       this.adminTaskRecords,
       this.onAdminTask,
       this.loadVenue});
+  final VoidCallback? onBackToMain;
   final Stream<QuerySnapshot<Map<String, dynamic>>> Function(int)? records;
   final String? Function()? currentUserId;
   final int initialTab;
@@ -255,6 +260,32 @@ class _BookingScreenState extends State<BookingScreen> {
   };
   late final bookingBanners =
       BannerService.activeBanners(placement: BannerPlacement.bookings);
+
+  int? _cachedStreamTab;
+  int? _cachedPublicLimit;
+  String? _cachedStreamUid;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _cachedStream;
+
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _getBookingStream(
+    Query<Map<String, dynamic>>? query,
+    int currentTab,
+    int currentLimit,
+    String? currentUid,
+  ) {
+    if (widget.records != null) return widget.records!.call(currentTab);
+    if (query == null) return null;
+    if (_cachedStream != null &&
+        _cachedStreamTab == currentTab &&
+        _cachedPublicLimit == currentLimit &&
+        _cachedStreamUid == currentUid) {
+      return _cachedStream;
+    }
+    _cachedStreamTab = currentTab;
+    _cachedPublicLimit = currentLimit;
+    _cachedStreamUid = currentUid;
+    _cachedStream = query.snapshots(includeMetadataChanges: true);
+    return _cachedStream;
+  }
   @override
   void initState() {
     super.initState();
@@ -387,18 +418,43 @@ class _BookingScreenState extends State<BookingScreen> {
     final uid = widget.currentUserId != null
         ? widget.currentUserId!()
         : FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      return const BookingScaffold(
-          body: Center(child: Text('سجل الدخول للوصول إلى الحجوزات')));
+    if (uid == null && (widget.admin || tab != 0)) {
+      return BookingScaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline_rounded,
+                  size: 64, color: bookingGold),
+              const SizedBox(height: 16),
+              const Text('سجل الدخول للوصول إلى هذا القسم',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                child: const Text('تسجيل الدخول'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (tab == 4 && !finance) {
+      tab = widget.admin ? 0 : 1;
     }
     Query<Map<String, dynamic>>? query;
     if (widget.records == null) {
       if (tab == 6) {
         query = FirebaseFirestore.instance
             .collection('booking_venue_staff')
-            .where('userId', isEqualTo: uid);
+            .where('userId', isEqualTo: uid ?? '');
       } else if (tab == 5) {
-        query = ownerBookingVenuesQuery(uid);
+        query = uid != null ? ownerBookingVenuesQuery(uid) : null;
       } else if (tab == 0) {
         query = widget.admin
             ? adminBookingVenuesQuery()
@@ -411,7 +467,7 @@ class _BookingScreenState extends State<BookingScreen> {
           query = bookingFinanceQueue(query);
         } else if (!widget.admin) {
           query =
-              query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid);
+              query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid ?? '');
         }
       }
     }
@@ -419,6 +475,7 @@ class _BookingScreenState extends State<BookingScreen> {
     final isReels = _bottomBarIndex == 2 && (tab == 0 || tab == 1);
     final isSearch = _bottomBarIndex == 1 && (tab == 0 || tab == 1);
     final isAccount = _bottomBarIndex == 4 && (tab == 0 || tab == 1);
+    final isHosted = widget.embedded || widget.onBackToMain != null;
     return Directionality(
         textDirection: TextDirection.rtl,
         child: BookingScaffold(
@@ -426,6 +483,16 @@ class _BookingScreenState extends State<BookingScreen> {
             appBar: isDiscovery || isReels
                 ? null
                 : AppBar(
+                    leading: (tab != 0 || (isHosted && _bottomBarIndex != 0))
+                        ? IconButton(
+                            tooltip: 'رجوع',
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            onPressed: () => setState(() {
+                              tab = 0;
+                              _bottomBarIndex = 0;
+                            }),
+                          )
+                        : null,
                     title: Text(widget.admin
                         ? 'إدارة الحجوزات'
                         : isSearch
@@ -440,50 +507,47 @@ class _BookingScreenState extends State<BookingScreen> {
                                             ? 'المراجعة المالية'
                                             : 'حجوزات الأنبار'),
                     actions: widget.appBarActions ??
-                        (widget.admin && tab != 1 && !isDiscovery
+                        ((widget.admin || finance) && tab != 1 && !isDiscovery
                             ? [
-                                IconButton(
-                                    icon: const Icon(Icons.campaign_outlined),
-                                    tooltip: 'بنرات الحجوزات',
-                                    onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const BannerManagementScreen(
-                                                    placement: BannerPlacement
-                                                        .bookings)))),
-                                IconButton(
-                                    icon: const Icon(Icons.add),
-                                    tooltip: 'إضافة مكان',
-                                    onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const BookingVenueEditor()))),
-                                IconButton(
-                                    icon: const Icon(Icons.settings),
-                                    tooltip: 'إعدادات الحجوزات',
-                                    onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const BookingSettingsScreen()))),
-                                PopupMenuButton<int>(
-                                    tooltip: 'أدوات الإدارة والمالك',
-                                    icon: const Icon(Icons.grid_view_outlined),
-                                    onSelected: (value) =>
-                                        setState(() => tab = value),
-                                    itemBuilder: (_) => [
-                                          for (final e in <int, String>{
-                                            2: 'لوحة المالك',
-                                            5: 'أماكني وأسعاري',
-                                            6: 'مهام الموظف',
-                                            if (finance) 4: 'المراجعة المالية'
-                                          }.entries)
+                                if (widget.admin) ...[
+                                  IconButton(
+                                      icon: const Icon(Icons.campaign_outlined),
+                                      tooltip: 'بنرات الحجوزات',
+                                      onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const BannerManagementScreen(
+                                                      placement: BannerPlacement
+                                                          .bookings)))),
+                                  IconButton(
+                                      icon: const Icon(Icons.add),
+                                      tooltip: 'إضافة مكان',
+                                      onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const BookingVenueEditor()))),
+                                  IconButton(
+                                      icon: const Icon(Icons.settings),
+                                      tooltip: 'إعدادات الحجوزات',
+                                      onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const BookingSettingsScreen()))),
+                                ],
+                                if (finance)
+                                  PopupMenuButton<int>(
+                                      tooltip: 'المراجعة المالية',
+                                      icon: const Icon(Icons.grid_view_outlined),
+                                      onSelected: (value) =>
+                                          setState(() => tab = value),
+                                      itemBuilder: (_) => const [
                                             PopupMenuItem(
-                                                value: e.key,
-                                                child: Text(e.value))
-                                        ])
+                                                value: 4,
+                                                child: Text('المراجعة المالية'))
+                                          ])
                               ]
                             : [
                                 IconButton(
@@ -495,19 +559,21 @@ class _BookingScreenState extends State<BookingScreen> {
                                   ),
                                 ),
                               ])),
-            bottomNavigationBar: BookingBottomBar(
-              currentIndex: _bottomBarIndex,
-              onTap: (newIndex) {
-                setState(() {
-                  _bottomBarIndex = newIndex;
-                  if (newIndex == 0) {
-                    tab = 0;
-                  } else if (newIndex == 3) {
-                    tab = 1;
-                  }
-                });
-              },
-            ),
+            bottomNavigationBar: widget.embedded
+                ? null
+                : BookingBottomBar(
+                    currentIndex: _bottomBarIndex,
+                    onTap: (newIndex) {
+                      setState(() {
+                        _bottomBarIndex = newIndex;
+                        if (newIndex == 0) {
+                          tab = 0;
+                        } else if (newIndex == 3) {
+                          tab = 1;
+                        }
+                      });
+                    },
+                  ),
             body: isSearch
                 ? const BookingSearchScreen(embedded: true)
                 : isReels
@@ -516,8 +582,12 @@ class _BookingScreenState extends State<BookingScreen> {
                         ? BookingAccountScreen(
                             admin: widget.admin,
                             embedded: true,
-                            onOpenAdminTools:
-                                widget.admin ? () => setState(() => tab = 0) : null,
+                            onOpenAdminTools: widget.admin
+                                ? () => setState(() {
+                                      tab = 0;
+                                      _bottomBarIndex = 0;
+                                    })
+                                : null,
                           )
                         : ListView(
                 key: const PageStorageKey('booking-workspace-scroll'),
@@ -556,13 +626,36 @@ class _BookingScreenState extends State<BookingScreen> {
                                 subtitle: widget.admin
                                     ? 'راجع الأماكن والطلبات والتوثيق من مساحة واحدة.'
                                     : 'إدارة الشاليهات والأسعار ومتابعة طلبات الحجز.')),
-                  if ((tab != 0 && tab != 1 && tab != 2) ||
-                      (widget.admin && tab == 0))
+                  if (uid != null &&
+                      (((tab != 0 && tab != 1 && tab != 2) ||
+                          (widget.admin && tab == 0))))
                     ...workspaceTools(uid),
                   if (tab == 0)
                     BookingFilterBar(
                         welcome: true,
-                        heroAction: null,
+                        onBack: widget.onBackToMain,
+                        heroAction: isHosted && finance
+                            ? PopupMenuButton<int>(
+                                tooltip: 'المراجعة المالية',
+                                icon: const Icon(Icons.apps_rounded,
+                                    color: Color(0xFF0F172A)),
+                                onSelected: (value) => setState(() {
+                                  tab = value;
+                                  _bottomBarIndex = 0;
+                                }),
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                      value: 4,
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.account_balance, size: 20),
+                                          SizedBox(width: 8),
+                                          Text('المراجعة المالية'),
+                                        ],
+                                      )),
+                                ],
+                              )
+                            : null,
                         filters: filters,
                         onChanged: () => setState(() {})),
                   if (tab == 1)
@@ -604,7 +697,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                 : FontWeight.w500,
                                             color: statusGroup == name
                                                 ? (Theme.of(context).brightness == Brightness.dark
-                                                    ? const Color(0xFFE6C894)
+                                                    ? const Color(0xFFC5A16B)
                                                     : const Color(0xFF8B6B23))
                                                 : (Theme.of(context).brightness == Brightness.dark
                                                     ? Colors.white60
@@ -665,8 +758,7 @@ class _BookingScreenState extends State<BookingScreen> {
                             });
                           }),
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: widget.records?.call(tab) ??
-                            query!.snapshots(includeMetadataChanges: true),
+                        stream: _getBookingStream(query, tab, publicLimit, uid),
                         builder: (context, s) {
                           final requireVerifiedServer =
                               tab != 0 || widget.admin || !s.hasData || (s.data?.docs.isEmpty ?? true);
@@ -824,17 +916,17 @@ class _BookingScreenState extends State<BookingScreen> {
                                 featuredVenues: widget.diagnosticFeatured.isNotEmpty
                                     ? (widget.diagnosticFeatured
                                         .where(filters.matches)
+                                        .where(isBookingVenueFeatured)
                                         .toList()
-                                      ..sort(filters.compare))
-                                    : docs
-                                        .where((d) =>
-                                            d.data()['featured'] == true ||
-                                            d.data()['isFeatured'] == true)
+                                      ..sort(compareFeaturedBookingVenues))
+                                    : (docs
                                         .map((d) => <String, dynamic>{
                                               ...d.data(),
                                               'id': d.id
                                             })
-                                        .toList(),
+                                        .where(isBookingVenueFeatured)
+                                        .toList()
+                                      ..sort(compareFeaturedBookingVenues)),
                                 hasMore: s.data!.docs.length > publicLimit,
                                 loading: s.connectionState ==
                                     ConnectionState.waiting,
@@ -981,6 +1073,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   bool intentReadFailed = false;
   final GlobalKey<BookingVenueDetailsState> _venueDetailsKey = GlobalKey<BookingVenueDetailsState>();
   final ScrollController _venueScrollController = ScrollController();
+  final ValueNotifier<int> _venueSelectedNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isVenueTabPinned = ValueNotifier<bool>(false);
   late final BookingRequestIntentStore intentStore =
       widget.intentStore ?? FileBookingRequestIntentStore();
@@ -1083,15 +1176,25 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   }
   DateTime calendarMonth = bookingBaghdadMonth();
   late Future<Map<String, dynamic>> availability = loadAvailability();
-  Future<Map<String, dynamic>> loadAvailability() {
+  Future<Map<String, dynamic>> loadAvailability() async {
+    if (FirebaseAuth.instance.currentUser == null &&
+        identical(widget.call, bookingCall)) {
+      return const {
+        'slots': [],
+        'timeZone': 'Asia/Baghdad',
+        'guestReadOnly': true,
+      };
+    }
     final first = DateTime.utc(calendarMonth.year, calendarMonth.month, 1, -3)
         .millisecondsSinceEpoch;
+    final end = DateTime.utc(calendarMonth.year, calendarMonth.month + 1, 1, -3)
+        .millisecondsSinceEpoch;
     final now = DateTime.now().millisecondsSinceEpoch + 1000;
+    final start = first > now ? first : (now < end ? now : first);
     return widget.call('getBookingAvailability', {
       'venueId': widget.venueId,
-      'start': first > now ? first : now,
-      'end': DateTime.utc(calendarMonth.year, calendarMonth.month + 1, 1, -3)
-          .millisecondsSinceEpoch
+      'start': start,
+      'end': end,
     });
   }
 
@@ -1169,6 +1272,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   void dispose() {
     requestSession?.cancel();
     _venueScrollController.dispose();
+    _venueSelectedNotifier.dispose();
     _isVenueTabPinned.dispose();
     notes.dispose();
     guestName.dispose();
@@ -1657,18 +1761,31 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
           body: Center(
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 900),
-                  child: Stack(
-                      children: [
-                        ListView(
+                  child: Column(
+                    children: [
+                      if (step == 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+                          child: BookingVenueDetails.buildTabBarWidget(
+                            context: context,
+                            selectedNotifier: _venueSelectedNotifier,
+                            onTabTap: (i) => _venueDetailsKey.currentState?.jump(i),
+                          ),
+                        ),
+                      Expanded(
+                        child: ListView(
                             key: ValueKey('booking-step-$step'),
                             controller: _venueScrollController,
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                             children: [
                               if (step > 0)
                                 BookingCheckoutHeader(step: (step - 1).clamp(0, 2)),
                               if (step == 0) ...[
                                 BookingVenueDetails(
                                     key: _venueDetailsKey,
+                                    showTabBar: false,
+                                    selectedNotifier: _venueSelectedNotifier,
+                                    scrollController: _venueScrollController,
                                     venue: v),
                           BookingSection(
                               title: 'تجارب الضيوف',
@@ -2131,88 +2248,9 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                   ])),
                         ],
                       ]),
-                        if (step == 0)
-                          ValueListenableBuilder<bool>(
-                            valueListenable: _isVenueTabPinned,
-                            builder: (context, isPinned, _) {
-                              if (!isPinned) return const SizedBox.shrink();
-                              return Positioned(
-                                top: 8,
-                                left: 20,
-                                right: 20,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: .22),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
-                                    border: Border.all(
-                                      color: bookingGold.withValues(alpha: .5),
-                                    ),
-                                  ),
-                                  child: ValueListenableBuilder<int>(
-                                    valueListenable: _venueDetailsKey.currentState?.selectedNotifier ?? ValueNotifier<int>(0),
-                                    builder: (context, currentSelected, _) => SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Row(
-                                        children: [
-                                          for (var i = 0; i < BookingVenueDetails.labels.length; i++)
-                                            Padding(
-                                              padding: const EdgeInsetsDirectional.only(end: 8),
-                                              child: Semantics(
-                                                selected: currentSelected == i,
-                                                child: TextButton(
-                                                  key: ValueKey('booking-pinned-tab-$i'),
-                                                  style: TextButton.styleFrom(
-                                                    minimumSize: const Size(48, 44),
-                                                    foregroundColor: currentSelected == i
-                                                        ? Theme.of(context).colorScheme.onSurface
-                                                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                                                    backgroundColor: Colors.transparent,
-                                                  ),
-                                                  onPressed: () => _venueDetailsKey.currentState?.jump(i),
-                                                  child: Container(
-                                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                                    decoration: BoxDecoration(
-                                                      border: Border(
-                                                        bottom: BorderSide(
-                                                          color: currentSelected == i
-                                                              ? bookingGold
-                                                              : Colors.transparent,
-                                                          width: 3,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      BookingVenueDetails.labels[i],
-                                                      softWrap: false,
-                                                      style: TextStyle(
-                                                        fontWeight: currentSelected == i
-                                                            ? FontWeight.w700
-                                                            : FontWeight.w500,
-                                                        fontFamily: 'Cairo',
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                      ],
-                  ))),
+                    ),
+                  ],
+                ))),
         ));
   }
 }
@@ -2883,9 +2921,90 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 BookingRecordedMoney(booking: b),
                 if (b['reviewedBy'] != null)
                   Text('مراجع العربون: ${b['reviewedBy']}'),
-                if (b['cancelledBy'] != null)
-                  Text(
-                      'ألغاه: ${b['cancelledBy']} — السبب: ${b['cancellationReason'] ?? b['reason']}'),
+                if (b['status'] == 'rejected') ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'سبب رفض الحجز من قبل المالك:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  color: Color(0xFF991B1B),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                (b['reason'] ?? b['rejectionReason'] ?? 'لم يحدد المالك سبباً إضافياً').toString(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF7F1D1D),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (b['status'] == 'cancelled' || b['cancelledBy'] != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, color: Color(0xFF475569), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'حالة الإلغاء: ${b['cancelledBy'] == b['customerId'] ? 'أُلغي بواسطة الزبون' : (b['cancelledBy'] == b['ownerId'] ? 'أُلغي بواسطة المالك' : (b['cancelledBy'] ?? 'ملغى'))}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  color: Color(0xFF334155),
+                                ),
+                              ),
+                              if (b['cancellationReason'] != null || b['reason'] != null) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  'السبب: ${b['cancellationReason'] ?? b['reason']}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (b['refundReference'] != null)
                   Text(
                       'مرجع الاسترداد: ${b['refundReference']}\nالمراجع: ${b['refundSettledBy'] ?? 'الإدارة'}\nوقت التسوية: ${b['refundSettledAt'] is num ? DateTime.fromMillisecondsSinceEpoch((b['refundSettledAt'] as num).toInt()).toString() : (b['refundSettledAt'] ?? 'غير محدد')}'),
@@ -4960,15 +5079,44 @@ class BookingBottomUtilitiesCard extends StatelessWidget {
                 context: context,
                 icon: Icons.add_business_outlined,
                 label: 'أضف مكانك',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BookingVenueEditor(
-                      ownerMode: true,
-                      data: {'ownerId': uid},
+                onTap: () {
+                  if (FirebaseAuth.instance.currentUser == null) {
+                    showDialog(
+                      context: context,
+                      builder: (dCtx) => AlertDialog(
+                        title: const Text('يلزم تسجيل الدخول'),
+                        content: const Text('يرجى تسجيل الدخول لإضافة مكان جديد.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dCtx),
+                            child: const Text('إلغاء'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(dCtx);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const LoginScreen()),
+                              );
+                            },
+                            child: const Text('تسجيل الدخول'),
+                          ),
+                        ],
+                      ),
+                    );
+                    return;
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BookingVenueEditor(
+                        ownerMode: true,
+                        data: {'ownerId': uid},
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
               _buildUtilityPill(
                 context: context,

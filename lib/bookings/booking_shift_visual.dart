@@ -88,7 +88,7 @@ class BookingShiftVisual {
     darkBackground: Color(0x3364748B),
     lightBorder: Color(0x6664748B),
     darkBorder: Color(0x8094A3B8),
-    accentColor: Color(0xFFD4AF37),
+    accentColor: Color(0xFFC5A16B),
   );
 
   static BookingShiftVisual specForKind(BookingShiftKind kind, {String? label}) {

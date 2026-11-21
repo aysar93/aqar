@@ -7,67 +7,122 @@ import 'package:flutter/services.dart';
 
 const _navy = Color(0xFF0F172A), _gold = Color(0xFFC5A16B);
 
+/// Reusable golden header decoration from the top of the bookings system
+BoxDecoration bookingGoldenHeaderDecoration(double radius) => BoxDecoration(
+      gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Color(0xFFD8BD95), Color(0xFFC5A16B)]),
+      borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(radius),
+          bottomRight: Radius.circular(radius)),
+    );
+
+/// Reusable golden header surface used for the top of Bookings and Main Home Screen
+class BookingGoldenHeaderContainer extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsDirectional? padding;
+
+  const BookingGoldenHeaderContainer({
+    super.key,
+    required this.child,
+    this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final topInset = MediaQuery.viewPaddingOf(context).top;
+    final isLandscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light),
+      child: LayoutBuilder(builder: (context, bounds) {
+        final radius = isLandscape
+            ? 22.0
+            : (bounds.maxWidth * .09).clamp(28.0, 42.0);
+        return Container(
+          key: const ValueKey('booking-welcome-search'),
+          width: double.infinity,
+          padding: padding ??
+              EdgeInsetsDirectional.fromSTEB(
+                  20,
+                  isLandscape ? topInset + 6 : topInset + 18,
+                  20,
+                  isLandscape ? 10 : 20),
+          decoration: bookingGoldenHeaderDecoration(radius),
+          child: child,
+        );
+      }),
+    );
+  }
+}
+
 /// The search field and greeting share one surface; categories live outside it.
-class BookingWelcomeSearch extends StatelessWidget {
+class BookingWelcomeSearch extends StatefulWidget {
   const BookingWelcomeSearch(
       {super.key,
       required this.search,
       this.toolbarAction,
-      this.filterBar});
+      this.filterBar,
+      this.onBack});
   final Widget search;
   final Widget? toolbarAction;
   final Widget? filterBar;
+  final VoidCallback? onBack;
+
+  @override
+  State<BookingWelcomeSearch> createState() => _BookingWelcomeSearchState();
+}
+
+class _BookingWelcomeSearchState extends State<BookingWelcomeSearch> {
+  Stream<QuerySnapshot>? _notificationStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (Firebase.apps.isNotEmpty && uid != null) {
+      _notificationStream = FirebaseFirestore.instance
+          .collection('users/$uid/notifications')
+          .where('read', isEqualTo: false)
+          .limit(10)
+          .snapshots();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.viewPaddingOf(context).top;
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark.copyWith(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light),
-        child: LayoutBuilder(builder: (context, bounds) {
-          final radius = (bounds.maxWidth * .09).clamp(28.0, 42.0);
-          return Container(
-              key: const ValueKey('booking-welcome-search'),
-              width: double.infinity,
-              padding:
-                  EdgeInsetsDirectional.fromSTEB(20, topInset + 18, 20, 20),
-              decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [Color(0xFFD8BD95), Color(0xFFC5A16B)]),
-                  borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(radius),
-                      bottomRight: Radius.circular(radius))),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Row 1: Actions Top Bar (Back button, Spacer, Notifications with Live Badge, Toolbar Action)
+    return BookingGoldenHeaderContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Row 1: Actions Top Bar (Back button, Spacer, Notifications with Live Badge, Toolbar Action)
                     Row(
                       children: [
-                        if (Navigator.of(context).canPop()) ...[
+                        if (Navigator.of(context).canPop() || widget.onBack != null) ...[
                           IconButton(
                             tooltip: 'الرجوع للرئيسية',
                             style: IconButton.styleFrom(
                               backgroundColor: const Color(0xFF0F172A).withValues(alpha: .10),
                               foregroundColor: _navy,
                             ),
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                            onPressed: () {
+                              if (widget.onBack != null) {
+                                widget.onBack!();
+                              } else {
+                                Navigator.of(context).maybePop();
+                              }
+                            },
+                            icon: const Icon(Icons.arrow_back_rounded, size: 20),
                           ),
                         ],
                         const Spacer(),
                         // Notification Icon with Live Badge
                         StreamBuilder<QuerySnapshot>(
-                          stream: Firebase.apps.isNotEmpty &&
-                                  FirebaseAuth.instance.currentUser != null
-                              ? FirebaseFirestore.instance
-                                  .collection('users/${FirebaseAuth.instance.currentUser!.uid}/notifications')
-                                  .where('read', isEqualTo: false)
-                                  .limit(10)
-                                  .snapshots()
-                              : const Stream.empty(),
+                          stream: _notificationStream ?? const Stream.empty(),
                           builder: (context, snapshot) {
                             final unreadCount = snapshot.data?.docs.length ?? 0;
                             return Stack(
@@ -113,9 +168,9 @@ class BookingWelcomeSearch extends StatelessWidget {
                             );
                           },
                         ),
-                        if (toolbarAction != null) ...[
+                        if (widget.toolbarAction != null) ...[
                           const SizedBox(width: 8),
-                          toolbarAction!,
+                          widget.toolbarAction!,
                         ],
                       ],
                     ),
@@ -168,13 +223,14 @@ class BookingWelcomeSearch extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(18),
                                     borderSide:
                                         const BorderSide(color: _navy)))),
-                        child: search),
-                    if (filterBar != null) ...[
+                        child: widget.search),
+                    if (widget.filterBar != null) ...[
                       const SizedBox(height: 10),
-                      filterBar!
+                      widget.filterBar!
                     ]
-                  ]));
-        }));
+                  ],
+                ),
+    );
   }
 }
 

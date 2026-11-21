@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'booking_form_validator.dart';
 import 'booking_widgets.dart';
 import 'booking_experience.dart';
@@ -165,6 +168,7 @@ class BookingSupportTicket extends StatelessWidget {
     final typeLabel = typeNames[typeKey];
     final statusLabel = statusNames[data['status']] ?? 'حالة غير معروفة';
     final messages = (data['messages'] is List) ? (data['messages'] as List) : null;
+    final evidence = (data['evidence'] is List) ? (data['evidence'] as List) : null;
 
     return BookingSection(
       title: '${data['subject'] ?? 'طلب دعم أو نزاع'}',
@@ -238,15 +242,98 @@ class BookingSupportTicket extends StatelessWidget {
               border: Border.all(color: const Color(0xFF10B981)),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Row(children: [
-                const Icon(Icons.gavel, color: Color(0xFF059669), size: 20),
-                const SizedBox(width: 8),
-                const Flexible(child: Text('القرار الإداري النهائي', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
+              const Row(children: [
+                Icon(Icons.gavel, color: Color(0xFF059669), size: 20),
+                SizedBox(width: 8),
+                Flexible(child: Text('القرار الإداري النهائي', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)))),
               ]),
               const SizedBox(height: 8),
               Text('${data['resolution']}', style: const TextStyle(height: 1.8, color: Color(0xFF065F46))),
             ]),
           ),
+        if (evidence != null && evidence.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text('الأدلة والمستندات المرفقة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 8),
+          for (final ev in evidence)
+            if (ev is Map)
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => BookingSecureEvidenceViewer.open(
+                    context, Map<String, dynamic>.from(ev)),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(children: [
+                    Icon(
+                      (ev['fileType']?.toString().contains('pdf') ?? false)
+                          ? Icons.picture_as_pdf
+                          : Icons.image,
+                      color: const Color(0xFF3B82F6),
+                      size: 26,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ev['fileName']?.toString() ?? 'ملف مرفق',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Row(children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: ev['uploadedByRole'] == 'admin'
+                                    ? const Color(0xFFDCFCE7)
+                                    : (ev['uploadedByRole'] == 'owner'
+                                        ? const Color(0xFFFEF3C7)
+                                        : const Color(0xFFE0E7FF)),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                ev['uploadedByRole'] == 'admin'
+                                    ? 'الإدارة'
+                                    : (ev['uploadedByRole'] == 'owner' ? 'المالك' : 'الزبون'),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: ev['uploadedByRole'] == 'admin'
+                                      ? const Color(0xFF166534)
+                                      : (ev['uploadedByRole'] == 'owner'
+                                          ? const Color(0xFF92400E)
+                                          : const Color(0xFF3730A3)),
+                                ),
+                              ),
+                            ),
+                            if (ev['note'] != null && ev['note'].toString().isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  ev['note'].toString(),
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ]),
+                        ],
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+        ],
         if (actions.isNotEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -492,4 +579,153 @@ class _MediaReviewState extends State<BookingMediaReviewCard> {
               label: const Text('رفض الملف')),
         ])
       ]));
+}
+
+/// Secure authenticated viewer for dispute evidence files.
+/// Guarantees zero token leaks by downloading raw bytes strictly through the
+/// authenticated Firebase Storage SDK session and verifying Storage security rules.
+class BookingSecureEvidenceViewer {
+  static Future<void> open(
+      BuildContext context, Map<String, dynamic> ev) async {
+    final fileName = ev['fileName']?.toString() ?? 'ملف مرفق';
+    final storagePath = ev['storagePath']?.toString() ?? '';
+    final fileUrl = ev['fileUrl']?.toString() ?? '';
+    final fileType = ev['fileType']?.toString() ?? '';
+    final isPdf =
+        fileType.contains('pdf') || fileName.toLowerCase().endsWith('.pdf');
+
+    if (storagePath.isEmpty && fileUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('مسار الملف غير متوفر أو تالف'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show secure loading modal
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: bookingGold),
+              ),
+              SizedBox(width: 16),
+              Text(
+                'جاري التحقق وتنزيل المستند بأمان...',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'Cairo',
+                    color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Uint8List? bytes;
+    String? errorMsg;
+    try {
+      if (storagePath.isNotEmpty) {
+        final ref = FirebaseStorage.instance.ref(storagePath);
+        bytes = await ref.getData(10 * 1024 * 1024);
+      } else if (fileUrl.isNotEmpty) {
+        final ref = FirebaseStorage.instance.refFromURL(fileUrl);
+        bytes = await ref.getData(10 * 1024 * 1024);
+      }
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied' || e.code == 'unauthorized') {
+        errorMsg =
+            'غير مصرح لك بالوصول إلى هذا المستند (مقتصر على أطراف النزاع والإدارة)';
+      } else {
+        errorMsg = 'فشل تنزيل المستند: ${e.message}';
+      }
+    } catch (e) {
+      errorMsg = 'حدث خطأ أثناء تنزيل المستند: $e';
+    }
+
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+
+    if (bytes == null || bytes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(errorMsg ?? 'تعذر تنزيل المستند: الملف فارغ أو غير موجود'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (isPdf) {
+      try {
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes!,
+          name: fileName,
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('تعذر فتح ملف PDF: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.black87,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.memory(
+                    bytes!,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(24),
+                      child: const Text('تعذر فك تشفير بيانات الصورة',
+                          style: TextStyle(
+                              color: Colors.black, fontFamily: 'Cairo')),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
 }

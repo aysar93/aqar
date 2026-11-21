@@ -12,9 +12,9 @@ class BookingAdminTheme {
   static const Color borderLight = Color(0x1FFFFFFF); // حد شفاف خفيف
 
   // ألوان التأكيد (تستخدم باعتدال)
-  static const Color gold = Color(0xFFD4AF37); // ذهبي خافت معتمد
-  static const Color goldSubtle = Color(0x26D4AF37); // ذهبي شفاف للخلفيات النشطة
-  static const Color goldHover = Color(0xFFE5C158); // ذهبي عند التفاعل
+  static const Color gold = Color(0xFFC5A16B); // ذهبي موحد معتمد
+  static const Color goldSubtle = Color(0x26C5A16B); // ذهبي شفاف للخلفيات النشطة
+  static const Color goldHover = Color(0xFFD8BD95); // ذهبي عند التفاعل
 
   // النصوص (الوضع الداكن)
   static const Color textPrimary = Color(0xFFF8FAFC); // أبيض مائل للرمادي

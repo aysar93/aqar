@@ -9,6 +9,8 @@ import 'booking_workspace.dart';
 import 'booking_extras.dart';
 import 'booking_ledger_access.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import 'admin/booking_csv_export_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -738,7 +740,36 @@ class BookingLedgerScreen extends StatelessWidget {
   const BookingLedgerScreen({super.key});
   @override
   Widget build(BuildContext context) => BookingScaffold(
-      appBar: AppBar(title: const Text('دفتر مالية الحجوزات')),
+      appBar: AppBar(
+        title: const Text('دفتر مالية الحجوزات'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'تصدير دفتر الأستاذ CSV',
+            onPressed: () async {
+              try {
+                final snap = await FirebaseFirestore.instance.collection('booking_ledger').get();
+                final entries = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+                final csv = BookingCsvExportService.generateLedgerCsv(entries);
+                if (context.mounted) {
+                  await BookingCsvExportService.exportAndShareCsv(
+                    context,
+                    fileName: 'aqar_ledger_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.csv',
+                    csvContent: csv,
+                    title: 'تصدير دفتر مالية الحجوزات',
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('تعذر تصدير السجل: $e')),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
       body: BookingLedgerAccess(
           sessions: FirebaseAuth.instance.authStateChanges().map((u) => u?.uid),
           currentUid: () => FirebaseAuth.instance.currentUser?.uid,

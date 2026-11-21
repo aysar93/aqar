@@ -147,8 +147,17 @@ class BookingVenuePrices extends StatelessWidget {
   }
 }
 class BookingVenueDetails extends StatefulWidget {
-  const BookingVenueDetails({super.key, required this.venue});
+  const BookingVenueDetails({
+    super.key,
+    required this.venue,
+    this.showTabBar = true,
+    this.selectedNotifier,
+    this.scrollController,
+  });
   final Map<String, dynamic> venue;
+  final bool showTabBar;
+  final ValueNotifier<int>? selectedNotifier;
+  final ScrollController? scrollController;
   static const labels = [
     'التفاصيل',
     'الأسعار',
@@ -156,6 +165,86 @@ class BookingVenueDetails extends StatefulWidget {
     'المزايا',
     'شروط الحجز'
   ];
+
+  static Widget buildTabBarWidget({
+    required BuildContext context,
+    required ValueNotifier<int> selectedNotifier,
+    required ValueChanged<int> onTabTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: .6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ValueListenableBuilder<int>(
+          valueListenable: selectedNotifier,
+          builder: (context, currentSelected, _) => Row(
+            children: [
+              for (var i = 0; i < labels.length; i++)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: Semantics(
+                    selected: currentSelected == i,
+                    child: TextButton(
+                      key: ValueKey('booking-section-' + i.toString()),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 44),
+                        foregroundColor: currentSelected == i
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        backgroundColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => onTabTap(i),
+                      child: Container(
+                        key: ValueKey('booking-pinned-tab-' + i.toString()),
+                        padding: const EdgeInsets.only(bottom: 10, top: 10),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: currentSelected == i
+                                  ? bookingGold
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          labels[i],
+                          softWrap: false,
+                          style: TextStyle(
+                            fontWeight: currentSelected == i
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   @override
   State<BookingVenueDetails> createState() => BookingVenueDetailsState();
 }
@@ -308,12 +397,36 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
 
   final anchors = List.generate(5, (_) => GlobalKey());
   final stackKey = GlobalKey();
-  final selectedNotifier = ValueNotifier<int>(0);
+  final _internalSelectedNotifier = ValueNotifier<int>(0);
+  ValueNotifier<int> get effectiveSelectedNotifier =>
+      widget.selectedNotifier ?? _internalSelectedNotifier;
+  ValueNotifier<int> get selectedNotifier => effectiveSelectedNotifier;
   final stickyOffsetNotifier = ValueNotifier<double>(0.0);
-  int get selected => selectedNotifier.value;
+  int get selected => effectiveSelectedNotifier.value;
   double get stickyOffset => stickyOffsetNotifier.value;
   ScrollPosition? position;
   bool jumping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController?.addListener(track);
+  }
+
+  @override
+  void didUpdateWidget(BookingVenueDetails oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scrollController != widget.scrollController) {
+      oldWidget.scrollController?.removeListener(track);
+      widget.scrollController?.addListener(track);
+      if (widget.scrollController != null) {
+        position?.removeListener(track);
+      } else {
+        position?.addListener(track);
+      }
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -321,20 +434,25 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
     if (next != position) {
       position?.removeListener(track);
       position = next;
-      position?.addListener(track);
+      if (widget.scrollController == null) {
+        position?.addListener(track);
+      }
     }
   }
+
   @override
   void dispose() {
+    widget.scrollController?.removeListener(track);
     position?.removeListener(track);
-    selectedNotifier.dispose();
+    _internalSelectedNotifier.dispose();
     stickyOffsetNotifier.dispose();
     super.dispose();
   }
+
   void syncScroll({required bool updateActive}) {
     if (!mounted) return;
     if (updateActive) {
-      final viewport = position?.context.storageContext.findRenderObject();
+      final viewport = (position?.context.storageContext ?? context).findRenderObject();
       final top =
           viewport is RenderBox ? viewport.localToGlobal(Offset.zero).dy : 0.0;
       var active = 0;
@@ -346,15 +464,17 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
           active = i;
         }
       }
-      if (active != selectedNotifier.value) {
-        selectedNotifier.value = active;
+      if (active != effectiveSelectedNotifier.value) {
+        effectiveSelectedNotifier.value = active;
       }
     }
   }
+
   void track() {
     if (!mounted) return;
     syncScroll(updateActive: !jumping);
   }
+
   static const labels = [
     'التفاصيل',
     'الأسعار',
@@ -362,16 +482,18 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
     'المزايا',
     'شروط الحجز'
   ];
+
   Future<void> jump(int index) async {
     jumping = true;
-    selectedNotifier.value = index;
+    effectiveSelectedNotifier.value = index;
     final c = anchors[index].currentContext;
-    if (c != null)
+    if (c != null) {
       await Scrollable.ensureVisible(c,
           alignment: .12,
           duration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
               : const Duration(milliseconds: 260));
+    }
     jumping = false;
     syncScroll(updateActive: false);
   }
@@ -474,78 +596,12 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
       const SizedBox(height: 16),
-      // Navigation Tab Bar (Fluid, zero jitter, perfectly responsive)
-      Container(
-        margin: const EdgeInsets.only(top: 14, bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: .6),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+      if (widget.showTabBar)
+        BookingVenueDetails.buildTabBarWidget(
+          context: context,
+          selectedNotifier: selectedNotifier,
+          onTabTap: jump,
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ValueListenableBuilder<int>(
-            valueListenable: selectedNotifier,
-            builder: (context, currentSelected, _) => Row(
-              children: [
-                for (var i = 0; i < labels.length; i++)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: Semantics(
-                      selected: currentSelected == i,
-                      child: TextButton(
-                        key: ValueKey('booking-section-$i'),
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                          foregroundColor: currentSelected == i
-                              ? Theme.of(context).colorScheme.onSurface
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                          backgroundColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () => jump(i),
-                        child: Container(
-                          padding: const EdgeInsets.only(bottom: 12, top: 12),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: currentSelected == i
-                                    ? bookingGold
-                                    : Colors.transparent,
-                                width: 3,
-                              ),
-                            ),
-                          ),
-                          child: Text(
-                            labels[i],
-                            softWrap: false,
-                            style: TextStyle(
-                              fontWeight: currentSelected == i
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
 
 
                       Container(
@@ -640,7 +696,7 @@ class BookingVenueDetailsState extends State<BookingVenueDetails> {
                                             ),
                                           ],
                                         ),
-                                      )
+                                      ),
                               ])),
                       section(
                           3,

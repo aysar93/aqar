@@ -1,4 +1,5 @@
 import '../screens/notifications_screen.dart';
+import '../screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -232,7 +233,7 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
                     width: 2.8,
                   ),
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFD4AF37), Color(0xFFC5A16B)],
+                    colors: [Color(0xFFD8BD95), Color(0xFFC5A16B)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -559,37 +560,48 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
           ),
           _buildDivider(borderColor),
 
-          // 2. إدارة أماكني وأسعاري (with pending requests counter badge)
-          StreamBuilder<QuerySnapshot>(
-            stream: uid != null
-                ? FirebaseFirestore.instance
-                    .collection('bookings')
-                    .where('ownerId', isEqualTo: uid)
-                    .where('status', isEqualTo: 'requested')
-                    .snapshots()
-                : null,
-            builder: (context, snapshot) {
-              final pendingCount = snapshot.data?.docs.length ?? 0;
-              return _buildOptionTile(
-                context: context,
-                icon: Icons.storefront_outlined,
-                iconBg: const Color(0xFFC5A16B).withValues(alpha: 0.15),
-                iconColor: const Color(0xFFC5A16B),
-                title: 'إدارة أماكني وأسعاري',
-                subtitle: 'الشاليهات، الأسعار، التوفر والطلبات',
-                badgeCount: pendingCount,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BookingMyVenuesScreen(userId: uid),
+          // 2. إدارة أماكني وأسعاري (only for owners with >= 1 venue)
+          if (uid != null)
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: ownerBookingVenuesQuery(uid).limit(1).snapshots(),
+              builder: (context, venueSnap) {
+                final ownsVenue = venueSnap.data?.docs.isNotEmpty ?? false;
+                if (!ownsVenue) return const SizedBox.shrink();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('bookings')
+                          .where('ownerId', isEqualTo: uid)
+                          .where('status', isEqualTo: 'requested')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        final pendingCount = snapshot.data?.docs.length ?? 0;
+                        return _buildOptionTile(
+                          context: context,
+                          icon: Icons.storefront_outlined,
+                          iconBg: const Color(0xFFC5A16B).withValues(alpha: 0.15),
+                          iconColor: const Color(0xFFC5A16B),
+                          title: 'إدارة أماكني وأسعاري',
+                          subtitle: 'الشاليهات، الأسعار، التوفر والطلبات',
+                          badgeCount: pendingCount,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BookingMyVenuesScreen(userId: uid),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
-                  );
-                },
-              );
-            },
-          ),
-          _buildDivider(borderColor),
+                    _buildDivider(borderColor),
+                  ],
+                );
+              },
+            ),
 
           // 3. خريطة الأماكن والشاليهات
           _buildOptionTile(
@@ -653,7 +665,7 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
           // 7. أدوات الإدارة والمالية إذا كان لديه صلاحية
           if (widget.admin || _canReviewFinance) ...[
             _buildDivider(borderColor),
-            if (_canReviewFinance || widget.admin)
+            if (_canReviewFinance)
               _buildOptionTile(
                 context: context,
                 icon: Icons.account_balance_wallet_outlined,
@@ -796,6 +808,32 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
   }
 
   void _showAddVenueModal(BuildContext context) {
+    if (FirebaseAuth.instance.currentUser == null) {
+      showDialog(
+        context: context,
+        builder: (dCtx) => AlertDialog(
+          title: const Text('يلزم تسجيل الدخول'),
+          content: const Text('يرجى تسجيل الدخول لإضافة مكان جديد.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dCtx),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dCtx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              child: const Text('تسجيل الدخول'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

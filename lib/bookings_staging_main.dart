@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,16 +8,49 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bookings/booking_screen.dart';
+import 'bookings/admin/booking_admin_dashboard_screen.dart';
+import 'bookings/booking_management.dart';
 import 'screens/admin/admin_dashboard.dart';
+import 'screens/main_shell.dart';
+import 'screens/settings_screen.dart';
+import 'providers/app_settings_provider.dart';
+import 'providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 
 const bookingStagingProject = 'aqar-bookings-test-20261009';
+String _decodeEnv(String raw, String b64) {
+  if (b64.isNotEmpty) {
+    try {
+      return utf8.decode(base64.decode(b64));
+    } catch (_) {}
+  }
+  return raw;
+}
+
+final uatAdminPw = _decodeEnv(
+  const String.fromEnvironment('UAT_ADMIN_PW'),
+  const String.fromEnvironment('UAT_ADMIN_PW_B64'),
+);
+final uatCustomerPw = _decodeEnv(
+  const String.fromEnvironment('UAT_CUSTOMER_PW'),
+  const String.fromEnvironment('UAT_CUSTOMER_PW_B64'),
+);
+final uatOwnerPw = _decodeEnv(
+  const String.fromEnvironment('UAT_OWNER_PW'),
+  const String.fromEnvironment('UAT_OWNER_PW_B64'),
+);
+final uatReviewerPw = _decodeEnv(
+  const String.fromEnvironment('UAT_REVIEWER_PW'),
+  const String.fromEnvironment('UAT_REVIEWER_PW_B64'),
+);
 bool bookingStagingAllowed(String? flavor, String project) {
   if (project != bookingStagingProject) return false;
   const envFlavor = String.fromEnvironment('BOOKINGS_APP_FLAVOR');
   final effective = flavor ?? (envFlavor.isNotEmpty ? envFlavor : null);
   return effective == 'bookingsStaging';
 }
+
 Future<void> endBookingStagingSession({
   required Future<void> Function() detachNotifications,
   required Future<void> Function() signOut,
@@ -67,27 +101,38 @@ Future<void> runBookingStaging({FirebaseOptions? options}) async {
   FirebaseMessaging.instance.getInitialMessage().then((message) {
     if (message != null) _pendingNotification = message;
   }).catchError((_) {});
-  runApp(MaterialApp(
-      navigatorKey: _stagingNavigator,
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar'), Locale('en')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: AppTheme.lightTheme,
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: Column(children: [
-            const Material(
-                color: Colors.amber,
-                child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text('STAGING — اختبار فقط — لا تحوّل أموالًا',
-                            style: TextStyle(color: Colors.black))))),
-            Expanded(child: child!)
-          ])),
-      home: const _StagingLogin()));
+  runApp(MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+            create: (_) => AppSettingsProvider()..loadSettings()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: Consumer<AppSettingsProvider>(
+        builder: (context, settings, _) => MaterialApp(
+            navigatorKey: _stagingNavigator,
+            locale: const Locale('ar'),
+            supportedLocales: const [Locale('ar'), Locale('en')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode,
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) => Directionality(
+                textDirection: TextDirection.rtl,
+                child: Column(children: [
+                  const Material(
+                      color: Colors.amber,
+                      child: SafeArea(
+                          bottom: false,
+                          child: Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                  'STAGING — اختبار فقط — لا تحوّل أموالًا',
+                                  style: TextStyle(color: Colors.black))))),
+                  Expanded(child: child!)
+                ])),
+            home: const _StagingLogin()),
+      )));
 }
 
 class _StagingLogin extends StatefulWidget {
@@ -101,11 +146,36 @@ class _LoginState extends State<_StagingLogin> {
   bool busy = false;
   String? error;
   StreamSubscription<String>? tokenUpdates;
+  String _currentRole = 'admin';
+
+  Future<void> _selectRole(String role) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _currentRole = role;
+      error = null;
+      if (role == 'admin') {
+        email.text = 'staging.admin.20261010@test.invalid';
+        if (uatAdminPw.isNotEmpty) password.text = uatAdminPw;
+      } else if (role == 'customer') {
+        email.text = 'customer.uat.test2026@test.invalid';
+        if (uatCustomerPw.isNotEmpty) password.text = uatCustomerPw;
+      } else if (role == 'owner') {
+        email.text = 'owner.uat.test2026@test.invalid';
+        if (uatOwnerPw.isNotEmpty) password.text = uatOwnerPw;
+      } else if (role == 'reviewer') {
+        email.text = 'staging.reviewer.20261010@test.invalid';
+        if (uatReviewerPw.isNotEmpty) password.text = uatReviewerPw;
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    email.text = 'staging.admin.20261010@test.invalid';
-    password.text = 'AqarUat2026!Test';
+    _selectRole('admin');
     _restoreSession();
   }
 
@@ -123,7 +193,10 @@ class _LoginState extends State<_StagingLogin> {
     bool opened = false;
     bool inactive = false;
     try {
-      if (FirebaseAuth.instance.currentUser == null) {
+      if (FirebaseAuth.instance.currentUser == null ||
+          FirebaseAuth.instance.currentUser!.email?.toLowerCase() !=
+              email.text.trim().toLowerCase()) {
+        await FirebaseAuth.instance.signOut();
         await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: email.text.trim(), password: password.text);
       } else {
@@ -154,11 +227,8 @@ class _LoginState extends State<_StagingLogin> {
       if (!mounted) return;
       opened = true;
       _stagingSessionReady = true;
-      final navigation = Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) =>
-                  const BookingScreen(admin: false)));
+      final navigation = Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const BookingScreen(admin: false)));
       final notification = _pendingNotification;
       _pendingNotification = null;
       if (notification != null) {
@@ -169,7 +239,8 @@ class _LoginState extends State<_StagingLogin> {
         });
       }
       await navigation;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('STAGING_LOGIN_ERROR: $e\n$st');
       if (e is FirebaseAuthException &&
           const {
             'user-disabled',
@@ -180,8 +251,7 @@ class _LoginState extends State<_StagingLogin> {
         inactive = true;
       }
       if (mounted) {
-        setState(() => error =
-            'تعذر الدخول. تحقق من الحساب وتشغيل خدمات staging واتصال الإنترنت.');
+        setState(() => error = 'تعذر الدخول: $e');
       }
     } finally {
       _stagingSessionReady = false;
@@ -205,33 +275,44 @@ class _LoginState extends State<_StagingLogin> {
     }
   }
 
+  Future<void> _enterBookingAdminDashboard() async {
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BookingAdminDashboardScreen()),
+    );
+  }
+
+  Future<void> _enterLedger() async {
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BookingLedgerScreen()),
+    );
+  }
+
   Future<void> _enterAdminDashboard() async {
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      if (FirebaseAuth.instance.currentUser == null) {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: email.text.trim(), password: password.text);
-      }
-      final uid = FirebaseAuth.instance.currentUser!.uid;
-      final user = await FirebaseFirestore.instance.doc('users/$uid').get();
-      if (user.data()?['isAdmin'] != true) {
-        throw StateError('هذا الحساب ليس لديه صلاحية إدارة');
-      }
-      if (!mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminDashboard()),
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() => error = 'تعذر فتح لوحة الإدارة: $e');
-      }
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminDashboard()),
+    );
+  }
+
+  Future<void> _enterUnifiedApp() async {
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MainShell()),
+    );
+  }
+
+  Future<void> _enterSettings() async {
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
   }
 
   @override
@@ -248,6 +329,33 @@ class _LoginState extends State<_StagingLogin> {
       body: ListView(padding: const EdgeInsets.all(24), children: [
         const Text(
             'يتطلب تشغيل خدمات مشروع الاختبار المنفصل وتوفير حساب اختبار من الإدارة. حسابات المحاكيات المحلية لا تعمل هنا.'),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('مشرف (Admin)'),
+              selected: _currentRole == 'admin',
+              onSelected: (_) => _selectRole('admin'),
+            ),
+            ChoiceChip(
+              label: const Text('مالك (Owner)'),
+              selected: _currentRole == 'owner',
+              onSelected: (_) => _selectRole('owner'),
+            ),
+            ChoiceChip(
+              label: const Text('زبون (Customer)'),
+              selected: _currentRole == 'customer',
+              onSelected: (_) => _selectRole('customer'),
+            ),
+            ChoiceChip(
+              label: const Text('مراجع مالي (Reviewer)'),
+              selected: _currentRole == 'reviewer',
+              onSelected: (_) => _selectRole('reviewer'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         TextField(
             controller: email,
             keyboardType: TextInputType.emailAddress,
@@ -261,7 +369,34 @@ class _LoginState extends State<_StagingLogin> {
         const SizedBox(height: 16),
         FilledButton(
             onPressed: busy ? null : () => _enterBookings(),
-            child: Text(busy ? 'جاري الدخول...' : 'دخول لتطبيق الحجوزات (واجهة المستخدم)')),
+            child: Text(busy
+                ? 'جاري الدخول...'
+                : 'دخول لتطبيق الحجوزات (واجهة المستخدم)')),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.home_work_outlined),
+          label:
+              const Text('دخول التطبيق الرئيسي الموحد (الشريط السفلي 5 أزرار)'),
+          onPressed: busy ? null : () => _enterUnifiedApp(),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.palette_outlined),
+          label: const Text('إعدادات المظهر والثيم (Settings Screen)'),
+          onPressed: busy ? null : () => _enterSettings(),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.dashboard_customize_outlined),
+          label: const Text('لوحة إدارة الحجوزات (9 تبويبات)'),
+          onPressed: busy ? null : () => _enterBookingAdminDashboard(),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.account_balance_wallet_outlined),
+          label: const Text('المراجعة المالية (دفتر الأستاذ)'),
+          onPressed: busy ? null : () => _enterLedger(),
+        ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           icon: const Icon(Icons.admin_panel_settings_outlined),

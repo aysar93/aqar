@@ -1,8 +1,11 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../booking_admin_theme.dart';
+import '../booking_csv_export_service.dart';
 import '../../booking_detail_access.dart' show bookingCanDisplayDetails;
 import '../../booking_widgets.dart' show bookingMoney;
 import '../../booking_screen.dart' show bookingCall;
@@ -152,7 +155,32 @@ class _BookingAdminBookingsTabState extends State<BookingAdminBookingsTab> with 
                     ),
                   ),
                   const Spacer(),
-                  if (_searchQuery.isNotEmpty || _statusFilter != 'all' || _categoryFilter != 'all')
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: const Color(0xFF10B981),
+                      side: const BorderSide(color: Color(0xFF10B981)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.file_download_outlined, size: 16),
+                    label: const Text(
+                      'تصدير CSV',
+                      style: TextStyle(fontSize: 11, fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      final list = filteredDocs.map((d) => {'id': d.id, ...d.data()}).toList();
+                      final csv = BookingCsvExportService.generateBookingsCsv(list);
+                      BookingCsvExportService.exportAndShareCsv(
+                        context,
+                        fileName: 'aqar_bookings_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.csv',
+                        csvContent: csv,
+                        title: 'تصدير حجوزات عقارات الأنبار',
+                      );
+                    },
+                  ),
+                  if (_searchQuery.isNotEmpty || _statusFilter != 'all' || _categoryFilter != 'all') ...[
+                    const SizedBox(width: 8),
                     TextButton.icon(
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -172,6 +200,7 @@ class _BookingAdminBookingsTabState extends State<BookingAdminBookingsTab> with 
                         });
                       },
                     ),
+                  ],
                 ],
               ),
             ),
@@ -898,6 +927,10 @@ class _BookingAdminDetailsSheetState extends State<BookingAdminDetailsSheet> {
                       _buildAdminActions(status, data),
                       const SizedBox(height: 16),
 
+                      // الملاحظات الإدارية الداخلية المشفرة والمحمية
+                      _buildInternalAdminNotesSection(data),
+                      const SizedBox(height: 16),
+
                       // سجل العمليات والتدقيق (Audit Trail)
                       _buildAuditLogSection(),
                     ],
@@ -952,7 +985,13 @@ class _BookingAdminDetailsSheetState extends State<BookingAdminDetailsSheet> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(String label, String value, {bool isPhone = false}) {
+    final bool checkPhone = isPhone || label.contains('هاتف') || label.contains('رقم');
+    final String cleanPhone = checkPhone
+        ? value.replaceAll(RegExp(r'[^0-9+]'), '')
+        : '';
+    final bool canCall = checkPhone && cleanPhone.length >= 7;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -972,15 +1011,45 @@ class _BookingAdminDetailsSheetState extends State<BookingAdminDetailsSheet> {
           const SizedBox(width: 8),
           Expanded(
             flex: 3,
-            child: Text(
-              value,
-              softWrap: true,
-              style: TextStyle(
-                color: BookingAdminTheme.text(context),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Cairo',
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value,
+                    softWrap: true,
+                    style: TextStyle(
+                      color: BookingAdminTheme.text(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+                if (canCall) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () async {
+                      final uri = Uri.parse('tel:$cleanPhone');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: BookingAdminTheme.gold.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.phone_in_talk_rounded,
+                        size: 14,
+                        color: BookingAdminTheme.gold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -1172,6 +1241,17 @@ class _BookingAdminDetailsSheetState extends State<BookingAdminDetailsSheet> {
               ),
             ],
 
+            // 6. إعادة جدولة موعد الحجز
+            if (['requested', 'held', 'payment_review', 'confirmed'].contains(status)) ...[
+              const SizedBox(height: 8),
+              BookingAdminButton(
+                isFullWidth: true,
+                icon: Icons.edit_calendar_rounded,
+                label: 'إعادة جدولة موعد الحجز إدارياً',
+                onPressed: () => _promptRescheduleBooking(data),
+              ),
+            ],
+
             if (status != 'requested' &&
                 !canReviewDeposit &&
                 status != 'confirmed' &&
@@ -1185,6 +1265,364 @@ class _BookingAdminDetailsSheetState extends State<BookingAdminDetailsSheet> {
         ],
       ),
     );
+  }
+
+  Widget _buildInternalAdminNotesSection(Map<String, dynamic> data) {
+    final rawLegacyNotes = data['adminNotes'];
+    final List<Map<String, dynamic>> legacyNotes = (rawLegacyNotes is List)
+        ? rawLegacyNotes.map((e) => Map<String, dynamic>.from(e as Map)).toList()
+        : [];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BookingAdminTheme.cardDecoration(
+        context: context,
+        borderColor: BookingAdminTheme.gold.withValues(alpha: 0.35),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.note_alt_outlined, size: 18, color: BookingAdminTheme.gold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'الملاحظات الإدارية الداخلية (معزولة ومشفرة للإدارة فقط)',
+                  style: TextStyle(
+                    color: BookingAdminTheme.text(context),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_comment_outlined, size: 20, color: BookingAdminTheme.gold),
+                tooltip: 'إضافة ملاحظة إدارية',
+                onPressed: _promptAddAdminNote,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('bookings')
+                .doc(widget.bookingId)
+                .collection('admin_notes')
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final subNotes = snapshot.data?.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList() ?? [];
+
+              if (subNotes.isEmpty && legacyNotes.isEmpty) {
+                return Text(
+                  'لا توجد ملاحظات إدارية داخلية مسجلة على هذا الحجز.',
+                  style: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 12, fontFamily: 'Cairo'),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final n in subNotes)
+                    _buildNoteCard(n, isLegacy: false),
+                  for (final n in legacyNotes.reversed)
+                    _buildNoteCard(n, isLegacy: true),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoteCard(Map<String, dynamic> n, {required bool isLegacy}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: BookingAdminTheme.surfaceSecondary(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: BookingAdminTheme.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                n['adminName'] ?? n['adminUid'] ?? 'المشرف',
+                style: const TextStyle(
+                  color: BookingAdminTheme.gold,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isLegacy)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: BookingAdminTheme.goldSubtle,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('(ملاحظة موروثة - Legacy)',
+                      style: TextStyle(fontSize: 10, color: BookingAdminTheme.gold, fontFamily: 'Cairo')),
+                ),
+              const Spacer(),
+              Text(
+                _formatDateTime(n['createdAt']),
+                style: TextStyle(
+                  color: BookingAdminTheme.textMute(context),
+                  fontSize: 10,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              if (!isLegacy && n['id'] != null) ...[
+                const SizedBox(width: 4),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
+                  tooltip: 'حذف الملاحظة',
+                  onPressed: () => _promptDeleteAdminNote(n['id'] as String),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            n['note']?.toString() ?? '',
+            style: TextStyle(
+              color: BookingAdminTheme.text(context),
+              fontSize: 12,
+              fontFamily: 'Cairo',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _promptDeleteAdminNote(String noteId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BookingAdminTheme.surface(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('حذف الملاحظة الإدارية', style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo')),
+        content: Text('هل أنت متأكد من حذف هذه الملاحظة الإدارية؟ سيتم توثيق الحذف في سجل التدقيق.', style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('إلغاء', style: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _busy = true);
+      try {
+        await bookingCall('deleteBookingAdminNote', {
+          'bookingId': widget.bookingId,
+          'noteId': noteId,
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم حذف الملاحظة الإدارية وتوثيق العملية في سجل التدقيق', style: TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تعذر حذف الملاحظة: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _promptAddAdminNote() async {
+    final ctrl = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BookingAdminTheme.surface(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('إضافة ملاحظة إدارية داخلية', style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo')),
+        content: TextField(
+          controller: ctrl,
+          maxLines: 3,
+          style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo'),
+          decoration: InputDecoration(
+            hintText: 'اكتب ملاحظات التدقيق أو المتابعة السرية...',
+            hintStyle: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo'),
+            filled: true,
+            fillColor: BookingAdminTheme.surfaceSecondary(context),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('إلغاء', style: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BookingAdminTheme.gold,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حفظ الملاحظة', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && ctrl.text.trim().isNotEmpty) {
+      setState(() => _busy = true);
+      try {
+        await bookingCall('addBookingAdminNote', {
+          'bookingId': widget.bookingId,
+          'note': ctrl.text.trim(),
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تمت إضافة الملاحظة الإدارية بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تعذر حفظ الملاحظة: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _promptRescheduleBooking(Map<String, dynamic> data) async {
+    final currentStart = (data['start'] as num?)?.toInt() ?? 0;
+    final currentEnd = (data['end'] as num?)?.toInt() ?? 0;
+    final reasonCtrl = TextEditingController();
+    DateTime pickedDate = currentStart > 0 ? DateTime.fromMillisecondsSinceEpoch(currentStart) : DateTime.now().add(const Duration(days: 1));
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: BookingAdminTheme.surface(context),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('إعادة جدولة موعد الحجز', style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'الموعد الحالي: ${_formatDateTime(currentStart)}',
+                style: TextStyle(color: BookingAdminTheme.textMute(context), fontSize: 12, fontFamily: 'Cairo'),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'التاريخ الجديد: ${pickedDate.year}/${pickedDate.month}/${pickedDate.day}',
+                      style: TextStyle(color: BookingAdminTheme.text(context), fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                    ),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 16, color: BookingAdminTheme.gold),
+                    label: const Text('تغيير', style: TextStyle(color: BookingAdminTheme.gold, fontFamily: 'Cairo')),
+                    onPressed: () async {
+                      final newDate = await showDatePicker(
+                        context: context,
+                        initialDate: pickedDate.isAfter(DateTime.now()) ? pickedDate : DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now().add(const Duration(hours: 1)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (newDate != null) {
+                        setDlgState(() => pickedDate = newDate);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonCtrl,
+                style: TextStyle(color: BookingAdminTheme.text(context), fontFamily: 'Cairo'),
+                decoration: InputDecoration(
+                  hintText: 'سبب إعادة الجدولة (مطلوب للتوثيق والإشعار)...',
+                  hintStyle: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo'),
+                  filled: true,
+                  fillColor: BookingAdminTheme.surfaceSecondary(context),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('إلغاء', style: TextStyle(color: BookingAdminTheme.textMute(context), fontFamily: 'Cairo')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BookingAdminTheme.gold,
+                foregroundColor: Colors.black,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('تأكيد الموعد الجديد', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirm == true && reasonCtrl.text.trim().isNotEmpty) {
+      setState(() => _busy = true);
+      try {
+        final duration = currentEnd > currentStart ? (currentEnd - currentStart) : 86400000;
+        final newStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, 14, 0).millisecondsSinceEpoch;
+        final newEnd = newStart + duration;
+
+        await bookingCall('rescheduleBooking', {
+          'bookingId': widget.bookingId,
+          'start': newStart,
+          'end': newEnd,
+          'reason': reasonCtrl.text.trim(),
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تمت إعادة جدولة الحجز بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('فشلت إعادة الجدولة: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
   }
 
   Widget _buildAuditLogSection() {

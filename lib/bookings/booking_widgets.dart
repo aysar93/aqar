@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/services.dart';
 import 'booking_page_indicator.dart';
@@ -27,7 +28,8 @@ bool isBookingVideoPath(String path) {
 }
 
 class BookingMediaGallery extends StatefulWidget {
-  const BookingMediaGallery({super.key, required this.paths, this.overlay, this.venueId});
+  const BookingMediaGallery(
+      {super.key, required this.paths, this.overlay, this.venueId});
   final List<String> paths;
   final Widget? overlay;
   final String? venueId;
@@ -129,7 +131,8 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                 setState(() => page = v);
                               },
                               itemBuilder: (_, i) {
-                                final isVideo = isBookingVideoPath(widget.paths[i]);
+                                final isVideo =
+                                    isBookingVideoPath(widget.paths[i]);
                                 return Semantics(
                                   label: isVideo
                                       ? 'فيديو المكان، العنصر ${i + 1} من ${widget.paths.length}'
@@ -143,23 +146,35 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                               top: 14,
                                               start: 14,
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5),
                                                 decoration: BoxDecoration(
-                                                  color: bookingNavy.withValues(alpha: .85),
-                                                  borderRadius: BorderRadius.circular(16),
-                                                  border: Border.all(color: bookingGold.withValues(alpha: .7)),
+                                                  color: bookingNavy.withValues(
+                                                      alpha: .85),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  border: Border.all(
+                                                      color: bookingGold
+                                                          .withValues(
+                                                              alpha: .7)),
                                                 ),
                                                 child: const Row(
-                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
-                                                    Icon(Icons.videocam_rounded, size: 16, color: bookingGold),
+                                                    Icon(Icons.videocam_rounded,
+                                                        size: 16,
+                                                        color: bookingGold),
                                                     SizedBox(width: 5),
                                                     Text(
                                                       'مشاهدة فيديو المكان',
                                                       style: TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 12,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                         fontFamily: 'Cairo',
                                                       ),
                                                     ),
@@ -175,10 +190,13 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                               MaterialPageRoute(
                                                   builder: (_) => BookingScaffold(
                                                       appBar: AppBar(
-                                                          title: const Text('صور المكان')),
+                                                          title: const Text(
+                                                              'صور المكان')),
                                                       body: Center(
                                                           child: InteractiveViewer(
-                                                              child: media(widget.paths[i])))))),
+                                                              child: media(
+                                                                  widget.paths[
+                                                                      i])))))),
                                           child: media(widget.paths[i]),
                                         ),
                                 );
@@ -193,19 +211,27 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                tooltip: _isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة',
+                                tooltip: _isFavorite
+                                    ? 'إزالة من المفضلة'
+                                    : 'إضافة إلى المفضلة',
                                 onPressed: () {
                                   setState(() => _isFavorite = !_isFavorite);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       duration: const Duration(seconds: 1),
-                                      content: Text(_isFavorite ? 'تمت إضافة المكان إلى المفضلة' : 'تمت الإزالة من المفضلة'),
+                                      content: Text(_isFavorite
+                                          ? 'تمت إضافة المكان إلى المفضلة'
+                                          : 'تمت الإزالة من المفضلة'),
                                     ),
                                   );
                                 },
                                 icon: Icon(
-                                  _isFavorite ? Icons.favorite : Icons.favorite_border,
-                                  color: _isFavorite ? const Color(0xFFEF4444) : Colors.white,
+                                  _isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: _isFavorite
+                                      ? const Color(0xFFEF4444)
+                                      : Colors.white,
                                   size: 22,
                                 ),
                               ),
@@ -223,8 +249,12 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                   decoration: BoxDecoration(
                                       color: bookingNavy.withValues(alpha: .75),
                                       borderRadius: BorderRadius.circular(20)),
-                                  child: Text('${page + 1} / ${widget.paths.length}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)))),
+                                  child: Text(
+                                      '${page + 1} / ${widget.paths.length}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold)))),
                           if (widget.paths.length > 1)
                             Positioned(
                                 bottom: 8,
@@ -233,13 +263,13 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                   IconButton.filled(
                                       tooltip: 'الوسيط السابق',
                                       style: IconButton.styleFrom(
-                                          backgroundColor:
-                                              bookingNavy.withValues(alpha: .75),
+                                          backgroundColor: bookingNavy
+                                              .withValues(alpha: .75),
                                           foregroundColor: Colors.white),
                                       onPressed: page > 0
                                           ? () => controller.previousPage(
-                                              duration:
-                                                  const Duration(milliseconds: 240),
+                                              duration: const Duration(
+                                                  milliseconds: 240),
                                               curve: Curves.easeOut)
                                           : null,
                                       icon: const Icon(Icons.arrow_back_ios_new,
@@ -248,13 +278,13 @@ class _BookingMediaGalleryState extends State<BookingMediaGallery> {
                                   IconButton.filled(
                                       tooltip: 'الوسيط التالي',
                                       style: IconButton.styleFrom(
-                                          backgroundColor:
-                                              bookingNavy.withValues(alpha: .75),
+                                          backgroundColor: bookingNavy
+                                              .withValues(alpha: .75),
                                           foregroundColor: Colors.white),
                                       onPressed: page < widget.paths.length - 1
                                           ? () => controller.nextPage(
-                                              duration:
-                                                  const Duration(milliseconds: 240),
+                                              duration: const Duration(
+                                                  milliseconds: 240),
                                               curve: Curves.easeOut)
                                           : null,
                                       icon: const Icon(Icons.arrow_forward_ios,
@@ -364,12 +394,17 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.orangeAccent, size: 36),
+            const Icon(Icons.error_outline,
+                color: Colors.orangeAccent, size: 36),
             const SizedBox(height: 8),
-            Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13)),
+            Text(error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 13)),
             const SizedBox(height: 10),
             OutlinedButton(
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white54)),
               onPressed: () {
                 setState(() {
                   loading = true;
@@ -393,7 +428,8 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
           children: [
             CircularProgressIndicator(color: bookingGold),
             SizedBox(height: 12),
-            Text('جارٍ تحميل الفيديو...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text('جارٍ تحميل الفيديو...',
+                style: TextStyle(color: Colors.white70, fontSize: 13)),
           ],
         ),
       );
@@ -423,7 +459,8 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
                   color: Colors.black.withValues(alpha: 0.55),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.play_arrow_rounded, size: 44, color: Colors.white),
+                child: const Icon(Icons.play_arrow_rounded,
+                    size: 44, color: Colors.white),
               ),
             ),
           Positioned(
@@ -433,7 +470,8 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(12),
@@ -449,7 +487,8 @@ class _BookingInlineVideoState extends State<_BookingInlineVideo> {
                       const SizedBox(width: 4),
                       Text(
                         c.value.isPlaying ? 'إيقاف' : 'تشغيل',
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                     ],
                   ),
@@ -519,23 +558,30 @@ String canonicalBookingStatus(dynamic raw) {
   if (raw == null) return 'unknown';
   final s = raw.toString().trim().toLowerCase();
   if (const {'confirmed', 'مؤكد', 'حجز مؤكد'}.contains(s)) return 'confirmed';
-  if (const {'cancelled', 'canceled', 'ملغي', 'ملغى', 'تم الإلغاء'}.contains(s)) return 'cancelled';
+  if (const {'cancelled', 'canceled', 'ملغي', 'ملغى', 'تم الإلغاء'}.contains(s))
+    return 'cancelled';
   if (const {'rejected', 'مرفوض', 'تم الرفض'}.contains(s)) return 'rejected';
   if (const {'expired', 'منتهي', 'انتهت المهلة'}.contains(s)) return 'expired';
   if (const {'held', 'معلق', 'حجز مؤقت'}.contains(s)) return 'held';
-  if (const {'payment_review', 'مراجعة العربون', 'مراجعة الدفع'}.contains(s)) return 'payment_review';
+  if (const {'payment_review', 'مراجعة العربون', 'مراجعة الدفع'}.contains(s))
+    return 'payment_review';
   if (const {'arrived', 'تم الوصول', 'واصل'}.contains(s)) return 'arrived';
-  if (const {'completed', 'مكتمل', 'منتهي الزيارة'}.contains(s)) return 'completed';
-  if (const {'cancel_requested', 'طلب إلغاء'}.contains(s)) return 'cancel_requested';
-  if (const {'payment_rejected', 'إيصال مرفوض'}.contains(s)) return 'payment_rejected';
-  if (const {'requested', 'طلب جديد', 'بانتظار المالك'}.contains(s)) return 'requested';
+  if (const {'completed', 'مكتمل', 'منتهي الزيارة'}.contains(s))
+    return 'completed';
+  if (const {'cancel_requested', 'طلب إلغاء'}.contains(s))
+    return 'cancel_requested';
+  if (const {'payment_rejected', 'إيصال مرفوض'}.contains(s))
+    return 'payment_rejected';
+  if (const {'requested', 'طلب جديد', 'بانتظار المالك'}.contains(s))
+    return 'requested';
   return s;
 }
 
 String bookingStatusLabel(dynamic raw) {
   if (raw == null) return 'حالة غير معروفة';
   final canon = canonicalBookingStatus(raw);
-  return bookingStatusNames[canon] ?? (raw.toString().isNotEmpty ? raw.toString() : 'حالة غير معروفة');
+  return bookingStatusNames[canon] ??
+      (raw.toString().isNotEmpty ? raw.toString() : 'حالة غير معروفة');
 }
 
 const bookingStatusNames = {
@@ -570,10 +616,14 @@ class BookingSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = booking['venueName'] ?? booking['venueTitle'] ?? booking['title'] ?? 'شاليه / مكان';
+    final name = booking['venueName'] ??
+        booking['venueTitle'] ??
+        booking['title'] ??
+        'شاليه / مكان';
     final loc = booking['location'] ?? booking['venueLocation'] ?? 'غير متوفر';
     final safeStatus = status.trim().isNotEmpty ? status : 'غير محدد';
-    final totalVal = booking['total'] ?? booking['price'] ?? booking['totalPrice'];
+    final totalVal =
+        booking['total'] ?? booking['price'] ?? booking['totalPrice'];
     final depositVal = booking['deposit'] ?? booking['depositAmount'];
     final remainingVal = booking['remaining'] ?? booking['remainingAmount'];
 
@@ -583,8 +633,7 @@ class BookingSummary extends StatelessWidget {
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface)),
-      Text(
-          '${venueCategory(booking['category'])} · $loc',
+      Text('${venueCategory(booking['category'])} · $loc',
           style: const TextStyle(height: 1.7)),
       Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -601,10 +650,14 @@ class BookingSummary extends StatelessWidget {
           'المتبقي': money(remainingVal)
         },
         {
-          'الزبون': '${booking['customerName'] ?? booking['guestName'] ?? 'غير متوفر'}',
-          'رقم الزبون': '${booking['customerPhone'] ?? booking['phone'] ?? 'غير متوفر'}',
+          'الزبون':
+              '${booking['customerName'] ?? booking['guestName'] ?? 'غير متوفر'}',
+          'رقم الزبون':
+              '${booking['customerPhone'] ?? booking['phone'] ?? 'غير متوفر'}',
           'المالك': '${booking['ownerName'] ?? 'غير متوفر'}',
-          'رقم المالك': '${booking['ownerPhone'] ?? 'غير متوفر'}'
+          if (['confirmed', 'arrived', 'completed'].contains(booking['status']) &&
+              (booking['ownerPhone'] ?? '').toString().trim().isNotEmpty)
+            'رقم المالك': '${booking['ownerPhone']}',
         },
         {
           'الشروط': '${booking['terms'] ?? 'غير متوفر'}',
@@ -613,8 +666,8 @@ class BookingSummary extends StatelessWidget {
       ])
         Card(
             margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -623,18 +676,51 @@ class BookingSummary extends StatelessWidget {
                       for (final entry in group.entries)
                         Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(entry.key,
-                                      style: const TextStyle(
-                                          color: Colors.blueGrey)),
-                                  Text(entry.value,
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          height: 1.6,
-                                          fontWeight: FontWeight.w600))
-                                ]))
+                            child: Builder(builder: (context) {
+                              final isPhone = entry.key.contains('رقم') ||
+                                  entry.key.contains('هاتف');
+                              final clean = entry.value
+                                  .replaceAll(RegExp(r'[^0-9+]'), '');
+                              final canCall = isPhone && clean.length >= 7;
+
+                              return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(entry.key,
+                                        style: const TextStyle(
+                                            color: Colors.blueGrey)),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(entry.value,
+                                              style: const TextStyle(
+                                                  fontSize: 16,
+                                                  height: 1.6,
+                                                  fontWeight: FontWeight.w600)),
+                                        ),
+                                        if (canCall)
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.phone_in_talk_rounded,
+                                                color: bookingGold,
+                                                size: 22),
+                                            tooltip: 'اتصال',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () async {
+                                              final uri =
+                                                  Uri.parse('tel:$clean');
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication);
+                                              }
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                  ]);
+                            }))
                     ]))),
     ]);
   }
@@ -698,7 +784,9 @@ List<Map<String, dynamic>> bookingCardShiftEntries(Map<String, dynamic> v) {
   final Iterable<Map<String, dynamic>> rawEntries = v2 != null
       ? v2.enabledShifts
       : (v['pricingMode'] == 'shifts'
-          ? (v['shifts'] as List? ?? []).whereType<Map>().map((e) => Map<String, dynamic>.from(e))
+          ? (v['shifts'] as List? ?? [])
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
           : const <Map<String, dynamic>>[]);
   final seen = <String>{};
   final result = <Map<String, dynamic>>[];
@@ -930,7 +1018,8 @@ class _BookingCardMediaState extends State<BookingCardMedia> {
               bottom: 6,
               end: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                 decoration: BoxDecoration(
                   color: bookingNavy.withValues(alpha: 0.75),
                   borderRadius: BorderRadius.circular(8),
@@ -960,13 +1049,16 @@ class _BookingCardMediaState extends State<BookingCardMedia> {
                             color: bookingNavy.withValues(alpha: .65),
                             borderRadius: BorderRadius.circular(18)),
                         child: SizedBox(
-                            width: (paths.length < 7 ? paths.length : 7) * 14.0 + 12.0,
+                            width:
+                                (paths.length < 7 ? paths.length : 7) * 14.0 +
+                                    12.0,
                             height: 22,
                             child: Theme(
                                 data: Theme.of(context).copyWith(
                                     colorScheme: Theme.of(context)
                                         .colorScheme
-                                        .copyWith(onSurfaceVariant: Colors.white)),
+                                        .copyWith(
+                                            onSurfaceVariant: Colors.white)),
                                 child: BookingPageIndicator(
                                     count: paths.length,
                                     page: page,
@@ -975,6 +1067,70 @@ class _BookingCardMediaState extends State<BookingCardMedia> {
                                         curve: Curves.easeOut)))))))
         ]));
   }
+}
+
+enum BookingFeaturedStatus {
+  active,
+  legacyNeedsDate,
+  expired,
+  none,
+}
+
+BookingFeaturedStatus getBookingFeaturedStatus(Map<String, dynamic> venue,
+    [DateTime? now]) {
+  final flag = venue['isFeatured'] == true || venue['featured'] == true;
+  if (!flag) return BookingFeaturedStatus.none;
+  final until = venue['featuredUntil'];
+  if (until == null) return BookingFeaturedStatus.legacyNeedsDate;
+  final current = now ?? DateTime.now();
+  if (until is int) {
+    return current.millisecondsSinceEpoch <= until
+        ? BookingFeaturedStatus.active
+        : BookingFeaturedStatus.expired;
+  }
+  if (until is DateTime) {
+    return (current.isBefore(until) || current.isAtSameMomentAs(until))
+        ? BookingFeaturedStatus.active
+        : BookingFeaturedStatus.expired;
+  }
+  final dt = bookingSafeDateTime(until);
+  if (dt != null) {
+    return (current.isBefore(dt) || current.isAtSameMomentAs(dt))
+        ? BookingFeaturedStatus.active
+        : BookingFeaturedStatus.expired;
+  }
+  return BookingFeaturedStatus.legacyNeedsDate;
+}
+
+/// Checks whether a booking venue is currently featured.
+/// Returns true only if the venue is marked featured AND featuredUntil has not expired.
+/// Missing or null featuredUntil is treated as active (legacyNeedsDate) for backward compatibility.
+bool isBookingVenueFeatured(Map<String, dynamic> venue, [DateTime? now]) {
+  final status = getBookingFeaturedStatus(venue, now);
+  return status == BookingFeaturedStatus.active ||
+      status == BookingFeaturedStatus.legacyNeedsDate;
+}
+
+/// Compares two featured venues for ordering:
+/// 1. Higher featuredPriority first (descending)
+/// 2. Higher updatedAt / createdAt first (descending)
+int compareFeaturedBookingVenues(
+    Map<String, dynamic> a, Map<String, dynamic> b) {
+  final pA = (a['featuredPriority'] is num)
+      ? (a['featuredPriority'] as num).toInt()
+      : 0;
+  final pB = (b['featuredPriority'] is num)
+      ? (b['featuredPriority'] as num).toInt()
+      : 0;
+  if (pA != pB) return pB.compareTo(pA);
+
+  final tA = (a['updatedAt'] is num)
+      ? (a['updatedAt'] as num).toInt()
+      : ((a['createdAt'] is num) ? (a['createdAt'] as num).toInt() : 0);
+  final tB = (b['updatedAt'] is num)
+      ? (b['updatedAt'] as num).toInt()
+      : ((b['createdAt'] is num) ? (b['createdAt'] as num).toInt() : 0);
+  return tB.compareTo(tA);
 }
 
 class BookingVenueCard extends StatelessWidget {
@@ -998,8 +1154,7 @@ class BookingVenueCard extends StatelessWidget {
         muted = Theme.of(context).colorScheme.onSurfaceVariant,
         liveBadge = BookingGeoUtils.getLiveAvailabilityBadge(venue),
         distanceInfo = BookingGeoUtils.getDistanceInfo(venue),
-        isVenueFeatured =
-            venue['featured'] == true || venue['isFeatured'] == true;
+        isVenueFeatured = isBookingVenueFeatured(venue);
     return Card(
         margin: compact
             ? EdgeInsets.zero
@@ -1056,7 +1211,8 @@ class BookingVenueCard extends StatelessWidget {
                                     color: bookingGold.withValues(alpha: .15),
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
-                                        color: bookingGold.withValues(alpha: .35),
+                                        color:
+                                            bookingGold.withValues(alpha: .35),
                                         width: 0.8),
                                   ),
                                   child: Text(
@@ -1077,7 +1233,7 @@ class BookingVenueCard extends StatelessWidget {
                               const SizedBox(height: 3),
                               Row(children: [
                                 const Icon(Icons.near_me_outlined,
-                                    size: 13, color: Color(0xFFD4AF37)),
+                                    size: 13, color: Color(0xFFC5A16B)),
                                 const SizedBox(width: 4),
                                 Text(
                                   distanceInfo.label,
@@ -1085,7 +1241,8 @@ class BookingVenueCard extends StatelessWidget {
                                     fontSize: 11,
                                     fontFamily: 'Cairo',
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).brightness == Brightness.dark
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
                                         ? const Color(0xFFCBD5E1)
                                         : const Color(0xFF475569),
                                   ),
@@ -1178,14 +1335,14 @@ class BookingStatusLegend extends StatelessWidget {
 
   static const Map<String, Color> colors = {
     'available': Color(0xFF22C55E),
-    'pending': Color(0xFFD4AF37),
+    'pending': Color(0xFFC5A16B),
     'confirmed': Color(0xFFEF4444),
     'unavailable': Color(0xFF94A3B8),
   };
 
   static const Map<String, ({String label, Color color})> items = {
     'available': (label: 'متاح', color: Color(0xFF22C55E)),
-    'pending': (label: 'قيد المراجعة', color: Color(0xFFD4AF37)),
+    'pending': (label: 'قيد المراجعة', color: Color(0xFFC5A16B)),
     'confirmed': (label: 'محجوز', color: Color(0xFFEF4444)),
     'unavailable': (label: 'غير متاح', color: Color(0xFF94A3B8)),
   };
@@ -1197,31 +1354,38 @@ class BookingStatusLegend extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+        border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
       ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 16,
-        runSpacing: 6,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: items.values.map((item) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.circle, size: 12, color: item.color),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  item.label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
+          return Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.circle, size: 10, color: item.color),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           );
         }).toList(),
       ),
@@ -1251,20 +1415,24 @@ class BookingCalendar extends StatelessWidget {
   String state(DateTime day) {
     // 1. Baghdad time check for past dates (+3 hours)
     final nowBaghdad = DateTime.now().toUtc().add(const Duration(hours: 3));
-    final todayBaghdad = DateTime(nowBaghdad.year, nowBaghdad.month, nowBaghdad.day);
+    final todayBaghdad =
+        DateTime(nowBaghdad.year, nowBaghdad.month, nowBaghdad.day);
     final dayBaghdad = DateTime(day.year, day.month, day.day);
     if (dayBaghdad.isBefore(todayBaghdad)) {
       return 'unavailable';
     }
 
     final range = intervalForDay(day);
-    if (range.length >= 2 && range[1].millisecondsSinceEpoch <= DateTime.now().millisecondsSinceEpoch) {
+    if (range.length >= 2 &&
+        range[1].millisecondsSinceEpoch <=
+            DateTime.now().millisecondsSinceEpoch) {
       return 'unavailable';
     }
 
     var result = 'available';
     for (final slot in slots) {
-      final slotStart = slot['start'] is num ? (slot['start'] as num).toInt() : 0;
+      final slotStart =
+          slot['start'] is num ? (slot['start'] as num).toInt() : 0;
       final slotEnd = slot['end'] is num ? (slot['end'] as num).toInt() : 0;
       if (range[0].millisecondsSinceEpoch < slotEnd &&
           slotStart < range[1].millisecondsSinceEpoch) {
@@ -1334,74 +1502,107 @@ class BookingCalendar extends StatelessWidget {
                   final selected = day.year == selectedDay?.year &&
                       day.month == selectedDay?.month &&
                       day.day == selectedDay?.day;
-                  final nowBaghdad = DateTime.now().toUtc().add(const Duration(hours: 3));
+                  final nowBaghdad =
+                      DateTime.now().toUtc().add(const Duration(hours: 3));
                   final isToday = day.year == nowBaghdad.year &&
                       day.month == nowBaghdad.month &&
                       day.day == nowBaghdad.day;
                   final canSelect = value == 'available';
                   final statusColor = colors[value]!;
-                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
                   return Semantics(
                       selected: selected,
                       enabled: canSelect,
                       label: '$n ${names[value]} ${isToday ? 'اليوم' : ''}',
                       child: Tooltip(
-                          message: '${names[value]}${isToday ? ' (اليوم)' : ''}',
+                          message:
+                              '${names[value]}${isToday ? ' (اليوم)' : ''}',
                           child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                   padding: EdgeInsets.zero,
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14)),
                                   side: selected
-                                      ? const BorderSide(color: bookingGold, width: 2.4)
+                                      ? const BorderSide(
+                                          color: bookingGold, width: 2.4)
                                       : (isToday
-                                          ? BorderSide(color: isDark ? Colors.white70 : bookingNavy, width: 1.5)
-                                          : BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1), width: 1)),
+                                          ? BorderSide(
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : bookingNavy,
+                                              width: 1.5)
+                                          : BorderSide(
+                                              color: isDark
+                                                  ? const Color(0xFF334155)
+                                                  : const Color(0xFFCBD5E1),
+                                              width: 1)),
                                   backgroundColor: value == 'available'
-                                      ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                                      ? (isDark
+                                          ? const Color(0xFF1E293B)
+                                          : Colors.white)
                                       : (value == 'unavailable'
-                                          ? (isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : const Color(0xFFF1F5F9))
-                                          : (isDark ? statusColor.withValues(alpha: 0.18) : statusColor.withValues(alpha: 0.12))),
+                                          ? (isDark
+                                              ? const Color(0xFF0F172A)
+                                                  .withValues(alpha: 0.6)
+                                              : const Color(0xFFF1F5F9))
+                                          : (isDark
+                                              ? statusColor.withValues(
+                                                  alpha: 0.18)
+                                              : statusColor.withValues(
+                                                  alpha: 0.12))),
                                   disabledBackgroundColor: value == 'available'
-                                      ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                                      ? (isDark
+                                          ? const Color(0xFF1E293B)
+                                          : Colors.white)
                                       : (value == 'unavailable'
-                                          ? (isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : const Color(0xFFF1F5F9))
-                                          : (isDark ? statusColor.withValues(alpha: 0.18) : statusColor.withValues(alpha: 0.12))),
+                                          ? (isDark
+                                              ? const Color(0xFF0F172A)
+                                                  .withValues(alpha: 0.6)
+                                              : const Color(0xFFF1F5F9))
+                                          : (isDark
+                                              ? statusColor.withValues(
+                                                  alpha: 0.18)
+                                              : statusColor.withValues(
+                                                  alpha: 0.12))),
                                   foregroundColor: isDark ? Colors.white : bookingNavy,
-                                  disabledForegroundColor: value == 'unavailable'
-                                      ? const Color(0xFF94A3B8)
-                                      : (isDark ? Colors.white : bookingNavy)),
+                                  disabledForegroundColor: value == 'unavailable' ? const Color(0xFF94A3B8) : (isDark ? Colors.white : bookingNavy)),
                               onPressed: canSelect ? () => onSelect(day) : null,
-                              child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text('$n',
-                                            maxLines: 1,
-                                            softWrap: false,
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: isToday || selected
-                                                    ? FontWeight.bold
-                                                    : FontWeight.w600,
-                                                color: value == 'unavailable'
-                                                    ? const Color(0xFF94A3B8)
-                                                    : (isDark ? const Color(0xFFF1F3F7) : bookingNavy)))),
-                                    const SizedBox(height: 3),
-                                    Container(
-                                        width: selected ? 8 : 7,
-                                        height: selected ? 8 : 7,
-                                        decoration: BoxDecoration(
-                                            color: statusColor,
-                                            shape: BoxShape.circle,
-                                            border: selected
-                                                ? Border.all(color: isDark ? Colors.black : Colors.white, width: 1)
-                                                : null))
-                                  ]))));
+                              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('$n',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: isToday || selected
+                                                ? FontWeight.bold
+                                                : FontWeight.w600,
+                                            color: value == 'unavailable'
+                                                ? const Color(0xFF94A3B8)
+                                                : (isDark
+                                                    ? const Color(0xFFF1F3F7)
+                                                    : bookingNavy)))),
+                                const SizedBox(height: 3),
+                                Container(
+                                    width: selected ? 8 : 7,
+                                    height: selected ? 8 : 7,
+                                    decoration: BoxDecoration(
+                                        color: statusColor,
+                                        shape: BoxShape.circle,
+                                        border: selected
+                                            ? Border.all(
+                                                color: isDark
+                                                    ? Colors.black
+                                                    : Colors.white,
+                                                width: 1)
+                                            : null))
+                              ]))));
                 })),
         ]);
       }),
