@@ -2,9 +2,22 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
-    function admin() { return active() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true; }
-    function bookingFinance() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('canReviewBookingPayments', false) == true; }
-    function active() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('isBlocked', false) == false; }
+    function active() {
+      return signedIn() &&
+        firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+        (!('isBlocked' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data) ||
+         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isBlocked == false);
+    }
+    function admin() {
+      return active() &&
+        ('isAdmin' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data) &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    function bookingFinance() {
+      return active() &&
+        ('canReviewBookingPayments' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data) &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.canReviewBookingPayments == true;
+    }
     match /booking_banner_media/{authorUid}/{fileName} {
       allow read: if true;
       // Retained legacy objects remain readable; new uploads use the server lifecycle.
@@ -40,6 +53,32 @@ service firebase.storage {
          (fileName.matches('[A-Za-z0-9_-]+[.]png') && request.resource.contentType == 'image/png') ||
          (fileName.matches('[A-Za-z0-9_-]+[.]pdf') && request.resource.contentType == 'application/pdf'));
       allow update, delete: if false;
+    }
+
+    match /booking_dispute_evidence/{ticketId}/{authorUid}/{fileName} {
+      function disputeTicket() {
+        return firestore.exists(/databases/(default)/documents/booking_support/$(ticketId))
+          ? firestore.get(/databases/(default)/documents/booking_support/$(ticketId)).data
+          : firestore.get(/databases/(default)/documents/booking_disputes/$(ticketId)).data;
+      }
+      function isDisputeParty() {
+        return active() && (
+          admin() ||
+          disputeTicket().customerId == request.auth.uid ||
+          disputeTicket().ownerId == request.auth.uid ||
+          disputeTicket().userId == request.auth.uid
+        );
+      }
+      function isOpenDispute() {
+        return !(disputeTicket().status in ['resolved', 'closed', 'rejected']);
+      }
+      allow read: if isDisputeParty();
+      allow create: if resource == null && isDisputeParty() && request.auth.uid == authorUid && isOpenDispute() &&
+        request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024 &&
+        ((fileName.matches('[A-Za-z0-9._-]+[.](jpg|jpeg|png|webp)') && request.resource.contentType.matches('image/(jpeg|png|webp)')) ||
+         (fileName.matches('[A-Za-z0-9._-]+[.]pdf') && request.resource.contentType == 'application/pdf'));
+      allow update: if false;
+      allow delete: if admin();
     }
     match /subscription_receipts/{subscriptionId}/{authorUid}/{fileName} {
       function subscription() { return firestore.get(/databases/(default)/documents/office_subscriptions/$(subscriptionId)).data; }

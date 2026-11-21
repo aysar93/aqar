@@ -8,7 +8,7 @@ function cancellationPolicy(p) {
   return {freeCancellationHours:p.freeCancellationHours,lateRefundPercent:p.lateRefundPercent};
 }
 const V2_LABELS = { morning: 'الفترة الصباحية', evening: 'الفترة المسائية', full_day: 'اليوم الكامل' };
-function venueDeposit(v) {
+function venueDeposit(v, categoryDefaults) {
   if (!v || typeof v !== 'object') return null;
   const v1 = Number.isSafeInteger(v.deposit) && v.deposit > 0 ? v.deposit : null;
   const isV2 = v.pricing && typeof v.pricing === 'object' && v.pricing.version === 2;
@@ -20,6 +20,9 @@ function venueDeposit(v) {
   }
   if (v2 !== null) return v2;
   if (v1 !== null) return v1;
+  if (categoryDefaults && v.category && Number.isSafeInteger(categoryDefaults[v.category]) && categoryDefaults[v.category] > 0) {
+    return categoryDefaults[v.category];
+  }
   return null;
 }
 function pricingConfig(d) {

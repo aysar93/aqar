@@ -58,13 +58,15 @@ service cloud.firestore {
       allow write: if false;
     }
     match /booking_support/{entry} {
-      allow read: if activeUser() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow read: if activeUser() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        (resource != null && (resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid))
+      );
       allow write: if false;
     }
     match /booking_action_audit/{entry} {
-      allow read: if activeUser() && (isAdmin() || bookingFinance() ||
-        get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.customerId == request.auth.uid ||
-        get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.ownerId == request.auth.uid);
+      allow read: if activeUser() && isAdmin();
       allow write: if false;
     }
     match /booking_finance_audit/{entry} {
@@ -83,11 +85,23 @@ service cloud.firestore {
     match /bookings/{bookingId} {
       allow read: if activeUser() && (isAdmin() || bookingFinance() || resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
       allow write: if false;
+
+      match /admin_notes/{noteId} {
+        allow read: if activeUser() && isAdmin();
+        allow write: if false;
+      }
     }
     match /booking_reports/{reportId} {
       allow read: if isAdmin();
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'resolved';
       allow create, delete: if false;
+    }
+    match /booking_disputes/{disputeId} {
+      allow read: if activeUser() && (
+        isAdmin() ||
+        (resource != null && (resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid))
+      );
+      allow write: if false;
     }
     match /booking_reels/{reelId} {
       allow read: if true;
