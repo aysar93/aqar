@@ -13,11 +13,13 @@ class StatisticsFilterBar extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -30,10 +32,10 @@ class StatisticsFilterBar extends StatelessWidget {
             vertical: 14,
           ),
           decoration: BoxDecoration(
-            color: _cardColor,
+            color: isDark ? _cardColor : Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.07,
               ),
             ),
@@ -48,10 +50,10 @@ class StatisticsFilterBar extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Text(
+                        Text(
                           'تصفية الإحصائيات',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: onSurface,
                             fontSize: StatisticsTextStyles.cardTitleSize,
                             fontWeight: FontWeight.w700,
                           ),
@@ -70,7 +72,7 @@ class StatisticsFilterBar extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(
+                        color: onSurface.withValues(
                           alpha: 0.58,
                         ),
                         fontSize: StatisticsTextStyles.sectionSubtitleSize,
@@ -86,14 +88,14 @@ class StatisticsFilterBar extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.05,
                   ),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.keyboard_arrow_left_rounded,
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.65,
                   ),
                   size: 22,
@@ -163,7 +165,7 @@ class _FilterCountBadge extends StatelessWidget {
     required this.count,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {

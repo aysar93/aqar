@@ -16,36 +16,44 @@ class BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final isLandscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
       child: SizedBox(
-        height: 70,
+        height: isLandscape ? 52 : 70,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
-              padding: const EdgeInsets.all(6),
+              padding: EdgeInsets.all(isLandscape ? 3 : 6),
               decoration: BoxDecoration(
                 color: selected
-                    ? const Color(0xffD4AF37).withValues(alpha: 0.15)
+                    ? const Color(0xFFC5A16B).withValues(alpha: 0.15)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
-                size: 28,
-                color: selected ? const Color(0xffD4AF37) : Colors.white70,
+                size: isLandscape ? 20 : 28,
+                color: selected ? const Color(0xFFC5A16B) : unselectedColor,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? const Color(0xffD4AF37) : Colors.white70,
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            SizedBox(height: isLandscape ? 1 : 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  color: selected ? const Color(0xFFC5A16B) : unselectedColor,
+                  fontSize: isLandscape ? 10.5 : 12,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ),
           ],

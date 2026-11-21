@@ -168,7 +168,7 @@ class OfficeHeader extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: const Color(0xFFD4AF37),
+              color: const Color(0xFFC5A16B),
               width: 2,
             ),
             boxShadow: [
@@ -274,7 +274,7 @@ class OfficeHeader extends StatelessWidget {
       style: const TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w800,
-        color: Color(0xFFD4AF37),
+        color: Color(0xFFC5A16B),
       ),
     );
   }
@@ -366,7 +366,7 @@ class OfficeHeader extends StatelessWidget {
         Icon(
           icon,
           size: 20,
-          color: const Color(0xFFD4AF37),
+          color: const Color(0xFFC5A16B),
         ),
         const SizedBox(height: 5),
         Text(
@@ -431,9 +431,9 @@ class OfficeHeader extends StatelessWidget {
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor:
-              isFollowing ? colorScheme.onSurface : const Color(0xFFD4AF37),
+              isFollowing ? colorScheme.onSurface : const Color(0xFFC5A16B),
           side: BorderSide(
-            color: isFollowing ? colorScheme.outline : const Color(0xFFD4AF37),
+            color: isFollowing ? colorScheme.outline : const Color(0xFFC5A16B),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),

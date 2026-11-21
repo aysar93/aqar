@@ -13,12 +13,14 @@ class MapResultsSheet extends StatelessWidget {
     required this.onPropertyTap,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _background = Color(0xFF0F172A);
   static const Color _card = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -30,10 +32,10 @@ class MapResultsSheet extends StatelessWidget {
             horizontal: 16,
           ),
           decoration: BoxDecoration(
-            color: _card,
+            color: isDark ? _card : Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.07,
               ),
             ),
@@ -70,8 +72,8 @@ class MapResultsSheet extends StatelessWidget {
                       : '${properties.length} عقار في المنطقة الظاهرة',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: onSurface,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -108,12 +110,14 @@ class MapResultsSheet extends StatelessWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
+        final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+        final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
         return FractionallySizedBox(
           heightFactor: 0.78,
           child: Container(
-            decoration: const BoxDecoration(
-              color: _background,
-              borderRadius: BorderRadius.vertical(
+            decoration: BoxDecoration(
+              color: isDark ? _background : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(28),
               ),
             ),
@@ -124,7 +128,7 @@ class MapResultsSheet extends StatelessWidget {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(
+                    color: onSurface.withValues(
                       alpha: 0.18,
                     ),
                     borderRadius: BorderRadius.circular(20),
@@ -142,8 +146,8 @@ class MapResultsSheet extends StatelessWidget {
                       Expanded(
                         child: Text(
                           '${properties.length} عقار في المنطقة الظاهرة',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: onSurface,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ),
@@ -151,9 +155,9 @@ class MapResultsSheet extends StatelessWidget {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(sheetContext).pop(),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: Color(0xFF94A3B8),
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
                       ),
                     ],

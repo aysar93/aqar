@@ -35,9 +35,11 @@ class StatisticsFilterSheet extends StatefulWidget {
 }
 
 class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
-  static const Color _background = Color(0xFF0F172A);
-  static const Color _cardColor = Color(0xFF1E293B);
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   late String? _adType;
   late String? _propertyType;
@@ -99,9 +101,9 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
         constraints: BoxConstraints(
           maxHeight: mediaQuery.size.height * 0.92,
         ),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _background,
-          borderRadius: BorderRadius.vertical(
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(28),
           ),
         ),
@@ -112,7 +114,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
             Divider(
               height: 1,
               thickness: 1,
-              color: Colors.white.withValues(
+              color: _onSurface.withValues(
                 alpha: 0.06,
               ),
             ),
@@ -203,7 +205,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
         width: 42,
         height: 4,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(
+          color: _onSurface.withValues(
             alpha: 0.18,
           ),
           borderRadius: BorderRadius.circular(20),
@@ -243,10 +245,10 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'تصفية الإحصائيات',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -255,7 +257,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
                 Text(
                   'خصص بيانات السوق التي تريد تحليلها',
                   style: TextStyle(
-                    color: Colors.white.withValues(
+                    color: _onSurface.withValues(
                       alpha: 0.55,
                     ),
                     fontSize: StatisticsTextStyles.sectionSubtitleSize,
@@ -272,7 +274,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
             },
             icon: Icon(
               Icons.close_rounded,
-              color: Colors.white.withValues(
+              color: _onSurface.withValues(
                 alpha: 0.72,
               ),
             ),
@@ -296,8 +298,8 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: _onSurface,
             fontSize: StatisticsTextStyles.cardTitleSize,
             fontWeight: FontWeight.w700,
           ),
@@ -346,15 +348,15 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
           hint: Text(
             'كل المدن',
             style: TextStyle(
-              color: Colors.white.withValues(
+              color: _onSurface.withValues(
                 alpha: 0.72,
               ),
               fontSize: StatisticsTextStyles.cardTitleSize,
               fontWeight: FontWeight.w600,
             ),
           ),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: _onSurface,
             fontSize: StatisticsTextStyles.cardTitleSize,
             fontWeight: FontWeight.w600,
           ),
@@ -405,15 +407,15 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
           hint: Text(
             'كل المناطق',
             style: TextStyle(
-              color: Colors.white.withValues(
+              color: _onSurface.withValues(
                 alpha: 0.72,
               ),
               fontSize: StatisticsTextStyles.cardTitleSize,
               fontWeight: FontWeight.w600,
             ),
           ),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: _onSurface,
             fontSize: StatisticsTextStyles.cardTitleSize,
             fontWeight: FontWeight.w600,
           ),
@@ -470,7 +472,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
                     border: Border.all(
                       color: selected
                           ? _gold.withValues(alpha: 0.40)
-                          : Colors.white.withValues(
+                          : _onSurface.withValues(
                               alpha: 0.06,
                             ),
                     ),
@@ -485,7 +487,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
                           border: Border.all(
                             color: selected
                                 ? _gold
-                                : Colors.white.withValues(
+                                : _onSurface.withValues(
                                     alpha: 0.28,
                                   ),
                             width: 1.7,
@@ -509,8 +511,8 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
                           _periodLabel(period),
                           style: TextStyle(
                             color: selected
-                                ? Colors.white
-                                : Colors.white.withValues(
+                                ? _onSurface
+                                : _onSurface.withValues(
                                     alpha: 0.75,
                                   ),
                             fontSize: StatisticsTextStyles.cardTitleSize,
@@ -550,7 +552,7 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
         color: _background,
         border: Border(
           top: BorderSide(
-            color: Colors.white.withValues(
+            color: _onSurface.withValues(
               alpha: 0.06,
             ),
           ),
@@ -589,9 +591,9 @@ class _StatisticsFilterSheetState extends State<StatisticsFilterSheet> {
               child: OutlinedButton(
                 onPressed: _resetFilters,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: _onSurface,
                   side: BorderSide(
-                    color: Colors.white.withValues(
+                    color: _onSurface.withValues(
                       alpha: 0.14,
                     ),
                   ),
@@ -673,11 +675,13 @@ class _ChoiceItem extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -689,13 +693,13 @@ class _ChoiceItem extends StatelessWidget {
             vertical: 9,
           ),
           decoration: BoxDecoration(
-            color: selected ? _gold.withValues(alpha: 0.12) : _cardColor,
+            color: selected ? _gold.withValues(alpha: 0.12) : (isDark ? _cardColor : Colors.white),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
                   ? _gold.withValues(alpha: 0.38)
-                  : Colors.white.withValues(
-                      alpha: 0.06,
+                  : onSurface.withValues(
+                      alpha: 0.08,
                     ),
             ),
           ),
@@ -715,7 +719,7 @@ class _ChoiceItem extends StatelessWidget {
                 style: TextStyle(
                   color: selected
                       ? _gold
-                      : Colors.white.withValues(
+                      : onSurface.withValues(
                           alpha: 0.78,
                         ),
                   fontSize: StatisticsTextStyles.bodySize,
@@ -741,17 +745,19 @@ class _DropdownContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: 14,
       ),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: Colors.white.withValues(
-            alpha: 0.07,
+          color: onSurface.withValues(
+            alpha: 0.08,
           ),
         ),
       ),

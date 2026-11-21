@@ -10,7 +10,7 @@ class LocationPickerPin extends StatelessWidget {
     this.isValid = true,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _dark = Color(0xFF0F172A);
   static const Color _error = Color(0xFFEF4444);
 

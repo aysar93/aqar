@@ -71,29 +71,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String title,
     VoidCallback onTap,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: const Color(0xff1E293B),
+      color: isDark ? const Color(0xff1E293B) : Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? Colors.transparent : Colors.black12,
+        ),
       ),
       child: ListTile(
         leading: Icon(
           icon,
-          color: const Color(0xffD4AF37),
+          color: const Color(0xffC5A16B),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios,
           size: 16,
-          color: Colors.white54,
+          color: isDark ? Colors.white54 : Colors.black38,
         ),
         onTap: onTap,
       ),
@@ -102,6 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
 
     if (loading) {
@@ -116,8 +121,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: const Text("حسابي"),
         centerTitle: true,
-        backgroundColor: const Color(0xff0F172A),
-        foregroundColor: Colors.white,
+        backgroundColor:
+            isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -125,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const CircleAvatar(
               radius: 45,
-              backgroundColor: Color(0xffD4AF37),
+              backgroundColor: Color(0xffC5A16B),
               child: Icon(
                 Icons.person,
                 size: 50,
@@ -231,28 +237,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             Card(
-              color: const Color(0xff1E293B),
+              color: isDark ? const Color(0xff1E293B) : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
+                side: BorderSide(
+                  color: isDark ? Colors.transparent : Colors.black12,
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.business,
-                          color: Color(0xffD4AF37),
+                          color: Color(0xffC5A16B),
                           size: 32,
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             "هل تمتلك مكتبًا عقاريًا؟",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -261,10 +272,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       "انضم إلى منصة عقارات الانبار وأنشئ صفحة خاصة بمكتبك، واعرض جميع عقاراتك في مكان واحد",
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: isDark ? Colors.white70 : Colors.black54,
                         height: 1.5,
                       ),
                     ),
@@ -275,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: const Icon(Icons.arrow_forward),
                         label: const Text("انضم الآن"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xffD4AF37),
+                          backgroundColor: const Color(0xffC5A16B),
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(
@@ -312,7 +323,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               () {
                 showModalBottomSheet(
                   context: context,
-                  backgroundColor: const Color(0xff1E293B),
+                  backgroundColor:
+                      isDark ? const Color(0xff1E293B) : Colors.white,
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(24),
@@ -331,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xffD4AF37)),
+                                color: Color(0xffC5A16B)),
                           ),
                           const SizedBox(height: 25),
                           Row(
@@ -360,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xffD4AF37),
+                                    backgroundColor: const Color(0xffC5A16B),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 14),
@@ -430,9 +442,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     textDirection: TextDirection.rtl,
                     child: Container(
                       padding: const EdgeInsets.all(24),
-                      decoration: const BoxDecoration(
-                        color: Color(0xff1E293B),
-                        borderRadius: BorderRadius.vertical(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xff1E293B) : Colors.white,
+                        borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(24),
                         ),
                       ),
@@ -452,7 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 20),
                           const CircleAvatar(
                             radius: 35,
-                            backgroundColor: Color(0xffD4AF37),
+                            backgroundColor: Color(0xffC5A16B),
                             child: Icon(Icons.home_work,
                                 color: Colors.white, size: 35),
                           ),
@@ -462,7 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xffD4AF37)),
+                                color: Color(0xffC5A16B)),
                           ),
                           const Text(
                             "الإصدار 1.0.5",
@@ -479,15 +491,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xffD4AF37)),
+                                        color: Color(0xffC5A16B)),
                                   ),
                                   const SizedBox(height: 6),
-                                  const Text(
+                                  Text(
                                     "تطبيق عقارات الانبار هو المنصة الرقمية المتكاملة والمتخصصة في سوق العقارات داخل محافظة الأنبار. انطلق التطبيق ليكون صلة الوصل الأسرع والأكثر أماناً بين الباحثين عن عقارات (شراء أو إيجار) وبين الملاك وأصحاب المكاتب العقارية، مستفيدين من أحدث التقنيات لتسهيل عملية البحث والتسويق",
                                     textAlign: TextAlign.justify,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.white70,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black87,
                                     ),
                                   ),
                                   const SizedBox(height: 15),
@@ -496,15 +510,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xffD4AF37)),
+                                        color: Color(0xffC5A16B)),
                                   ),
                                   const SizedBox(height: 6),
-                                  const Text(
+                                  Text(
                                     "أن نكون الدليل العقاري الأول والأنشط في الأنبار، ونساهم في تطوير وتسهيل حركة الاستثمار العقاري والتوسع العمراني الذي تشهده المحافظة، من خلال توفير بيئة رقمية شفافة وموثوقة لكل مستخدم",
                                     textAlign: TextAlign.justify,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.white70,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black87,
                                     ),
                                   ),
                                   const SizedBox(height: 15),
@@ -513,7 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xffD4AF37)),
+                                        color: Color(0xffC5A16B)),
                                   ),
                                   const SizedBox(height: 8),
                                   _buildFeaturePoint(
@@ -571,6 +587,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ودجت فرعية مساعدة لبناء نقاط المميزات في "عن التطبيق" بشكل منسق
   Widget _buildFeaturePoint(String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -581,9 +598,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.white70,
+                color: isDark ? Colors.white70 : Colors.black87,
               ),
             ),
           ),

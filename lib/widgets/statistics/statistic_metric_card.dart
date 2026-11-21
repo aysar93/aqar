@@ -37,27 +37,29 @@ class StatisticMetricCard extends StatelessWidget {
     this.highlighted = false,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final accent = accentColor ?? _gold;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: highlighted
               ? accent.withValues(alpha: 0.32)
-              : Colors.white.withValues(alpha: 0.06),
+              : onSurface.withValues(alpha: 0.06),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
+            color: Colors.black.withValues(alpha: isDark ? 0.10 : 0.05),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -92,7 +94,7 @@ class StatisticMetricCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(
+                    color: onSurface.withValues(
                       alpha: 0.62,
                     ),
                     fontSize: StatisticsTextStyles.sectionSubtitleSize,
@@ -110,8 +112,8 @@ class StatisticMetricCard extends StatelessWidget {
               value,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontSize: StatisticsTextStyles.metricSize,
                 fontWeight: FontWeight.w800,
                 height: 1.3,
@@ -125,7 +127,7 @@ class StatisticMetricCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.42,
                 ),
                 fontSize: StatisticsTextStyles.secondarySize,

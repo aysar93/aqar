@@ -42,9 +42,14 @@ class ConversationScreen extends StatefulWidget {
 
 class _ConversationScreenState extends State<ConversationScreen>
     with WidgetsBindingObserver {
-  static const _background = Color(0xFF0F172A);
-  static const _surface = Color(0xFF1E293B);
-  static const _gold = Color(0xFFD4AF37);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _surface => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? Colors.white70 : Colors.black54;
+  Color get _textMuted => _isDark ? Colors.white54 : Colors.black45;
+  static const _gold = Color(0xFFC5A16B);
   final _service = ChatService();
   final _history = ChatHistoryPreferences();
   final _text = TextEditingController();
@@ -670,7 +675,7 @@ class _ConversationScreenState extends State<ConversationScreen>
   Widget _action(
           BuildContext context, String title, IconData icon, String value) =>
       ListTile(
-          textColor: Colors.white,
+          textColor: _textPrimary,
           leading: Icon(icon, color: _gold),
           title: Text(title),
           onTap: () => Navigator.pop(context, value));
@@ -681,9 +686,9 @@ class _ConversationScreenState extends State<ConversationScreen>
           builder: (dialogContext) => AlertDialog(
                   backgroundColor: _surface,
                   title:
-                      Text(title, style: const TextStyle(color: Colors.white)),
+                      Text(title, style: TextStyle(color: _textPrimary)),
                   content:
-                      Text(body, style: const TextStyle(color: Colors.white70)),
+                      Text(body, style: TextStyle(color: _textSecondary)),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(dialogContext, false),
@@ -786,13 +791,13 @@ class _ConversationScreenState extends State<ConversationScreen>
         backgroundColor: _surface,
         builder: (sheetContext) => SafeArea(
                 child: ListView(shrinkWrap: true, children: [
-              const Padding(
-                  padding: EdgeInsets.all(16),
+              Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Text('الردود الجاهزة',
-                      style: TextStyle(color: Colors.white, fontSize: 18))),
+                      style: TextStyle(color: _textPrimary, fontSize: 18))),
               for (final reply in _preferences.quickReplies)
                 ListTile(
-                    textColor: Colors.white,
+                    textColor: _textPrimary,
                     title: Text(reply),
                     onTap: () => Navigator.pop(sheetContext, reply)),
               if (_preferences.quickReplies.isEmpty)
@@ -940,17 +945,25 @@ class _ConversationScreenState extends State<ConversationScreen>
         textDirection: TextDirection.rtl,
         child: Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.dark(
-                  primary: _gold, secondary: _gold, surface: _surface),
-              inputDecorationTheme: const InputDecorationTheme(
-                  hintStyle: TextStyle(color: Colors.white38),
+              colorScheme: _isDark
+                  ? const ColorScheme.dark(
+                      primary: _gold,
+                      secondary: _gold,
+                      surface: Color(0xFF1E293B))
+                  : const ColorScheme.light(
+                      primary: _gold,
+                      secondary: _gold,
+                      surface: Colors.white),
+              inputDecorationTheme: InputDecorationTheme(
+                  hintStyle: TextStyle(
+                      color: _isDark ? Colors.white38 : Colors.black38),
                   border: InputBorder.none),
             ),
             child: Scaffold(
               backgroundColor: _background,
               appBar: AppBar(
                 backgroundColor: _background,
-                foregroundColor: Colors.white,
+                foregroundColor: _textPrimary,
                 elevation: 0,
                 leading: IconButton(
                     tooltip: 'رجوع',
@@ -981,8 +994,10 @@ class _ConversationScreenState extends State<ConversationScreen>
                         Text(title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w700)),
+                            style: TextStyle(
+                                color: _textPrimary,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700)),
                         if (typing ||
                             _chat['isClosed'] == true ||
                             widget.admin ||
@@ -1022,7 +1037,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                             child: TextField(
                                 controller: _search,
                                 autofocus: true,
-                                style: const TextStyle(color: Colors.white),
+                                style: TextStyle(color: _textPrimary),
                                 decoration: const InputDecoration(
                                     hintText: 'ابحث في الرسائل ورقم العقار',
                                     prefixIcon:
@@ -1034,8 +1049,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                                   _searching = false;
                                   _search.clear();
                                 }),
-                            icon:
-                                const Icon(Icons.close, color: Colors.white54)),
+                            icon: Icon(Icons.close, color: _textMuted)),
                       ])),
                 if (!widget.admin && _preferences.hoursEnabled && !open)
                   Padding(
@@ -1043,8 +1057,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                           horizontal: 16, vertical: 8),
                       child: Text(
                           'وقت العمل: ${ChatPreferences.clock(_preferences.openingMinute)} – ${ChatPreferences.clock(_preferences.closingMinute)} • بتوقيت بغداد',
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11))),
+                          style: TextStyle(color: _textMuted, fontSize: 11))),
                 Expanded(
                     child: _loading || _loadingMessages && _error == null
                         ? const Center(
@@ -1058,8 +1071,8 @@ class _ConversationScreenState extends State<ConversationScreen>
                                         padding: const EdgeInsets.all(24),
                                         child: Text(_error!,
                                             textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                color: Colors.white60))),
+                                            style: TextStyle(
+                                                color: _textSecondary))),
                                     if (_uid != null && !_accountChanged)
                                       TextButton.icon(
                                           onPressed: _initialize,
@@ -1091,14 +1104,14 @@ class _ConversationScreenState extends State<ConversationScreen>
                                               _searching
                                                   ? 'لا توجد نتائج مطابقة'
                                                   : 'مرحباً بك في عقارات الأنبار',
-                                              style: const TextStyle(
-                                                  color: Colors.white,
+                                              style: TextStyle(
+                                                  color: _textPrimary,
                                                   fontSize: 16)),
                                           const SizedBox(height: 8),
-                                          const Text(
+                                          Text(
                                               'تواصل مع الإدارة للاستفسار عن العقارات',
                                               style: TextStyle(
-                                                  color: Colors.white54,
+                                                  color: _textMuted,
                                                   fontSize: 12)),
                                         ])),
                                   for (var i = 0; i < filtered.length; i++) ...[
@@ -1133,11 +1146,10 @@ class _ConversationScreenState extends State<ConversationScreen>
                                   ],
                                 ]))),
                 if (!_enabled && !_loading && _error == null)
-                  const Padding(
-                      padding: EdgeInsets.all(10),
+                  Padding(
+                      padding: const EdgeInsets.all(10),
                       child: Text('الإرسال غير متاح حالياً',
-                          style:
-                              TextStyle(color: Colors.white54, fontSize: 12))),
+                          style: TextStyle(color: _textMuted, fontSize: 12))),
                 if (_replyId != null)
                   Container(
                       color: _surface,
@@ -1154,16 +1166,16 @@ class _ConversationScreenState extends State<ConversationScreen>
                                         _message(_replyId)!),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white60, fontSize: 12))),
+                                style: TextStyle(
+                                    color: _textSecondary, fontSize: 12))),
                         IconButton(
                             tooltip: 'إلغاء الرد',
                             onPressed: () {
                               setState(() => _replyId = null);
                               _saveDraft();
                             },
-                            icon: const Icon(Icons.close,
-                                color: Colors.white54, size: 18)),
+                            icon: Icon(Icons.close,
+                                color: _textMuted, size: 18)),
                       ])),
                 if (_pendingProperty != null)
                   Container(
@@ -1195,9 +1207,9 @@ class _ConversationScreenState extends State<ConversationScreen>
                       color: _surface,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Column(children: [
-                        const Text('تسجيل جاهز للإرسال',
-                            style:
-                                TextStyle(color: Colors.white60, fontSize: 12)),
+                        Text('تسجيل جاهز للإرسال',
+                            style: TextStyle(
+                                color: _textSecondary, fontSize: 12)),
                         Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -1211,9 +1223,13 @@ class _ConversationScreenState extends State<ConversationScreen>
                             ]),
                       ])),
                 Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                         color: _surface,
-                        border: Border(top: BorderSide(color: Colors.white10))),
+                        border: Border(
+                            top: BorderSide(
+                                color: _isDark
+                                    ? Colors.white10
+                                    : Colors.black12))),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     child: Row(
@@ -1244,8 +1260,8 @@ class _ConversationScreenState extends State<ConversationScreen>
                                   minLines: 1,
                                   maxLines: 5,
                                   maxLength: 5000,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 14),
+                                  style: TextStyle(
+                                      color: _textPrimary, fontSize: 14),
                                   decoration: const InputDecoration(
                                       hintText: 'اكتب رسالتك…',
                                       counterText: '',
@@ -1287,8 +1303,11 @@ class _ConversationScreenState extends State<ConversationScreen>
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2, color: _gold))
                                   : Icon(Icons.send_rounded,
-                                      color:
-                                          _enabled ? _gold : Colors.white24)),
+                                      color: _enabled
+                                          ? _gold
+                                          : (_isDark
+                                              ? Colors.white24
+                                              : Colors.black26))),
                         ])),
               ])),
             )));

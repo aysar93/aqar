@@ -46,21 +46,26 @@ class _ChatReplyPreviewState extends State<ChatReplyPreview> {
     }
   }
 
-  Widget _content(String text) => InkWell(
-      onTap: widget.onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-            color: Colors.black12,
-            borderRadius: BorderRadius.circular(8),
-            border: const Border(
-                right: BorderSide(color: Color(0xFFD4AF37), width: 2))),
-        child: Text(text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white60, fontSize: 12)),
-      ));
+  Widget _content(String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+        onTap: widget.onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+              color: isDark ? Colors.black12 : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: const Border(
+                  right: BorderSide(color: Color(0xFFC5A16B), width: 2))),
+          child: Text(text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: isDark ? Colors.white60 : Colors.black54,
+                  fontSize: 12)),
+        ));
+  }
   @override
   Widget build(BuildContext context) {
     if (widget.message != null) {

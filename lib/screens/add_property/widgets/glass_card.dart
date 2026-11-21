@@ -14,25 +14,29 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border.all(
-          color: selected ? const Color(0xFFD4AF37) : Colors.white12,
+          color: selected
+              ? const Color(0xFFC5A16B)
+              : onSurface.withValues(alpha: 0.12),
           width: selected ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .35),
+            color: Colors.black.withValues(alpha: isDark ? .35 : .08),
             blurRadius: 25,
             offset: const Offset(0, 12),
           ),
           if (selected)
             BoxShadow(
-              color: const Color(0xFFD4AF37).withValues(alpha: .25),
+              color: const Color(0xFFC5A16B).withValues(alpha: .25),
               blurRadius: 35,
               spreadRadius: 2,
             ),

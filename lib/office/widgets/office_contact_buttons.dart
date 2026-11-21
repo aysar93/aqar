@@ -130,10 +130,10 @@ class OfficeContactButtons extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     final foregroundColor =
-        isPrimary ? const Color(0xFF0F172A) : const Color(0xFFD4AF37);
+        isPrimary ? const Color(0xFF0F172A) : const Color(0xFFC5A16B);
 
     final backgroundColor =
-        isPrimary ? const Color(0xFFD4AF37) : Colors.transparent;
+        isPrimary ? const Color(0xFFC5A16B) : Colors.transparent;
 
     return SizedBox(
       height: 44,
@@ -155,7 +155,7 @@ class OfficeContactButtons extends StatelessWidget {
           backgroundColor: backgroundColor,
           side: BorderSide(
             color: isPrimary
-                ? const Color(0xFFD4AF37)
+                ? const Color(0xFFC5A16B)
                 : colorScheme.outline.withValues(alpha: 0.55),
           ),
           padding: const EdgeInsets.symmetric(

@@ -23,8 +23,8 @@ class PropertyCardSocialService {
   static const _navy     = Color(0xFF0B1320);   // Navy عميق جداً وأنيق — الخلفية الرئيسية
   static const _navyMid  = Color(0xFF131F33);   // Navy ثانوي — للشرائح والبطاقات
   static const _navyCard = Color(0xFF182740);   // Navy للكروت البارزة (السعر)
-  static const _gold     = Color(0xFFB8972A);   // ذهبي فاخر هادئ غير صارخ
-  static const _goldSoft = Color(0xFFC9A227);   // ذهبي ثانوي ناعم
+  static const _gold     = Color(0xFFC5A16B);   // ذهبي موحد
+  static const _goldSoft = Color(0xFFC5A16B);   // ذهبي ثانوي موحد
   static const _white    = Colors.white;
   static const _textSub  = Color(0xFFCBD5E1);   // نصوص ثانوية واضحة
 
@@ -281,7 +281,7 @@ class _DiagonalAccentPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFB8972A).withValues(alpha: 0.15)
+      ..color = const Color(0xFFC5A16B).withValues(alpha: 0.15)
       ..strokeWidth = 18
       ..style = PaintingStyle.stroke;
     canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
@@ -1057,7 +1057,7 @@ class _Footer extends StatelessWidget {
         color: Color(0xFF09101C), // Navy فاحم وأنيق
         border: Border(
           top: BorderSide(
-            color: Color(0xFFB8972A),
+            color: Color(0xFFC5A16B),
             width: 1.0,
           ),
         ),

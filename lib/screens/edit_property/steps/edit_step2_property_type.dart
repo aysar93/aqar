@@ -42,24 +42,26 @@ class EditStep2PropertyType extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "نوع العقار",
             style: TextStyle(
-              color: Colors.white,
+              color: onSurface,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "اختر نوع العقار",
             style: TextStyle(
-              color: Colors.white60,
+              color: onSurface.withValues(alpha: 0.60),
               fontSize: 15,
             ),
           ),
@@ -104,13 +106,13 @@ class EditStep2PropertyType extends StatelessWidget {
                       Icon(
                         icon,
                         size: 45,
-                        color: const Color(0xffD4AF37),
+                        color: const Color(0xffC5A16B),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         name,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: onSurface,
                           fontSize: 19,
                           fontWeight: FontWeight.bold,
                         ),

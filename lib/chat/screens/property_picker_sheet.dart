@@ -59,6 +59,8 @@ class _PropertyPickerSheetState extends State<PropertyPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
     final matches = _properties.where((doc) {
       final d = doc.data();
       return '${d['title']} ${d['city']} ${d['areaName']} ${d['propertyNumber']}'
@@ -69,14 +71,14 @@ class _PropertyPickerSheetState extends State<PropertyPickerSheet> {
         child: SizedBox(
             height: MediaQuery.sizeOf(context).height * .75,
             child: Column(children: [
-              const Padding(
-                  padding: EdgeInsets.all(16),
+              Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Text('اختر عقاراً لإرساله',
-                      style: TextStyle(color: Colors.white, fontSize: 18))),
+                      style: TextStyle(color: textPrimary, fontSize: 18))),
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextField(
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: textPrimary),
                       decoration: const InputDecoration(
                           hintText:
                               'بحث في العقارات المحمّلة بالعنوان أو الرقم',
@@ -86,22 +88,24 @@ class _PropertyPickerSheetState extends State<PropertyPickerSheet> {
                   child: ListView(controller: _controller, children: [
                 for (final doc in matches)
                   ListTile(
-                      textColor: Colors.white,
+                      textColor: textPrimary,
                       title: Text(doc.data()['title'] ?? 'عقار'),
                       subtitle: Text(
                           '${doc.data()['city'] ?? ''} • ${iqd(doc.data()['price'])}'),
                       leading: const Icon(Icons.home_outlined,
-                          color: Color(0xFFD4AF37)),
+                          color: Color(0xFFC5A16B)),
                       onTap: () => Navigator.pop(
                           context,
                           PropertyChatCard.snapshot(
                               PropertyModel.fromMap(doc.data(), doc.id)))),
                 if (matches.isEmpty && !_loading)
-                  const Padding(
-                      padding: EdgeInsets.all(24),
+                  Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Text('لا توجد نتائج ضمن العقارات المحمّلة',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white54))),
+                          style: TextStyle(
+                              color:
+                                  isDark ? Colors.white54 : Colors.black54))),
                 if (_error != null)
                   TextButton(
                       onPressed: _load,
@@ -109,7 +113,7 @@ class _PropertyPickerSheetState extends State<PropertyPickerSheet> {
                 if (_loading)
                   const Center(
                       child:
-                          CircularProgressIndicator(color: Color(0xFFD4AF37)))
+                          CircularProgressIndicator(color: Color(0xFFC5A16B)))
                 else if (_more)
                   TextButton(
                       onPressed: _load,

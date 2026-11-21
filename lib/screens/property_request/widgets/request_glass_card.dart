@@ -12,29 +12,30 @@ class RequestGlassCard extends StatelessWidget {
     this.margin,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _card = Color(0xff1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: _card.withValues(
-          alpha: 0.92,
-        ),
+        color: isDark
+            ? _card.withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
-            alpha: 0.06,
-          ),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.08),
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
-              alpha: 0.18,
+              alpha: isDark ? 0.18 : 0.06,
             ),
             blurRadius: 18,
             offset: const Offset(0, 8),

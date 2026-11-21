@@ -23,9 +23,11 @@ class PropertyCardPreviewScreen extends StatefulWidget {
 
 class _PropertyCardPreviewScreenState
     extends State<PropertyCardPreviewScreen> {
-  static const _navy = Color(0xFF0F172A);
-  static const _darkSlate = Color(0xFF1E293B);
-  static const _gold = Color(0xFFD4AF37);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _navy =>
+      _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _darkSlate => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  static const _gold = Color(0xFFC5A16B);
 
   // التخزين المؤقت للصورة عالية الدقة لتوحيد الناتج عبر كل الأزرار
   Uint8List? _cachedCardBytes;
@@ -41,7 +43,7 @@ class _PropertyCardPreviewScreenState
       backgroundColor: _navy,
       appBar: AppBar(
         backgroundColor: _darkSlate,
-        foregroundColor: Colors.white,
+        foregroundColor: _isDark ? Colors.white : const Color(0xFF0F172A),
         title: const Text(
           'بطاقة العقار',
           style: TextStyle(
@@ -289,7 +291,7 @@ class _PropertyCardPreviewScreenState
           content: Row(
             children: [
               const Icon(Icons.check_circle_rounded,
-                  color: Color(0xFFD4AF37), size: 18),
+                  color: Color(0xFFC5A16B), size: 18),
               const SizedBox(width: 8),
               Text(
                 'تم الحفظ في الاستوديو ✓ ($w x $h)',
@@ -455,11 +457,13 @@ class _PdfPreviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor:
+          isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         title: Text(
           'معاينة PDF — #${data.number}',
           style: const TextStyle(fontSize: 16),

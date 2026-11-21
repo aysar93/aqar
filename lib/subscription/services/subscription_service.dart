@@ -1,3 +1,5 @@
+import 'package:cloud_functions/cloud_functions.dart';
+import '../payment_accounts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/subscription_model.dart';
@@ -395,47 +397,21 @@ class SubscriptionService {
     String? transactionId,
     String? notes,
     String? receiptUrl,
+    String? expectedNumber,
   }) async {
-    final docRef = _firestore.collection(paymentsCollection).doc();
-
-    final payment = SubscriptionPaymentModel(
-      id: docRef.id,
-      officeId: officeId,
-      ownerUid: ownerUid,
-      subscriptionId: subscriptionId,
-      packageId: package.id,
-      packageName: package.name,
-      amount: package.price,
-      currency: package.currency,
-      status: 'pending',
-      paymentMethod: paymentMethod,
-      transactionId: transactionId,
-      notes: notes,
-      receiptUrl: receiptUrl,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      approvedAt: null,
-      approvedBy: null,
-    );
-
-    await docRef.set(
-      payment.toMap(
-        useServerTimestamp: true,
-      ),
-    );
-
-    // ربط رقم عملية الدفع بالاشتراك.
-    await _firestore
-        .collection(subscriptionsCollection)
-        .doc(subscriptionId)
-        .update({
-      'paymentId': docRef.id,
-      'paymentStatus': 'pending',
+    final accounts = await SubscriptionPaymentAccounts.load();
+    final result = await FirebaseFunctions.instance
+        .httpsCallable('createSubscriptionPayment')
+        .call({
+      'subscriptionId': subscriptionId,
+      'legacy': true,
       'paymentMethod': paymentMethod,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'expectedNumber': expectedNumber ?? accounts[paymentMethod]?['number'],
+      'transactionId': transactionId,
+      'notes': notes,
+      'receiptUrl': receiptUrl,
     });
-
-    return docRef.id;
+    return result.data['id'] as String;
   }
 
   Stream<List<SubscriptionPaymentModel>> watchOfficePayments(

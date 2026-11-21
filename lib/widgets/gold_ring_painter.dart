@@ -26,7 +26,7 @@ class GoldRingPainter extends CustomPainter {
 
     // الحلقة الخلفية
     final background = Paint()
-      ..color = const Color(0xFFD4AF37).withValues(alpha: .12)
+      ..color = const Color(0xFFC5A16B).withValues(alpha: .12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
@@ -44,10 +44,10 @@ class GoldRingPainter extends CustomPainter {
       endAngle: math.pi * 2,
       transform: GradientRotation(rotation),
       colors: const [
-        Color(0x00D4AF37),
-        Color(0xFFD4AF37),
-        Color(0xFFFFE082),
-        Color(0xFFD4AF37),
+        Color(0x00C5A16B),
+        Color(0xFFC5A16B),
+        Color(0xFFD8BD95),
+        Color(0xFFC5A16B),
       ],
       stops: const [
         0.0,

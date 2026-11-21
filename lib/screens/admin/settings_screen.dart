@@ -1,8 +1,9 @@
 import '../../widgets/media_image.dart';
+import '../../services/media_store.dart';
+import 'payment_account_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
-import '../../services/media_store.dart';
 import 'package:image_picker/image_picker.dart';
 import 'admin_chat_list_screen.dart';
 
@@ -132,12 +133,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xff0F172A),
+          backgroundColor: bgColor,
           elevation: 0,
           centerTitle: true,
           title: const Text(
@@ -151,6 +155,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.all(18),
           child: Column(
             children: [
+              ListTile(
+                  title: const Text('حسابات الدفع (كي وزين كاش)'),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const PaymentAccountSettingsScreen()))),
               _settingsCard(
                 title: "بيانات المكتب",
                 icon: Icons.business,
@@ -213,9 +224,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       width: 120,
                                       height: 120,
                                       decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xff0F172A,
-                                        ),
+                                        color: bgColor,
                                         borderRadius: BorderRadius.circular(
                                           18,
                                         ),
@@ -223,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       child: const Icon(
                                         Icons.add_a_photo,
                                         color: Color(
-                                          0xffD4AF37,
+                                          0xffC5A16B,
                                         ),
                                         size: 40,
                                       ),
@@ -232,10 +241,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(
                           height: 10,
                         ),
-                        const Text(
+                        Text(
                           "اختيار شعار التطبيق",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: onSurface,
                           ),
                         ),
                       ],
@@ -250,15 +259,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   children: [
                     SwitchListTile(
-                      title: const Text(
+                      title: Text(
                         "تفعيل الإشعارات",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: onSurface,
                         ),
                       ),
                       value: allowNotifications,
                       activeThumbColor: const Color(
-                        0xffD4AF37,
+                        0xffC5A16B,
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -267,15 +276,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     SwitchListTile(
-                      title: const Text(
+                      title: Text(
                         "السماح بالتعليقات",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: onSurface,
                         ),
                       ),
                       value: allowComments,
                       activeThumbColor: const Color(
-                        0xffD4AF37,
+                        0xffC5A16B,
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -284,14 +293,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     SwitchListTile(
-                      title: const Text(
+                      title: Text(
                         "تفعيل الدردشة",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: onSurface,
                         ),
                       ),
                       value: allowChat,
-                      activeThumbColor: const Color(0xffD4AF37),
+                      activeThumbColor: const Color(0xffC5A16B),
                       onChanged: (value) {
                         setState(() {
                           allowChat = value;
@@ -304,24 +313,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ListTile(
                       leading: const Icon(
                         Icons.chat,
-                        color: Color(0xffD4AF37),
+                        color: Color(0xffC5A16B),
                       ),
-                      title: const Text(
+                      title: Text(
                         "إدارة المحادثات",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: onSurface,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         "عرض والرد على محادثات المستخدمين",
                         style: TextStyle(
-                          color: Colors.white60,
+                          color: onSurface.withValues(alpha: 0.60),
                         ),
                       ),
-                      trailing: const Icon(
+                      trailing: Icon(
                         Icons.arrow_forward_ios,
-                        color: Colors.white54,
+                        color: onSurface.withValues(alpha: 0.54),
                         size: 18,
                       ),
                       onTap: () {
@@ -342,7 +351,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(
-                      0xffD4AF37,
+                      0xffC5A16B,
                     ),
                     padding: const EdgeInsets.all(
                       15,
@@ -372,28 +381,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String label,
     required IconData icon,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: onSurface,
         ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.white60,
+          labelStyle: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
           ),
           prefixIcon: Icon(
             icon,
             color: const Color(
-              0xffD4AF37,
+              0xffC5A16B,
             ),
           ),
           filled: true,
-          fillColor: const Color(
-            0xff0F172A,
-          ),
+          fillColor: isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(
               15,
@@ -409,12 +418,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required Widget child,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(
-          0xff1E293B,
-        ),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(
           20,
         ),
@@ -427,7 +436,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icon(
                 icon,
                 color: const Color(
-                  0xffD4AF37,
+                  0xffC5A16B,
                 ),
               ),
               const SizedBox(
@@ -435,8 +444,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),

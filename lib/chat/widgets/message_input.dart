@@ -108,6 +108,8 @@ class _MessageInputState extends State<MessageInput> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fieldBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
     return SafeArea(
       top: false,
       child: Container(
@@ -117,8 +119,11 @@ class _MessageInputState extends State<MessageInput> {
           12,
           10,
         ),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E293B),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          border: isDark
+              ? null
+              : const Border(top: BorderSide(color: Colors.black12)),
         ),
         child: Row(
           children: [
@@ -129,18 +134,18 @@ class _MessageInputState extends State<MessageInput> {
                 textCapitalization: TextCapitalization.sentences,
                 minLines: 1,
                 maxLines: 5,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
                 decoration: InputDecoration(
                   hintText: widget.enabled
                       ? "اكتب رسالتك"
                       : "الإرسال غير متاح حالياً",
-                  hintStyle: const TextStyle(
-                    color: Colors.white54,
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.white54 : Colors.black45,
                   ),
                   filled: true,
-                  fillColor: const Color(0xFF0F172A),
+                  fillColor: fieldBg,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 14,
@@ -156,7 +161,7 @@ class _MessageInputState extends State<MessageInput> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: const BorderSide(
-                      color: Color(0xFFD4AF37),
+                      color: Color(0xFFC5A16B),
                       width: 2,
                     ),
                   ),
@@ -166,7 +171,7 @@ class _MessageInputState extends State<MessageInput> {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: fieldBg,
               child: IconButton(
                 tooltip: 'مشاركة الموقع',
                 onPressed: widget.enabled && !_busy
@@ -174,21 +179,21 @@ class _MessageInputState extends State<MessageInput> {
                     : null,
                 icon: const Icon(
                   Icons.location_on,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC5A16B),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: fieldBg,
               child: IconButton(
                 tooltip: 'إرسال صورة',
                 onPressed:
                     widget.enabled && !_busy ? () => _perform(pickImage) : null,
                 icon: const Icon(
                   Icons.photo,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC5A16B),
                 ),
               ),
             ),
@@ -196,7 +201,7 @@ class _MessageInputState extends State<MessageInput> {
             CircleAvatar(
               radius: 24,
               backgroundColor:
-                  widget.enabled ? const Color(0xFFD4AF37) : Colors.grey,
+                  widget.enabled ? const Color(0xFFC5A16B) : Colors.grey,
               child: IconButton(
                 tooltip: 'إرسال الرسالة',
                 onPressed: widget.enabled && !_busy

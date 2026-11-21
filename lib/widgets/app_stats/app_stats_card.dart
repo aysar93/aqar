@@ -70,6 +70,7 @@ class _AppStatsCardState extends State<AppStatsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Container(
@@ -78,25 +79,33 @@ class _AppStatsCardState extends State<AppStatsCard> {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
-            colors: [
-              Color(0xFF1E293B),
-              Color(0xFF111827),
-              Color(0xFF0F172A),
-            ],
+            colors: isDark
+                ? const [
+                    Color(0xFF1E293B),
+                    Color(0xFF111827),
+                    Color(0xFF0F172A),
+                  ]
+                : const [
+                    Colors.white,
+                    Color(0xFFF8FAFC),
+                    Color(0xFFF1F5F9),
+                  ],
           ),
           border: Border.all(
-            color: const Color(0xFFD4AF37).withValues(
-              alpha: 0.24,
-            ),
+            color: isDark
+                ? const Color(0xFFC5A16B).withValues(
+                    alpha: 0.24,
+                  )
+                : const Color(0xFFE2E8F0),
             width: 0.8,
           ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(
-                alpha: 0.14,
+                alpha: isDark ? 0.14 : 0.04,
               ),
               blurRadius: 10,
               offset: const Offset(0, 4),
@@ -117,10 +126,10 @@ class _AppStatsCardState extends State<AppStatsCard> {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFFD4AF37).withValues(
+                        const Color(0xFFC5A16B).withValues(
                           alpha: 0.08,
                         ),
-                        const Color(0xFFD4AF37).withValues(
+                        const Color(0xFFC5A16B).withValues(
                           alpha: 0,
                         ),
                       ],
@@ -227,13 +236,13 @@ class _StatsData extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFFD4AF37).withValues(
+                const Color(0xFFC5A16B).withValues(
                   alpha: 0,
                 ),
-                const Color(0xFFD4AF37).withValues(
+                const Color(0xFFC5A16B).withValues(
                   alpha: 0.30,
                 ),
-                const Color(0xFFD4AF37).withValues(
+                const Color(0xFFC5A16B).withValues(
                   alpha: 0,
                 ),
               ],
@@ -277,7 +286,7 @@ class _StatsLoading extends StatelessWidget {
         height: 19,
         child: CircularProgressIndicator(
           strokeWidth: 1.8,
-          color: Color(0xFFD4AF37),
+          color: Color(0xFFC5A16B),
         ),
       ),
     );
@@ -308,11 +317,11 @@ class _StatsError extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFFD4AF37).withValues(
+            color: const Color(0xFFC5A16B).withValues(
               alpha: 0.08,
             ),
             border: Border.all(
-              color: const Color(0xFFD4AF37).withValues(
+              color: const Color(0xFFC5A16B).withValues(
                 alpha: 0.18,
               ),
               width: 0.8,
@@ -320,7 +329,7 @@ class _StatsError extends StatelessWidget {
           ),
           child: const Icon(
             Icons.cloud_off_rounded,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
             size: 14,
           ),
         ),
@@ -331,9 +340,11 @@ class _StatsError extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withValues(
-                alpha: 0.70,
-              ),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(
+                      alpha: 0.70,
+                    )
+                  : const Color(0xFF475569),
               fontSize: 9.5,
               fontWeight: FontWeight.w500,
             ),
@@ -351,7 +362,7 @@ class _StatsError extends StatelessWidget {
             },
             icon: const Icon(
               Icons.refresh_rounded,
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC5A16B),
               size: 17,
             ),
           ),

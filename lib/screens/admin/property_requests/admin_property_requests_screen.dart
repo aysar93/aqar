@@ -17,7 +17,7 @@ class AdminPropertyRequestsScreen extends StatefulWidget {
 
 class _AdminPropertyRequestsScreenState
     extends State<AdminPropertyRequestsScreen> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _background = Color(0xff0F172A);
 
   final Map<String, SharedStream<QuerySnapshot<Map<String, dynamic>>>>
@@ -1053,7 +1053,7 @@ class _InfoRow extends StatelessWidget {
     required this.value,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   @override
   Widget build(BuildContext context) {

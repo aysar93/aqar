@@ -19,12 +19,13 @@ class PropertyImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final Widget image;
 
     if (_isAsset) {
-      image = _buildAssetImage();
+      image = _buildAssetImage(isDark);
     } else {
-      image = _buildCachedNetworkImageProvider();
+      image = _buildCachedNetworkImageProvider(isDark);
     }
 
     if (borderRadius == null) {
@@ -37,23 +38,23 @@ class PropertyImage extends StatelessWidget {
     );
   }
 
-  Widget _buildAssetImage() {
+  Widget _buildAssetImage(bool isDark) {
     return Container(
       width: width,
       height: height,
-      color: const Color(0xff0F172A),
+      color: isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9),
       alignment: Alignment.center,
       child: Image.asset(
         imagePath,
         width: width,
         height: height,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => _errorWidget(),
+        errorBuilder: (_, __, ___) => _errorWidget(isDark),
       ),
     );
   }
 
-  Widget _buildCachedNetworkImageProvider() {
+  Widget _buildCachedNetworkImageProvider(bool isDark) {
     return CachedNetworkImage(
       imageUrl: imagePath,
       width: width,
@@ -65,22 +66,22 @@ class PropertyImage extends StatelessWidget {
         color: const Color.fromARGB(255, 168, 180, 202),
         alignment: Alignment.center,
         child: const CircularProgressIndicator(
-          color: Color(0xffD4AF37),
+          color: Color(0xffC5A16B),
         ),
       ),
-      errorWidget: (_, __, ___) => _errorWidget(),
+      errorWidget: (_, __, ___) => _errorWidget(isDark),
     );
   }
 
-  Widget _errorWidget() {
+  Widget _errorWidget(bool isDark) {
     return Container(
       width: width,
       height: height,
-      color: const Color(0xff1E293B),
+      color: isDark ? const Color(0xff1E293B) : const Color(0xFFF1F5F9),
       alignment: Alignment.center,
       child: const Icon(
         Icons.home_work_rounded,
-        color: Color(0xffD4AF37),
+        color: Color(0xffC5A16B),
         size: 70,
       ),
     );

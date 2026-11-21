@@ -19,7 +19,7 @@ class Step3Location extends StatefulWidget {
 }
 
 class _Step3LocationState extends State<Step3Location> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _card = Color(0xff1E293B);
 
   late final TextEditingController _landmarkController;
@@ -85,6 +85,10 @@ class _Step3LocationState extends State<Step3Location> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary = isDark ? Colors.white60 : Colors.black54;
+    final cardColor = isDark ? _card : Colors.white;
     final selectedCity = _selectedCity;
     final selectedDistrict = _selectedDistrict;
 
@@ -95,19 +99,19 @@ class _Step3LocationState extends State<Step3Location> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       children: [
-        const Text(
+        Text(
           "أين تبحث عن العقار؟",
           style: TextStyle(
-            color: Colors.white,
+            color: textPrimary,
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           "حدد المدينة والمنطقة التي ترغب بالعثور على العقار فيها",
           style: TextStyle(
-            color: Colors.white60,
+            color: textSecondary,
             fontSize: 14,
             height: 1.5,
           ),
@@ -128,10 +132,10 @@ class _Step3LocationState extends State<Step3Location> {
                 ),
                 initialValue: selectedCity,
                 isExpanded: true,
-                dropdownColor: _card,
+                dropdownColor: cardColor,
                 iconEnabledColor: _gold,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 15,
                 ),
                 decoration: _inputDecoration(
@@ -175,10 +179,10 @@ class _Step3LocationState extends State<Step3Location> {
                 ),
                 initialValue: selectedDistrict,
                 isExpanded: true,
-                dropdownColor: _card,
+                dropdownColor: cardColor,
                 iconEnabledColor: _gold,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 15,
                 ),
                 decoration: _inputDecoration(
@@ -221,10 +225,10 @@ class _Step3LocationState extends State<Step3Location> {
                 title: "نقطة دالة",
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 "اختياري — يمكنك كتابة موقع تقريبي أو نقطة معروفة",
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: isDark ? Colors.white54 : Colors.black54,
                   fontSize: 12,
                   height: 1.5,
                 ),
@@ -238,8 +242,8 @@ class _Step3LocationState extends State<Step3Location> {
                   widget.request.landmark = value.trim();
                   widget.onChanged();
                 },
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 15,
                 ),
                 decoration: _inputDecoration(
@@ -280,8 +284,8 @@ class _Step3LocationState extends State<Step3Location> {
                   child: Text(
                     "الموقع المطلوب: "
                     "$selectedCity - $selectedDistrict",
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -300,11 +304,12 @@ class _Step3LocationState extends State<Step3Location> {
     required IconData icon,
     String? hint,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(
-        color: Colors.white60,
+      labelStyle: TextStyle(
+        color: isDark ? Colors.white60 : Colors.black54,
         fontSize: 14,
       ),
       hintStyle: const TextStyle(
@@ -317,9 +322,9 @@ class _Step3LocationState extends State<Step3Location> {
         size: 21,
       ),
       filled: true,
-      fillColor: const Color(0xff0F172A).withValues(
-        alpha: 0.55,
-      ),
+      fillColor: isDark
+          ? const Color(0xff0F172A).withValues(alpha: 0.55)
+          : const Color(0xFFF1F5F9),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 14,
         vertical: 15,
@@ -331,7 +336,9 @@ class _Step3LocationState extends State<Step3Location> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black12,
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -344,7 +351,9 @@ class _Step3LocationState extends State<Step3Location> {
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: 0.03),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.05),
         ),
       ),
     );
@@ -360,10 +369,11 @@ class _SectionTitle extends StatelessWidget {
     required this.title,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Icon(
@@ -374,8 +384,8 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),

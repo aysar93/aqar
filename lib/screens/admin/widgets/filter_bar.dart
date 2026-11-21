@@ -36,6 +36,8 @@ class FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: SizedBox(
@@ -62,11 +64,11 @@ class FilterBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? const Color(
-                          0xffD4AF37,
+                          0xffC5A16B,
                         )
-                      : const Color(
-                          0xff1E293B,
-                        ),
+                      : (isDark
+                          ? const Color(0xff1E293B)
+                          : Colors.white),
                   borderRadius: BorderRadius.circular(
                     20,
                   ),
@@ -75,7 +77,7 @@ class FilterBar extends StatelessWidget {
                   child: Text(
                     filterName(filter),
                     style: TextStyle(
-                      color: selected ? Colors.black : Colors.white,
+                      color: selected ? Colors.black : onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

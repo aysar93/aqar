@@ -143,7 +143,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: const BorderSide(
-              color: Color(0xffD4AF37),
+              color: Color(0xffC5A16B),
               width: 1,
             ),
           ),
@@ -712,16 +712,19 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
     return Scaffold(
-      backgroundColor: const Color(0xff0F172A),
+      backgroundColor: bgColor,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: const Color(0xff0F172A),
-        title: const Text(
+        backgroundColor: bgColor,
+        title: Text(
           "إضافة عقار",
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -737,9 +740,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                 child: LinearProgressIndicator(
                   minHeight: 9,
                   value: (currentStep + 1) / totalSteps,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: onSurface.withValues(alpha: 0.10),
                   valueColor: const AlwaysStoppedAnimation(
-                    Color(0xffD4AF37),
+                    Color(0xffC5A16B),
                   ),
                 ),
               ),
@@ -747,8 +750,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
             const SizedBox(height: 10),
             Text(
               "الخطوة ${currentStep + 1} من $totalSteps",
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: onSurface.withValues(alpha: 0.70),
                 fontSize: 15,
               ),
             ),
@@ -791,9 +794,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
             ),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xff1E293B),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xff1E293B) : Colors.white,
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
                 ),
@@ -808,7 +811,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           onPressed: isPublishing ? null : previousStep,
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(
-                              color: Color(0xffD4AF37),
+                              color: Color(0xffC5A16B),
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
@@ -817,7 +820,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           child: const Text(
                             "رجوع",
                             style: TextStyle(
-                              color: Color(0xffD4AF37),
+                              color: Color(0xffC5A16B),
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                             ),
@@ -840,7 +843,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xffD4AF37),
+                          backgroundColor: const Color(0xffC5A16B),
                           foregroundColor: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(

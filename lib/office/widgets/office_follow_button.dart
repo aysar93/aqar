@@ -60,11 +60,11 @@ class OfficeFollowButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: isFollowing
               ? Theme.of(context).colorScheme.onSurface
-              : const Color(0xFFD4AF37),
+              : const Color(0xFFC5A16B),
           side: BorderSide(
             color: isFollowing
                 ? Theme.of(context).colorScheme.outline
-                : const Color(0xFFD4AF37),
+                : const Color(0xFFC5A16B),
           ),
           padding: const EdgeInsets.symmetric(
             horizontal: 16,

@@ -140,18 +140,20 @@ class _HoldVoiceButtonState extends State<HoldVoiceButton>
                 Text(
                     '${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}',
                     style: const TextStyle(
-                        color: Color(0xFFD4AF37), fontSize: 12)),
+                        color: Color(0xFFC5A16B), fontSize: 12)),
               if (_busy)
                 const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Color(0xFFD4AF37)))
+                        strokeWidth: 2, color: Color(0xFFC5A16B)))
               else
                 Icon(_recording ? Icons.mic : Icons.mic_none_rounded,
                     color: widget.enabled
-                        ? const Color(0xFFD4AF37)
-                        : Colors.white24),
+                        ? const Color(0xFFC5A16B)
+                        : (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white24
+                            : Colors.black26)),
             ])),
       ));
 }

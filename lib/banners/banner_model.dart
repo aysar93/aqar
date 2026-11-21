@@ -5,6 +5,7 @@ class BannerModel {
   final String title;
   final String subtitle;
   final String imageUrl;
+  final String? mediaId;
   final String type;
   final String targetId;
   final bool isActive;
@@ -16,6 +17,7 @@ class BannerModel {
     required this.title,
     required this.subtitle,
     required this.imageUrl,
+    this.mediaId,
     required this.type,
     required this.targetId,
     required this.isActive,
@@ -31,6 +33,7 @@ class BannerModel {
       title: data['title']?.toString() ?? '',
       subtitle: data['subtitle']?.toString() ?? '',
       imageUrl: data['imageUrl']?.toString() ?? '',
+      mediaId: data['mediaId'] as String?,
       type: data['type']?.toString() ?? 'property',
       targetId: data['targetId']?.toString() ?? '',
       isActive: data['isActive'] as bool? ?? true,

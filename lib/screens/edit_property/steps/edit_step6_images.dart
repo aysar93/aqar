@@ -92,6 +92,9 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -100,12 +103,12 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
           Row(
             textDirection: TextDirection.rtl,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'صور العقار',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: onSurface,
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
@@ -117,16 +120,16 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xff1E293B),
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white10,
+                    color: onSurface.withValues(alpha: 0.10),
                   ),
                 ),
                 child: Text(
                   '$totalImages / 10',
                   style: const TextStyle(
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -134,11 +137,11 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'يمكنك الاحتفاظ بالصور الحالية أو حذفها وإضافة صور جديدة',
             textAlign: TextAlign.right,
             style: TextStyle(
-              color: Colors.white60,
+              color: onSurface.withValues(alpha: 0.60),
               fontSize: 14,
             ),
           ),
@@ -155,10 +158,10 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
                 totalImages >= 10 ? 'وصلت إلى الحد الأقصى' : 'إضافة صور',
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xffD4AF37),
+                backgroundColor: const Color(0xffC5A16B),
                 foregroundColor: Colors.black,
-                disabledBackgroundColor: Colors.white10,
-                disabledForegroundColor: Colors.white38,
+                disabledBackgroundColor: onSurface.withValues(alpha: 0.10),
+                disabledForegroundColor: onSurface.withValues(alpha: 0.38),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
@@ -176,21 +179,21 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
                     Icon(
                       Icons.photo_library_outlined,
                       size: 70,
-                      color: Colors.white.withValues(alpha: .15),
+                      color: onSurface.withValues(alpha: .15),
                     ),
                     const SizedBox(height: 15),
-                    const Text(
+                    Text(
                       'لا توجد صور للعقار',
                       style: TextStyle(
-                        color: Colors.white54,
+                        color: onSurface.withValues(alpha: 0.54),
                         fontSize: 15,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'يمكنك إضافة صور جديدة من جهازك',
                       style: TextStyle(
-                        color: Colors.white38,
+                        color: onSurface.withValues(alpha: 0.38),
                         fontSize: 12,
                       ),
                     ),

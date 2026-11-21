@@ -15,7 +15,7 @@ class StatisticsLoading extends StatefulWidget {
 
 class _StatisticsLoadingState extends State<StatisticsLoading>
     with SingleTickerProviderStateMixin {
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   late final AnimationController _controller;
   late final Animation<double> _animation;
@@ -570,7 +570,9 @@ class _StatisticsLoadingState extends State<StatisticsLoading>
     double radius = 7,
     bool gold = false,
   }) {
-    final baseColor = gold ? _gold : Colors.white;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final baseColor = gold ? _gold : onSurface;
 
     return Opacity(
       opacity: _animation.value,
@@ -603,15 +605,17 @@ class _SkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
-            alpha: 0.045,
+          color: onSurface.withValues(
+            alpha: 0.06,
           ),
         ),
       ),

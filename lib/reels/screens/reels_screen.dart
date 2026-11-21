@@ -45,10 +45,11 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: AnimatedBuilder(
           animation: _feed,
           builder: (context, _) {
@@ -77,75 +78,78 @@ class _ReelsScreenState extends State<ReelsScreen> {
                 ? all
                 : all.where((r) => r.category == _category).toList();
             if (reels.isEmpty) return _message('لا توجد ريلز منشورة الآن');
-            return Stack(
-              children: [
-                PageView.builder(
-                  scrollDirection: Axis.vertical,
-                  allowImplicitScrolling: true,
-                  itemCount: reels.length,
-                  onPageChanged: (value) {
-                    setState(() => _index = value);
-                    _feed.checkCurrent(reels[value]);
-                    if (value >= reels.length - 3) _feed.loadMore();
-                  },
-                  itemBuilder: (_, index) => ReelPlayerCard(
-                      key: ValueKey(reels[index].id),
-                      reel: reels[index],
-                      active: index == _index),
-                ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('ريلز العقارات',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20)),
-                                Text('عقارات الأنبار',
-                                    style: TextStyle(
-                                        color: Colors.white70, fontSize: 12)),
-                              ]),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.tune_rounded,
-                              color: Colors.white),
-                          onPressed: () async {
-                            await _feed.loadCategoryCatalog();
-                            if (!context.mounted) return;
-                            final categories = [
-                              'الكل',
-                              ...{for (final r in _feed.reels) r.category}
-                            ];
-                            final value = await showMenu<String>(
-                                context: context,
-                                color: AppTheme.cardColor,
-                                initialValue: _category,
-                                position:
-                                    const RelativeRect.fromLTRB(12, 90, 12, 0),
-                                items: categories
-                                    .map((v) =>
-                                        PopupMenuItem(value: v, child: Text(v)))
-                                    .toList());
-                            if (value != null && mounted) {
-                              setState(() {
-                                _category = value;
-                                _index = 0;
-                              });
-                            }
-                          },
-                        ),
-                      ],
+            return ColoredBox(
+              color: Colors.black,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    scrollDirection: Axis.vertical,
+                    allowImplicitScrolling: true,
+                    itemCount: reels.length,
+                    onPageChanged: (value) {
+                      setState(() => _index = value);
+                      _feed.checkCurrent(reels[value]);
+                      if (value >= reels.length - 3) _feed.loadMore();
+                    },
+                    itemBuilder: (_, index) => ReelPlayerCard(
+                        key: ValueKey(reels[index].id),
+                        reel: reels[index],
+                        active: index == _index),
+                  ),
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('ريلز العقارات',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20)),
+                                  Text('عقارات الأنبار',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 12)),
+                                ]),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.tune_rounded,
+                                color: Colors.white),
+                            onPressed: () async {
+                              await _feed.loadCategoryCatalog();
+                              if (!context.mounted) return;
+                              final categories = [
+                                'الكل',
+                                ...{for (final r in _feed.reels) r.category}
+                              ];
+                              final value = await showMenu<String>(
+                                  context: context,
+                                  color: isDark ? AppTheme.cardColor : Colors.white,
+                                  initialValue: _category,
+                                  position:
+                                      const RelativeRect.fromLTRB(12, 90, 12, 0),
+                                  items: categories
+                                      .map((v) =>
+                                          PopupMenuItem(value: v, child: Text(v)))
+                                      .toList());
+                              if (value != null && mounted) {
+                                setState(() {
+                                  _category = value;
+                                  _index = 0;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -153,13 +157,18 @@ class _ReelsScreenState extends State<ReelsScreen> {
     );
   }
 
-  Widget _message(String text) => Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(text, style: const TextStyle(color: Colors.white70)),
-        if (_feed.pages.hasMore && _feed.error == null)
-          TextButton(
-              onPressed: _feed.loadMore, child: const Text('عرض المزيد')),
-      ]));
+  Widget _message(String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(text,
+          style: TextStyle(
+              color: isDark ? Colors.white70 : const Color(0xFF475569))),
+      if (_feed.pages.hasMore && _feed.error == null)
+        TextButton(
+            onPressed: _feed.loadMore, child: const Text('عرض المزيد')),
+    ]));
+  }
 }
 
 class ReelPlayerCard extends StatefulWidget {

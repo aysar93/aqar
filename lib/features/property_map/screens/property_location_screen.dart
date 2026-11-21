@@ -22,17 +22,20 @@ class PropertyLocationScreen extends StatelessWidget {
 
   static const Color _background = Color(0xFF0F172A);
   static const Color _card = Color(0xFF1E293B);
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? _card : Colors.white;
     final position = LatLng(
       location.latitude,
       location.longitude,
     );
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: isDark ? _background : const Color(0xFFF8FAFC),
       body: SizedBox.expand(
         child: Stack(
           fit: StackFit.expand,
@@ -93,10 +96,10 @@ class PropertyLocationScreen extends StatelessWidget {
                               horizontal: 14,
                             ),
                             decoration: BoxDecoration(
-                              color: _card,
+                              color: cardColor,
                               borderRadius: BorderRadius.circular(15),
                               border: Border.all(
-                                color: Colors.white.withValues(
+                                color: onSurface.withValues(
                                   alpha: 0.06,
                                 ),
                               ),
@@ -121,8 +124,8 @@ class PropertyLocationScreen extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.right,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: onSurface,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -135,7 +138,7 @@ class PropertyLocationScreen extends StatelessWidget {
                                 Container(
                                   width: 1,
                                   height: 24,
-                                  color: Colors.white.withValues(
+                                  color: onSurface.withValues(
                                     alpha: 0.08,
                                   ),
                                 ),
@@ -215,16 +218,18 @@ class PropertyLocationScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) {
+        final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+        final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
         return SafeArea(
           top: false,
           child: Container(
             margin: const EdgeInsets.all(14),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: _card,
+              color: isDark ? _card : Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.08,
                 ),
               ),
@@ -238,27 +243,27 @@ class PropertyLocationScreen extends StatelessWidget {
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(
+                      color: onSurface.withValues(
                         alpha: 0.18,
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  Text(
                     'الاتجاهات والمشاركة',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'اختر طريقة فتح موقع العقار أو مشاركته',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF94A3B8),
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       fontSize: 12,
                     ),
                   ),
@@ -401,7 +406,7 @@ class _TopMapAction extends StatelessWidget {
             height: 40,
             child: Icon(
               icon,
-              color: const Color(0xFFD4AF37),
+              color: const Color(0xFFC5A16B),
               size: 21,
             ),
           ),
@@ -426,6 +431,8 @@ class _LocationActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -437,12 +444,12 @@ class _LocationActionTile extends StatelessWidget {
             vertical: 13,
           ),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(
-              alpha: 0.13,
-            ),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.13)
+                : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.06,
               ),
             ),
@@ -453,14 +460,14 @@ class _LocationActionTile extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD4AF37).withValues(
+                  color: const Color(0xFFC5A16B).withValues(
                     alpha: 0.12,
                   ),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(
                   icon,
-                  color: const Color(0xFFD4AF37),
+                  color: const Color(0xFFC5A16B),
                   size: 23,
                 ),
               ),
@@ -471,8 +478,8 @@ class _LocationActionTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -480,8 +487,8 @@ class _LocationActionTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF94A3B8),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         fontSize: 11,
                       ),
                     ),
@@ -566,6 +573,8 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -575,17 +584,17 @@ class _BackButton extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.06,
               ),
             ),
           ),
           child: const Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
             size: 19,
           ),
         ),

@@ -89,12 +89,12 @@ class OfficeServicesChips extends StatelessWidget {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFD4AF37).withValues(
+          color: const Color(0xFFC5A16B).withValues(
             alpha: 0.09,
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFFD4AF37).withValues(
+            color: const Color(0xFFC5A16B).withValues(
               alpha: 0.35,
             ),
             width: 0.8,
@@ -106,14 +106,14 @@ class OfficeServicesChips extends StatelessWidget {
             const Icon(
               Icons.check_circle_outline_rounded,
               size: 15,
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC5A16B),
             ),
             const SizedBox(width: 6),
             Text(
               service,
               textDirection: TextDirection.rtl,
               style: const TextStyle(
-                color: Color(0xFFD4AF37),
+                color: Color(0xFFC5A16B),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),

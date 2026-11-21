@@ -122,14 +122,17 @@ class _OfficesScreenState extends State<OfficesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFF0F172A);
-    const cardColor = Color(0xFF1E293B);
-    const goldColor = Color(0xFFD4AF37);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    const goldColor = Color(0xFFC5A16B);
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: backgroundColor,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -273,6 +276,7 @@ class _OfficesScreenState extends State<OfficesScreen> {
   }
 
   Widget _buildHeader(Color goldColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
@@ -292,23 +296,23 @@ class _OfficesScreenState extends State<OfficesScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'المكاتب العقارية',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 3),
+              const SizedBox(height: 3),
               Text(
                 'اكتشف المكاتب العقارية المعتمدة',
                 style: TextStyle(
-                  color: Colors.white60,
+                  color: isDark ? Colors.white60 : Colors.black54,
                   fontSize: 12,
                 ),
               ),
@@ -339,6 +343,7 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (
@@ -355,26 +360,26 @@ class _SearchField extends StatelessWidget {
           textDirection: TextDirection.rtl,
           textInputAction: TextInputAction.search,
           keyboardType: TextInputType.text,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
           ),
           decoration: InputDecoration(
             hintText: 'ابحث عن مكتب، مدينة أو منطقة',
             hintTextDirection: TextDirection.rtl,
-            hintStyle: const TextStyle(
-              color: Colors.white54,
+            hintStyle: TextStyle(
+              color: isDark ? Colors.white54 : Colors.black45,
               fontSize: 13,
             ),
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.search_rounded,
-              color: Colors.white60,
+              color: isDark ? Colors.white60 : Colors.black54,
             ),
             suffixIcon: hasText
                 ? IconButton(
                     onPressed: onClear,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Colors.white60,
+                      color: isDark ? Colors.white60 : Colors.black54,
                     ),
                   )
                 : null,
@@ -387,7 +392,9 @@ class _SearchField extends StatelessWidget {
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.06),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black12,
               ),
             ),
             focusedBorder: OutlineInputBorder(
@@ -415,6 +422,7 @@ class _EmptyOfficesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasSearch = searchQuery.isNotEmpty;
 
     return Center(
@@ -440,8 +448,8 @@ class _EmptyOfficesView extends StatelessWidget {
             Text(
               hasSearch ? 'لا توجد نتائج' : 'لا توجد مكاتب متاحة حاليًا',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
               ),
@@ -452,8 +460,8 @@ class _EmptyOfficesView extends StatelessWidget {
                   ? 'جرّب البحث باسم مكتب أو مدينة أخرى'
                   : 'ستظهر هنا المكاتب العقارية المعتمدة',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: isDark ? Colors.white54 : Colors.black54,
                 fontSize: 13,
               ),
             ),
@@ -475,6 +483,7 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -490,8 +499,8 @@ class _ErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 15,
               ),
             ),

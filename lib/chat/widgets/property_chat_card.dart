@@ -88,36 +88,44 @@ class PropertyChatCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-      width: 265,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if ((property['imageUrl'] ?? '').toString().isNotEmpty)
-          ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: MediaImage(property['imageUrl'],
-                  height: 125,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(
-                      height: 80,
-                      child: Center(
-                          child: Icon(Icons.home_outlined,
-                              color: Colors.white54))))),
-        const SizedBox(height: 10),
-        Text(property['title'] ?? 'عقار',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-        Text('${iqd(property['price'])} • ${property['adType'] ?? ''}',
-            style: const TextStyle(color: Color(0xFFD4AF37))),
-        Text('${property['location'] ?? ''} • رقم ${property['number'] ?? ''}',
-            style: const TextStyle(color: Colors.white60, fontSize: 12)),
-        TextButton.icon(
-            onPressed: () => _open(context),
-            icon: const Icon(Icons.open_in_new, size: 16),
-            label: const Text('عرض التفاصيل'),
-            style:
-                TextButton.styleFrom(foregroundColor: const Color(0xFFD4AF37))),
-      ]));
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+        width: 265,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if ((property['imageUrl'] ?? '').toString().isNotEmpty)
+            ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: MediaImage(property['imageUrl'],
+                    height: 125,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => SizedBox(
+                        height: 80,
+                        child: Center(
+                            child: Icon(Icons.home_outlined,
+                                color: isDark
+                                    ? Colors.white54
+                                    : Colors.black45))))),
+          const SizedBox(height: 10),
+          Text(property['title'] ?? 'عقار',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontWeight: FontWeight.bold)),
+          Text('${iqd(property['price'])} • ${property['adType'] ?? ''}',
+              style: const TextStyle(color: Color(0xFFC5A16B))),
+          Text('${property['location'] ?? ''} • رقم ${property['number'] ?? ''}',
+              style: TextStyle(
+                  color: isDark ? Colors.white60 : Colors.black54,
+                  fontSize: 12)),
+          TextButton.icon(
+              onPressed: () => _open(context),
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('عرض التفاصيل'),
+              style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFC5A16B))),
+        ]));
+  }
 }
