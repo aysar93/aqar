@@ -250,7 +250,7 @@ class _OfficeGalleryState extends State<OfficeGallery> {
         height: 30,
         child: CircularProgressIndicator(
           strokeWidth: 2.5,
-          color: Color(0xFFD4AF37),
+          color: Color(0xFFC5A16B),
         ),
       ),
     );
@@ -391,7 +391,7 @@ class _OfficeGalleryState extends State<OfficeGallery> {
             height: 6,
             decoration: BoxDecoration(
               color: isSelected
-                  ? const Color(0xFFD4AF37)
+                  ? const Color(0xFFC5A16B)
                   : Colors.white.withValues(
                       alpha: 0.7,
                     ),
@@ -449,7 +449,7 @@ class _OfficeGalleryState extends State<OfficeGallery> {
                 border: Border.all(
                   color: selected
                       ? const Color(
-                          0xFFD4AF37,
+                          0xFFC5A16B,
                         )
                       : Colors.transparent,
                   width: 2,

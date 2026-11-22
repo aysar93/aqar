@@ -38,23 +38,25 @@ class _Step7ContactState extends State<Step7Contact> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: ListView(
         children: [
-          const Text(
+          Text(
             "معلومات التواصل",
             style: TextStyle(
-              color: Colors.white,
+              color: onSurface,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "أدخل معلومات التواصل مع صاحب العقار",
             style: TextStyle(
-              color: Colors.white60,
+              color: onSurface.withValues(alpha: 0.60),
             ),
           ),
           const SizedBox(height: 30),
@@ -89,33 +91,33 @@ class _Step7ContactState extends State<Step7Contact> {
     IconData icon,
     Function(String) onChange,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       margin: const EdgeInsets.only(
         bottom: 15,
       ),
       decoration: BoxDecoration(
-        color: const Color(
-          0xff1E293B,
-        ),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.phone,
         onChanged: onChange,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: onSurface,
         ),
         decoration: InputDecoration(
           prefixIcon: Icon(
             icon,
             color: const Color(
-              0xffD4AF37,
+              0xffC5A16B,
             ),
           ),
           labelText: title,
-          labelStyle: const TextStyle(
-            color: Colors.white60,
+          labelStyle: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(18),

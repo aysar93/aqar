@@ -17,6 +17,7 @@ class _AddPropertyButtonState extends State<AddPropertyButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTapDown: (_) {
         setState(() {
@@ -45,7 +46,7 @@ class _AddPropertyButtonState extends State<AddPropertyButton> {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: const Color(0xffD4AF37),
+                color: const Color(0xffC5A16B),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -55,10 +56,10 @@ class _AddPropertyButtonState extends State<AddPropertyButton> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               "اعلن",
               style: TextStyle(
-                color: Colors.white70,
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),

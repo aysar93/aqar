@@ -14,12 +14,15 @@ class LocationSummaryCard extends StatelessWidget {
     this.isMoving = false,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _card = Color(0xFF1E293B);
   static const Color _textSecondary = Color(0xFF94A3B8);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryColor = isDark ? _textSecondary : const Color(0xFF64748B);
     final city = location.city.trim();
     final district = location.district.trim();
     final landmark = location.landmark.trim();
@@ -28,10 +31,10 @@ class LocationSummaryCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _card,
+        color: isDark ? _card : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: onSurface.withValues(alpha: 0.06),
         ),
         boxShadow: [
           BoxShadow(
@@ -64,10 +67,10 @@ class LocationSummaryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'موقع العقار',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: onSurface,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -80,8 +83,8 @@ class LocationSummaryCard extends StatelessWidget {
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _textSecondary,
+                      style: TextStyle(
+                        color: secondaryColor,
                         fontSize: 12,
                       ),
                     ),
@@ -98,9 +101,9 @@ class LocationSummaryCard extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.near_me_rounded,
-                  color: _textSecondary,
+                  color: secondaryColor,
                   size: 17,
                 ),
                 const SizedBox(width: 7),
@@ -109,8 +112,8 @@ class LocationSummaryCard extends StatelessWidget {
                     landmark,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _textSecondary,
+                    style: TextStyle(
+                      color: secondaryColor,
                       fontSize: 12,
                     ),
                   ),
@@ -125,7 +128,9 @@ class LocationSummaryCard extends StatelessWidget {
               vertical: 10,
             ),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.13),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.13)
+                  : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -139,7 +144,7 @@ class LocationSummaryCard extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 28,
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.08,
                   ),
                 ),
@@ -188,6 +193,8 @@ class _CoordinateValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Column(
       children: [
         Text(
@@ -201,8 +208,8 @@ class _CoordinateValue extends StatelessWidget {
         Text(
           value.toStringAsFixed(6),
           textDirection: TextDirection.ltr,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: onSurface,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -225,7 +232,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     const success = Color(0xFF22C55E);
     const error = Color(0xFFEF4444);
-    const moving = Color(0xFFD4AF37);
+    const moving = Color(0xFFC5A16B);
 
     final Color color;
     final String text;

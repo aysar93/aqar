@@ -12,23 +12,25 @@ class StatisticsHeader extends StatelessWidget {
     this.generatedAt,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: _gold.withValues(alpha: 0.18),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -49,6 +51,7 @@ class StatisticsHeader extends StatelessWidget {
                     Text(
                       'إحصائيات السوق العقاري',
                       style: StatisticsTextStyles.pageTitle.copyWith(
+                        color: onSurface,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         height: 1.4,
@@ -58,7 +61,7 @@ class StatisticsHeader extends StatelessWidget {
                     Text(
                       'تحليل أسعار العقارات اعتمادًا على بيانات السوق المنشورة في التطبيق',
                       style: StatisticsTextStyles.pageSubtitle.copyWith(
-                        color: Colors.white.withValues(
+                        color: onSurface.withValues(
                           alpha: 0.65,
                         ),
                         fontSize: 12.5,
@@ -73,7 +76,7 @@ class StatisticsHeader extends StatelessWidget {
           const SizedBox(height: 18),
           Container(
             height: 1,
-            color: Colors.white.withValues(
+            color: onSurface.withValues(
               alpha: 0.07,
             ),
           ),
@@ -162,22 +165,24 @@ class _InfoChip extends StatelessWidget {
     required this.text,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 11,
         vertical: 7,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(
+        color: onSurface.withValues(
           alpha: 0.055,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(
+          color: onSurface.withValues(
             alpha: 0.07,
           ),
         ),
@@ -194,7 +199,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             text,
             style: StatisticsTextStyles.chip.copyWith(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.75,
               ),
             ),

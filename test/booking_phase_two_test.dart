@@ -1,0 +1,153 @@
+import 'package:aqar/bookings/booking_widgets.dart';
+import 'package:aqar/bookings/booking_notification.dart';
+import 'package:aqar/bookings/booking_screen.dart';
+import 'package:aqar/subscription/payment_accounts.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'support/booking_intent_store_fake.dart';
+
+void main() {
+  test(
+      'push and internal payloads resolve the same private booking destination',
+      () {
+    expect(
+        bookingNotificationId({'type': 'booking', 'bookingId': 'customer_123'}),
+        'customer_123');
+    expect(
+        bookingNotificationId({
+          'data': {'type': 'booking', 'bookingId': 'customer_123'}
+        }),
+        'customer_123');
+    expect(
+        bookingNotificationId({'type': 'booking', 'bookingId': 'a/b'}), isNull);
+    expect(bookingNotificationId({'type': 'booking', 'bookingId': ''}), isNull);
+    expect(
+        bookingNotificationId(
+            {'type': 'property', 'bookingId': 'customer_123'}),
+        isNull);
+  });
+  test(
+      'overnight and full-day shifts use Baghdad irrespective of device timezone',
+      () {
+    final dates = bookingShiftDates(
+        DateTime(2026, 11, 1), {'checkInMinute': 1200, 'checkOutMinute': 480});
+    expect(dates.first, DateTime.utc(2026, 11, 1, 17));
+    expect(dates.last, DateTime.utc(2026, 11, 2, 5));
+    expect(
+        bookingShiftDates(DateTime(2026, 11, 1), {
+          'checkInMinute': 60,
+          'checkOutMinute': 60
+        }).last.difference(bookingShiftDates(DateTime(2026, 11, 1),
+            {'checkInMinute': 60, 'checkOutMinute': 60}).first),
+        const Duration(days: 1));
+    expect(bookingMinute('24:00'), isNull);
+    expect(bookingMinute('20:00'), 1200);
+  });
+  test('missing shared configuration leaves payments unavailable', () {
+    expect(SubscriptionPaymentAccounts.parse(null), isEmpty);
+  });
+  testWidgets(
+      'request shows explicit policy and priced shifts on a narrow screen',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        home: BookingRequestScreen(
+            venueId: 'test',
+            intentStore: MemoryIntentStore(),
+            currentUserId: () => 'synthetic-customer',
+            call: (name, data) async => name == 'getPublishedBookingReviews'
+                ? {'count': 0, 'average': 0, 'reviews': []}
+                : {'slots': []},
+            venue: {
+          'name': 'مزرعة',
+          'ownerName': 'المالك',
+          'location': 'بغداد',
+          'price': 100000,
+          'deposit': 20000,
+          'terms': 'شروط',
+          'pricingMode': 'shifts',
+          'shifts': [
+            {
+              'id': 'night',
+              'name': 'الشفت الليلي',
+              'price': 200000,
+              'checkInMinute': 1200,
+              'checkOutMinute': 480
+            }
+          ],
+          'cancellationPolicy': {
+            'freeCancellationHours': 24,
+            'lateRefundPercent': 25
+          },
+        })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-next')));
+    await tester.pumpAndSettle();
+    final shiftDropdown = find.byType(DropdownButtonFormField<String>);
+    if (shiftDropdown.evaluate().isNotEmpty) {
+      await tester.ensureVisible(shiftDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(shiftDropdown);
+      await tester.pumpAndSettle();
+    } else {
+      expect(find.text('اختر الفترة المطلوبة:'), findsOneWidget);
+    }
+    final shiftTarget = find.textContaining('الشفت الليلي').last;
+    await tester.ensureVisible(shiftTarget);
+    await tester.pumpAndSettle();
+    await tester.tap(shiftTarget);
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.radio_button_checked), findsWidgets);
+    Future<void> revealAndTap(Finder target) async {
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 5 && target.hitTestable().evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(ListView).first, const Offset(0, -180));
+        await tester.pumpAndSettle();
+      }
+      expect(target.hitTestable(), findsOneWidget);
+      await tester.tap(target.hitTestable());
+    }
+
+    await revealAndTap(find.byTooltip('الشهر التالي'));
+    await tester.pumpAndSettle();
+    await revealAndTap(find.text('22'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-next')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'الاسم الكامل للضيف / الزبون'),
+      'ضيف تجريبي',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'رقم الهاتف للتواصل'),
+      '07701234567',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-next')));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.descendant(
+            of: find.byType(BookingVenueOverview),
+            matching: find.text('السعر المحدد')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(BookingVenueOverview),
+            matching: find.text('200,000 د.ع')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(BookingVenueOverview),
+            matching: find.text('180,000 د.ع')),
+        findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('استرداد كامل العربون'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}

@@ -383,10 +383,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final areas = _availableAreas;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
@@ -458,7 +459,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   color: const Color(0xFF0F172A),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFD4AF37),
+                    color: const Color(0xFFC5A16B),
                     width: 3,
                   ),
                   boxShadow: [
@@ -469,7 +470,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       offset: const Offset(0, 6),
                     ),
                     BoxShadow(
-                      color: const Color(0xFFD4AF37).withValues(alpha: 0.20),
+                      color: const Color(0xFFC5A16B).withValues(alpha: 0.20),
                       blurRadius: 14,
                       spreadRadius: 2,
                     ),
@@ -486,7 +487,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     ) {
                       return const Icon(
                         Icons.location_on_rounded,
-                        color: Color(0xFFD4AF37),
+                        color: Color(0xFFC5A16B),
                         size: 34,
                       );
                     },
@@ -523,6 +524,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildMapActions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Positioned(
       left: 14,
       right: 14,
@@ -533,7 +535,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: Material(
-              color: const Color(0xFF1E293B),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               elevation: 6,
               child: InkWell(
@@ -549,12 +551,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            color: Color(0xFFD4AF37),
+                            color: Color(0xFFC5A16B),
                           ),
                         )
                       : const Icon(
                           Icons.my_location_rounded,
-                          color: Color(0xFFD4AF37),
+                          color: Color(0xFFC5A16B),
                           size: 25,
                         ),
                 ),
@@ -578,7 +580,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD4AF37),
+                backgroundColor: const Color(0xFFC5A16B),
                 foregroundColor: const Color(0xFF0F172A),
                 elevation: 8,
                 shape: RoundedRectangleBorder(
@@ -593,6 +595,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         16,
@@ -606,12 +610,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: const Color(
-                0xFF1E293B,
-              ),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(
                 14,
               ),
+              border: isDark
+                  ? null
+                  : Border.all(
+                      color: onSurface.withValues(alpha: 0.08),
+                    ),
             ),
             child: IconButton(
               onPressed: () {
@@ -620,7 +627,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: Color(
-                  0xFFD4AF37,
+                  0xFFC5A16B,
                 ),
                 size: 20,
               ),
@@ -629,25 +636,23 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           const SizedBox(
             width: 14,
           ),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'تحديد موقع العقار',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'حرّك الخريطة حتى يصبح المؤشر فوق العقار',
                   style: TextStyle(
-                    color: Color(
-                      0xFF94A3B8,
-                    ),
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     fontSize: 12,
                   ),
                 ),
@@ -702,7 +707,7 @@ class _MarkerTipPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFD4AF37)
+      ..color = const Color(0xFFC5A16B)
       ..style = PaintingStyle.fill;
 
     final path = ui.Path()
@@ -739,6 +744,8 @@ class _LocationDropdown extends StatelessWidget {
   Widget build(
     BuildContext context,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final validValue = value != null && items.contains(value) ? value : null;
 
     return Column(
@@ -751,10 +758,8 @@ class _LocationDropdown extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: const TextStyle(
-              color: Color(
-                0xFF94A3B8,
-              ),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -766,14 +771,12 @@ class _LocationDropdown extends StatelessWidget {
             horizontal: 14,
           ),
           decoration: BoxDecoration(
-            color: const Color(
-              0xFF1E293B,
-            ),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(
               16,
             ),
             border: Border.all(
-              color: Colors.white.withValues(
+              color: onSurface.withValues(
                 alpha: 0.08,
               ),
             ),
@@ -782,26 +785,22 @@ class _LocationDropdown extends StatelessWidget {
             child: DropdownButton<String>(
               value: validValue,
               isExpanded: true,
-              dropdownColor: const Color(
-                0xFF1E293B,
-              ),
+              dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
               icon: const Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: Color(
-                  0xFFD4AF37,
+                  0xFFC5A16B,
                 ),
               ),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
-              hint: const Text(
+              hint: Text(
                 'اختر',
                 style: TextStyle(
-                  color: Color(
-                    0xFF94A3B8,
-                  ),
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
               ),
               items: items

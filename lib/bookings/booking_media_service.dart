@@ -1,0 +1,259 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
+
+import 'booking_media_image.dart';
+
+typedef BookingMediaCall = Future<Map<String, dynamic>> Function(
+    String name, Map<String, dynamic> data);
+
+class BookingReceiptIntegrityException implements Exception {
+  final String message =
+      'لم يكتمل رفع الإيصال؛ أعد المحاولة بعد استقرار الشبكة';
+}
+
+class BookingMediaService {
+  static String? emulatorHost;
+
+  // Content-addressed within the booking/customer namespace. A process restart
+  // and re-selection of identical compressed bytes must reuse the same object.
+  static String receiptFileName(Uint8List bytes) =>
+      '${BigInt.parse(sha256.convert(bytes).toString(), radix: 16)}.jpg';
+
+  // A resumed native upload can report success for a truncated object. Do not
+  // submit a receipt until the private stored bytes match the compressed input.
+  static Future<void> uploadVerifiedReceipt(Uint8List bytes,
+      {required Future<void> Function(Uint8List) upload,
+      required Future<Uint8List?> Function() read,
+      Future<void> Function()? discardInvalid,
+      bool reuseExisting = false}) async {
+    if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+      throw StateError('حجم الإيصال غير صالح');
+    }
+    final existing = reuseExisting ? await read() : null;
+    if (existing == null) await upload(bytes);
+    final stored = existing ?? await read();
+    Future<Never> reject() async {
+      // Cleanup cannot turn a failed verification into a successful submission.
+      try {
+        await discardInvalid?.call();
+      } catch (_) {}
+      throw BookingReceiptIntegrityException();
+    }
+
+    if (stored == null || stored.length != bytes.length) {
+      await reject();
+    }
+    for (var i = 0; i < bytes.length; i++) {
+      if (stored[i] != bytes[i]) {
+        await reject();
+      }
+    }
+  }
+
+  static Future<Uint8List> readImageData(String url, String? token,
+      {http.Client? client}) async {
+    final canAttach = token != null && BookingMediaImage.isTrustedMediaUrl(url);
+    final headers =
+        canAttach ? {'Authorization': 'Bearer $token'} : <String, String>{};
+    final uri = Uri.parse(url);
+    Future<http.Response> get(Map<String, String> h) => (client == null
+            ? http.get(uri, headers: h)
+            : client.get(uri, headers: h))
+        .timeout(const Duration(seconds: 120));
+    final response = await get(headers);
+    if (response.statusCode == 200 &&
+        response.bodyBytes.length <= 10 * 1024 * 1024)
+      return response.bodyBytes;
+    final range = RegExp(r'^bytes \*/([0-9]+)$')
+        .firstMatch(response.headers['content-range'] ?? '');
+    final size = range == null ? null : int.tryParse(range.group(1)!);
+    if (response.statusCode != 416 ||
+        size == null ||
+        size <= 0 ||
+        size > 10 * 1024 * 1024) throw StateError('قراءة مرفوضة');
+    final bytes = BytesBuilder(copy: false);
+    for (var start = 0; start < size; start += 4 * 1024 * 1024) {
+      final end = (start + 4 * 1024 * 1024 - 1).clamp(0, size - 1);
+      final part = await get({...headers, 'Range': 'bytes=$start-$end'});
+      if (part.statusCode != 206 ||
+          part.bodyBytes.length != end - start + 1 ||
+          part.headers['content-range'] != 'bytes $start-$end/$size')
+        throw StateError('قراءة مرفوضة');
+      bytes.add(part.bodyBytes);
+    }
+    return bytes.takeBytes();
+  }
+
+  static Future<File> downloadVideo(
+    String bucket,
+    String path, {
+    bool forceRefreshToken = false,
+  }) async {
+    final uri = Uri.parse(videoUrl(bucket, path));
+    Future<Map<String, String>> headers({bool refresh = false}) async {
+      try {
+        final token = await FirebaseAuth.instance.currentUser?.getIdToken(refresh);
+        return token == null ? {} : {'Authorization': 'Bearer $token'};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    var head = await http
+        .head(uri, headers: await headers(refresh: forceRefreshToken))
+        .timeout(const Duration(seconds: 120));
+    if (head.statusCode == 401 && !forceRefreshToken) {
+      head = await http
+          .head(uri, headers: await headers(refresh: true))
+          .timeout(const Duration(seconds: 120));
+    }
+    if (head.statusCode == 403 || head.statusCode == 401) {
+      throw StateError('ليس لديك صلاحية مشاهدة هذا الفيديو (${head.statusCode})');
+    }
+    if (head.statusCode == 404) {
+      throw StateError('المقطع غير متاح أو تم حذفه (404)');
+    }
+    final size = int.tryParse(head.headers['content-length'] ?? '');
+    if (head.statusCode != 200 ||
+        size == null ||
+        size < 12 ||
+        size > 50 * 1024 * 1024) {
+      throw StateError('تعذر تحميل الفيديو');
+    }
+    final directory = await Directory((await getTemporaryDirectory()).path)
+        .createTemp('booking_video_');
+    final file = File('${directory.path}/video.mp4');
+    final sink = file.openWrite();
+    try {
+      for (var start = 0; start < size; start += 4 * 1024 * 1024) {
+        final end = (start + 4 * 1024 * 1024 - 1).clamp(0, size - 1);
+        var response = await http.get(uri, headers: {
+          ...await headers(refresh: forceRefreshToken),
+          'Range': 'bytes=$start-$end'
+        }).timeout(const Duration(seconds: 120));
+        if (response.statusCode == 401) {
+          response = await http.get(uri, headers: {
+            ...await headers(refresh: true),
+            'Range': 'bytes=$start-$end'
+          }).timeout(const Duration(seconds: 120));
+        }
+        if (response.statusCode != 206 ||
+            response.bodyBytes.length != end - start + 1 ||
+            response.headers['content-range'] != 'bytes $start-$end/$size') {
+          throw StateError('تعذر تحميل الفيديو (${response.statusCode})');
+        }
+        sink.add(response.bodyBytes);
+      }
+      await sink.close();
+      return file;
+    } catch (_) {
+      await sink.close();
+      await directory.delete(recursive: true);
+      rethrow;
+    }
+  }
+
+  static String videoUrl(String bucket, String path) {
+    var project = bucket.replaceFirst(
+        RegExp(r'\.(firebasestorage\.app|appspot\.com)$'), '');
+    if (project.isEmpty) {
+      try {
+        project = Firebase.app().options.projectId;
+      } catch (_) {}
+    }
+    final id = path.split('/').last.split('.').first;
+    final base = emulatorHost == null
+        ? 'https://us-central1-$project.cloudfunctions.net/bookingMediaContent'
+        : 'http://$emulatorHost:5001/$project/us-central1/bookingMediaContent';
+    return path.startsWith('booking_media/')
+        ? '$base?path=${Uri.encodeComponent(path)}'
+        : '$base?mediaId=${Uri.encodeComponent(id)}';
+  }
+
+  static Future<Map<String, dynamic>> uploadImage(
+      Uint8List bytes, BookingMediaCall call,
+      {String? venueId, bool banner = false}) {
+    if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+      throw StateError('حجم الصورة غير صالح');
+    }
+    return call('uploadBookingImage', {
+      'kind': banner ? 'banner' : 'venue',
+      if (venueId != null) 'venueId': venueId,
+      'base64': base64Encode(bytes)
+    });
+  }
+
+  static Future<void> uploadVideo(
+      Uint8List bytes, String venueId, BookingMediaCall call,
+      {Future<void> Function(String, Uint8List)? upload,
+      void Function(double progress, String status)? onProgress}) async {
+    if (bytes.length < 12 || bytes.length > 50 * 1024 * 1024) {
+      throw StateError('حجم الفيديو غير صالح');
+    }
+    onProgress?.call(0.05, 'جارٍ حجز مسار الفيديو على الخادم...');
+    final result = await call(
+        'reserveBookingVideo', {'venueId': venueId, 'size': bytes.length});
+    final path = result['path'] as String;
+    final mediaId = result['mediaId'] as String;
+    final expected = RegExp('^booking_media_v3/' +
+        RegExp.escape(venueId) +
+        r'/[A-Za-z0-9_-]+/' +
+        RegExp.escape(mediaId) +
+        r'\.mp4$');
+    if (!expected.hasMatch(path)) throw StateError('مسار الفيديو غير صالح');
+    if (upload != null) {
+      onProgress?.call(0.2, 'جارٍ رفع الفيديو...');
+      await upload(path, bytes);
+      onProgress?.call(0.9, 'اكتمل رفع الملف...');
+    } else {
+      const chunkSize = 4 * 1024 * 1024;
+      final project = Firebase.app().options.projectId;
+      final base = emulatorHost == null
+          ? 'https://us-central1-$project.cloudfunctions.net/uploadBookingVideoChunk'
+          : 'http://$emulatorHost:5001/$project/us-central1/uploadBookingVideoChunk';
+      final totalChunks = (bytes.length / chunkSize).ceil();
+      for (var offset = 0; offset < bytes.length; offset += chunkSize) {
+        final currentChunk = (offset ~/ chunkSize) + 1;
+        final progress = 0.1 + (offset / bytes.length) * 0.8;
+        onProgress?.call(
+            progress,
+            'جارٍ رفع المقطع (الجزء $currentChunk من $totalChunks)...');
+        final end = (offset + chunkSize).clamp(0, bytes.length);
+        for (var attempt = 0;; attempt++) {
+          try {
+            final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+            final response = await http
+                .post(
+                    Uri.parse(
+                        '$base?mediaId=$mediaId&index=${offset ~/ chunkSize}'),
+                    headers: {
+                      'Authorization': 'Bearer $token',
+                      'Content-Type': 'application/octet-stream'
+                    },
+                    body: bytes.sublist(offset, end))
+                .timeout(const Duration(seconds: 120));
+            if (response.statusCode == 200) break;
+            if (response.statusCode < 500) {
+              throw StateError('رفع الفيديو مرفوض');
+            }
+            throw http.ClientException('server');
+          } on StateError {
+            rethrow;
+          } catch (_) {
+            if (attempt >= 2) rethrow;
+            await Future<void>.delayed(Duration(seconds: attempt + 1));
+          }
+        }
+      }
+    }
+    onProgress?.call(0.95, 'جارٍ تثبيت مقطع الفيديو واعتماده...');
+    await call('finishBookingVideo', {'mediaId': mediaId});
+    onProgress?.call(1.0, 'اكتمل الرفع بنجاح');
+  }
+}

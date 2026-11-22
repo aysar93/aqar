@@ -119,4 +119,45 @@ void main() {
       await folder.delete();
     }
   });
+
+  test('enforces strict 3-way match between projectId, bucket, and Functions host', () {
+    // 1. Valid Bookings Staging 3-way match
+    expect(
+      MediaStore.isApprovedBrokerUri(
+        projectId: 'aqar-bookings-test-20261009',
+        bucket: 'aqar-bookings-test-20261009.firebasestorage.app',
+        uri: Uri.parse('https://us-central1-aqar-bookings-test-20261009.cloudfunctions.net/mediaBroker/uploadMedia'),
+        productionPath: '/uploadMedia',
+        mediaTestPath: '/mediaBrokerTest/uploadMedia',
+        bookingsStagingPath: '/mediaBroker/uploadMedia',
+      ),
+      isTrue,
+    );
+
+    // 2. Rejects Staging project with Production host or bucket
+    expect(
+      MediaStore.isApprovedBrokerUri(
+        projectId: 'aqar-bookings-test-20261009',
+        bucket: 'aqar-9f3f9-media-canary',
+        uri: Uri.parse('https://us-central1-aqar-9f3f9.cloudfunctions.net/uploadMedia'),
+        productionPath: '/uploadMedia',
+        mediaTestPath: '/mediaBrokerTest/uploadMedia',
+        bookingsStagingPath: '/mediaBroker/uploadMedia',
+      ),
+      isFalse,
+    );
+
+    // 3. Rejects Production project with Staging bucket
+    expect(
+      MediaStore.isApprovedBrokerUri(
+        projectId: 'aqar-9f3f9',
+        bucket: 'aqar-bookings-test-20261009.firebasestorage.app',
+        uri: Uri.parse('https://us-central1-aqar-9f3f9.cloudfunctions.net/uploadMedia'),
+        productionPath: '/uploadMedia',
+        mediaTestPath: '/mediaBrokerTest/uploadMedia',
+        bookingsStagingPath: '/mediaBroker/uploadMedia',
+      ),
+      isFalse,
+    );
+  });
 }

@@ -11,8 +11,8 @@ class WhyAqarSection extends StatefulWidget {
 
 class _WhyAqarSectionState extends State<WhyAqarSection>
     with SingleTickerProviderStateMixin {
-  static const _gold = Color(0xffD4AF37);
-  static const _lightGold = Color(0xffF8D86B);
+  static const _gold = Color(0xffC5A16B);
+  static const _lightGold = Color(0xffC5A16B);
 
   static const _features = <_FeatureData>[
     _FeatureData(
@@ -136,6 +136,7 @@ class _WhyAqarSectionState extends State<WhyAqarSection>
             child: Center(
               child: Builder(
                 builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
                   final diameter = math.min(
                     MediaQuery.sizeOf(context).width - 70,
                     260.0,
@@ -149,7 +150,7 @@ class _WhyAqarSectionState extends State<WhyAqarSection>
                       padding: EdgeInsets.all(diameter * .10),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xff0F172A),
+                        color: isDark ? const Color(0xff0F172A) : Colors.white,
                         border: Border.all(
                           color: _gold.withValues(alpha: .45),
                           width: 1.4,
@@ -161,11 +162,9 @@ class _WhyAqarSectionState extends State<WhyAqarSection>
                           Container(
                             width: diameter * .18,
                             height: diameter * .18,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [_lightGold, _gold],
-                              ),
+                              color: _gold,
                             ),
                             child: Icon(
                               feature.icon,
@@ -178,7 +177,7 @@ class _WhyAqarSectionState extends State<WhyAqarSection>
                             feature.title,
                             maxLines: 1,
                             style: TextStyle(
-                              color: Colors.white,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                               fontSize: diameter * .055,
                               fontWeight: FontWeight.w800,
                             ),
@@ -191,7 +190,7 @@ class _WhyAqarSectionState extends State<WhyAqarSection>
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: isDark ? Colors.white70 : const Color(0xFF475569),
                                 fontSize: 10.5,
                                 height: 1.4,
                               ),
@@ -259,18 +258,18 @@ class _PremiumHeading extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xffF8D86B), Color(0xffD4AF37)],
+                  colors: [Color(0xffD8BD95), Color(0xffC5A16B)],
                 ),
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
             const SizedBox(width: 11),
-            const Expanded(
+            Expanded(
               child: Text(
                 'لماذا عقارات الانبار؟',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   height: 1.25,
@@ -280,8 +279,8 @@ class _PremiumHeading extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        const Padding(
-          padding: EdgeInsets.only(right: 15),
+        Padding(
+          padding: const EdgeInsets.only(right: 15),
           child: FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
@@ -290,7 +289,7 @@ class _PremiumHeading extends StatelessWidget {
               maxLines: 1,
               textAlign: TextAlign.right,
               style: TextStyle(
-                color: Colors.white60,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : const Color(0xFF64748B),
                 fontSize: 14,
                 height: 1.6,
               ),
@@ -358,13 +357,15 @@ class _AnimatedFeature extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        const Positioned.fill(
+                        Positioned.fill(
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xff293A52), Color(0xff121C2D)],
+                                colors: Theme.of(context).brightness == Brightness.dark
+                                    ? const [Color(0xff293A52), Color(0xff121C2D)]
+                                    : const [Color(0xFFF8FAFC), Color(0xFFE2E8F0)],
                               ),
                             ),
                           ),
@@ -397,7 +398,7 @@ class _AnimatedFeature extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: iconSize < 56 ? 12 : 15,
                   fontWeight: FontWeight.w700,
                   height: 1.2,
@@ -416,27 +417,31 @@ class _PremiumFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
-        Divider(color: Colors.white.withValues(alpha: .10)),
+        Divider(color: isDark ? Colors.white.withValues(alpha: .10) : const Color(0xFFE2E8F0)),
         const SizedBox(height: 15),
-        const FittedBox(
+        FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             'عقارات الانبار • لأن العثور على العقار المناسب يجب أن يكون أسهل',
             maxLines: 1,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white54,
+              color: isDark ? Colors.white54 : const Color(0xFF64748B),
               fontSize: 12.5,
               height: 1.6,
             ),
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           '© 2026 Aqar Al-Anbar',
-          style: TextStyle(color: Colors.white30, fontSize: 11.5),
+          style: TextStyle(
+            color: isDark ? Colors.white30 : const Color(0xFF94A3B8),
+            fontSize: 11.5,
+          ),
         ),
       ],
     );

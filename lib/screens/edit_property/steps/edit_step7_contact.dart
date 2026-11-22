@@ -49,24 +49,27 @@ class _EditStep7ContactState extends State<EditStep7Contact> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
+        Text(
           'الوصف والتواصل',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'راجع وصف العقار ومعلومات التواصل',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white60,
+            color: onSurface.withValues(alpha: 0.60),
             fontSize: 15,
           ),
         ),
@@ -118,28 +121,28 @@ class _EditStep7ContactState extends State<EditStep7Contact> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xff1E293B),
+            color: cardColor,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: const Color(0xffD4AF37).withValues(alpha: .20),
+              color: const Color(0xffC5A16B).withValues(alpha: .20),
             ),
           ),
-          child: const Row(
+          child: Row(
             textDirection: TextDirection.rtl,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
+              const Icon(
                 Icons.info_outline_rounded,
-                color: Color(0xffD4AF37),
+                color: Color(0xffC5A16B),
                 size: 21,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'بعد حفظ التعديلات سيعود العقار إلى قيد المراجعة حتى تتم الموافقة على التعديلات',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: onSurface.withValues(alpha: 0.70),
                     fontSize: 13,
                     height: 1.6,
                   ),
@@ -162,12 +165,14 @@ class _EditStep7ContactState extends State<EditStep7Contact> {
     List<TextInputFormatter>? inputFormatters,
     int maxLines = 1,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white10,
+          color: onSurface.withValues(alpha: 0.10),
         ),
       ),
       child: TextField(
@@ -178,18 +183,18 @@ class _EditStep7ContactState extends State<EditStep7Contact> {
         onChanged: onChanged,
         textAlign: TextAlign.right,
         textDirection: TextDirection.rtl,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: onSurface,
           fontSize: 16,
         ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.white60,
+          labelStyle: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
           ),
           prefixIcon: Icon(
             icon,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
           ),
           alignLabelWithHint: maxLines > 1,
           border: InputBorder.none,

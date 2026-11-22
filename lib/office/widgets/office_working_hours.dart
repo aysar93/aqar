@@ -94,7 +94,7 @@ class OfficeWorkingHours extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37).withValues(
+            color: const Color(0xFFC5A16B).withValues(
               alpha: 0.12,
             ),
             borderRadius: BorderRadius.circular(10),
@@ -102,7 +102,7 @@ class OfficeWorkingHours extends StatelessWidget {
           child: const Icon(
             Icons.access_time_rounded,
             size: 19,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
           ),
         ),
       ],
@@ -137,14 +137,14 @@ class OfficeWorkingHours extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isToday
-            ? const Color(0xFFD4AF37).withValues(
+            ? const Color(0xFFC5A16B).withValues(
                 alpha: 0.09,
               )
             : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         border: isToday
             ? Border.all(
-                color: const Color(0xFFD4AF37).withValues(alpha: 0.25),
+                color: const Color(0xFFC5A16B).withValues(alpha: 0.25),
               )
             : null,
       ),
@@ -171,7 +171,7 @@ class OfficeWorkingHours extends StatelessWidget {
                 vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFD4AF37),
+                color: const Color(0xFFC5A16B),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -195,7 +195,7 @@ class OfficeWorkingHours extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
                 color:
-                    isToday ? const Color(0xFFD4AF37) : colorScheme.onSurface,
+                    isToday ? const Color(0xFFC5A16B) : colorScheme.onSurface,
               ),
             ),
           ),

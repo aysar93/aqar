@@ -9,6 +9,7 @@ import 'notification_navigation_service.dart';
 import 'push_token_sync.dart';
 import 'push_migration.dart';
 import 'push_device_service.dart';
+import 'booking_foreground_notice.dart';
 
 class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -16,6 +17,16 @@ class FCMService {
   static bool _initialized = false;
   static final _tokenSync = PushTokenSyncGate();
   static const _privacyChannel = MethodChannel('aqar/push_privacy');
+  static final _bookingForeground = BookingForegroundNotice(
+    navigatorKey: NotificationNavigationService.navigatorKey,
+    currentUserId: () => FirebaseAuth.instance.currentUser?.uid,
+    canReadBooking: (id) async => (await FirebaseFirestore.instance
+            .collection('bookings')
+            .doc(id)
+            .get(const GetOptions(source: Source.server)))
+        .exists,
+    openBooking: _handleNotificationClick,
+  );
 
   static Future<void> _drainNativeNotificationTap() async {
     final payload = await _privacyChannel
@@ -60,6 +71,14 @@ class FCMService {
     // =========================================================
 
     FirebaseMessaging.onMessage.listen((message) async {
+      final payload = Map<String, dynamic>.from(message.data);
+      if (payload['type'] == 'booking') {
+        debugPrint("========== Firebase ==========");
+        debugPrint(message.notification?.title);
+        debugPrint(message.notification?.body);
+        await _bookingForeground.receive(payload);
+        return;
+      }
       if (PushMigration.enabled &&
           !kIsWeb &&
           (defaultTargetPlatform == TargetPlatform.android ||

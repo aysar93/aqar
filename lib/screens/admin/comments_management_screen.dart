@@ -14,14 +14,15 @@ class CommentsManagementScreen extends StatefulWidget {
 }
 
 class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
-  static const Color _background = Color(0xff0F172A);
-  static const Color _card = Color(0xff1E293B);
-  static const Color _cardSoft = Color(0xff243247);
-  static const Color _gold = Color(0xffD4AF37);
-  static const Color _text = Color(0xffF8FAFC);
-  static const Color _muted = Color(0xff94A3B8);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _danger = Color(0xffEF4444);
   static const Color _success = Color(0xff22C55E);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background => _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _cardSoft => _isDark ? const Color(0xff243247) : const Color(0xFFF1F5F9);
+  Color get _text => _isDark ? const Color(0xffF8FAFC) : const Color(0xFF0F172A);
+  Color get _muted => _isDark ? const Color(0xff94A3B8) : const Color(0xFF64748B);
 
   static const int _pageSize = 10;
 
@@ -368,11 +369,11 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             backgroundColor: _card,
-            title: const Text(
+            title: Text(
               'حذف التعليق',
               style: TextStyle(color: _text, fontWeight: FontWeight.bold),
             ),
-            content: const Text(
+            content: Text(
               'هل أنت متأكد من حذف هذا التعليق؟ لا يمكن التراجع عن العملية',
               style: TextStyle(color: _muted),
             ),
@@ -467,7 +468,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
               softWrap: false,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: _muted,
                 fontSize: 9.5,
                 height: 1.05,
@@ -479,7 +480,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
               '$value',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: _text,
                 fontSize: 15,
                 height: 1.0,
@@ -588,7 +589,9 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
             border: Border.all(
               color: pinned
                   ? _gold.withValues(alpha: 0.40)
-                  : Colors.white.withValues(alpha: 0.06),
+                  : (_isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.08)),
             ),
             boxShadow: [
               BoxShadow(
@@ -620,7 +623,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                                     name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: _text,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,
@@ -640,7 +643,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                             const SizedBox(height: 4),
                             Text(
                               _formatDate(data['createdAt']),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: _muted,
                                 fontSize: 11,
                               ),
@@ -650,7 +653,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                       ),
                       PopupMenuButton<String>(
                         color: _cardSoft,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.more_vert_rounded,
                           color: _muted,
                         ),
@@ -672,21 +675,21 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                               propertyId == null
                                   ? 'العقار غير متوفر'
                                   : 'فتح العقار',
-                              style: const TextStyle(color: _text),
+                              style: TextStyle(color: _text),
                             ),
                           ),
                           PopupMenuItem(
                             value: 'pin',
                             child: Text(
                               pinned ? 'إلغاء تثبيت التعليق' : 'تثبيت التعليق',
-                              style: const TextStyle(color: _text),
+                              style: TextStyle(color: _text),
                             ),
                           ),
                           PopupMenuItem(
                             value: 'hide',
                             child: Text(
                               hidden ? 'إظهار التعليق' : 'إخفاء التعليق',
-                              style: const TextStyle(color: _text),
+                              style: TextStyle(color: _text),
                             ),
                           ),
                           const PopupMenuItem(
@@ -705,7 +708,9 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.035),
+                      color: _isDark
+                          ? Colors.white.withValues(alpha: 0.035)
+                          : Colors.black.withValues(alpha: 0.035),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
@@ -1009,7 +1014,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                     ),
                     if (!compact) ...[
                       const SizedBox(height: 5),
-                      const Text(
+                      Text(
                         'ستظهر التعليقات الجديدة هنا تلقائيًا',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -1052,7 +1057,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
                 size: 38,
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'تعذر تحميل التعليقات',
                 style: TextStyle(
                   color: _text,
@@ -1064,7 +1069,7 @@ class _CommentsManagementScreenState extends State<CommentsManagementScreen> {
               Text(
                 error,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _muted,
                   fontSize: 11,
                 ),

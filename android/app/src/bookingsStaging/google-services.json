@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "463930605039",
+    "project_id": "aqar-bookings-test-20261009",
+    "storage_bucket": "aqar-bookings-test-20261009.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:463930605039:android:b95ecef1a9b983703dca1a",
+        "android_client_info": {
+          "package_name": "com.andalus.aqar.bookingstest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAs1onba-zxK3pCp4Zbuo0SOAUCc4qql5g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -10,18 +10,19 @@ class NotificationPermissionSheet extends StatelessWidget {
     required this.onLater,
   });
 
-  static const Color gold = Color(0xFFD4AF37);
+  static const Color gold = Color(0xFFC5A16B);
   static const Color dark = Color(0xFF0F172A);
   static const Color card = Color(0xFF1E293B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return PopScope(
       canPop: false,
       child: Container(
-        decoration: const BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: isDark ? card : Colors.white,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(32),
           ),
         ),
@@ -39,7 +40,7 @@ class NotificationPermissionSheet extends StatelessWidget {
               width: 45,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
@@ -77,11 +78,11 @@ class NotificationPermissionSheet extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            const Text(
+            Text(
               'ابقَ على اطلاع',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -89,12 +90,12 @@ class NotificationPermissionSheet extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            const Text(
+            Text(
               'فعّل الإشعارات لتصلك تحديثات إعلاناتك، '
               'والرسائل، وأهم التنبيهات فور وصولها',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white70,
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
                 fontSize: 15.5,
                 height: 1.8,
               ),
@@ -138,10 +139,10 @@ class NotificationPermissionSheet extends StatelessWidget {
               height: 48,
               child: TextButton(
                 onPressed: onLater,
-                child: const Text(
+                child: Text(
                   'ليس الآن',
                   style: TextStyle(
-                    color: Colors.white60,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -154,9 +155,9 @@ class NotificationPermissionSheet extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.lock_outline_rounded,
-                  color: Colors.white38,
+                  color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                   size: 15,
                 ),
                 const SizedBox(width: 6),
@@ -165,7 +166,9 @@ class NotificationPermissionSheet extends StatelessWidget {
                     'يمكنك تغيير إعدادات الإشعارات لاحقًا',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.35),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.35)
+                          : const Color(0xFF94A3B8),
                       fontSize: 12,
                     ),
                   ),

@@ -7,6 +7,8 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 
 initializeApp();
+Object.assign(exports, require('./booking_functions'));
+Object.assign(exports, require('./booking_external_media'));
 
 const db = getFirestore();
 Object.assign(exports, require('./chat_functions'));
@@ -289,7 +291,7 @@ exports.sendNotificationToUser = onDocumentCreated(
 // إذا أوقف المستخدم الإشعارات من داخل التطبيق
 // لا نرسل Push، لكن وثيقة الإشعار تبقى موجودة
 // ويمكنه رؤيتها داخل صفحة الإشعارات.
-if (userData.notificationsEnabled === false) {
+if (userData.notificationsEnabled === false || userData.isBlocked === true) {
   return null;
 }
 
@@ -303,6 +305,7 @@ if (!token) {
     await getMessaging().send({
 
       token: token,
+      data: require('./notification_push_data').notificationPushData(data, event.params.notificationId),
 
       notification: {
         title: title,
@@ -327,3 +330,14 @@ const officeCounters = require('./office_counters');
 exports.refreshOfficeFollowerMetrics = officeCounters.refreshOfficeFollowerMetrics;
 exports.refreshOfficeReviewMetrics = officeCounters.refreshOfficeReviewMetrics;
 exports.refreshOfficePropertyMetrics = officeCounters.refreshOfficePropertyMetrics;
+
+const paymentSettings = require("./payment_accounts");
+for (const name of ["getPaymentAccountSettings", "savePaymentAccountSettings", "createSubscriptionPayment", "reviewOfficeSubscription", "auditSubscriptionPayment"]) exports[name] = paymentSettings[name];
+
+if (process.env.BOOKING_LEGACY_EXTERNAL_READS === "true") {
+  Object.assign(exports, require("./booking_legacy_external_media"));
+}
+
+const gateway = require('./booking_media_gateway');
+exports.bookingMediaContent = gateway.bookingMediaContent;
+exports.uploadBookingVideoChunk = gateway.uploadBookingVideoChunk;

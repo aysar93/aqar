@@ -27,8 +27,11 @@ class PropertyStatisticsScreen extends StatefulWidget {
 }
 
 class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
-  static const Color _background = Color(0xFF0F172A);
-  static const Color _gold = Color(0xFFD4AF37);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _blue = Color(0xFF38BDF8);
   static const Color _orange = Color(0xFFF59E0B);
@@ -68,10 +71,10 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
-          title: const Text(
+          title: Text(
             'إحصائيات العقارات',
             style: TextStyle(
-              color: Colors.white,
+              color: _textPrimary,
               fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
@@ -81,9 +84,9 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
             onPressed: () {
               Navigator.of(context).maybePop();
             },
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
+              color: _textPrimary,
               size: 20,
             ),
           ),
@@ -97,8 +100,9 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
                     },
               icon: Icon(
                 Icons.refresh_rounded,
-                color:
-                    _isLoading ? Colors.white.withValues(alpha: 0.30) : _gold,
+                color: _isLoading
+                    ? _textPrimary.withValues(alpha: 0.30)
+                    : _gold,
               ),
             ),
             const SizedBox(width: 4),
@@ -106,7 +110,8 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
         ),
         body: RefreshIndicator(
           color: _gold,
-          backgroundColor: const Color(0xFF1E293B),
+          backgroundColor:
+              _isDark ? const Color(0xFF1E293B) : Colors.white,
           onRefresh: () => _loadStatistics(forceRefresh: true),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -319,8 +324,8 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: _textPrimary,
                   fontSize: StatisticsTextStyles.sectionTitleSize,
                   fontWeight: FontWeight.w800,
                 ),
@@ -329,7 +334,9 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.46),
+                  color: _isDark
+                      ? Colors.white.withValues(alpha: 0.46)
+                      : Colors.black54,
                   fontSize: StatisticsTextStyles.captionSize,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
@@ -347,9 +354,15 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.025),
+        color: _isDark
+            ? Colors.white.withValues(alpha: 0.025)
+            : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: _isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black12,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +377,9 @@ class _PropertyStatisticsScreenState extends State<PropertyStatisticsScreen> {
             child: Text(
               'هذه الإحصائيات تعتمد على أسعار العقارات المنشورة والمعتمدة داخل التطبيق، وتهدف إلى إعطاء مؤشر عام عن السوق. السعر الفعلي للعقار قد يختلف حسب الموقع والحالة والمواصفات وظروف البيع أو الإيجار',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.45),
+                color: _isDark
+                    ? Colors.white.withValues(alpha: 0.45)
+                    : Colors.black54,
                 fontSize: StatisticsTextStyles.sectionSubtitleSize,
                 fontWeight: FontWeight.w500,
                 height: 1.6,

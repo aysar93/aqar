@@ -21,7 +21,7 @@ class AppStatItem extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
-    this.color = const Color(0xFFD4AF37),
+    this.color = const Color(0xFFC5A16B),
     this.animationDuration = const Duration(milliseconds: 1100),
 
     // أحجام Compact
@@ -77,7 +77,9 @@ class AppStatItem extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.70),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.70)
+                  : const Color(0xFF475569),
               fontSize: labelFontSize,
               fontWeight: FontWeight.w600,
               height: 1.1,

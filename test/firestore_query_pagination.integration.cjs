@@ -1,19 +1,21 @@
 // Local only: exercises real Firestore cursor/aggregation protocol. Never runs against production.
 const {test,after}=require('node:test'),assert=require('node:assert/strict');
 if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8185'||process.env.GCLOUD_PROJECT!=='demo-aqar')throw Error('DEMO_EMULATOR_ONLY');
-const admin=require('../functions/node_modules/firebase-admin');
-const app=admin.initializeApp({projectId:'demo-aqar'},'closure-queries');const db=app.firestore();
+const sdkRequire=require('node:module').createRequire(require.resolve('../functions/node_modules/firebase-admin'));
+const {initializeApp,deleteApp}=sdkRequire('firebase-admin/app');
+const {getFirestore,Timestamp,FieldPath}=sdkRequire('firebase-admin/firestore');
+const app=initializeApp({projectId:'demo-aqar'},'closure-queries');const db=getFirestore(app);
 const ids=[];
 const seed=(async()=>{const batch=db.batch();
  for(let i=0;i<65;i++){
   const ref=db.doc(`properties/closure-${String(i).padStart(3,'0')}`);ids.push(ref);
-  batch.set(ref,{officeId:i<60?'closure-office-a':'closure-office-b',status:i===59?'pending':i===58?'active':'approved',isFeatured:i%2===0,createdAt:admin.firestore.Timestamp.fromMillis(Math.floor(i/2)*1000),price:Math.floor(i/2)});
+  batch.set(ref,{officeId:i<60?'closure-office-a':'closure-office-b',status:i===59?'pending':i===58?'active':'approved',isFeatured:i%2===0,createdAt:Timestamp.fromMillis(Math.floor(i/2)*1000),price:Math.floor(i/2)});
  }
  for(let i=0;i<45;i++){const ref=db.doc(`office_reviews/closure-${String(i).padStart(3,'0')}`);ids.push(ref);
-  batch.set(ref,{officeId:'closure-office-a',createdAt:admin.firestore.Timestamp.fromMillis(Math.floor(i/2)*1000),...(i===0?{}:{status:i>24?'hidden':'published'})});
+  batch.set(ref,{officeId:'closure-office-a',createdAt:Timestamp.fromMillis(Math.floor(i/2)*1000),...(i===0?{}:{status:i>24?'hidden':'published'})});
  }
  for(let i=0;i<45;i++){const ref=db.doc(`office_followers/closure-${String(i).padStart(3,'0')}`);ids.push(ref);
-  batch.set(ref,{officeId:'closure-office-a',userId:`closure-follower-${i}`,createdAt:admin.firestore.Timestamp.fromMillis(Math.floor(i/2)*1000),...(i===0?{}:{isActive:i<25})});}
+  batch.set(ref,{officeId:'closure-office-a',userId:`closure-follower-${i}`,createdAt:Timestamp.fromMillis(Math.floor(i/2)*1000),...(i===0?{}:{isActive:i<25})});}
  for(const [path,data] of [['offices/closure-office-a',{ownerId:'closure-owner',status:'active'}],['users/closure-owner',{isAdmin:false,isBlocked:false}]]){const ref=db.doc(path);ids.push(ref);batch.set(ref,data);}
  await batch.commit();})();
 async function walk(q){let cursor;const pages=[];for(let i=0;i<5;i++){
@@ -39,4 +41,4 @@ test('owner follower query works; unrelated users cannot enumerate followers',as
  assert.equal((await request('closure-owner')).status,200);// Public follower enumeration is deliberately denied.
  assert.equal((await request('closure-outsider')).status,403);
 });
-after(async()=>{await seed;const batch=db.batch();for(const ref of ids)batch.delete(ref);await batch.commit();await app.delete();});
+after(async()=>{await seed;const batch=db.batch();for(const ref of ids)batch.delete(ref);await batch.commit();await deleteApp(app);});

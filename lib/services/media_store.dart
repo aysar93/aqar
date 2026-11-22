@@ -40,6 +40,46 @@ class MediaStore {
         bucket: bucket);
   }
 
+  static bool isApprovedBrokerUri({
+    required String projectId,
+    required String bucket,
+    required Uri? uri,
+    required String productionPath,
+    required String mediaTestPath,
+    required String bookingsStagingPath,
+  }) {
+    if (uri == null || uri.hasQuery || uri.userInfo.isNotEmpty) return false;
+    final sandbox = bucket.startsWith('demo-') &&
+        projectId.startsWith('demo-') &&
+        uri.scheme == 'http' &&
+        ['127.0.0.1', 'localhost', '10.0.2.2'].contains(uri.host) &&
+        uri.port == 9396 &&
+        uri.path == productionPath;
+    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' &&
+        projectId == 'aqar-media-test-20261018' &&
+        uri.scheme == 'https' &&
+        uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' &&
+        uri.path == mediaTestPath;
+    final isolatedBookingsStaging =
+        bucket == 'aqar-bookings-test-20261009.firebasestorage.app' &&
+            projectId == 'aqar-bookings-test-20261009' &&
+            uri.scheme == 'https' &&
+            uri.host ==
+                'us-central1-aqar-bookings-test-20261009.cloudfunctions.net' &&
+            (uri.path == bookingsStagingPath || uri.path == productionPath);
+    final productionCloud = (bucket == 'aqar-9f3f9-media-canary' ||
+            bucket == 'aqar-9f3f9.appspot.com' ||
+            bucket == 'aqar-9f3f9.firebasestorage.app') &&
+        projectId == 'aqar-9f3f9' &&
+        uri.scheme == 'https' &&
+        uri.host == 'us-central1-aqar-9f3f9.cloudfunctions.net' &&
+        uri.path == productionPath;
+    return sandbox ||
+        isolatedCloud ||
+        isolatedBookingsStaging ||
+        productionCloud;
+  }
+
   String _uid() {
     if (const bool.fromEnvironment('FCM_MIGRATION')) {
       throw StateError('Media upload unavailable in FCM staging');
@@ -162,31 +202,14 @@ class MediaStore {
                 .padLeft(2, '0')).join();
     const endpoint = String.fromEnvironment('MEDIA_UPLOAD_URL');
     final uri = Uri.tryParse(endpoint);
-    final sandbox = bucket.startsWith('demo-') &&
-        auth.app.options.projectId.startsWith('demo-') &&
-        uri != null &&
-        uri.scheme == 'http' &&
-        ['127.0.0.1', 'localhost', '10.0.2.2'].contains(uri.host) &&
-        uri.port == 9396 &&
-        uri.path == '/uploadMedia' &&
-        !uri.hasQuery &&
-        uri.userInfo.isEmpty;
-    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' &&
-        auth.app.options.projectId == 'aqar-media-test-20261018' &&
-        uri != null &&
-        uri.scheme == 'https' &&
-        uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' &&
-        uri.path == '/mediaBrokerTest/uploadMedia' &&
-        !uri.hasQuery &&
-        uri.userInfo.isEmpty;
-    if (!sandbox &&
-        !isolatedCloud &&
-        (uri == null ||
-            uri.scheme != 'https' ||
-            uri.host != 'us-central1-aqar-9f3f9.cloudfunctions.net' ||
-            uri.path != '/uploadMedia' ||
-            uri.hasQuery ||
-            uri.userInfo.isNotEmpty)) {
+    if (uri == null || !isApprovedBrokerUri(
+      projectId: auth.app.options.projectId,
+      bucket: bucket,
+      uri: uri,
+      productionPath: '/uploadMedia',
+      mediaTestPath: '/mediaBrokerTest/uploadMedia',
+      bookingsStagingPath: '/mediaBroker/uploadMedia',
+    )) {
       throw StateError('Approved private upload broker must be configured');
     }
     final idToken = await auth.currentUser!.getIdToken();
@@ -269,31 +292,14 @@ class MediaStore {
     final uid = _uid();
     const endpoint = String.fromEnvironment('MEDIA_PRIVATE_READ_URL');
     final uri = Uri.tryParse(endpoint);
-    final sandbox = bucket.startsWith('demo-') &&
-        auth.app.options.projectId.startsWith('demo-') &&
-        uri != null &&
-        uri.scheme == 'http' &&
-        ['127.0.0.1', 'localhost', '10.0.2.2'].contains(uri.host) &&
-        uri.port == 9396 &&
-        uri.path == '/readPrivateMedia' &&
-        !uri.hasQuery &&
-        uri.userInfo.isEmpty;
-    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' &&
-        auth.app.options.projectId == 'aqar-media-test-20261018' &&
-        uri != null &&
-        uri.scheme == 'https' &&
-        uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' &&
-        uri.path == '/mediaBrokerTest/readPrivateMedia' &&
-        !uri.hasQuery &&
-        uri.userInfo.isEmpty;
-    if (!sandbox &&
-        !isolatedCloud &&
-        (uri == null ||
-            uri.scheme != 'https' ||
-            uri.host != 'us-central1-aqar-9f3f9.cloudfunctions.net' ||
-            uri.path != '/readPrivateMedia' ||
-            uri.hasQuery ||
-            uri.userInfo.isNotEmpty)) {
+    if (uri == null || !isApprovedBrokerUri(
+      projectId: auth.app.options.projectId,
+      bucket: bucket,
+      uri: uri,
+      productionPath: '/readPrivateMedia',
+      mediaTestPath: '/mediaBrokerTest/readPrivateMedia',
+      bookingsStagingPath: '/mediaBroker/readPrivateMedia',
+    )) {
       throw StateError('Approved private read broker must be configured');
     }
     final token = await auth.currentUser!.getIdToken();

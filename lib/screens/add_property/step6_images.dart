@@ -47,24 +47,26 @@ class _Step6ImagesState extends State<Step6Images> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "صور العقار",
             style: TextStyle(
-              color: Colors.white,
+              color: onSurface,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "يمكنك إضافة حتى 10 صور",
             style: TextStyle(
-              color: Colors.white60,
+              color: onSurface.withValues(alpha: 0.60),
             ),
           ),
           const SizedBox(height: 30),
@@ -81,7 +83,7 @@ class _Step6ImagesState extends State<Step6Images> {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(
-                  0xffD4AF37,
+                  0xffC5A16B,
                 ),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
@@ -95,11 +97,11 @@ class _Step6ImagesState extends State<Step6Images> {
           const SizedBox(height: 25),
           Expanded(
             child: widget.property.selectedImages.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       "لم يتم اختيار صور بعد",
                       style: TextStyle(
-                        color: Colors.white54,
+                        color: onSurface.withValues(alpha: 0.54),
                       ),
                     ),
                   )

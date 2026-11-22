@@ -10,10 +10,12 @@ class MapLoadingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Positioned.fill(
       child: Container(
-        color: const Color(0xFF0F172A).withValues(
-          alpha: 0.55,
+        color: Colors.black.withValues(
+          alpha: isDark ? 0.55 : 0.35,
         ),
         child: Center(
           child: Container(
@@ -22,10 +24,10 @@ class MapLoadingOverlay extends StatelessWidget {
               vertical: 18,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.06,
                 ),
               ),
@@ -47,15 +49,15 @@ class MapLoadingOverlay extends StatelessWidget {
                   height: 28,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.8,
-                    color: Color(0xFFD4AF37),
+                    color: Color(0xFFC5A16B),
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: onSurface,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),

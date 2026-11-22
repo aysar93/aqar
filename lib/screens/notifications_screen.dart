@@ -56,6 +56,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary = isDark ? Colors.white70 : Colors.black54;
     final user = FirebaseAuth.instance.currentUser;
 
     // ==================================================
@@ -63,18 +67,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // ==================================================
     if (user == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: bgColor,
         appBar: AppBar(
           elevation: 0,
           centerTitle: true,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          title: const Text(
+          title: Text(
             "التنبيهات",
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textPrimary,
             ),
           ),
         ),
@@ -88,31 +92,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD4AF37).withValues(alpha: .10),
+                    color: const Color(0xFFC5A16B).withValues(alpha: .10),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.notifications_none_rounded,
                     size: 52,
-                    color: Color(0xFFD4AF37),
+                    color: Color(0xFFC5A16B),
                   ),
                 ),
                 const SizedBox(height: 25),
-                const Text(
+                Text(
                   "التنبيهات خاصة بالمستخدمين المسجلين",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textPrimary,
                     fontSize: 21,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   "سجل الدخول لاستلام تنبيهات العقارات والإشعارات الخاصة بحسابك",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white60,
+                    color: textSecondary,
                     fontSize: 15,
                     height: 1.7,
                   ),
@@ -127,11 +131,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final uid = user.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(widget.history ? "الإشعارات السابقة" : "التنبيهات"),
         centerTitle: true,
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: bgColor,
+        foregroundColor: textPrimary,
         actions: [
           if (TrustedInbox.enabled && !widget.history)
             IconButton(
@@ -145,21 +150,81 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               tooltip: "حذف جميع التنبيهات",
               icon: const Icon(Icons.delete_sweep),
               onPressed: () async {
-                final snapshot =
-                    await TrustedInbox.forUser(uid, history: widget.history)
-                        .get();
-
-                for (final doc in snapshot.docs) {
-                  await TrustedInbox.dismiss(doc.reference,
-                      history: widget.history);
-                }
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("تم حذف جميع التنبيهات"),
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.delete_sweep, color: Color(0xFFEF4444)),
+                          SizedBox(width: 8),
+                          Text(
+                            "حذف كافة التنبيهات",
+                            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      content: const Text(
+                        "هل أنت متأكد من رغبتك في حذف جميع التنبيهات نهائياً؟",
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text("إلغاء", style: TextStyle(fontFamily: 'Cairo')),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4444),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text("تأكيد الحذف", style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ),
-                  );
+                  ),
+                );
+
+                if (confirm != true || !context.mounted) return;
+
+                try {
+                  final snapshot =
+                      await TrustedInbox.forUser(uid, history: widget.history)
+                          .get();
+
+                  if (snapshot.docs.isNotEmpty) {
+                    final deletedIds = <String>{};
+                    for (final doc in snapshot.docs) {
+                      await TrustedInbox.dismiss(doc.reference,
+                          history: widget.history);
+                      deletedIds.add(doc.id);
+                    }
+                    if (mounted) {
+                      setState(() => _locallyDeleted.addAll(deletedIds));
+                      _pageKey.currentState?.refresh();
+                    }
+                  }
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("تم حذف جميع التنبيهات بنجاح"),
+                        backgroundColor: Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("تعذر حذف التنبيهات، يرجى المحاولة لاحقاً"),
+                        backgroundColor: Color(0xFFEF4444),
+                      ),
+                    );
+                  }
                 }
               }),
         ],
@@ -178,13 +243,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             if (snapshot.hasError) {
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    snapshot.error.toString(),
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 14,
-                    ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.notifications_off_outlined, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Text(
+                        "لا توجد إشعارات جديدة حالياً",
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: textSecondary,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFC5A16B),
+                          side: const BorderSide(color: Color(0xFFC5A16B)),
+                        ),
+                        onPressed: () => _pageKey.currentState?.refresh(),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text("تحديث", style: TextStyle(fontFamily: 'Cairo')),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -205,23 +288,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   const SizedBox(height: 140),
-                  const Center(
+                  Center(
                     child: CircleAvatar(
                       radius: 45,
-                      backgroundColor: Color(0xFF1E293B),
-                      child: Icon(
+                      backgroundColor: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFE2E8F0),
+                      child: const Icon(
                         Icons.notifications_none_rounded,
                         size: 50,
-                        color: Color(0xFFD4AF37),
+                        color: Color(0xFFC5A16B),
                       ),
                     ),
                   ),
                   const SizedBox(height: 25),
-                  const Center(
+                  Center(
                     child: Text(
                       "لا توجد تنبيهات",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
@@ -234,7 +319,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       "ستظهر هنا جميع إشعارات العقارات والتنبيهات الجديدة عند توفرها",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.65),
+                        color: textSecondary,
                         fontSize: 15,
                         height: 1.6,
                       ),
@@ -316,9 +401,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: isRead
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFF334155),
+                            ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                            : (isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFF1F5F9)),
                         borderRadius: BorderRadius.circular(18),
+                        border: isDark
+                            ? null
+                            : Border.all(color: Colors.black12),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,14 +419,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 getNotificationIcon(
                                   data['type'] ?? 'general',
                                 ),
-                                color: const Color(0xFFD4AF37),
+                                color: const Color(0xFFC5A16B),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   data['title'] ?? '',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: textPrimary,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -347,8 +437,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           const SizedBox(height: 10),
                           Text(
                             data['message'] ?? '',
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: textSecondary,
                               fontSize: 15,
                             ),
                           ),
@@ -358,8 +448,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             children: [
                               Text(
                                 dateText,
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.black45,
                                   fontSize: 12,
                                 ),
                               ),
@@ -367,7 +459,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 const Text(
                                   "جديد",
                                   style: TextStyle(
-                                    color: Color(0xFFD4AF37),
+                                    color: Color(0xFFC5A16B),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),

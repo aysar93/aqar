@@ -67,6 +67,8 @@ class _MapControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -78,10 +80,10 @@ class _MapControlButton extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(15),
               border: Border.all(
-                color: Colors.white.withValues(
+                color: onSurface.withValues(
                   alpha: 0.07,
                 ),
               ),
@@ -102,14 +104,14 @@ class _MapControlButton extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.2,
-                        color: Color(0xFFD4AF37),
+                        color: Color(0xFFC5A16B),
                       ),
                     )
                   : Icon(
                       icon,
                       size: 23,
                       color: enabled
-                          ? const Color(0xFFD4AF37)
+                          ? const Color(0xFFC5A16B)
                           : const Color(0xFF64748B),
                     ),
             ),

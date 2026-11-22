@@ -59,18 +59,23 @@ class PropertyHorizontalCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
-          splashColor: const Color(0xffD4AF37).withValues(alpha: .12),
+          splashColor: const Color(0xffC5A16B).withValues(alpha: .12),
           highlightColor: Colors.transparent,
           onTap: onTap,
           child: Container(
             width: 290,
             margin: const EdgeInsets.only(left: 14),
             decoration: BoxDecoration(
-              color: const Color(0xff1E293B),
+              color: Theme.of(context).brightness == Brightness.dark ? const Color(0xff1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(24),
+              border: Theme.of(context).brightness == Brightness.dark
+                  ? null
+                  : Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: .32),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withValues(alpha: .32)
+                      : Colors.black.withValues(alpha: .05),
                   blurRadius: 24,
                   spreadRadius: 1,
                   offset: const Offset(0, 12),
@@ -103,25 +108,31 @@ class PropertyHorizontalCard extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 placeholder: (_, __) => Container(
                                   height: 190,
-                                  color: const Color(0xff263248),
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xff263248)
+                                      : const Color(0xFFF1F5F9),
                                   child: const Center(
                                     child: SizedBox(
                                       width: 26,
                                       height: 26,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2.2,
-                                        color: Color(0xffD4AF37),
+                                        color: Color(0xffC5A16B),
                                       ),
                                     ),
                                   ),
                                 ),
                                 errorWidget: (_, __, ___) => Container(
                                   height: 190,
-                                  color: const Color(0xff263248),
-                                  child: const Center(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xff263248)
+                                      : const Color(0xFFF1F5F9),
+                                  child: Center(
                                     child: Icon(
                                       Icons.home_work_rounded,
-                                      color: Colors.white54,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white54
+                                          : const Color(0xFF94A3B8),
                                       size: 55,
                                     ),
                                   ),
@@ -154,14 +165,14 @@ class PropertyHorizontalCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xffD4AF37),
+                          color: const Color(0xffC5A16B),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: .15),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xffD4AF37)
+                              color: const Color(0xffC5A16B)
                                   .withValues(alpha: .35),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
@@ -219,14 +230,14 @@ class PropertyHorizontalCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xffD4AF37),
+                            color: const Color(0xffC5A16B),
                             borderRadius: BorderRadius.circular(22),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: .15),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xffD4AF37)
+                                color: const Color(0xffC5A16B)
                                     .withValues(alpha: .35),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
@@ -352,8 +363,10 @@ class PropertyHorizontalCard extends StatelessWidget {
                           property.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -367,11 +380,11 @@ class PropertyHorizontalCard extends StatelessWidget {
                                 vertical: 5,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xffD4AF37)
+                                color: const Color(0xffC5A16B)
                                     .withValues(alpha: .12),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: const Color(0xffD4AF37)
+                                  color: const Color(0xffC5A16B)
                                       .withValues(alpha: .30),
                                 ),
                               ),
@@ -381,13 +394,13 @@ class PropertyHorizontalCard extends StatelessWidget {
                                   const Icon(
                                     Icons.home_work_rounded,
                                     size: 15,
-                                    color: Color(0xffD4AF37),
+                                    color: Color(0xffC5A16B),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     property.propertyType,
                                     style: const TextStyle(
-                                      color: Color(0xffD4AF37),
+                                      color: Color(0xffC5A16B),
                                       fontWeight: FontWeight.w600,
                                       fontSize: 12,
                                     ),
@@ -403,13 +416,13 @@ class PropertyHorizontalCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: const Color(0xffD4AF37)
+                                color: const Color(0xffC5A16B)
                                     .withValues(alpha: .12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
                                 Icons.location_on_rounded,
-                                color: Color(0xffD4AF37),
+                                color: Color(0xffC5A16B),
                                 size: 16,
                               ),
                             ),
@@ -419,8 +432,10 @@ class PropertyHorizontalCard extends StatelessWidget {
                                 property.location,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white70,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white70
+                                      : const Color(0xFF64748B),
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -438,8 +453,8 @@ class PropertyHorizontalCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [
-                                Color(0xffD4AF37),
-                                Color(0xffB8922F),
+                                Color(0xffC5A16B),
+                                Color(0xffA8844E),
                               ],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
@@ -447,7 +462,7 @@ class PropertyHorizontalCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xffD4AF37)
+                                color: const Color(0xffC5A16B)
                                     .withValues(alpha: .30),
                                 blurRadius: 14,
                                 offset: const Offset(0, 6),
@@ -533,16 +548,17 @@ class _InfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 8,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .04),
+        color: isDark ? Colors.white.withValues(alpha: .04) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withValues(alpha: .06),
+          color: isDark ? Colors.white.withValues(alpha: .06) : const Color(0xFFE2E8F0),
         ),
       ),
       child: Column(
@@ -550,14 +566,14 @@ class _InfoItem extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
             size: 18,
           ),
           const SizedBox(height: 5),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),

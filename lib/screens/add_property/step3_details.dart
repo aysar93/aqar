@@ -138,14 +138,18 @@ class _Step3DetailsState extends State<Step3Details> {
 
     final showFurniture = isHouse || isApartment || isFarm;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: ListView(
         children: [
-          const Text(
+          Text(
             "تفاصيل العقار",
             style: TextStyle(
-              color: Colors.white,
+              color: onSurface,
               fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
@@ -155,8 +159,8 @@ class _Step3DetailsState extends State<Step3Details> {
             type == null
                 ? "أدخل تفاصيل العقار"
                 : "أدخل التفاصيل المناسبة لـ $type",
-            style: const TextStyle(
-              color: Colors.white60,
+            style: TextStyle(
+              color: onSurface.withValues(alpha: 0.60),
               fontSize: 15,
             ),
           ),
@@ -299,13 +303,13 @@ class _Step3DetailsState extends State<Step3Details> {
             ),
             initialValue: widget.property.documentType,
             isExpanded: true,
-            dropdownColor: const Color(0xff1E293B),
+            dropdownColor: cardColor,
             decoration: inputDecoration(
               label: "نوع السند",
               icon: Icons.description_rounded,
             ),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onSurface,
               fontSize: 15,
             ),
             items: const [
@@ -339,13 +343,13 @@ class _Step3DetailsState extends State<Step3Details> {
               ),
               initialValue: widget.property.furnitureStatus,
               isExpanded: true,
-              dropdownColor: const Color(0xff1E293B),
+              dropdownColor: cardColor,
               decoration: inputDecoration(
                 label: "حالة الأثاث",
                 icon: Icons.chair_rounded,
               ),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontSize: 15,
               ),
               items: const [
@@ -381,29 +385,31 @@ class _Step3DetailsState extends State<Step3Details> {
     TextInputType keyboardType = TextInputType.number,
     required Function(String) onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       margin: const EdgeInsets.only(
         bottom: 15,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         onChanged: onChanged,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: onSurface,
         ),
         decoration: InputDecoration(
           prefixIcon: Icon(
             icon,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
           ),
           labelText: title,
-          labelStyle: const TextStyle(
-            color: Colors.white60,
+          labelStyle: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(18),
@@ -416,17 +422,19 @@ class _Step3DetailsState extends State<Step3Details> {
     required String label,
     required IconData icon,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(
-        color: Colors.white60,
+      labelStyle: TextStyle(
+        color: onSurface.withValues(alpha: 0.60),
       ),
       prefixIcon: Icon(
         icon,
-        color: const Color(0xffD4AF37),
+        color: const Color(0xffC5A16B),
       ),
       filled: true,
-      fillColor: const Color(0xff1E293B),
+      fillColor: isDark ? const Color(0xff1E293B) : Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: BorderSide.none,
@@ -438,7 +446,7 @@ class _Step3DetailsState extends State<Step3Details> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(
-          color: Color(0xffD4AF37),
+          color: Color(0xffC5A16B),
         ),
       ),
       contentPadding: const EdgeInsets.all(18),

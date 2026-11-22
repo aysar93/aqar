@@ -16,7 +16,7 @@ class AreaStatisticsScreen extends StatelessWidget {
 
   static const Color _background = Color(0xFF0F172A);
   static const Color _cardColor = Color(0xFF1E293B);
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _red = Color(0xFFEF4444);
   static const Color _orange = Color(0xFFF59E0B);
@@ -24,6 +24,9 @@ class AreaStatisticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? _background : const Color(0xFFF8FAFC);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width < 360
         ? 10.0
@@ -34,9 +37,9 @@ class AreaStatisticsScreen extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: _background,
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: _background,
+          backgroundColor: bgColor,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
@@ -44,8 +47,8 @@ class AreaStatisticsScreen extends StatelessWidget {
             statistics.areaName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: textPrimary,
               fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
@@ -55,9 +58,9 @@ class AreaStatisticsScreen extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).maybePop();
             },
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
+              color: textPrimary,
               size: 20,
             ),
           ),
@@ -75,11 +78,12 @@ class AreaStatisticsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(),
+                _buildHeader(context),
                 const SizedBox(height: 16),
                 AreaStatisticsCard(statistics: statistics),
                 const SizedBox(height: 24),
                 _buildSectionHeader(
+                  context,
                   icon: Icons.analytics_outlined,
                   title: 'تفاصيل الأسعار',
                   subtitle: 'قراءة تفصيلية لأسعار العقارات في المنطقة',
@@ -88,33 +92,36 @@ class AreaStatisticsScreen extends StatelessWidget {
                 _buildPriceMetrics(),
                 const SizedBox(height: 24),
                 _buildSectionHeader(
+                  context,
                   icon: Icons.square_foot_rounded,
                   title: 'سعر المتر المربع',
                   subtitle:
                       'متوسط السعر اعتمادًا على العقارات ذات المساحة الصالحة',
                 ),
                 const SizedBox(height: 12),
-                _buildPricePerSquareMeterCard(),
+                _buildPricePerSquareMeterCard(context),
                 if (statistics.hasPreviousPeriodData) ...[
                   const SizedBox(height: 24),
                   _buildSectionHeader(
+                    context,
                     icon: Icons.timeline_rounded,
                     title: 'اتجاه الأسعار',
                     subtitle: 'مقارنة متوسط السعر بالفترة السابقة',
                   ),
                   const SizedBox(height: 12),
-                  _buildTrendCard(),
+                  _buildTrendCard(context),
                 ],
                 const SizedBox(height: 24),
                 _buildSectionHeader(
+                  context,
                   icon: Icons.verified_outlined,
                   title: 'جودة البيانات',
                   subtitle: 'حجم العينة المستخدمة في حساب هذه الإحصائية',
                 ),
                 const SizedBox(height: 12),
-                _buildDataQualityCard(),
+                _buildDataQualityCard(context),
                 const SizedBox(height: 20),
-                _buildDisclaimer(),
+                _buildDisclaimer(context),
               ],
             ),
           ),
@@ -123,17 +130,18 @@ class AreaStatisticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: _gold.withValues(alpha: 0.16)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.06),
             blurRadius: 18,
             offset: const Offset(0, 7),
           ),
@@ -164,8 +172,8 @@ class AreaStatisticsScreen extends StatelessWidget {
                   statistics.areaName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontSize: StatisticsTextStyles.pageTitleSize,
                     fontWeight: FontWeight.w900,
                   ),
@@ -176,7 +184,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                     Icon(
                       Icons.location_city_outlined,
                       size: 13,
-                      color: Colors.white.withValues(alpha: 0.40),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.40)
+                          : Colors.black45,
                     ),
                     const SizedBox(width: 5),
                     Expanded(
@@ -185,7 +195,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.52),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.52)
+                              : Colors.black54,
                           fontSize: StatisticsTextStyles.secondarySize,
                           fontWeight: FontWeight.w500,
                         ),
@@ -274,19 +286,22 @@ class AreaStatisticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPricePerSquareMeterCard() {
+  Widget _buildPricePerSquareMeterCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasData = statistics.hasPricePerSquareMeter;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(19),
         border: Border.all(
           color: hasData
               ? _blue.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.06),
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black12),
         ),
       ),
       child: Row(
@@ -300,7 +315,11 @@ class AreaStatisticsScreen extends StatelessWidget {
             ),
             child: Icon(
               Icons.square_foot_rounded,
-              color: hasData ? _blue : Colors.white.withValues(alpha: 0.30),
+              color: hasData
+                  ? _blue
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.30)
+                      : Colors.black26),
               size: 22,
             ),
           ),
@@ -312,7 +331,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                 Text(
                   'متوسط سعر المتر',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.45)
+                        : Colors.black54,
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
@@ -326,8 +347,10 @@ class AreaStatisticsScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: hasData
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.50),
+                        ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.50)
+                            : Colors.black45),
                     fontSize: StatisticsTextStyles.metricSize,
                     fontWeight: FontWeight.w800,
                   ),
@@ -338,7 +361,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                       ? 'محسوب من ${statistics.pricePerSquareMeterSampleCount} من أصل ${statistics.propertyCount} عقار'
                       : 'لا توجد عقارات كافية تحتوي على سعر ومساحة صالحين',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.38),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.38)
+                        : Colors.black54,
                     fontSize: StatisticsTextStyles.captionSize,
                     fontWeight: FontWeight.w500,
                     height: 1.45,
@@ -352,7 +377,8 @@ class AreaStatisticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTrendCard() {
+  Widget _buildTrendCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final increasing = statistics.isPriceIncreasing;
 
     final decreasing = statistics.isPriceDecreasing;
@@ -415,7 +441,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                     Text(
                       'مقارنة بمتوسط السعر في الفترة السابقة',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.42),
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.42)
+                            : Colors.black54,
                         fontSize: StatisticsTextStyles.captionSize,
                         fontWeight: FontWeight.w500,
                       ),
@@ -445,7 +473,12 @@ class AreaStatisticsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 15),
-          Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
+          Divider(
+            height: 1,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black12,
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -459,7 +492,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                 width: 1,
                 height: 36,
                 margin: const EdgeInsets.symmetric(horizontal: 10),
-                color: Colors.white.withValues(alpha: 0.06),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black12,
               ),
               Expanded(
                 child: _TrendPrice(
@@ -474,7 +509,8 @@ class AreaStatisticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDataQualityCard() {
+  Widget _buildDataQualityCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final reliable = statistics.hasReliableSample;
 
     final color = reliable ? _green : _orange;
@@ -526,7 +562,9 @@ class AreaStatisticsScreen extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.50),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.50)
+                        : Colors.black54,
                     fontSize: StatisticsTextStyles.sectionSubtitleSize,
                     fontWeight: FontWeight.w500,
                     height: 1.55,
@@ -540,11 +578,13 @@ class AreaStatisticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader({
+  Widget _buildSectionHeader(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -564,8 +604,8 @@ class AreaStatisticsScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -574,7 +614,9 @@ class AreaStatisticsScreen extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.42),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.42)
+                      : Colors.black54,
                   fontSize: StatisticsTextStyles.sectionSubtitleSize,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
@@ -587,14 +629,21 @@ class AreaStatisticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDisclaimer() {
+  Widget _buildDisclaimer(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.025),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.025)
+            : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black12,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,7 +658,9 @@ class AreaStatisticsScreen extends StatelessWidget {
             child: Text(
               'هذه الأرقام مبنية على أسعار العقارات المنشورة والمعتمدة في التطبيق، ولا تمثل تقييمًا رسميًا للعقار أو سعر البيع النهائي',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.42),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.42)
+                    : Colors.black54,
                 fontSize: StatisticsTextStyles.captionSize,
                 fontWeight: FontWeight.w500,
                 height: 1.55,
@@ -685,11 +736,12 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       constraints: const BoxConstraints(minHeight: 120),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: accentColor.withValues(alpha: 0.12)),
       ),
@@ -710,8 +762,8 @@ class _MetricCard extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
               fontSize: StatisticsTextStyles.cardTitleSize,
               fontWeight: FontWeight.w800,
             ),
@@ -720,7 +772,9 @@ class _MetricCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.40),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.40)
+                  : Colors.black54,
               fontSize: StatisticsTextStyles.captionSize,
               fontWeight: FontWeight.w500,
             ),
@@ -739,13 +793,16 @@ class _TrendPrice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.38),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.38)
+                : Colors.black54,
             fontSize: StatisticsTextStyles.captionSize,
             fontWeight: FontWeight.w500,
           ),
@@ -755,8 +812,8 @@ class _TrendPrice extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
           ),

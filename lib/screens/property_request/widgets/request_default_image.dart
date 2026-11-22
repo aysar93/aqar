@@ -20,7 +20,7 @@ class RequestDefaultImage extends StatelessWidget {
     this.showRequestedBadge = true,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _background = Color(0xff0F172A);
   static const Color _card = Color(0xff1E293B);
 
@@ -123,7 +123,7 @@ class RequestDefaultImage extends StatelessWidget {
                 error,
                 stackTrace,
               ) {
-                return _buildFallback();
+                return _buildFallback(context);
               },
             ),
 
@@ -209,13 +209,14 @@ class RequestDefaultImage extends StatelessWidget {
   // التصميم الاحتياطي
   // ==================================================
 
-  Widget _buildFallback() {
+  Widget _buildFallback(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final icon = iconFor(propertyType);
     final title = titleFor(propertyType);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: _card,
+      decoration: BoxDecoration(
+        color: isDark ? _card : const Color(0xFFF1F5F9),
       ),
       child: Stack(
         children: [
@@ -274,17 +275,17 @@ class RequestDefaultImage extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   "مطلوب $title",
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   "طلب عقاري",
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: isDark ? Colors.white54 : Colors.black54,
                     fontSize: 12,
                   ),
                 ),

@@ -221,6 +221,8 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width >= 900
         ? 28.0
@@ -231,9 +233,9 @@ class _PropertyManagementScreenState extends State<PropertyManagementScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xff0F172A),
+          backgroundColor: bgColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
@@ -397,14 +399,16 @@ class _ResponsiveFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: onSurface.withValues(alpha: 0.06),
         ),
       ),
       child: LayoutBuilder(
@@ -442,7 +446,7 @@ class _ResponsiveFilters extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           color: isSelected
                               ? Colors.white
-                              : Colors.white.withValues(alpha: .72),
+                              : onSurface.withValues(alpha: .72),
                         ),
                       ),
                     ),
@@ -480,6 +484,8 @@ class _HeaderSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final published = _count('approved');
     final pending = _count('pending');
     final rejected = _count('rejected');
@@ -491,10 +497,10 @@ class _HeaderSummary extends StatelessWidget {
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xff1E293B),
+            color: isDark ? const Color(0xff1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: Colors.white.withValues(alpha: .05),
+              color: onSurface.withValues(alpha: .05),
             ),
           ),
           child: Row(
@@ -505,10 +511,10 @@ class _HeaderSummary extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'إدارة العقارات',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: onSurface,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
@@ -521,7 +527,7 @@ class _HeaderSummary extends StatelessWidget {
                         ? '$total عقار'
                         : '$shown من $total',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: .55),
+                  color: onSurface.withValues(alpha: .55),
                   fontSize: 10.5,
                 ),
               ),
@@ -582,16 +588,18 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withValues(alpha: .045),
+          color: onSurface.withValues(alpha: .045),
         ),
       ),
       child: Column(
@@ -604,15 +612,15 @@ class _MiniStat extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: .58),
+              color: onSurface.withValues(alpha: .58),
               fontSize: 8.5,
               fontWeight: FontWeight.w700,
             ),
           ),
           Text(
             value?.toString() ?? '—',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onSurface,
               fontSize: 13,
               fontWeight: FontWeight.w900,
             ),
@@ -638,6 +646,8 @@ class _LoadMoreSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     if (!hasMore) {
       return Padding(
         padding: const EdgeInsets.only(
@@ -648,7 +658,7 @@ class _LoadMoreSection extends StatelessWidget {
           'تم عرض جميع العقارات',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .45),
+            color: onSurface.withValues(alpha: .45),
             fontSize: 11,
           ),
         ),
@@ -701,6 +711,8 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -724,10 +736,10 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'لا توجد عقارات',
               style: TextStyle(
-                color: Colors.white,
+                color: onSurface,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -737,7 +749,7 @@ class _EmptyState extends StatelessWidget {
               'جرّب تغيير الفلتر أو تعديل عبارة البحث',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: .55),
+                color: onSurface.withValues(alpha: .55),
                 fontSize: 12,
               ),
             ),
@@ -759,23 +771,25 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.cloud_off_rounded,
               size: 42,
-              color: Colors.white54,
+              color: onSurface.withValues(alpha: 0.54),
             ),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontWeight: FontWeight.w700,
               ),
             ),

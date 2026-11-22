@@ -12,7 +12,7 @@ val fcmStaging = System.getenv("FCM_STAGING_BUILD") == "true"
 val unsignedBridgeCandidate = System.getenv("PUSH_BRIDGE_UNSIGNED_RC") == "true" && !fcmStaging
 val keystoreProperties = Properties().apply {
     val keyFile = rootProject.file("key.properties")
-    if (!fcmStaging && keyFile.exists()) load(keyFile.inputStream())
+    if (!fcmStaging && keyFile.exists()) keyFile.inputStream().use { load(it) }
 }
 if (fcmStaging) {
     val config = file("google-services.json").readText()
@@ -20,8 +20,12 @@ if (fcmStaging) {
         "Install isolated staging google-services.json before building"
     }
 }
-require(fcmStaging || unsignedBridgeCandidate || keystoreProperties.containsKey("storeFile")) {
-    "Production signing configuration is required outside the isolated staging build"
+
+// Debug builds do not require production signing secrets. Release builds must be signed outside isolated staging / unsigned bridge RC.
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name.contains("Release") } && !fcmStaging && !unsignedBridgeCandidate && keystoreProperties.getProperty("storeFile") == null) {
+        throw GradleException("Release signing requires android/key.properties")
+    }
 }
 
 android {
@@ -57,29 +61,61 @@ android {
         multiDexEnabled = true
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("production") { dimension = "environment" }
+        create("bookingsStaging") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookingstest"
+            versionNameSuffix = "-bookings-staging"
+        }
+        create("bookingsTest") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.test"
+            versionNameSuffix = "-bookings-test"
+        }
+        create("bookingsStagingDiagnostic") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.stagediag"
+            versionNameSuffix = "-staging-diagnostic"
+            versionCode = 2026104306
+        }
+        create("bookingsOfflinePreview") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.offlinepreview"
+            versionNameSuffix = "-offline-ui-preview"
+            versionCode = 2026104409
+        }
+        create("bookingsLocalDiagnostic") {
+            dimension = "environment"
+            applicationIdSuffix = ".bookings.localdiag"
+            versionNameSuffix = "-local-diagnostic"
+            versionCode = 2026104310
+        }
+    }
 
     signingConfigs {
-    if (keystoreProperties.containsKey("storeFile")) create("release") {
-        storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
-        storePassword = keystoreProperties["storePassword"] as String
-        keyAlias = keystoreProperties["keyAlias"] as String
-        keyPassword = keystoreProperties["keyPassword"] as String
+        if (keystoreProperties.getProperty("storeFile") != null) create("release") {
+            storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+        }
     }
-}
 
     buildTypes {
-    release {
-        signingConfig = if (unsignedBridgeCandidate) null else if (fcmStaging) signingConfigs.getByName("debug") else signingConfigs.getByName("release")
+        release {
+            signingConfig = if (unsignedBridgeCandidate) null else if (fcmStaging) signingConfigs.getByName("debug") else signingConfigs.findByName("release")
 
-        isMinifyEnabled = true
-        isShrinkResources = true
+            isMinifyEnabled = true
+            isShrinkResources = true
 
-        proguardFiles(
-            getDefaultProguardFile("proguard-android-optimize.txt"),
-            "proguard-rules.pro"
-        )
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
     }
-}
 }
 
 flutter {

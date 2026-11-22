@@ -14,9 +14,15 @@ class AllPropertyRequestsScreen extends StatefulWidget {
 }
 
 class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
-  static const Color _gold = Color(0xffD4AF37);
-  static const Color _background = Color(0xff0F172A);
-  static const Color _card = Color(0xff1E293B);
+  static const Color _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? Colors.white70 : Colors.black54;
+  Color get _textMuted => _isDark ? Colors.white54 : Colors.black45;
+  Color get _borderSubtle => _isDark ? Colors.white10 : Colors.black12;
 
   String selectedType = 'الكل';
   final TextEditingController searchController = TextEditingController();
@@ -79,11 +85,11 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
-          foregroundColor: Colors.white,
-          title: const Text(
+          foregroundColor: _textPrimary,
+          title: Text(
             "مطلوب على عقارات الانبار",
             style: TextStyle(
-              color: Colors.white,
+              color: _textPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -104,7 +110,7 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                   hintText: "ابحث برقم الطلب، نوع العقار، المدينة أو المنطقة",
                   prefixIcon: const Icon(
                     Icons.search_rounded,
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                   ),
                   suffixIcon: search.isNotEmpty
                       ? IconButton(
@@ -118,7 +124,7 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xff1E293B),
+                  fillColor: _card,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
                     borderSide: BorderSide.none,
@@ -130,7 +136,7 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
                     borderSide: const BorderSide(
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                     ),
                   ),
                 ),
@@ -293,14 +299,14 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                 color: selected ? _gold : _card,
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: selected ? _gold : Colors.white10,
+                  color: selected ? _gold : _borderSubtle,
                 ),
               ),
               alignment: Alignment.center,
               child: Text(
                 item,
                 style: TextStyle(
-                  color: selected ? Colors.black : Colors.white70,
+                  color: selected ? Colors.black : _textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -337,11 +343,11 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
         color: _card,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: _gold.withValues(alpha: .18),
+          color: _gold.withValues(alpha: _isDark ? .18 : .28),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .12),
+            color: Colors.black.withValues(alpha: _isDark ? .12 : .06),
             blurRadius: 14,
             offset: const Offset(0, 7),
           ),
@@ -397,8 +403,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: _textPrimary,
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                             ),
@@ -420,8 +426,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                                     location,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white60,
+                                    style: TextStyle(
+                                      color: _textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -441,11 +447,11 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                           const SizedBox(width: 4),
                           PopupMenuButton<String>(
                             tooltip: 'إدارة الطلب',
-                            color: const Color(0xff1E293B),
+                            color: _card,
                             padding: EdgeInsets.zero,
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.more_vert_rounded,
-                              color: Colors.white60,
+                              color: _textSecondary,
                               size: 22,
                             ),
                             onSelected: (value) {
@@ -486,8 +492,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                   ],
                 ),
                 const SizedBox(height: 15),
-                const Divider(
-                  color: Colors.white10,
+                Divider(
+                  color: _borderSubtle,
                   height: 1,
                 ),
                 const SizedBox(height: 14),
@@ -562,10 +568,10 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             backgroundColor: _card,
-            title: const Text(
+            title: Text(
               'حذف الطلب',
               style: TextStyle(
-                color: Colors.white,
+                color: _textPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -573,8 +579,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
               'هل أنت متأكد من حذف طلب $propertyType نهائيًا؟\n\n'
               'سيختفي الطلب من قسم مطلوب على عقارات الانبار، '
               'ولا يمكن التراجع عن الحذف',
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: _textSecondary,
                 height: 1.6,
               ),
             ),
@@ -586,10 +592,10 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
                     false,
                   );
                 },
-                child: const Text(
+                child: Text(
                   'إلغاء',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: _textSecondary,
                   ),
                 ),
               ),
@@ -654,7 +660,9 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
     return Container(
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .035),
+        color: _isDark
+            ? Colors.white.withValues(alpha: .035)
+            : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -670,8 +678,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
               const SizedBox(width: 5),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white54,
+                style: TextStyle(
+                  color: _textMuted,
                   fontSize: 10,
                 ),
               ),
@@ -682,8 +690,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: _textPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -734,14 +742,14 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
         Icon(
           icon,
           size: 88,
-          color: Colors.white.withValues(alpha: .12),
+          color: _textPrimary.withValues(alpha: .12),
         ),
         const SizedBox(height: 22),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: _textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -750,8 +758,8 @@ class _AllPropertyRequestsScreenState extends State<AllPropertyRequestsScreen> {
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white54,
+          style: TextStyle(
+            color: _textMuted,
             fontSize: 13,
             height: 1.6,
           ),

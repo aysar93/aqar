@@ -38,7 +38,7 @@ class DataConfidenceBadge extends StatelessWidget {
     this.showDescription = true,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _orange = Color(0xFFF59E0B);
   static const Color _red = Color(0xFFEF4444);
@@ -46,6 +46,8 @@ class DataConfidenceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final level = confidenceLevel(sampleSize);
     final color = _colorForLevel(level);
 
@@ -91,8 +93,8 @@ class DataConfidenceBadge extends StatelessWidget {
                   Text(
                     _descriptionForLevel(level),
                     style: TextStyle(
-                      color: Colors.white.withValues(
-                        alpha: 0.56,
+                      color: onSurface.withValues(
+                        alpha: 0.62,
                       ),
                       fontSize: StatisticsTextStyles.captionSize,
                       fontWeight: FontWeight.w500,
@@ -107,8 +109,8 @@ class DataConfidenceBadge extends StatelessWidget {
                       Icon(
                         Icons.square_foot_rounded,
                         size: 14,
-                        color: Colors.white.withValues(
-                          alpha: 0.42,
+                        color: onSurface.withValues(
+                          alpha: 0.48,
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -118,8 +120,8 @@ class DataConfidenceBadge extends StatelessWidget {
                           '$pricePerSquareMeterSampleSize '
                           'من أصل $sampleSize عقار',
                           style: TextStyle(
-                            color: Colors.white.withValues(
-                              alpha: 0.42,
+                            color: onSurface.withValues(
+                              alpha: 0.48,
                             ),
                             fontSize: StatisticsTextStyles.captionSize,
                             fontWeight: FontWeight.w500,

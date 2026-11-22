@@ -19,9 +19,15 @@ class PropertyRequestScreen extends StatefulWidget {
 }
 
 class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
-  static const Color _gold = Color(0xffD4AF37);
-  static const Color _background = Color(0xff0F172A);
-  static const Color _card = Color(0xff1E293B);
+  static const Color _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? Colors.white70 : Colors.black54;
+  Color get _textMuted => _isDark ? Colors.white54 : Colors.black45;
+  Color get _borderSubtle => _isDark ? Colors.white10 : Colors.black12;
 
   final PageController _pageController = PageController();
 
@@ -430,14 +436,14 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
           elevation: 0,
           centerTitle: true,
           backgroundColor: _background,
-          foregroundColor: Colors.white,
+          foregroundColor: _textPrimary,
           title: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 "اطلب عقارًا",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -445,8 +451,8 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
               const SizedBox(height: 2),
               Text(
                 _stepTitle,
-                style: const TextStyle(
-                  color: Colors.white54,
+                style: TextStyle(
+                  color: _textMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.normal,
                 ),
@@ -472,7 +478,7 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
                   child: LinearProgressIndicator(
                     minHeight: 9,
                     value: (currentStep + 1) / totalSteps,
-                    backgroundColor: Colors.white10,
+                    backgroundColor: _borderSubtle,
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       _gold,
                     ),
@@ -484,8 +490,8 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
 
               Text(
                 "الخطوة ${currentStep + 1} من $totalSteps",
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: _textSecondary,
                   fontSize: 14,
                 ),
               ),
@@ -554,9 +560,7 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
                   ),
                   border: Border(
                     top: BorderSide(
-                      color: Colors.white.withValues(
-                        alpha: 0.05,
-                      ),
+                      color: _borderSubtle,
                     ),
                   ),
                 ),
@@ -606,7 +610,7 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _gold,
-                            foregroundColor: _background,
+                            foregroundColor: const Color(0xff0F172A),
                             disabledBackgroundColor: _gold.withValues(
                               alpha: 0.45,
                             ),
@@ -623,7 +627,7 @@ class _PropertyRequestScreenState extends State<PropertyRequestScreen> {
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 3,
-                                    color: _background,
+                                    color: Color(0xff0F172A),
                                   ),
                                 )
                               : Text(

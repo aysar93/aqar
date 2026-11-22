@@ -96,7 +96,7 @@ class OfficeStatsCard extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37).withValues(
+            color: const Color(0xFFC5A16B).withValues(
               alpha: 0.12,
             ),
             borderRadius: BorderRadius.circular(10),
@@ -104,7 +104,7 @@ class OfficeStatsCard extends StatelessWidget {
           child: const Icon(
             Icons.bar_chart_rounded,
             size: 20,
-            color: Color(0xFFD4AF37),
+            color: Color(0xFFC5A16B),
           ),
         ),
       ],
@@ -171,13 +171,13 @@ class OfficeStatsCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFFD4AF37).withValues(alpha: 0.10),
+              color: const Color(0xFFC5A16B).withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(
               item.icon,
               size: 20,
-              color: const Color(0xFFD4AF37),
+              color: const Color(0xFFC5A16B),
             ),
           ),
           const SizedBox(width: 9),

@@ -7,13 +7,13 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_screen.dart';
+import '../bookings/booking_screen.dart';
 import 'favorites_screen.dart';
 import 'login_screen.dart';
 import 'add_property/add_property_screen.dart';
 import 'property_request/property_request_screen.dart';
 import '../reels/screens/reels_screen.dart';
 
-import '../chat/chat_screen.dart';
 
 import '../widgets/navigation/custom_bottom_bar.dart';
 import '../widgets/navigation/advertise_options_sheet.dart';
@@ -231,8 +231,9 @@ class _MainShellState extends State<MainShell> {
         ),
         const SizedBox(),
         const ReelsScreen(),
-        ChatScreen(
-          onBack: _backToHome,
+        BookingScreen(
+          embedded: false,
+          onBackToMain: _backToHome,
         ),
       ];
 
@@ -340,108 +341,6 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _handleBottomNavigation(int index) async {
-    // ==========================================
-    // المحادثة تحتاج تسجيل الدخول
-    // ==========================================
-    if (index == 4) {
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        await showDialog<void>(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(
-                  color: Color(0xFFD4AF37),
-                  width: 1,
-                ),
-              ),
-              title: const Row(
-                children: [
-                  Icon(
-                    Icons.lock_outline_rounded,
-                    color: Color(0xFFD4AF37),
-                    size: 26,
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "تسجيل الدخول مطلوب",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: const Text(
-                "للتواصل مع الإدارة عبر المحادثة، يرجى تسجيل الدخول إلى حسابك أولاً",
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  height: 1.6,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text(
-                    "إلغاء",
-                    style: TextStyle(
-                      color: Colors.white60,
-                    ),
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) {
-                        return;
-                      }
-
-                      _openLogin();
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4AF37),
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.login_rounded,
-                    size: 19,
-                  ),
-                  label: const Text(
-                    "تسجيل الدخول",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-
-        return;
-      }
-    }
-
-    // ==========================================
-    // باقي صفحات الشريط السفلي
-    // ==========================================
     if (!mounted) {
       return;
     }
@@ -459,20 +358,29 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) => _buildContent(context);
 
   Widget _buildContent(BuildContext context) {
-    final bool hideBottomBar = currentIndex == 4;
-
-    return Scaffold(
-      body: HomePreservingTabBody(
-        currentIndex: currentIndex,
-        pages: pages,
+    return PopScope(
+      canPop: currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (currentIndex != 0) {
+          setState(() {
+            currentIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
+        body: HomePreservingTabBody(
+          currentIndex: currentIndex,
+          pages: pages,
+        ),
+        bottomNavigationBar: currentIndex == 4
+            ? null
+            : CustomBottomBar(
+                currentIndex: currentIndex,
+                onTap: _handleBottomNavigation,
+                onAddTap: _openAdvertiseOptions,
+              ),
       ),
-      bottomNavigationBar: hideBottomBar
-          ? null
-          : CustomBottomBar(
-              currentIndex: currentIndex,
-              onTap: _handleBottomNavigation,
-              onAddTap: _openAdvertiseOptions,
-            ),
     );
   }
 }

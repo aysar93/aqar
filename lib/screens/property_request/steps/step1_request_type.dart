@@ -13,26 +13,27 @@ class Step1RequestType extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       children: [
-        const Text(
+        Text(
           "ما نوع الطلب؟",
           style: TextStyle(
-            color: Colors.white,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           "حدد ما إذا كنت تبحث عن عقار للشراء أو للإيجار",
           style: TextStyle(
-            color: Colors.white60,
+            color: isDark ? Colors.white60 : Colors.black54,
             fontSize: 14,
             height: 1.5,
           ),
@@ -79,11 +80,11 @@ class Step1RequestType extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   "سيظهر طلبك لأصحاب العقارات بعد إرساله ومراجعته",
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: isDark ? Colors.white70 : Colors.black54,
                     fontSize: 13,
                     height: 1.6,
                   ),
@@ -112,11 +113,12 @@ class _RequestTypeOption extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
   static const Color _background = Color(0xff0F172A);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -128,10 +130,14 @@ class _RequestTypeOption extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected
                 ? _gold.withValues(alpha: 0.10)
-                : const Color(0xff1E293B),
+                : (isDark ? const Color(0xff1E293B) : Colors.white),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? _gold : Colors.white.withValues(alpha: 0.06),
+              color: selected
+                  ? _gold
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black12),
               width: selected ? 1.4 : 1,
             ),
           ),
@@ -159,7 +165,9 @@ class _RequestTypeOption extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: selected ? _gold : Colors.white,
+                        color: selected
+                            ? _gold
+                            : (isDark ? Colors.white : const Color(0xFF0F172A)),
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
@@ -167,8 +175,8 @@ class _RequestTypeOption extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Colors.white60,
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : Colors.black54,
                         fontSize: 13,
                         height: 1.4,
                       ),
@@ -185,7 +193,9 @@ class _RequestTypeOption extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: selected ? _gold : Colors.transparent,
                   border: Border.all(
-                    color: selected ? _gold : Colors.white38,
+                    color: selected
+                        ? _gold
+                        : (isDark ? Colors.white38 : Colors.black26),
                     width: 1.5,
                   ),
                 ),

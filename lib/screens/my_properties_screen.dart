@@ -25,9 +25,15 @@ class MyPropertiesScreen extends StatefulWidget {
 }
 
 class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
-  static const Color _gold = Color(0xffD4AF37);
-  static const Color _background = Color(0xff0F172A);
-  static const Color _card = Color(0xff1E293B);
+  static const Color _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? Colors.white70 : Colors.black54;
+  Color get _textMuted => _isDark ? Colors.white54 : Colors.black45;
+  Color get _borderSubtle => _isDark ? Colors.white10 : Colors.black12;
 
   String filter = 'all';
   String requestFilter = 'all';
@@ -45,12 +51,12 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
         : currentUid;
 
     if (uid == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: _background,
         body: Center(
           child: Text(
             'يجب تسجيل الدخول أولاً',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: _textPrimary),
           ),
         ),
       );
@@ -65,7 +71,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
           centerTitle: true,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          foregroundColor: _textPrimary,
           title: Text(
             _isViewingOtherUser
                 ? ((widget.targetUserName?.trim().isNotEmpty ?? false)
@@ -73,7 +79,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                     : 'عقارات المستخدم')
                 : 'إعلاناتي',
             style: TextStyle(
-              color: Colors.white,
+              color: _textPrimary,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -89,7 +95,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                   decoration: BoxDecoration(
                     color: _card,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white10),
+                    border: Border.all(color: _borderSubtle),
                   ),
                   child: Row(
                     children: [
@@ -147,13 +153,13 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             Icon(
               icon,
               size: 19,
-              color: selected ? Colors.black : Colors.white70,
+              color: selected ? Colors.black : _textSecondary,
             ),
             const SizedBox(width: 7),
             Text(
               title,
               style: TextStyle(
-                color: selected ? Colors.black : Colors.white70,
+                color: selected ? Colors.black : _textSecondary,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -174,7 +180,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
-              color: Color(0xffD4AF37),
+              color: Color(0xffC5A16B),
             ),
           );
         }
@@ -215,27 +221,27 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
               Icon(
                 Icons.home_work_outlined,
                 size: 95,
-                color: Colors.white.withValues(alpha: .12),
+                color: _textPrimary.withValues(alpha: .12),
               ),
               const SizedBox(height: 25),
-              const Center(
+              Center(
                 child: Text(
                   "ليس لديك أي عقار",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
                   "ابدأ بإضافة أول عقار لك\nوسيظهر هنا تلقائياً",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white60,
+                    color: _textSecondary,
                     fontSize: 15,
                     height: 1.6,
                   ),
@@ -412,15 +418,16 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                               height: 154,
                               margin: const EdgeInsets.only(bottom: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xff1E293B),
+                                color: _card,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: const Color(0xffD4AF37)
-                                      .withValues(alpha: .10),
+                                  color: const Color(0xffC5A16B)
+                                      .withValues(alpha: _isDark ? .10 : .22),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: .12),
+                                    color: Colors.black.withValues(
+                                        alpha: _isDark ? .12 : .06),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -506,8 +513,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                     maxLines: 2,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
+                                                    style: TextStyle(
+                                                      color: _textPrimary,
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w800,
@@ -520,14 +527,13 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                   PopupMenuButton<String>(
                                                     tooltip: 'إدارة العقار',
                                                     offset: const Offset(0, 6),
-                                                    color:
-                                                        const Color(0xff1E293B),
+                                                    color: _card,
                                                     elevation: 10,
                                                     padding: EdgeInsets.zero,
                                                     iconSize: 19,
                                                     icon: const Icon(
                                                       Icons.more_horiz_rounded,
-                                                      color: Color(0xffD4AF37),
+                                                      color: Color(0xffC5A16B),
                                                     ),
                                                     shape:
                                                         RoundedRectangleBorder(
@@ -536,7 +542,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                               12),
                                                       side: BorderSide(
                                                         color: const Color(
-                                                                0xffD4AF37)
+                                                                0xffC5A16B)
                                                             .withValues(
                                                                 alpha: .16),
                                                       ),
@@ -575,7 +581,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                                   .edit_outlined,
                                                               size: 18,
                                                               color: Color(
-                                                                  0xffD4AF37),
+                                                                  0xffC5A16B),
                                                             ),
                                                             SizedBox(width: 8),
                                                             Text('تعديل'),
@@ -609,7 +615,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                               ),
                                               child: Container(
                                                 height: .6,
-                                                color: const Color(0xffD4AF37)
+                                                color: const Color(0xffC5A16B)
                                                     .withValues(alpha: .18),
                                               ),
                                             ),
@@ -617,7 +623,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                               children: [
                                                 const Icon(
                                                   Icons.location_on_outlined,
-                                                  color: Color(0xffD4AF37),
+                                                  color: Color(0xffC5A16B),
                                                   size: 13,
                                                 ),
                                                 const SizedBox(width: 3),
@@ -629,9 +635,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                     style: TextStyle(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: .58),
+                                                      color: _textSecondary,
                                                       fontSize: 9.5,
                                                     ),
                                                   ),
@@ -644,7 +648,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                 const Icon(
                                                   Icons
                                                       .confirmation_number_outlined,
-                                                  color: Color(0xffD4AF37),
+                                                  color: Color(0xffC5A16B),
                                                   size: 12,
                                                 ),
                                                 const SizedBox(width: 3),
@@ -655,9 +659,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                     style: TextStyle(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: .52),
+                                                      color: _textSecondary,
                                                       fontSize: 8.5,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -671,7 +673,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                               children: [
                                                 const Icon(
                                                   Icons.remove_red_eye_outlined,
-                                                  color: Color(0xffD4AF37),
+                                                  color: Color(0xffC5A16B),
                                                   size: 12,
                                                 ),
                                                 const SizedBox(width: 3),
@@ -681,8 +683,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
-                                                    color: Colors.white
-                                                        .withValues(alpha: .48),
+                                                    color: _textMuted,
                                                     fontSize: 8.5,
                                                     fontWeight: FontWeight.w600,
                                                   ),
@@ -699,7 +700,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                     style: const TextStyle(
-                                                      color: Color(0xffD4AF37),
+                                                      color: Color(0xffC5A16B),
                                                       fontSize: 11.0,
                                                       fontWeight:
                                                           FontWeight.w900,
@@ -965,7 +966,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
           color: selected ? _gold : _card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? _gold : Colors.white10,
+            color: selected ? _gold : _borderSubtle,
           ),
         ),
         child: Column(
@@ -973,7 +974,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             Text(
               "$count",
               style: TextStyle(
-                color: selected ? Colors.black : Colors.white,
+                color: selected ? Colors.black : _textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -982,7 +983,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             Text(
               title,
               style: TextStyle(
-                color: selected ? Colors.black : Colors.white70,
+                color: selected ? Colors.black : _textSecondary,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -1006,7 +1007,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _gold.withValues(alpha: .15)),
+        border: Border.all(color: _gold.withValues(alpha: _isDark ? .15 : .25)),
       ),
       child: InkWell(
         onTap: () => _showRequestDetails(requestId, data),
@@ -1040,8 +1041,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                           _requestTitle(requestType, propertyType),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: _textPrimary,
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1053,8 +1054,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                               .join(' • '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white60,
+                          style: TextStyle(
+                            color: _textSecondary,
                             fontSize: 13,
                           ),
                         ),
@@ -1087,7 +1088,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                 ],
               ),
               const SizedBox(height: 15),
-              const Divider(color: Colors.white10, height: 1),
+              Divider(color: _borderSubtle, height: 1),
               const SizedBox(height: 14),
               _requestInfoRow(
                 Icons.square_foot_rounded,
@@ -1184,15 +1185,15 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
         const SizedBox(width: 7),
         Text(
           "$title:",
-          style: const TextStyle(color: Colors.white54, fontSize: 13),
+          style: TextStyle(color: _textMuted, fontSize: 13),
         ),
         const SizedBox(width: 7),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: _textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -1212,13 +1213,13 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 30),
       children: [
         const SizedBox(height: 90),
-        Icon(icon, size: 90, color: Colors.white.withValues(alpha: .12)),
+        Icon(icon, size: 90, color: _textPrimary.withValues(alpha: .12)),
         const SizedBox(height: 24),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: _textPrimary,
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
@@ -1227,8 +1228,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white60,
+          style: TextStyle(
+            color: _textSecondary,
             fontSize: 14,
             height: 1.6,
           ),
@@ -1274,9 +1275,9 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(sheetContext).size.height * .88,
             ),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _background,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SafeArea(
               top: false,
@@ -1288,7 +1289,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                     width: 46,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: _isDark ? Colors.white24 : Colors.black26,
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
@@ -1302,8 +1303,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                               (data['requestType'] ?? '').toString(),
                               (data['propertyType'] ?? 'عقار').toString(),
                             ),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: _textPrimary,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1315,7 +1316,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                       ],
                     ),
                   ),
-                  const Divider(color: Colors.white10, height: 1),
+                  Divider(color: _borderSubtle, height: 1),
                   Flexible(
                     child: ListView(
                       padding: const EdgeInsets.all(18),
@@ -1330,8 +1331,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                   width: 125,
                                   child: Text(
                                     row.key,
-                                    style: const TextStyle(
-                                      color: Colors.white54,
+                                    style: TextStyle(
+                                      color: _textMuted,
                                       fontSize: 13,
                                     ),
                                   ),
@@ -1340,8 +1341,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                   child: Text(
                                     row.value,
                                     textAlign: TextAlign.right,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: _textPrimary,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -1355,7 +1356,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                             .toString()
                             .trim()
                             .isNotEmpty) ...[
-                          const Divider(color: Colors.white10),
+                          Divider(color: _borderSubtle),
                           const SizedBox(height: 8),
                           const Text(
                             "تفاصيل إضافية",
@@ -1367,8 +1368,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                           const SizedBox(height: 8),
                           Text(
                             data['description'].toString(),
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: _textSecondary,
                               height: 1.7,
                             ),
                           ),
@@ -1376,8 +1377,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                         const SizedBox(height: 10),
                         Text(
                           "معرّف الطلب: $requestId",
-                          style: const TextStyle(
-                            color: Colors.white38,
+                          style: TextStyle(
+                            color: _textMuted,
                             fontSize: 11,
                           ),
                         ),
@@ -1399,15 +1400,15 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: _card,
-          title: const Text(
+          title: Text(
             "حذف الطلب",
             textAlign: TextAlign.right,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: _textPrimary),
           ),
-          content: const Text(
+          content: Text(
             "هل أنت متأكد من حذف طلب العقار؟ لا يمكن التراجع بعد الحذف",
             textAlign: TextAlign.right,
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: _textSecondary),
           ),
           actions: [
             TextButton(
@@ -1518,15 +1519,15 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xffD4AF37) : const Color(0xff1E293B),
+          color: selected ? const Color(0xffC5A16B) : _card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? const Color(0xffD4AF37) : Colors.white10,
+            color: selected ? const Color(0xffC5A16B) : _borderSubtle,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: const Color(0xffD4AF37).withValues(alpha: .35),
+                    color: const Color(0xffC5A16B).withValues(alpha: .35),
                     blurRadius: 16,
                     spreadRadius: 1,
                     offset: const Offset(0, 6),
@@ -1539,7 +1540,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             Text(
               "$count",
               style: TextStyle(
-                color: selected ? Colors.black : Colors.white,
+                color: selected ? Colors.black : _textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
               ),
@@ -1549,7 +1550,7 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: selected ? Colors.black : Colors.white70,
+                color: selected ? Colors.black : _textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -1570,10 +1571,10 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
         vertical: 8,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xff334155),
+        color: _isDark ? const Color(0xff334155) : const Color(0xFFE2E8F0),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: Colors.white10,
+          color: _borderSubtle,
         ),
       ),
       child: Row(
@@ -1582,13 +1583,13 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
           Icon(
             icon,
             size: 17,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
           ),
           const SizedBox(width: 6),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: _textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1605,16 +1606,16 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
       context: context,
       builder: (_) {
         return AlertDialog(
-          backgroundColor: const Color(0xff1E293B),
-          title: const Text(
+          backgroundColor: _card,
+          title: Text(
             "حذف العقار",
             textAlign: TextAlign.right,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: _textPrimary),
           ),
-          content: const Text(
+          content: Text(
             "هل أنت متأكد من حذف هذا العقار؟ لا يمكن التراجع بعد الحذف",
             textAlign: TextAlign.right,
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: _textSecondary),
           ),
           actions: [
             TextButton(

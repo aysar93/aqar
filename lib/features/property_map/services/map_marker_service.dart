@@ -24,7 +24,7 @@ typedef ClusterMarkerTap = void Function(
 /// مع flutter_map لا نحتاج BitmapDescriptor؛
 /// كل Marker يحتوي Widget Flutter مباشرة.
 class MapMarkerService {
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _dark = Color(0xFF0F172A);
   static const Color _card = Color(0xFF1E293B);
 

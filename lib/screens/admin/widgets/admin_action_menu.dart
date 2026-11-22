@@ -13,16 +13,19 @@ class AdminActionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     final data = document.data() as Map<String, dynamic>;
 
     final isFeatured = data["isFeatured"] ?? false;
 
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert,
-        color: Colors.white,
+        color: onSurface,
       ),
-      color: const Color(0xff1E293B),
+      color: cardColor,
       onSelected: (value) async {
         switch (value) {
           case "availability":
@@ -33,7 +36,7 @@ class AdminActionMenu extends StatelessWidget {
 
             showModalBottomSheet(
               context: context,
-              backgroundColor: const Color(0xff1E293B),
+              backgroundColor: cardColor,
               isScrollControlled: true,
               builder: (_) => ChangeAvailabilitySheet(
                 documentId: document.id,
@@ -168,7 +171,7 @@ class AdminActionMenu extends StatelessWidget {
           child: ListTile(
             leading: Icon(
               isFeatured ? Icons.star : Icons.star_border,
-              color: const Color(0xffD4AF37),
+              color: const Color(0xffC5A16B),
             ),
             title: Text(
               isFeatured ? "إلغاء تمييز العقار" : "تمييز العقار",

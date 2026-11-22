@@ -58,10 +58,25 @@ class OfficeProfileScreen extends StatefulWidget {
     required this.officeId,
   });
 
-  static const gold = Color(0xFFD4AF37);
+  static const gold = Color(0xFFC5A16B);
   static const background = Color(0xFF0F172A);
   static const card = Color(0xFF111C2B);
   static const field = Color(0xFF162334);
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+  static Color bgOf(BuildContext context) =>
+      isDark(context) ? background : const Color(0xFFF8FAFC);
+  static Color cardOf(BuildContext context) =>
+      isDark(context) ? card : Colors.white;
+  static Color fieldOf(BuildContext context) =>
+      isDark(context) ? field : const Color(0xFFF1F5F9);
+  static Color textOf(BuildContext context) =>
+      isDark(context) ? Colors.white : const Color(0xFF0F172A);
+  static Color subTextOf(BuildContext context) =>
+      isDark(context) ? Colors.white.withValues(alpha: .72) : Colors.black54;
+  static Color mutedOf(BuildContext context) =>
+      isDark(context) ? Colors.white.withValues(alpha: .55) : Colors.black45;
 
   @override
   State<OfficeProfileScreen> createState() => _OfficeProfileScreenState();
@@ -102,7 +117,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: OfficeProfileScreen.background,
+        backgroundColor: OfficeProfileScreen.bgOf(context),
         body: StreamBuilder<OfficeModel?>(
           stream: _officeStream,
           builder: (context, snapshot) {
@@ -177,7 +192,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
 
   Widget _buildHeaderInfo(BuildContext context, OfficeModel office) {
     return Container(
-      color: OfficeProfileScreen.background,
+      color: OfficeProfileScreen.bgOf(context),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -200,8 +215,8 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
     return SliverAppBar(
       expandedHeight: 330,
       pinned: true,
-      backgroundColor: OfficeProfileScreen.background,
-      foregroundColor: Colors.white,
+      backgroundColor: OfficeProfileScreen.bgOf(context),
+      foregroundColor: OfficeProfileScreen.textOf(context),
       elevation: 0,
       leadingWidth: 52,
       leading: IconButton(
@@ -245,7 +260,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
     return PreferredSize(
       preferredSize: const Size.fromHeight(46),
       child: Material(
-        color: OfficeProfileScreen.background,
+        color: OfficeProfileScreen.bgOf(context),
         child: TabBar(
           controller: _tabController,
           isScrollable: false,
@@ -256,7 +271,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
           indicator: const BoxDecoration(),
           overlayColor: WidgetStatePropertyAll(Colors.transparent),
           labelColor: OfficeProfileScreen.gold,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: OfficeProfileScreen.subTextOf(context),
           labelStyle: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
@@ -279,7 +294,7 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: OfficeProfileScreen.card,
+      backgroundColor: OfficeProfileScreen.cardOf(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -295,9 +310,9 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
                     Icons.edit_outlined,
                     color: OfficeProfileScreen.gold,
                   ),
-                  title: const Text(
+                  title: Text(
                     'تعديل المكتب',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: OfficeProfileScreen.textOf(context)),
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -318,9 +333,9 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
                     Icons.flag_outlined,
                     color: OfficeProfileScreen.gold,
                   ),
-                  title: const Text(
+                  title: Text(
                     'الإبلاغ عن المكتب',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: OfficeProfileScreen.textOf(context)),
                   ),
                   onTap: () async {
                     Navigator.pop(sheetContext);
@@ -346,9 +361,9 @@ class _OfficeProfileScreenState extends State<OfficeProfileScreen>
                     Icons.email_outlined,
                     color: OfficeProfileScreen.gold,
                   ),
-                  title: const Text(
+                  title: Text(
                     'إرسال بريد إلكتروني',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: OfficeProfileScreen.textOf(context)),
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -459,7 +474,7 @@ class _HeroCover extends StatelessWidget {
               colors: [
                 Colors.black.withValues(alpha: .08),
                 Colors.black.withValues(alpha: .20),
-                OfficeProfileScreen.background.withValues(alpha: .96),
+                OfficeProfileScreen.bgOf(context).withValues(alpha: .96),
               ],
               stops: const [0, .45, 1],
             ),
@@ -511,7 +526,7 @@ class _VerifiedBadge extends StatelessWidget {
           builder: (_) => Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
-              backgroundColor: OfficeProfileScreen.card,
+              backgroundColor: OfficeProfileScreen.cardOf(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
@@ -521,19 +536,19 @@ class _VerifiedBadge extends StatelessWidget {
               ),
               titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-              title: const Row(
+              title: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.verified_rounded,
                     color: OfficeProfileScreen.gold,
                     size: 22,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'مكتب موثّق',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: OfficeProfileScreen.textOf(context),
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),
@@ -542,9 +557,9 @@ class _VerifiedBadge extends StatelessWidget {
               ),
               content: RichText(
                 textAlign: TextAlign.right,
-                text: const TextSpan(
+                text: TextSpan(
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: OfficeProfileScreen.subTextOf(context),
                     fontSize: 12.5,
                     height: 1.8,
                   ),
@@ -753,8 +768,8 @@ class _IdentityBlock extends StatelessWidget {
                       : office.name.trim(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: OfficeProfileScreen.textOf(context),
                     fontSize: 20,
                     height: 1.15,
                     fontWeight: FontWeight.w800,
@@ -834,7 +849,7 @@ class _RatingSummary extends StatelessWidget {
         Text(
           '($reviewsCount تقييم)',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .62),
+            color: OfficeProfileScreen.subTextOf(context),
             fontSize: 11,
           ),
         ),
@@ -866,7 +881,7 @@ class _InlineInfo extends StatelessWidget {
         Text(
           text,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .72),
+            color: OfficeProfileScreen.subTextOf(context),
             fontSize: 11,
           ),
         ),
@@ -1104,8 +1119,8 @@ class _SocialLinksCard extends StatelessWidget {
             ),
             label: Text(
               link.label,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: OfficeProfileScreen.textOf(context),
                 fontSize: 10,
               ),
             ),
@@ -1167,8 +1182,9 @@ class _SmallActionButton extends StatelessWidget {
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 3),
-          backgroundColor:
-              filled ? OfficeProfileScreen.gold : OfficeProfileScreen.field,
+          backgroundColor: filled
+              ? OfficeProfileScreen.gold
+              : OfficeProfileScreen.fieldOf(context),
           side: BorderSide(
             color: OfficeProfileScreen.gold.withValues(alpha: .20),
           ),
@@ -1194,7 +1210,9 @@ class _SmallActionButton extends StatelessWidget {
                 label,
                 maxLines: 1,
                 style: TextStyle(
-                  color: filled ? Colors.black : Colors.white,
+                  color: filled
+                      ? Colors.black
+                      : OfficeProfileScreen.textOf(context),
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1228,7 +1246,7 @@ class _DescriptionPreview extends StatelessWidget {
           maxLines: 4,
           overflow: TextOverflow.fade,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .72),
+            color: OfficeProfileScreen.subTextOf(context),
             fontSize: 13,
             height: 1.75,
           ),
@@ -1268,7 +1286,7 @@ class _DescriptionPreview extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: OfficeProfileScreen.card,
+      backgroundColor: OfficeProfileScreen.cardOf(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
@@ -1295,22 +1313,22 @@ class _DescriptionPreview extends StatelessWidget {
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: OfficeProfileScreen.mutedOf(context),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(height: 15),
-                  const Row(
+                  Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.business_outlined,
                         color: OfficeProfileScreen.gold,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'عن المكتب',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: OfficeProfileScreen.textOf(context),
                           fontSize: 19,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1324,7 +1342,7 @@ class _DescriptionPreview extends StatelessWidget {
                       child: Text(
                         text,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: .78),
+                          color: OfficeProfileScreen.subTextOf(context),
                           fontSize: 14,
                           height: 1.9,
                         ),
@@ -1395,7 +1413,11 @@ class _CompactInfoCard extends StatelessWidget {
           ],
           if (office.workingHours.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Divider(color: Colors.white10),
+            Divider(
+              color: OfficeProfileScreen.isDark(context)
+                  ? Colors.white10
+                  : Colors.black12,
+            ),
             const SizedBox(height: 7),
             _WorkingHoursPreview(
               hours: office.workingHours,
@@ -1438,7 +1460,7 @@ class _DetailTile extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: .50),
+                  color: OfficeProfileScreen.mutedOf(context),
                   fontSize: 10,
                 ),
               ),
@@ -1447,8 +1469,8 @@ class _DetailTile extends StatelessWidget {
                 value,
                 maxLines: fullWidth ? 3 : 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: OfficeProfileScreen.textOf(context),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1514,18 +1536,18 @@ class _WorkingHoursPreview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(
+            const Icon(
               Icons.access_time_rounded,
               color: OfficeProfileScreen.gold,
               size: 20,
             ),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text(
               'أوقات العمل',
               style: TextStyle(
-                color: Colors.white,
+                color: OfficeProfileScreen.textOf(context),
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),
@@ -1541,7 +1563,7 @@ class _WorkingHoursPreview extends StatelessWidget {
               vertical: 8,
             ),
             decoration: BoxDecoration(
-              color: OfficeProfileScreen.field.withValues(alpha: .65),
+              color: OfficeProfileScreen.fieldOf(context),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -1550,15 +1572,15 @@ class _WorkingHoursPreview extends StatelessWidget {
                   child: Text(
                     _dayName(entry.key),
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: .70),
+                      color: OfficeProfileScreen.subTextOf(context),
                       fontSize: 11,
                     ),
                   ),
                 ),
                 Text(
                   entry.value.trim().isEmpty ? 'مغلق' : entry.value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: OfficeProfileScreen.textOf(context),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1747,7 +1769,7 @@ class _Metric extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .62),
+            color: OfficeProfileScreen.subTextOf(context),
             fontSize: 8.5,
           ),
         ),
@@ -1762,7 +1784,9 @@ class _MetricDivider extends StatelessWidget {
     return Container(
       height: 45,
       width: 1,
-      color: Colors.white.withValues(alpha: .08),
+      color: OfficeProfileScreen.isDark(context)
+          ? Colors.white.withValues(alpha: .08)
+          : Colors.black12,
     );
   }
 }
@@ -1819,7 +1843,7 @@ class _ServiceTile extends StatelessWidget {
       height: 88,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: OfficeProfileScreen.field,
+        color: OfficeProfileScreen.fieldOf(context),
         borderRadius: BorderRadius.circular(13),
         border: Border.all(
           color: OfficeProfileScreen.gold.withValues(alpha: .28),
@@ -1839,8 +1863,8 @@ class _ServiceTile extends StatelessWidget {
             maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: OfficeProfileScreen.textOf(context),
               fontSize: 10,
             ),
           ),
@@ -2023,9 +2047,10 @@ class _LatestPropertiesState extends State<_LatestProperties> {
                           Icons.arrow_back_rounded,
                           color: OfficeProfileScreen.gold,
                         ),
-                        label: const Text(
+                        label: Text(
                           'استعراض جميع عقارات المكتب',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                              color: OfficeProfileScreen.textOf(context)),
                         ),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(46),
@@ -2159,7 +2184,9 @@ class _PropertyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0D1724),
+            color: OfficeProfileScreen.isDark(context)
+                ? const Color(0xFF0D1724)
+                : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
               color: OfficeProfileScreen.gold.withValues(alpha: .20),
@@ -2237,8 +2264,8 @@ class _PropertyCard extends StatelessWidget {
                             _priceText(price),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: OfficeProfileScreen.textOf(context),
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2248,8 +2275,8 @@ class _PropertyCard extends StatelessWidget {
                             type.isEmpty ? title : type,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: OfficeProfileScreen.textOf(context),
                               fontSize: 12,
                             ),
                           ),
@@ -2260,7 +2287,7 @@ class _PropertyCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: .55),
+                                color: OfficeProfileScreen.mutedOf(context),
                                 fontSize: 9,
                               ),
                             ),
@@ -2515,7 +2542,7 @@ class _ReviewSummaryCard extends StatelessWidget {
               Text(
                 '$count تقييم',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: .60),
+                  color: OfficeProfileScreen.subTextOf(context),
                   fontSize: 11,
                 ),
               ),
@@ -2553,10 +2580,10 @@ class _AddReviewButton extends StatelessWidget {
           color: OfficeProfileScreen.gold,
           size: 18,
         ),
-        label: const Text(
+        label: Text(
           'قيّم المكتب',
           style: TextStyle(
-            color: Colors.white,
+            color: OfficeProfileScreen.textOf(context),
             fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
@@ -2768,7 +2795,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AlertDialog(
-        backgroundColor: OfficeProfileScreen.card,
+        backgroundColor: OfficeProfileScreen.cardOf(context),
         insetPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 24,
@@ -2780,7 +2807,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: OfficeProfileScreen.field,
+              backgroundColor: OfficeProfileScreen.fieldOf(context),
               backgroundImage: widget.userImageUrl.isNotEmpty
                   ? CachedNetworkImageProvider(widget.userImageUrl)
                   : null,
@@ -2797,8 +2824,8 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                 widget.userName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: OfficeProfileScreen.textOf(context),
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2811,12 +2838,12 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 4),
-              const Align(
+              Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: Text(
                   'كيف تقيّم تجربتك مع المكتب؟',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: OfficeProfileScreen.subTextOf(context),
                     fontSize: 12,
                   ),
                 ),
@@ -2857,18 +2884,18 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                 maxLines: 4,
                 enabled: !_submitting,
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: OfficeProfileScreen.textOf(context),
                   fontSize: 13,
                 ),
                 decoration: InputDecoration(
                   hintText: 'اكتب تعليقك (اختياري)',
-                  hintStyle: const TextStyle(
-                    color: Colors.white38,
+                  hintStyle: TextStyle(
+                    color: OfficeProfileScreen.mutedOf(context),
                     fontSize: 12,
                   ),
                   filled: true,
-                  fillColor: OfficeProfileScreen.field,
+                  fillColor: OfficeProfileScreen.fieldOf(context),
                   contentPadding: const EdgeInsets.all(12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -2887,9 +2914,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                       context,
                       rootNavigator: true,
                     ).pop(false),
-            child: const Text(
+            child: Text(
               'إلغاء',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: OfficeProfileScreen.subTextOf(context)),
             ),
           ),
           FilledButton.icon(
@@ -2949,7 +2976,7 @@ class _ReviewCard extends StatelessWidget {
       icon: Icons.person_outline_rounded,
       leading: CircleAvatar(
         radius: 16,
-        backgroundColor: OfficeProfileScreen.field,
+        backgroundColor: OfficeProfileScreen.fieldOf(context),
         backgroundImage:
             imageUrl.isNotEmpty ? CachedNetworkImageProvider(imageUrl) : null,
         child: imageUrl.isEmpty
@@ -2979,7 +3006,7 @@ class _ReviewCard extends StatelessWidget {
               Text(
                 review.rating.toStringAsFixed(1),
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: .60),
+                  color: OfficeProfileScreen.subTextOf(context),
                   fontSize: 11,
                 ),
               ),
@@ -2996,7 +3023,7 @@ class _ReviewCard extends StatelessWidget {
             Text(
               review.comment.trim(),
               style: TextStyle(
-                color: Colors.white.withValues(alpha: .75),
+                color: OfficeProfileScreen.subTextOf(context),
                 fontSize: 12,
                 height: 1.7,
               ),
@@ -3008,13 +3035,13 @@ class _ReviewCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: OfficeProfileScreen.field,
+                color: OfficeProfileScreen.fieldOf(context),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 'رد المكتب: ${review.ownerReply.trim()}',
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: OfficeProfileScreen.subTextOf(context),
                   fontSize: 11,
                   height: 1.6,
                 ),
@@ -3049,7 +3076,7 @@ class _AboutTab extends StatelessWidget {
                 ? 'لا توجد نبذة مضافة عن المكتب حاليًا.'
                 : office.description.trim(),
             style: TextStyle(
-              color: Colors.white.withValues(alpha: .75),
+              color: OfficeProfileScreen.subTextOf(context),
               fontSize: 13,
               height: 1.9,
             ),
@@ -3097,10 +3124,11 @@ class _Card extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: OfficeProfileScreen.card,
+        color: OfficeProfileScreen.cardOf(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: OfficeProfileScreen.gold.withValues(alpha: .10),
+          color: OfficeProfileScreen.gold.withValues(
+              alpha: OfficeProfileScreen.isDark(context) ? .10 : .22),
         ),
       ),
       child: Column(
@@ -3144,7 +3172,9 @@ class _VerticalDivider extends StatelessWidget {
     return Container(
       height: 42,
       width: 1,
-      color: Colors.white.withValues(alpha: .08),
+      color: OfficeProfileScreen.isDark(context)
+          ? Colors.white.withValues(alpha: .08)
+          : Colors.black12,
     );
   }
 }
@@ -3165,7 +3195,7 @@ class _EmptyMessage extends StatelessWidget {
           text,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .55),
+            color: OfficeProfileScreen.mutedOf(context),
             fontSize: 12,
             height: 1.6,
           ),
@@ -3244,10 +3274,10 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: OfficeProfileScreen.background,
+      backgroundColor: OfficeProfileScreen.bgOf(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        foregroundColor: OfficeProfileScreen.textOf(context),
         elevation: 0,
       ),
       body: Center(
@@ -3265,8 +3295,8 @@ class _ErrorView extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: OfficeProfileScreen.textOf(context),
                   fontSize: 16,
                 ),
               ),

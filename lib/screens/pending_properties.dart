@@ -329,7 +329,7 @@ class _PendingPropertiesState extends State<PendingProperties> {
                                 });
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xffD4AF37),
+                                backgroundColor: const Color(0xffC5A16B),
                               ),
                               icon: const Icon(Icons.star),
                               label: const Text('تمييز'),

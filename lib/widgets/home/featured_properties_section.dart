@@ -49,7 +49,7 @@ class FeaturedPropertiesSection extends StatelessWidget {
                   width: 5,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: const Color(0xffD4AF37),
+                    color: const Color(0xffC5A16B),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -85,9 +85,9 @@ class FeaturedPropertiesSection extends StatelessWidget {
                     // TODO: شاشة جميع العقارات المميزة
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xffD4AF37),
+                    foregroundColor: const Color(0xffC5A16B),
                     side: const BorderSide(
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                     ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,

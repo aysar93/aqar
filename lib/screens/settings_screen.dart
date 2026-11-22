@@ -182,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   leading: const Icon(
                     Icons.camera_alt,
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                   ),
                   title: const Text(
                     "التقاط صورة",
@@ -196,7 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   leading: const Icon(
                     Icons.photo_library,
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                   ),
                   title: const Text(
                     "اختيار من المعرض",
@@ -487,11 +487,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg =
+        isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+    final cardBg = isDark ? const Color(0xff1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subTextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final fieldFillColor = isDark ? const Color(0xff1E293B) : Colors.white;
+    final readOnlyFieldFill =
+        isDark ? const Color(0xff26354D) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+    const goldColor = Color(0xffC5A16B);
+
     if (loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xff0F172A),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xffD4AF37)),
+      return Scaffold(
+        backgroundColor: scaffoldBg,
+        body: const Center(
+          child: CircularProgressIndicator(color: goldColor),
         ),
       );
     }
@@ -499,15 +511,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xff0F172A),
+        backgroundColor: scaffoldBg,
 
         appBar: AppBar(
-          backgroundColor: const Color(0xff0F172A),
+          backgroundColor: scaffoldBg,
+          foregroundColor: textColor,
           elevation: 0,
           centerTitle: true,
-          title: const Text(
+          title: Text(
             "الملف الشخصي",
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
           ),
         ),
 
@@ -528,21 +544,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xff0F172A),
+                          color: cardBg,
                           border: Border.all(
-                            color: const Color(0xffD4AF37),
+                            color: goldColor,
                             width: 2.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(
-                                0xffD4AF37,
-                              ).withValues(alpha: .22),
+                              color: goldColor.withValues(alpha: .22),
                               blurRadius: 18,
                               spreadRadius: 1,
                             ),
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: .35),
+                              color: Colors.black.withValues(alpha: .15),
                               blurRadius: 14,
                               offset: const Offset(0, 6),
                             ),
@@ -550,7 +564,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         child: CircleAvatar(
                           radius: 55,
-                          backgroundColor: const Color(0xff1E293B),
+                          backgroundColor: fieldFillColor,
                           backgroundImage: selectedImage != null
                               ? FileImage(selectedImage!)
                                   as ImageProvider<Object>
@@ -561,7 +575,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ? const Icon(
                                   Icons.person_rounded,
                                   size: 55,
-                                  color: Color(0xffD4AF37),
+                                  color: goldColor,
                                 )
                               : null,
                         ),
@@ -579,7 +593,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 children: [
                                   CircularProgressIndicator(
                                     value: uploadProgress,
-                                    color: const Color(0xffD4AF37),
+                                    color: goldColor,
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
@@ -600,15 +614,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xffD4AF37),
+                            color: goldColor,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xff0F172A),
+                              color: scaffoldBg,
                               width: 3,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: .30),
+                                color: Colors.black.withValues(alpha: .20),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -642,14 +656,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       return null;
                     },
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: "الاسم",
-                      prefixIcon: const Icon(Icons.person),
+                      labelStyle: TextStyle(color: subTextColor),
+                      prefixIcon: const Icon(Icons.person, color: goldColor),
                       filled: true,
-                      fillColor: const Color(0xff1E293B),
+                      fillColor: fieldFillColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: goldColor, width: 1.5),
                       ),
                     ),
                   ),
@@ -674,17 +698,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       return null;
                     },
                     keyboardType: TextInputType.phone,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: "رقم الهاتف",
+                      labelStyle: TextStyle(color: subTextColor),
                       helperText: canEditPhone
                           ? "أدخل رقم الهاتف لإكمال بيانات الحساب"
                           : "لتغيير رقم تسجيل الدخول تواصل مع الإدارة",
-                      prefixIcon: const Icon(Icons.phone),
+                      helperStyle: TextStyle(color: subTextColor),
+                      prefixIcon: const Icon(Icons.phone, color: goldColor),
                       filled: true,
-                      fillColor: const Color(0xff1E293B),
+                      fillColor: canEditPhone ? fieldFillColor : readOnlyFieldFill,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: goldColor, width: 1.5),
                       ),
                     ),
                   ),
@@ -697,14 +732,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextFormField(
                     initialValue: contactEmail,
                     enabled: false,
-                    style: const TextStyle(color: Colors.white70),
+                    style: TextStyle(color: subTextColor),
                     decoration: InputDecoration(
                       labelText: "البريد الإلكتروني",
-                      prefixIcon: const Icon(Icons.email),
+                      labelStyle: TextStyle(color: subTextColor),
+                      prefixIcon: const Icon(Icons.email, color: goldColor),
                       filled: true,
-                      fillColor: const Color(0xff26354D),
+                      fillColor: readOnlyFieldFill,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                     ),
                   ),
@@ -712,16 +753,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 25),
 
                   Card(
-                    color: const Color(0xff1E293B),
+                    color: cardBg,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: borderColor),
+                    ),
                     child: ListTile(
                       leading:
-                          const Icon(Icons.block, color: Color(0xffD4AF37)),
-                      title: const Text('المستخدمون المحظورون',
-                          style: TextStyle(color: Colors.white)),
+                          const Icon(Icons.block, color: goldColor),
+                      title: Text(
+                        'المستخدمون المحظورون',
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+                      ),
                       trailing:
-                          const Icon(Icons.chevron_left, color: Colors.white60),
+                          Icon(Icons.chevron_left, color: subTextColor),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => const BlockedUsersScreen())),
                     ),
@@ -732,20 +777,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Notifications
                   //--------------------------------
                   Card(
-                    color: const Color(0xff1E293B),
+                    color: cardBg,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: borderColor),
                     ),
                     child: SwitchListTile(
                       value: notificationsEnabled,
-                      activeThumbColor: const Color(0xffD4AF37),
-                      title: const Text(
+                      activeThumbColor: goldColor,
+                      activeTrackColor: goldColor.withValues(alpha: 0.35),
+                      title: Text(
                         "الإشعارات",
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         "تشغيل أو إيقاف إشعارات التطبيق",
-                        style: TextStyle(color: Colors.white60),
+                        style: TextStyle(color: subTextColor),
                       ),
                       onChanged: _toggleNotifications,
                     ),
@@ -762,8 +809,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.lock_outline),
                       label: const Text("تغيير كلمة المرور"),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xffD4AF37),
-                        side: const BorderSide(color: Color(0xffD4AF37)),
+                        foregroundColor: const Color(0xffC5A16B),
+                        side: const BorderSide(color: Color(0xffC5A16B)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -794,7 +841,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           : const Icon(Icons.save),
                       label: Text(saving ? "جاري الحفظ..." : "حفظ التغييرات"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xffD4AF37),
+                        backgroundColor: const Color(0xffC5A16B),
                         foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -828,7 +875,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final result = await showModalBottomSheet<bool>(
                           context: context,
                           isScrollControlled: true,
-                          backgroundColor: const Color(0xff1E293B),
+                          backgroundColor: cardBg,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(30),
@@ -846,30 +893,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const CircleAvatar(
+                                    CircleAvatar(
                                       radius: 34,
-                                      backgroundColor: Color(0xff3A1D1D),
-                                      child: Icon(
+                                      backgroundColor: isDark
+                                          ? const Color(0xff3A1D1D)
+                                          : const Color(0xffFEE2E2),
+                                      child: const Icon(
                                         Icons.delete_forever_rounded,
                                         color: Colors.redAccent,
                                         size: 38,
                                       ),
                                     ),
                                     const SizedBox(height: 20),
-                                    const Text(
+                                    Text(
                                       "حذف الحساب",
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: textColor,
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     const SizedBox(height: 12),
-                                    const Text(
+                                    Text(
                                       "سيتم حذف حسابك نهائياً مع جميع البيانات المرتبطة به",
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: Colors.white70,
+                                        color: subTextColor,
                                         height: 1.6,
                                       ),
                                     ),
@@ -886,20 +935,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                               Colors.red.withValues(alpha: .25),
                                         ),
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Icon(
+                                          const Icon(
                                             Icons.warning_amber_rounded,
                                             color: Colors.redAccent,
                                           ),
-                                          SizedBox(width: 10),
+                                          const SizedBox(width: 10),
                                           Expanded(
                                             child: Text(
                                               "لا يمكن استعادة الحساب أو البيانات بعد تنفيذ عملية الحذف",
                                               style: TextStyle(
-                                                color: Colors.white70,
+                                                color: subTextColor,
                                                 height: 1.5,
                                               ),
                                             ),
@@ -945,7 +994,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       child: const Text(
                                         "إلغاء",
                                         style: TextStyle(
-                                          color: Color(0xffD4AF37),
+                                          color: goldColor,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -1011,21 +1060,25 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     required IconData icon,
     required bool obscure,
     required VoidCallback toggle,
+    required Color fieldFill,
+    required Color subTextColor,
+    required Color goldColor,
+    required Color borderColor,
     double labelFontSize = 12,
   }) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(
         fontSize: labelFontSize,
-        color: Colors.white60,
+        color: subTextColor,
       ),
       floatingLabelStyle: TextStyle(
         fontSize: labelFontSize,
-        color: const Color(0xffD4AF37),
+        color: goldColor,
       ),
       prefixIcon: Icon(
         icon,
-        color: const Color(0xffD4AF37),
+        color: goldColor,
         size: 21,
       ),
       suffixIcon: IconButton(
@@ -1033,11 +1086,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
         icon: Icon(
           obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
           size: 21,
-          color: Colors.white60,
+          color: subTextColor,
         ),
       ),
       filled: true,
-      fillColor: const Color(0xff0F172A),
+      fillColor: fieldFill,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 14,
         vertical: 14,
@@ -1048,13 +1101,13 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: .10),
+          color: borderColor,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Color(0xffD4AF37),
+        borderSide: BorderSide(
+          color: goldColor,
           width: 1.5,
         ),
       ),
@@ -1133,35 +1186,43 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xff1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subTextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final fieldFill = isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+    const goldColor = Color(0xffC5A16B);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AlertDialog(
-        backgroundColor: const Color(0xff1E293B),
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(
-            color: const Color(0xffD4AF37).withValues(alpha: .35),
+            color: goldColor.withValues(alpha: .35),
           ),
         ),
         titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
         contentPadding: const EdgeInsets.fromLTRB(22, 8, 22, 14),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        title: const Row(
+        title: Row(
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: Color(0xff0F172A),
-              child: Icon(
+              backgroundColor: isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9),
+              child: const Icon(
                 Icons.lock_reset_rounded,
-                color: Color(0xffD4AF37),
+                color: goldColor,
               ),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 "تغيير كلمة المرور",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: textColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
                 ),
@@ -1175,12 +1236,12 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
                     "أدخل كلمة المرور الحالية ثم كلمة المرور الجديدة.",
                     style: TextStyle(
-                      color: Colors.white60,
+                      color: subTextColor,
                       height: 1.5,
                       fontSize: 13,
                     ),
@@ -1192,8 +1253,8 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                   obscureText: _obscureOld,
                   enableSuggestions: false,
                   autocorrect: false,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 13,
                   ),
                   decoration: _fieldDecoration(
@@ -1201,6 +1262,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                     labelFontSize: 12,
                     icon: Icons.lock_outline_rounded,
                     obscure: _obscureOld,
+                    fieldFill: fieldFill,
+                    subTextColor: subTextColor,
+                    goldColor: goldColor,
+                    borderColor: borderColor,
                     toggle: () {
                       setState(() {
                         _obscureOld = !_obscureOld;
@@ -1220,8 +1285,8 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                   obscureText: _obscureNew,
                   enableSuggestions: false,
                   autocorrect: false,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 13,
                   ),
                   decoration: _fieldDecoration(
@@ -1229,6 +1294,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                     labelFontSize: 12,
                     icon: Icons.password_rounded,
                     obscure: _obscureNew,
+                    fieldFill: fieldFill,
+                    subTextColor: subTextColor,
+                    goldColor: goldColor,
+                    borderColor: borderColor,
                     toggle: () {
                       setState(() {
                         _obscureNew = !_obscureNew;
@@ -1257,8 +1326,8 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                   obscureText: _obscureConfirm,
                   enableSuggestions: false,
                   autocorrect: false,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 13,
                   ),
                   decoration: _fieldDecoration(
@@ -1266,6 +1335,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                     labelFontSize: 12,
                     icon: Icons.verified_user_outlined,
                     obscure: _obscureConfirm,
+                    fieldFill: fieldFill,
+                    subTextColor: subTextColor,
+                    goldColor: goldColor,
+                    borderColor: borderColor,
                     toggle: () {
                       setState(() {
                         _obscureConfirm = !_obscureConfirm;
@@ -1293,15 +1366,15 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
           TextButton(
             onPressed:
                 _submitting ? null : () => Navigator.of(context).pop(false),
-            child: const Text(
+            child: Text(
               "إلغاء",
-              style: TextStyle(color: Colors.white60),
+              style: TextStyle(color: subTextColor),
             ),
           ),
           ElevatedButton.icon(
             onPressed: _submitting ? null : _submit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xffD4AF37),
+              backgroundColor: goldColor,
               foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

@@ -2,13 +2,15 @@ name: aqar
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.5+20
+version: 1.0.5+21
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
     
   font_awesome_flutter: ^11.0.0
@@ -46,6 +48,7 @@ dependencies:
   image_picker: ^1.1.2
   geolocator: ^13.0.2
   http: ^1.6.0
+  crypto: ^3.0.6
   intl: ^0.20.2
   google_fonts: ^6.3.0
   photo_view: ^0.15.0
@@ -56,6 +59,7 @@ dependencies:
   pdf: ^3.11.3
   printing: ^5.13.4
   qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.2
   gal: ^2.3.0
 
   custom_refresh_indicator: ^4.0.1
@@ -63,6 +67,7 @@ dependencies:
   latlong2: ^0.10.1
   cloud_functions: ^5.6.2
   record: ^7.1.1
+  file_picker: 11.0.3
 
 dev_dependencies:
   file: ^7.0.1
@@ -91,6 +96,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/fonts/Cairo-OFL.txt
     - assets/images/logo.png
     - assets/images/refresh_icon.png
     - assets/images/onboarding_1.png
@@ -107,3 +113,7 @@ flutter:
           weight: 400
         - asset: assets/fonts/Tajawal-Bold.ttf
           weight: 700
+
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo.ttf

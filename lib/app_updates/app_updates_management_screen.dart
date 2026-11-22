@@ -15,9 +15,11 @@ class AppUpdatesManagementScreen extends StatefulWidget {
 
 class _AppUpdatesManagementScreenState
     extends State<AppUpdatesManagementScreen> {
-  static const _bg = Color(0xff0F172A);
-  static const _card = Color(0xff1E293B);
-  static const _gold = Color(0xffD4AF37);
+  static const _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _bg => _isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xff1E293B) : Colors.white;
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   @override
   Widget build(BuildContext context) {
@@ -211,14 +213,14 @@ class _AppUpdatesManagementScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: _onSurface,
                       fontSize: 17,
                       fontWeight: FontWeight.w900)),
               const SizedBox(height: 2),
               Text(subtitle,
                   style:
-                      const TextStyle(color: Colors.white38, fontSize: 10.5)),
+                      TextStyle(color: _onSurface.withValues(alpha: 0.45), fontSize: 10.5)),
             ],
           ),
         ),
@@ -236,7 +238,7 @@ class _AppUpdatesManagementScreenState
         border: Border.all(
           color: update.isActive
               ? _gold.withValues(alpha: .34)
-              : Colors.white.withValues(alpha: .06),
+              : _onSurface.withValues(alpha: .06),
         ),
       ),
       child: Column(
@@ -262,15 +264,15 @@ class _AppUpdatesManagementScreenState
                     Text(update.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: _onSurface,
                             fontWeight: FontWeight.w900,
                             fontSize: 15.5)),
                     const SizedBox(height: 5),
                     Text(
                         'الإصدار ${update.version}  •  Build ${update.buildNumber}',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11)),
+                        style: TextStyle(
+                            color: _onSurface.withValues(alpha: 0.54), fontSize: 11)),
                   ],
                 ),
               ),
@@ -281,7 +283,7 @@ class _AppUpdatesManagementScreenState
           Row(
             children: [
               _chip(update.isMandatory ? 'إجباري' : 'اختياري',
-                  update.isMandatory ? Colors.redAccent : Colors.greenAccent),
+                  update.isMandatory ? Colors.redAccent : Colors.green),
               const SizedBox(width: 7),
               _chip('${update.features.length} مميزات', _gold),
               const Spacer(),
@@ -289,12 +291,12 @@ class _AppUpdatesManagementScreenState
                 tooltip: 'معاينة',
                 onPressed: () => _preview(context, update),
                 icon:
-                    const Icon(Icons.visibility_rounded, color: Colors.white70),
+                    Icon(Icons.visibility_rounded, color: _onSurface.withValues(alpha: 0.70)),
               ),
               IconButton(
                 tooltip: 'تعديل',
                 onPressed: () => _openEditor(context, update: update),
-                icon: const Icon(Icons.edit_rounded, color: Colors.white70),
+                icon: Icon(Icons.edit_rounded, color: _onSurface.withValues(alpha: 0.70)),
               ),
               PopupMenuButton<String>(
                 color: _card,
@@ -304,7 +306,7 @@ class _AppUpdatesManagementScreenState
                     value: 'active',
                     child: Text(
                       update.isActive ? 'إيقاف الظهور' : 'نشر هذا الإصدار',
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: _onSurface),
                     ),
                   ),
                   const PopupMenuItem(
@@ -314,7 +316,7 @@ class _AppUpdatesManagementScreenState
                   ),
                 ],
                 icon:
-                    const Icon(Icons.more_vert_rounded, color: Colors.white70),
+                    Icon(Icons.more_vert_rounded, color: _onSurface.withValues(alpha: 0.70)),
               ),
             ],
           ),
@@ -324,7 +326,7 @@ class _AppUpdatesManagementScreenState
   }
 
   Widget _status(AppUpdateModel update) {
-    final color = update.isActive ? Colors.greenAccent : Colors.white54;
+    final color = update.isActive ? Colors.green : _onSurface.withValues(alpha: 0.54);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
@@ -357,18 +359,18 @@ class _AppUpdatesManagementScreenState
           BoxDecoration(color: _card, borderRadius: BorderRadius.circular(24)),
       child: Column(
         children: [
-          const Icon(Icons.system_update_rounded,
-              color: Colors.white24, size: 55),
+          Icon(Icons.system_update_rounded,
+              color: _onSurface.withValues(alpha: 0.24), size: 55),
           const SizedBox(height: 12),
-          const Text('لا توجد إصدارات محفوظة',
+          Text('لا توجد إصدارات محفوظة',
               style: TextStyle(
-                  color: Colors.white,
+                  color: _onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 7),
-          const Text('أنشئ إصداراً جديداً ثم راجعه من المعاينة قبل نشره',
+          Text('أنشئ إصداراً جديداً ثم راجعه من المعاينة قبل نشره',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, height: 1.5)),
+              style: TextStyle(color: _onSurface.withValues(alpha: 0.54), height: 1.5)),
           const SizedBox(height: 17),
           ElevatedButton.icon(
             onPressed: () => _openEditor(context),
@@ -400,15 +402,15 @@ class _AppUpdatesManagementScreenState
               const Icon(Icons.error_outline_rounded,
                   color: Colors.redAccent, size: 48),
               const SizedBox(height: 10),
-              const Text('تعذر تحميل الإصدارات',
+              Text('تعذر تحميل الإصدارات',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: _onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 17)),
               const SizedBox(height: 7),
               Text(error,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  style: TextStyle(color: _onSurface.withValues(alpha: 0.54), fontSize: 11)),
             ],
           ),
         ),
@@ -502,7 +504,7 @@ class _UpdateEditorDialog extends StatefulWidget {
 }
 
 class _UpdateEditorDialogState extends State<_UpdateEditorDialog> {
-  static const _gold = Color(0xffD4AF37);
+  static const _gold = Color(0xffC5A16B);
   static const _bg = Color(0xff0B1220);
   static const _card = Color(0xff1E293B);
 

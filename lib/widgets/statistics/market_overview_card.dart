@@ -19,13 +19,15 @@ class MarketOverviewCard extends StatelessWidget {
     required this.statistics,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
   static const Color _cardColor = Color(0xFF1E293B);
   static const Color _green = Color(0xFF22C55E);
   static const Color _red = Color(0xFFEF4444);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     final trendColor = _trendColor;
     final trendIcon = _trendIcon;
 
@@ -33,14 +35,14 @@ class MarketOverviewCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: isDark ? _cardColor : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: _gold.withValues(alpha: 0.16),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
+            color: Colors.black.withValues(alpha: isDark ? 0.16 : 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -72,10 +74,10 @@ class MarketOverviewCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'متوسط أسعار العقارات',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: onSurface,
                         fontSize: StatisticsTextStyles.sectionTitleSize,
                         fontWeight: FontWeight.w700,
                       ),
@@ -84,7 +86,7 @@ class MarketOverviewCard extends StatelessWidget {
                     Text(
                       'حسب الفلاتر والفترة المحددة',
                       style: TextStyle(
-                        color: Colors.white.withValues(
+                        color: onSurface.withValues(
                           alpha: 0.48,
                         ),
                         fontSize: StatisticsTextStyles.captionSize,
@@ -100,8 +102,8 @@ class MarketOverviewCard extends StatelessWidget {
           Text(
             _formatPrice(statistics.averagePrice),
             textDirection: TextDirection.rtl,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onSurface,
               fontSize: 27,
               fontWeight: FontWeight.w900,
               height: 1.25,
@@ -111,7 +113,7 @@ class MarketOverviewCard extends StatelessWidget {
           Text(
             'دينار عراقي',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.48),
+              color: onSurface.withValues(alpha: 0.48),
               fontSize: StatisticsTextStyles.secondarySize,
               fontWeight: FontWeight.w600,
             ),
@@ -158,7 +160,7 @@ class MarketOverviewCard extends StatelessWidget {
                   child: Text(
                     _trendDescription,
                     style: TextStyle(
-                      color: Colors.white.withValues(
+                      color: onSurface.withValues(
                         alpha: 0.58,
                       ),
                       fontSize: StatisticsTextStyles.secondarySize,
@@ -169,12 +171,12 @@ class MarketOverviewCard extends StatelessWidget {
               ],
             )
           else
-            _buildNoComparison(),
+            _buildNoComparison(onSurface),
           const SizedBox(height: 18),
           Divider(
             height: 1,
             thickness: 1,
-            color: Colors.white.withValues(alpha: 0.06),
+            color: onSurface.withValues(alpha: 0.06),
           ),
           const SizedBox(height: 16),
           Row(
@@ -192,7 +194,7 @@ class MarketOverviewCard extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(
                   horizontal: 12,
                 ),
-                color: Colors.white.withValues(alpha: 0.07),
+                color: onSurface.withValues(alpha: 0.07),
               ),
               Expanded(
                 child: _OverviewInfo(
@@ -212,24 +214,24 @@ class MarketOverviewCard extends StatelessWidget {
     );
   }
 
-  Widget _buildNoComparison() {
+  Widget _buildNoComparison(Color onSurface) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 11,
         vertical: 8,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.045),
+        color: onSurface.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: onSurface.withValues(alpha: 0.06),
         ),
       ),
       child: Row(
         children: [
           Icon(
             Icons.info_outline_rounded,
-            color: Colors.white.withValues(alpha: 0.55),
+            color: onSurface.withValues(alpha: 0.55),
             size: 17,
           ),
           const SizedBox(width: 7),
@@ -237,7 +239,7 @@ class MarketOverviewCard extends StatelessWidget {
             child: Text(
               'لا تتوفر بيانات كافية للمقارنة مع الفترة السابقة',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.55),
+                color: onSurface.withValues(alpha: 0.55),
                 fontSize: StatisticsTextStyles.captionSize,
                 fontWeight: FontWeight.w500,
                 height: 1.4,
@@ -366,10 +368,12 @@ class _OverviewInfo extends StatelessWidget {
     required this.icon,
   });
 
-  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _gold = Color(0xFFC5A16B);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Row(
       children: [
         Icon(
@@ -387,7 +391,7 @@ class _OverviewInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withValues(
+                  color: onSurface.withValues(
                     alpha: 0.42,
                   ),
                   fontSize: StatisticsTextStyles.captionSize,
@@ -400,8 +404,8 @@ class _OverviewInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onSurface,
                   fontSize: StatisticsTextStyles.sectionSubtitleSize,
                   fontWeight: FontWeight.w700,
                 ),

@@ -24,9 +24,11 @@ class AppUpdateDialog extends StatefulWidget {
 }
 
 class _AppUpdateDialogState extends State<AppUpdateDialog> {
-  static const _gold = Color(0xffD4AF37);
-  static const _bg = Color(0xff08111F);
-  static const _surface = Color(0xff111C2E);
+  static const _gold = Color(0xffC5A16B);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _bg => _isDark ? const Color(0xff08111F) : Colors.white;
+  Color get _surface => _isDark ? const Color(0xff111C2E) : const Color(0xFFF8FAFC);
+  Color get _onSurface => _isDark ? Colors.white : const Color(0xFF0F172A);
 
   bool _dontShowAgain = false;
   bool _openingStore = false;
@@ -123,8 +125,8 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                         Text(
                           widget.update.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: _onSurface,
                             fontSize: 23,
                             fontWeight: FontWeight.w900,
                             height: 1.15,
@@ -138,8 +140,8 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: _onSurface.withValues(alpha: 0.70),
                             fontSize: 13.5,
                             height: 1.35,
                           ),
@@ -160,15 +162,15 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.lock_outline_rounded,
-                                color: Colors.white30, size: 14),
+                            Icon(Icons.lock_outline_rounded,
+                                color: _onSurface.withValues(alpha: 0.38), size: 14),
                             const SizedBox(width: 5),
                             Text(
                               defaultTargetPlatform == TargetPlatform.iOS
                                   ? 'سيتم الانتقال إلى متجر App Store'
                                   : 'سيتم الانتقال إلى متجر Google Play',
-                              style: const TextStyle(
-                                  color: Colors.white38, fontSize: 10.5),
+                              style: TextStyle(
+                                  color: _onSurface.withValues(alpha: 0.45), fontSize: 10.5),
                             ),
                           ],
                         ),
@@ -221,9 +223,9 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .045),
+        color: _onSurface.withValues(alpha: .045),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: .08)),
+        border: Border.all(color: _onSurface.withValues(alpha: .08)),
       ),
       child: Text.rich(
         TextSpan(
@@ -234,8 +236,8 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
             ),
             TextSpan(
               text: widget.update.version,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                  color: _onSurface, fontWeight: FontWeight.w900),
             ),
           ],
         ),
@@ -286,7 +288,7 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       decoration: BoxDecoration(
         color: _surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: .07)),
+        border: Border.all(color: _onSurface.withValues(alpha: .07)),
       ),
       child: Column(
         children: [
@@ -316,8 +318,8 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                           Text(feature.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: _onSurface,
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold)),
                           if (feature.description.trim().isNotEmpty) ...[
@@ -325,8 +327,8 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                             Text(feature.description,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white54,
+                                style: TextStyle(
+                                    color: _onSurface.withValues(alpha: 0.54),
                                     fontSize: 10.5,
                                     height: 1.2)),
                           ],
@@ -348,12 +350,12 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .035),
+          color: _onSurface.withValues(alpha: .035),
           borderRadius: BorderRadius.circular(17),
           border: Border.all(
             color: _dontShowAgain
                 ? _gold.withValues(alpha: .35)
-                : Colors.white.withValues(alpha: .05),
+                : _onSurface.withValues(alpha: .05),
           ),
         ),
         child: Row(
@@ -363,24 +365,24 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
               onChanged: (v) => setState(() => _dontShowAgain = v ?? false),
               activeColor: _gold,
               checkColor: Colors.black,
-              side: const BorderSide(color: Colors.white54, width: 1.4),
+              side: BorderSide(color: _onSurface.withValues(alpha: 0.54), width: 1.4),
             ),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('لا تعرض هذا التنبيه مرة أخرى',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: _onSurface,
                           fontSize: 13.5,
                           fontWeight: FontWeight.bold)),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text('لن يظهر لهذا الإصدار بعد اختيار هذا الخيار',
-                      style: TextStyle(color: Colors.white54, fontSize: 10.5)),
+                      style: TextStyle(color: _onSurface.withValues(alpha: 0.54), fontSize: 10.5)),
                 ],
               ),
             ),
-            const Icon(Icons.shield_outlined, color: Colors.white30, size: 21),
+            Icon(Icons.shield_outlined, color: _onSurface.withValues(alpha: 0.30), size: 21),
           ],
         ),
       ),
@@ -396,7 +398,7 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
               onPressed: _dismiss,
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
-                foregroundColor: Colors.white,
+                foregroundColor: _onSurface,
                 side: BorderSide(color: _gold.withValues(alpha: .65)),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),

@@ -15,8 +15,9 @@ class OfficeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
-    const background = Color(0xFF1E293B);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const gold = Color(0xFFC5A16B);
+    final background = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Material(
       color: Colors.transparent,
@@ -29,11 +30,11 @@ class OfficeCard extends StatelessWidget {
             color: background,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: gold.withValues(alpha: 0.16),
+              color: isDark ? gold.withValues(alpha: 0.16) : const Color(0xFFE2E8F0),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.20),
+                color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
                 blurRadius: 16,
                 offset: const Offset(0, 8),
               ),
@@ -147,7 +148,7 @@ class OfficeCard extends StatelessWidget {
                     Icon(
                       Icons.star_rounded,
                       size: 15,
-                      color: Color(0xFFD4AF37),
+                      color: Color(0xFFC5A16B),
                     ),
                     SizedBox(width: 4),
                     Text(
@@ -212,7 +213,9 @@ class OfficeCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.72),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.72)
+                        : const Color(0xFF475569),
                     fontSize: 13,
                   ),
                 ),
@@ -293,6 +296,7 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -304,8 +308,8 @@ class _StatItem extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
             fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
@@ -314,7 +318,7 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.58),
+            color: isDark ? Colors.white.withValues(alpha: 0.58) : const Color(0xFF64748B),
             fontSize: 11,
           ),
         ),

@@ -301,6 +301,8 @@ class PropertyCard extends StatelessWidget {
                 ? 166.0
                 : 178.0;
 
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
         final titleSize = width < 600 ? 12.5 : 13.5;
         final priceSize = width < 600 ? 12.5 : 14.0;
 
@@ -309,14 +311,14 @@ class PropertyCard extends StatelessWidget {
           height: cardHeight,
           margin: const EdgeInsets.only(bottom: 7),
           decoration: BoxDecoration(
-            color: const Color(0xff1E293B),
+            color: isDark ? const Color(0xff1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withValues(alpha: .055),
+              color: onSurface.withValues(alpha: .055),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .10),
+                color: Colors.black.withValues(alpha: isDark ? .10 : .05),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -371,7 +373,7 @@ class PropertyCard extends StatelessWidget {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: onSurface,
                                     fontSize: titleSize,
                                     fontWeight: FontWeight.w800,
                                     height: 1.08,
@@ -405,8 +407,8 @@ class PropertyCard extends StatelessWidget {
                                         : Icons.star_border_rounded,
                                     size: 17,
                                     color: isFeatured
-                                        ? const Color(0xffD4AF37)
-                                        : Colors.white54,
+                                        ? const Color(0xffC5A16B)
+                                        : onSurface.withValues(alpha: 0.54),
                                   ),
                                 ),
                               ),
@@ -424,7 +426,7 @@ class PropertyCard extends StatelessWidget {
                             children: [
                               const Icon(
                                 Icons.location_on_outlined,
-                                color: Color(0xffD4AF37),
+                                color: Color(0xffC5A16B),
                                 size: 12,
                               ),
                               const SizedBox(width: 2),
@@ -434,7 +436,7 @@ class PropertyCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: .55),
+                                    color: onSurface.withValues(alpha: .55),
                                     fontSize: 9,
                                     height: 1.05,
                                   ),
@@ -449,7 +451,7 @@ class PropertyCard extends StatelessWidget {
                                 Icon(
                                   Icons.confirmation_number_outlined,
                                   size: 11,
-                                  color: Colors.white.withValues(alpha: .40),
+                                  color: onSurface.withValues(alpha: .40),
                                 ),
                                 const SizedBox(width: 2),
                                 Expanded(
@@ -459,7 +461,7 @@ class PropertyCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color:
-                                          Colors.white.withValues(alpha: .45),
+                                          onSurface.withValues(alpha: .45),
                                       fontSize: 8,
                                       fontWeight: FontWeight.w700,
                                       height: 1,
@@ -475,7 +477,7 @@ class PropertyCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: const Color(0xffD4AF37),
+                              color: const Color(0xffC5A16B),
                               fontSize: priceSize,
                               fontWeight: FontWeight.w900,
                               height: 1,
@@ -507,7 +509,7 @@ class PropertyCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: .44),
+                                    color: onSurface.withValues(alpha: .44),
                                     fontSize: 8,
                                     height: 1,
                                   ),
@@ -517,11 +519,13 @@ class PropertyCard extends StatelessWidget {
                               _compactCounter(
                                 Icons.remove_red_eye_outlined,
                                 views.toString(),
+                                onSurface,
                               ),
                               const SizedBox(width: 5),
                               _compactCounter(
                                 Icons.favorite_border_rounded,
                                 favorites.toString(),
+                                onSurface,
                               ),
                             ],
                           ),
@@ -555,21 +559,21 @@ class PropertyCard extends StatelessWidget {
     );
   }
 
-  Widget _compactCounter(IconData icon, String value) {
+  Widget _compactCounter(IconData icon, String value, Color onSurface) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
           size: 11,
-          color: const Color(0xffD4AF37),
+          color: const Color(0xffC5A16B),
         ),
         const SizedBox(width: 1),
         Text(
           value,
           maxLines: 1,
-          style: const TextStyle(
-            color: Colors.white60,
+          style: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
             fontSize: 8,
             fontWeight: FontWeight.w700,
           ),

@@ -94,6 +94,7 @@ class CategoriesSection extends StatelessWidget {
   }
 
   Widget _buildCategories(BuildContext context, double cardWidth) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: SizedBox(
@@ -122,7 +123,7 @@ class CategoriesSection extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: AqarRadius.category(context),
-                    splashColor: const Color(0xffD4AF37).withValues(alpha: .12),
+                    splashColor: const Color(0xffC5A16B).withValues(alpha: .12),
                     highlightColor: Colors.transparent,
                     onTap: () => onCategorySelected(title),
                     child: AnimatedContainer(
@@ -130,24 +131,33 @@ class CategoriesSection extends StatelessWidget {
                       curve: Curves.easeOutCubic,
                       width: cardWidth,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xff263548),
-                            Color(0xff1E293B),
-                          ],
+                          colors: isDark
+                              ? const [
+                                  Color(0xff263548),
+                                  Color(0xff1E293B),
+                                ]
+                              : const [
+                                  Colors.white,
+                                  Color(0xFFF8FAFC),
+                                ],
                         ),
                         borderRadius: AqarRadius.category(context),
                         border: Border.all(
-                          color: const Color(0xffD4AF37).withValues(alpha: .18),
+                          color: isDark
+                              ? const Color(0xffC5A16B).withValues(alpha: .18)
+                              : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: .22),
-                            blurRadius: 12,
-                            offset: const Offset(0, 8),
+                            color: isDark
+                                ? Colors.black.withValues(alpha: .22)
+                                : Colors.black.withValues(alpha: .04),
+                            blurRadius: isDark ? 12 : 8,
+                            offset: isDark ? const Offset(0, 8) : const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -178,29 +188,37 @@ class CategoriesSection extends StatelessWidget {
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
                                               colors: [
-                                                Color(0xffF8D86B),
-                                                Color(0xffD4AF37),
+                                                Color(0xffD8BD95),
+                                                Color(0xffC5A16B),
                                               ],
                                             )
                                           : LinearGradient(
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
-                                              colors: [
-                                                Colors.white
-                                                    .withValues(alpha: .08),
-                                                Colors.white
-                                                    .withValues(alpha: .02),
-                                              ],
+                                              colors: isDark
+                                                  ? [
+                                                      Colors.white
+                                                          .withValues(alpha: .08),
+                                                      Colors.white
+                                                          .withValues(alpha: .02),
+                                                    ]
+                                                  : [
+                                                      const Color(0xFFF1F5F9),
+                                                      const Color(0xFFE2E8F0),
+                                                    ],
                                             ),
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.white.withValues(
-                                            alpha: selected ? .35 : .08),
+                                        color: isDark
+                                            ? Colors.white.withValues(
+                                                alpha: selected ? .35 : .08)
+                                            : (selected ? Colors.black26 : const Color(0xFFCBD5E1)),
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: .18),
+                                          color: isDark
+                                              ? Colors.black.withValues(alpha: .18)
+                                              : Colors.black.withValues(alpha: .04),
                                           blurRadius: 10,
                                           offset: const Offset(0, 4),
                                         ),
@@ -211,7 +229,7 @@ class CategoriesSection extends StatelessWidget {
                                       size: AqarSizes.categoryIcon(context),
                                       color: selected
                                           ? Colors.black
-                                          : const Color(0xffD4AF37),
+                                          : const Color(0xffC5A16B),
                                     ),
                                   ),
                                 ),
@@ -221,7 +239,9 @@ class CategoriesSection extends StatelessWidget {
                                 title,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: selected ? Colors.black : Colors.white,
+                                  color: selected
+                                      ? Colors.black
+                                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                   fontWeight: FontWeight.bold,
                                   fontSize: AqarText.category(context),
                                 ),
@@ -239,7 +259,7 @@ class CategoriesSection extends StatelessWidget {
                               height:
                                   AqarSizes.categoryIndicatorHeight(context),
                               decoration: BoxDecoration(
-                                color: const Color(0xffD4AF37),
+                                color: const Color(0xffC5A16B),
                                 borderRadius:
                                     AqarRadius.categoryIndicator(context),
                               ),

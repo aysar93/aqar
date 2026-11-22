@@ -2,6 +2,8 @@ import '../moderation/eula.dart' show safetyTerms;
 import 'package:flutter/material.dart';
 
 void showTermsSheet(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final bodyColor = isDark ? Colors.white70 : Colors.black87;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -14,9 +16,9 @@ void showTermsSheet(BuildContext context) {
       textDirection: TextDirection.rtl,
       child: Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xff1E293B),
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xff1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(24),
           ),
         ),
@@ -38,7 +40,7 @@ void showTermsSheet(BuildContext context) {
             const Center(
               child: Icon(
                 Icons.gavel_rounded,
-                color: Color(0xffD4AF37),
+                color: Color(0xffC5A16B),
                 size: 45,
               ),
             ),
@@ -48,7 +50,7 @@ void showTermsSheet(BuildContext context) {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xffD4AF37),
+                color: Color(0xffC5A16B),
               ),
             ),
             const Divider(height: 25),
@@ -57,57 +59,68 @@ void showTermsSheet(BuildContext context) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _term("سياسة سلامة المستخدمين والمحتوى", safetyTerms),
+                    _term("سياسة سلامة المستخدمين والمحتوى", safetyTerms,
+                        bodyColor),
                     _term(
                       "١. قبول الشروط",
                       "باستخدامك لتطبيق عقارات الانبار فإنك تقر بقراءة هذه الشروط والأحكام وتوافق على الالتزام بها. وإذا كنت لا توافق على أي جزء منها، فيرجى عدم استخدام التطبيق أو خدماته",
+                      bodyColor,
                     ),
                     _term(
                       "٢. مسؤولية المستخدم",
                       "يتحمل المستخدم كامل المسؤولية عن صحة المعلومات والصور والأسعار ووسائل التواصل التي يقوم بإدخالها، ويقر بأن جميع البيانات المنشورة صحيحة ولا تنتهك حقوق الآخرين",
+                      bodyColor,
                     ),
                     _term(
                       "٣. الإعلانات العقارية",
                       "يجب أن تكون جميع الإعلانات المنشورة حقيقية وتعبر عن العقار المعروض بدقة، ويمنع نشر أي إعلان مضلل أو يحتوي على معلومات غير صحيحة أو صور لا تعود للعقار",
+                      bodyColor,
                     ),
                     _term(
                       "٤. الاستخدام الممنوع",
                       "يُمنع استخدام التطبيق لنشر محتوى مخالف للقانون أو الآداب العامة، أو نشر إعلانات وهمية أو مكررة بشكل متعمد، أو استخدام التطبيق للإساءة إلى الآخرين أو محاولة تعطيل خدماته",
+                      bodyColor,
                     ),
                     _term(
                       "٥. تعديل الشروط",
                       "تحتفظ إدارة التطبيق بحق تعديل شروط الاستخدام أو إضافة بنود جديدة في أي وقت بما يتوافق مع تطوير الخدمات أو المتطلبات القانونية، ونطلب موافقة صريحة على التغييرات الجوهرية قبل استخدام الحساب",
+                      bodyColor,
                     ),
                     _term(
                       "٦. صلاحيات إدارة التطبيق",
                       "تحتفظ إدارة التطبيق بحق مراجعة الإعلانات المنشورة وتعديلها أو إخفائها أو حذفها إذا تبين أنها تخالف شروط الاستخدام أو القوانين النافذة، كما يحق لها اتخاذ الإجراءات المناسبة للحفاظ على جودة المحتوى وسلامة المستخدمين",
+                      bodyColor,
                     ),
                     _term(
                       "٧. تعليق أو حذف الحساب",
                       "يجوز لإدارة التطبيق تعليق أو إيقاف أو حذف أي حساب يثبت استخدامه للتطبيق بصورة مخالفة لشروط الاستخدام أو لأغراض احتيالية أو غير قانونية، دون الإخلال بأي حقوق قانونية أخرى",
+                      bodyColor,
                     ),
                     _term(
                       "٨. حدود المسؤولية",
                       "يعمل تطبيق عقارات الانبار كمنصة إلكترونية لعرض الإعلانات العقارية والتواصل بين المستخدمين، ولا يكون طرفاً في عمليات البيع أو الشراء أو الإيجار، ولا يتحمل أي مسؤولية عن الاتفاقات أو النزاعات أو الخسائر التي قد تنشأ بين الأطراف",
+                      bodyColor,
                     ),
                     _term(
                       "٩. الملكية الفكرية",
                       "جميع حقوق التطبيق، بما في ذلك التصميم والبرمجيات والشعار والمحتوى الذي تنتجه إدارة التطبيق، محفوظة. ولا يجوز نسخها أو إعادة استخدامها أو توزيعها دون الحصول على موافقة خطية مسبقة",
+                      bodyColor,
                     ),
                     _term(
                       "١٠. القانون المطبق",
                       "تخضع هذه الشروط وتفسر وفقاً للقوانين النافذة في جمهورية العراق، وتكون المحاكم العراقية المختصة هي الجهة المختصة بالنظر في أي نزاع ينشأ عن استخدام التطبيق، ما لم ينص القانون على خلاف ذلك",
+                      bodyColor,
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            const Center(
+            Center(
               child: Text(
                 "آخر تحديث: سبتمبر 2026",
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: isDark ? Colors.white54 : Colors.black54,
                   fontSize: 13,
                 ),
               ),
@@ -130,7 +143,7 @@ void showTermsSheet(BuildContext context) {
   );
 }
 
-Widget _term(String title, String body) {
+Widget _term(String title, String body, Color bodyColor) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: Column(
@@ -141,15 +154,15 @@ Widget _term(String title, String body) {
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 15,
-            color: Color(0xffD4AF37),
+            color: Color(0xffC5A16B),
           ),
         ),
         const SizedBox(height: 5),
         Text(
           body,
           textAlign: TextAlign.justify,
-          style: const TextStyle(
-            color: Colors.white70,
+          style: TextStyle(
+            color: bodyColor,
             fontSize: 14,
             height: 1.5,
           ),

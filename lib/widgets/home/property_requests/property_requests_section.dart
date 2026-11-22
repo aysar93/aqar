@@ -16,18 +16,19 @@ class PropertyRequestsSection extends StatefulWidget {
 }
 
 class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
-  static const Color _gold = Color(0xffD4AF37);
+  static const Color _gold = Color(0xffC5A16B);
 
   late PageController _pageController;
   bool _controllerInitialized = false;
+  double _lastWidth = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (_controllerInitialized) return;
-
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
+    if (_controllerInitialized && (width - _lastWidth).abs() < 2) return;
+    _lastWidth = width;
 
     final viewportFraction = width < 360
         ? 0.85
@@ -37,12 +38,26 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                 ? 0.48
                 : 0.34;
 
-    _pageController = PageController(
-      viewportFraction: viewportFraction,
-      keepPage: true,
-    );
+    final initialPage = _controllerInitialized && _pageController.hasClients
+        ? (_pageController.page?.round() ?? _currentPage)
+        : _currentPage;
 
-    _controllerInitialized = true;
+    if (_controllerInitialized) {
+      final old = _pageController;
+      _pageController = PageController(
+        viewportFraction: viewportFraction,
+        initialPage: initialPage,
+        keepPage: true,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    } else {
+      _pageController = PageController(
+        viewportFraction: viewportFraction,
+        initialPage: initialPage,
+        keepPage: true,
+      );
+      _controllerInitialized = true;
+    }
   }
 
   int _currentPage = 0;
@@ -152,17 +167,19 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
             bottom: 4,
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: const Color(0xffD4AF37).withValues(alpha: 0.10),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xffC5A16B).withValues(alpha: 0.10)
+                  : const Color(0xFFE2E8F0),
               width: 1,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.black.withValues(alpha: .04),
                 blurRadius: 14,
-                offset: Offset(0, 6),
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -301,8 +318,8 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xffF8D66D),
-                      Color(0xffD4AF37),
+                      Color(0xffD8BD95),
+                      Color(0xffC5A16B),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(10),
@@ -314,22 +331,22 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       "طلبات العقارات",
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: .3,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       "العقارات التي يبحث عنها المستخدمون",
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        color: Colors.white54,
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF64748B),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

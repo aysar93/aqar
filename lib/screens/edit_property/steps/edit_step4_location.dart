@@ -156,24 +156,27 @@ class _EditStep4LocationState extends State<EditStep4Location> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardColor = isDark ? const Color(0xff1E293B) : Colors.white;
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
+        Text(
           'موقع العقار',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white,
+            color: onSurface,
             fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'راجع معلومات موقع العقار وعدّلها عند الحاجة',
           textAlign: TextAlign.right,
           style: TextStyle(
-            color: Colors.white60,
+            color: onSurface.withValues(alpha: 0.60),
             fontSize: 15,
           ),
         ),
@@ -227,12 +230,12 @@ class _EditStep4LocationState extends State<EditStep4Location> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xff1E293B),
+            color: cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: widget.property.hasMapLocation
-                  ? const Color(0xffD4AF37).withValues(alpha: .45)
-                  : Colors.white10,
+                  ? const Color(0xffC5A16B).withValues(alpha: .45)
+                  : onSurface.withValues(alpha: 0.10),
             ),
           ),
           child: Column(
@@ -243,15 +246,15 @@ class _EditStep4LocationState extends State<EditStep4Location> {
                 children: [
                   const Icon(
                     Icons.location_on_rounded,
-                    color: Color(0xffD4AF37),
+                    color: Color(0xffC5A16B),
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'إحداثيات الموقع',
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: onSurface,
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
@@ -260,7 +263,7 @@ class _EditStep4LocationState extends State<EditStep4Location> {
                   if (widget.property.hasMapLocation)
                     const Icon(
                       Icons.check_circle_rounded,
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                       size: 20,
                     ),
                 ],
@@ -271,8 +274,8 @@ class _EditStep4LocationState extends State<EditStep4Location> {
                     ? 'يوجد موقع محفوظ لهذا العقار'
                     : 'لا يوجد موقع محفوظ لهذا العقار',
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white60,
+                style: TextStyle(
+                  color: onSurface.withValues(alpha: 0.60),
                   fontSize: 13,
                 ),
               ),
@@ -325,14 +328,14 @@ class _EditStep4LocationState extends State<EditStep4Location> {
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.property.hasMapLocation
-                  ? const Color(0xff1E293B)
-                  : const Color(0xffD4AF37),
+                  ? cardColor
+                  : const Color(0xffC5A16B),
               foregroundColor: widget.property.hasMapLocation
-                  ? const Color(0xffD4AF37)
+                  ? const Color(0xffC5A16B)
                   : Colors.black,
               side: widget.property.hasMapLocation
                   ? const BorderSide(
-                      color: Color(0xffD4AF37),
+                      color: Color(0xffC5A16B),
                     )
                   : BorderSide.none,
               elevation: 0,
@@ -353,30 +356,32 @@ class _EditStep4LocationState extends State<EditStep4Location> {
     required IconData icon,
     required ValueChanged<String> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xff1E293B),
+        color: isDark ? const Color(0xff1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white10,
+          color: onSurface.withValues(alpha: 0.10),
         ),
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
         textAlign: TextAlign.right,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: onSurface,
           fontSize: 16,
         ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.white60,
+          labelStyle: TextStyle(
+            color: onSurface.withValues(alpha: 0.60),
           ),
           prefixIcon: Icon(
             icon,
-            color: const Color(0xffD4AF37),
+            color: const Color(0xffC5A16B),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -393,6 +398,8 @@ class _EditStep4LocationState extends State<EditStep4Location> {
     required String label,
     required ValueChanged<String> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? Colors.white : const Color(0xFF0F172A);
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(
@@ -405,18 +412,18 @@ class _EditStep4LocationState extends State<EditStep4Location> {
         ),
       ],
       onChanged: onChanged,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: onSurface,
         fontSize: 14,
       ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: Colors.white54,
+        labelStyle: TextStyle(
+          color: onSurface.withValues(alpha: 0.54),
           fontSize: 13,
         ),
         filled: true,
-        fillColor: const Color(0xff0F172A),
+        fillColor: isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,

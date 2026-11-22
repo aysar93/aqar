@@ -11,9 +11,11 @@ class SendNotificationScreen extends StatefulWidget {
 }
 
 class _SendNotificationScreenState extends State<SendNotificationScreen> {
-  static const _background = Color(0xFF0F172A);
-  static const _card = Color(0xFF1E293B);
-  static const _gold = Color(0xFFD4AF37);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background =>
+      _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  Color get _card => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  static const _gold = Color(0xFFC5A16B);
 
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
@@ -127,7 +129,7 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
           title: const Text('إرسال تنبيه'),
           centerTitle: true,
           backgroundColor: _background,
-          foregroundColor: Colors.white,
+          foregroundColor: _isDark ? Colors.white : const Color(0xFF0F172A),
           elevation: 0,
         ),
         body: SafeArea(
@@ -228,7 +230,11 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                         child: DropdownButtonFormField<String>(
                           initialValue: _notificationType,
                           dropdownColor: _card,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: _isDark
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
+                          ),
                           decoration: _decoration('نوع التنبيه'),
                           items: const [
                             DropdownMenuItem(
@@ -636,7 +642,9 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
         color: _card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: .06),
+          color: _isDark
+              ? Colors.white.withValues(alpha: .06)
+              : Colors.black12,
         ),
       ),
       child: Column(
@@ -676,12 +684,16 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
         decoration: BoxDecoration(
           color: selected
               ? _gold.withValues(alpha: .12)
-              : Colors.white.withValues(alpha: .025),
+              : (_isDark
+                  ? Colors.white.withValues(alpha: .025)
+                  : const Color(0xFFF1F5F9)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected
                 ? _gold.withValues(alpha: .65)
-                : Colors.white.withValues(alpha: .07),
+                : (_isDark
+                    ? Colors.white.withValues(alpha: .07)
+                    : Colors.black12),
           ),
         ),
         child: Column(
@@ -690,7 +702,9 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
             Icon(
               icon,
               size: 23,
-              color: selected ? _gold : Colors.white70,
+              color: selected
+                  ? _gold
+                  : (_isDark ? Colors.white70 : Colors.black54),
             ),
             const SizedBox(height: 6),
             Text(
@@ -711,7 +725,9 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 9.5,
-                color: Colors.white.withValues(alpha: .62),
+                color: _isDark
+                    ? Colors.white.withValues(alpha: .62)
+                    : Colors.black54,
               ),
             ),
           ],
@@ -724,17 +740,23 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: Colors.white.withValues(alpha: .025),
+      fillColor: _isDark
+          ? Colors.white.withValues(alpha: .025)
+          : const Color(0xFFF1F5F9),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: .08),
+          color: _isDark
+              ? Colors.white.withValues(alpha: .08)
+              : Colors.black12,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: .08),
+          color: _isDark
+              ? Colors.white.withValues(alpha: .08)
+              : Colors.black12,
         ),
       ),
       focusedBorder: OutlineInputBorder(
