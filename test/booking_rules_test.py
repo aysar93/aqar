@@ -25,7 +25,7 @@ class BookingRules(unittest.TestCase):
         for uid in ['customer', 'owner', 'other', 'admin', 'reviewer', 'blocked']:
             assert write('users/'+uid, {'isAdmin':uid=='admin', 'isBlocked':uid=='blocked','canReviewBookingPayments':uid=='reviewer'}, 'SEED', timestamp=None)==200
         assert write('bookings/private', {'customerId':'customer','ownerId':'owner','status':'requested'}, 'SEED', timestamp=None)==200
-        assert write('booking_venues/public', {'active':True}, 'SEED', timestamp=None)==200
+        assert write('booking_venues/public', {'active':True, 'verificationStatus':'verified'}, 'SEED', timestamp=None)==200
         assert write('booking_venues/hidden', {'active':False}, 'SEED', timestamp=None)==200
 
     def test_booking_privacy_and_server_only_mutation(self):

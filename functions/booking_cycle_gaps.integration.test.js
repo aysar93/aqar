@@ -8,7 +8,7 @@ const p=require('./booking_policy');
 const call=(name,uid,data)=>f[name].run({auth:{uid},data});
 const cp={freeCancellationHours:24,lateRefundPercent:15};
 async function fixture(id,status='confirmed'){
- for(const [uid,flags]of Object.entries({cg_customer:{canReviewBookingPayments:true},cg_owner:{canReviewBookingPayments:true},cg_admin:{isAdmin:true},cg_finance:{canReviewBookingPayments:true},cg_staff:{canReviewBookingPayments:true},cg_other:{}}))await db.doc('users/'+uid).set({name:'Synthetic UAT',phone:'07000000000',isBlocked:false,...flags});
+ for(const [uid,flags]of Object.entries({cg_customer:{canReviewBookingPayments:true},cg_owner:{canReviewBookingPayments:true},cg_admin:{isAdmin:true},cg_finance:{canReviewBookingPayments:true},cg_staff:{canReviewBookingPayments:true},cg_other:{}}))await db.doc('users/'+uid).set({name:'Synthetic UAT',phone:'07700000000',isBlocked:false,...flags});
  await db.doc('booking_venues/cg_venue').set({ownerId:'cg_owner',active:true,name:'Synthetic',location:'Anbar',category:'farm',price:100000,deposit:20000,terms:'terms',cancellationPolicy:cp});
  await db.doc('booking_venue_staff/cg_venue_cg_staff').set({ownerId:'cg_owner',scopes:['bookings']});
  await db.doc('bookings/'+id).set({venueId:'cg_venue',customerId:'cg_customer',ownerId:'cg_owner',status,total:100000,deposit:20000,paid:status==='confirmed'?20000:0,remaining:status==='confirmed'?80000:100000,start:Date.now()+48*3600000,end:Date.now()+49*3600000,cancellationPolicy:cp,version:0});

@@ -6,7 +6,7 @@ const db=require('firebase-admin/firestore').getFirestore(),f=require('./booking
 test('request committed before a lost response can be retried concurrently without duplicate intent',async()=>{
  const customer='checkout_lost_customer',owner='checkout_lost_owner',venue='checkout_lost_venue',id=customer+'_stable_intent';
  try {
-  for(const uid of [customer,owner])await db.doc('users/'+uid).set({name:'Synthetic',phone:'00000000000',isBlocked:false});
+  for(const uid of [customer,owner])await db.doc('users/'+uid).set({name:'Synthetic',phone:'07700000000',isBlocked:false});
   const cancellationPolicy={freeCancellationHours:24,lateRefundPercent:25};
   await db.doc('booking_venues/'+venue).set({name:'Synthetic',location:'Anbar',category:'chalet',ownerId:owner,active:true,price:250000,deposit:50000,terms:'Synthetic terms',cancellationPolicy});
   const start=Date.now()+2*86400000;
