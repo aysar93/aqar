@@ -391,6 +391,59 @@ exports.setBookingVenueActive = onCall(async r => {
   return { ok: true, venueId, active };
 });
 
+exports.setPlatformBookingKillSwitch = onCall(async r => {
+  if (!r.data || typeof r.data.enabled !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'يجب تحديد حالة التشغيل بقيمة منطقية صالحة (true أو false)');
+  }
+  const enabled = r.data.enabled;
+  const maintenanceMessage = r.data.maintenanceMessage
+    ? text(r.data.maintenanceMessage, 1000)
+    : 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث';
+  const reason = r.data.reason
+    ? text(r.data.reason, 1000)
+    : (enabled ? 'إعادة تشغيل منصة الحجوزات' : 'إيقاف منصة الحجوزات بالقاطع المركزي');
+  const ctrlRef = db.doc('booking_settings/platform_controls');
+
+  await db.runTransaction(async tx => {
+    const u = await actor(r, tx);
+    if (u.isAdmin !== true) throw new HttpsError('permission-denied', 'للإدارة فقط');
+    const snap = await tx.get(ctrlRef);
+    const prev = snap.exists ? snap.data() : { isBookingsEnabled: true };
+
+    const payload = {
+      isBookingsEnabled: enabled,
+      maintenanceMessage,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: u.uid,
+    };
+    if (!enabled) {
+      payload.disabledAt = FieldValue.serverTimestamp();
+      payload.disabledBy = u.uid;
+    } else {
+      payload.disabledAt = null;
+      payload.disabledBy = null;
+    }
+
+    if (snap.exists) {
+      tx.update(ctrlRef, payload);
+    } else {
+      tx.create(ctrlRef, payload);
+    }
+
+    tx.create(db.collection('booking_platform_audit').doc(), {
+      actorUid: u.uid,
+      action: enabled ? 'enablePlatformBookings' : 'disablePlatformBookings',
+      before: { isBookingsEnabled: prev.isBookingsEnabled !== false },
+      after: { isBookingsEnabled: enabled },
+      reason,
+      maintenanceMessage,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return { ok: true, isBookingsEnabled: enabled, maintenanceMessage };
+});
+
 exports.setVenueFeatured = onCall(async r => {
   const venueId = id(r.data.venueId);
   const isFeatured = r.data.isFeatured === true;
@@ -451,6 +504,13 @@ exports.rescheduleBooking = onCall(async r => {
 
   const ref = db.doc(`bookings/${bookingId}`);
   await db.runTransaction(async tx => {
+    const platformDoc = await tx.get(db.doc('booking_settings/platform_controls'));
+    if (platformDoc.exists) {
+      const pData = platformDoc.data();
+      if (pData && pData.isBookingsEnabled === false) {
+        throw new HttpsError('failed-precondition', pData.maintenanceMessage || 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث');
+      }
+    }
     const u = await actor(r, tx);
     const bSnap = await tx.get(ref);
     if (!bSnap.exists) fail('الحجز غير موجود');
@@ -742,6 +802,13 @@ exports.requestBooking = onCall(async r => {
   const start = Number(d.start), end = Number(d.end);
   if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start <= Date.now() || end <= start || end-start > 31*86400000) fail('موعد غير صالح');
   await db.runTransaction(async tx => {
+    const platformDoc = await tx.get(db.doc('booking_settings/platform_controls'));
+    if (platformDoc.exists) {
+      const pData = platformDoc.data();
+      if (pData && pData.isBookingsEnabled === false) {
+        throw new HttpsError('failed-precondition', pData.maintenanceMessage || 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث');
+      }
+    }
     const u=await actor(r,tx),customer=person(u);
     const validatedGuest = policy(() => validateGuestInput(d, customer));
     const existing = await tx.get(ref); if (existing.exists) return;
@@ -816,6 +883,13 @@ exports.actOnBooking = onCall({memory:'512MiB',timeoutSeconds:120},async r => {
     // Retrying a completed operation is safe only for its original actor/payload.
     if (d.action === 'submitPayment' && b.customerId === u.uid && b.receiptPath === receipt && b.paymentMethod === d.method && b.transactionNumber === d.transactionNumber && b.paymentAccount === d.expectedNumber) return;
     if (d.action === 'approve') {
+      const platformDoc = await tx.get(db.doc('booking_settings/platform_controls'));
+      if (platformDoc.exists) {
+        const pData = platformDoc.data();
+        if (pData && pData.isBookingsEnabled === false) {
+          throw new HttpsError('failed-precondition', pData.maintenanceMessage || 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث');
+        }
+      }
       if (!operates || b.status !== 'requested' || b.start <= now || !venue?.active) fail('لا يمكن قبول الحجز');
       const occupied = await tx.get(db.collection('bookings').where('venueId','==',b.venueId));
       const closures = await tx.get(db.collection('booking_closures').where('venueId','==',b.venueId));

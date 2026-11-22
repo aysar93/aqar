@@ -158,4 +158,35 @@ class BookingRules(unittest.TestCase):
         for uid in ['owner','admin','customer',None]: self.assertEqual(download(chunk,uid),403)
         self.assertEqual(upload('booking_media_v3/v3venue/owner/unreserved.mp4','owner','video/mp4'),403)
 
+    def test_killswitch_platform_controls_privacy_and_audit_rules(self):
+        controls = 'booking_settings/platform_controls'
+        private_cfg = 'booking_settings/private_payment_config'
+        audit_doc = 'booking_platform_audit/audit_entry_1'
+        self.assertEqual(write(controls, {'isBookingsEnabled': True, 'maintenanceMessage': 'test'}, 'SEED', timestamp=None), 200)
+        self.assertEqual(write(private_cfg, {'secretKey': 'confidential_123'}, 'SEED', timestamp=None), 200)
+        self.assertEqual(write(audit_doc, {'action': 'disablePlatformBookings', 'actorUid': 'admin'}, 'SEED', timestamp=None), 200)
+
+        # 1. platform_controls read: public to everyone
+        for uid in [None, 'customer', 'owner', 'reviewer', 'admin']:
+            self.assertEqual(call('/' + controls, uid), 200)
+
+        # 2. private settings under booking_settings: admin only, denied for all others
+        self.assertEqual(call('/' + private_cfg, 'admin'), 200)
+        for uid in [None, 'customer', 'owner', 'reviewer', 'other', 'blocked']:
+            self.assertEqual(call('/' + private_cfg, uid), 403)
+
+        # 3. Direct client write to booking_settings is completely denied
+        for uid in [None, 'customer', 'owner', 'admin']:
+            self.assertEqual(write(controls, {'isBookingsEnabled': False}, uid, True, timestamp=None), 403)
+            self.assertEqual(write(private_cfg, {'secretKey': 'tampered'}, uid, True, timestamp=None), 403)
+
+        # 4. booking_platform_audit read: admin only
+        self.assertEqual(call('/' + audit_doc, 'admin'), 200)
+        for uid in [None, 'customer', 'owner', 'reviewer', 'other', 'blocked']:
+            self.assertEqual(call('/' + audit_doc, uid), 403)
+
+        # 5. booking_platform_audit write: completely denied for all clients
+        for uid in [None, 'customer', 'owner', 'admin']:
+            self.assertEqual(write('booking_platform_audit/fake_audit', {'action': 'fake'}, uid, timestamp=None), 403)
+
 if __name__=='__main__': unittest.main()

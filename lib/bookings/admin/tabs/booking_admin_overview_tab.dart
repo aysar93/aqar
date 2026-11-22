@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../booking_admin_theme.dart';
 import '../../booking_widgets.dart' show bookingMoney;
+import '../../booking_screen.dart' show bookingCall;
 
 class BookingAdminOverviewTab extends StatefulWidget {
   final Function(int tabIndex)? onNavigateToTab;
@@ -94,6 +95,10 @@ class _BookingAdminOverviewTabState extends State<BookingAdminOverviewTab> with 
               children: [
                 // شريط تصفية الفترة والتحكم السريع
                 _buildPeriodFilter(),
+                const SizedBox(height: 16),
+
+                // قاطع الطوارئ المركزي الشامل للحجوزات
+                _buildGlobalKillSwitchCard(),
                 const SizedBox(height: 16),
 
                 // شريط التنبيهات الإدارية العاجلة
@@ -697,5 +702,273 @@ class _BookingAdminOverviewTabState extends State<BookingAdminOverviewTab> with 
       }
       return true;
     }).toList();
+  }
+
+  Widget _buildGlobalKillSwitchCard() {
+    final dark = BookingAdminTheme.isDark(context);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.doc('booking_settings/platform_controls').snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? {};
+        final isEnabled = data['isBookingsEnabled'] != false; // default true
+        final maintenanceMsg = (data['maintenanceMessage'] ?? 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث').toString();
+        final updatedAt = data['updatedAt'];
+        String timeStr = 'غير مسجل';
+        if (updatedAt is Timestamp) {
+          final dt = updatedAt.toDate();
+          timeStr = '${dt.year}/${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+
+        final statusColor = isEnabled ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+        final statusBg = isEnabled ? const Color(0x1F10B981) : const Color(0x1FEF4444);
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: dark ? BookingAdminTheme.surfaceCard : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: statusColor.withValues(alpha: 0.4), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: dark ? 0.2 : 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isEnabled ? Icons.check_circle_outline : Icons.gpp_bad_outlined,
+                      color: statusColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'قاطع الطوارئ المركزي لمنظومة الحجوزات',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: dark ? BookingAdminTheme.textPrimary : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          isEnabled
+                              ? 'المنظومة مفعلة بالكامل وتستقبل طلبات الحجز'
+                              : 'المنظومة متوقفة بالقاطع الشامل (لا يُسمح بحجوزات جديدة)',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (!isEnabled) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'رسالة الصيانة للمستخدمين: $maintenanceMsg',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          color: dark ? BookingAdminTheme.textSecondary : const Color(0xFF475569),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'تاريخ آخر تغيير: $timeStr | المسؤول: ${data['updatedBy'] ?? 'الإدارة'}',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 10,
+                          color: dark ? BookingAdminTheme.textMuted : const Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isEnabled ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: Icon(isEnabled ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                  label: Text(
+                    isEnabled ? 'إيقاف منصة الحجوزات بالكامل (طوارئ)' : 'إعادة تشغيل منصة الحجوزات',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  onPressed: () => _confirmToggleKillSwitch(isEnabled, data),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmToggleKillSwitch(bool currentEnabled, Map<String, dynamic> data) {
+    final nextState = !currentEnabled;
+    final msgCtrl = TextEditingController(
+      text: (data['maintenanceMessage'] ?? 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث').toString(),
+    );
+    final reasonCtrl = TextEditingController(
+      text: nextState ? 'إعادة تشغيل المنصة بعد الفحص' : 'إيقاف طارئ للمنصة لأعمال التدقيق',
+    );
+    bool busy = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(
+                nextState ? Icons.play_arrow_rounded : Icons.warning_rounded,
+                color: nextState ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                nextState ? 'تأكيد تشغيل المنصة' : 'تأكيد إيقاف المنصة',
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Directionality(
+            textDirection: TextDirection.rtl,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nextState
+                        ? 'سيتم تفعيل استقبال طلبات الحجوزات الجديدة واعتمادها لجميع العقارات فوراً.'
+                        : 'تحذير: سيتم رفض أي طلب حجز جديد أو اعتماد حجز فوري في عموم النظام. تظل الحجوزات القائمة والتقارير متاحة.',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13,
+                      color: nextState ? Colors.black87 : Colors.red.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (!nextState) ...[
+                    const Text('رسالة الصيانة التي ستظهر للمستخدمين:', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: msgCtrl,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'أدخل رسالة التوضيح...',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  const Text('سبب الإجراء (لسجل التدقيق الإداري):', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: reasonCtrl,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'أدخل سبب الإجراء...',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : () => Navigator.pop(ctx),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: nextState ? Colors.green : Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: busy
+                  ? null
+                  : () async {
+                      setDialogState(() => busy = true);
+                      try {
+                        await bookingCall('setPlatformBookingKillSwitch', {
+                          'enabled': nextState,
+                          'maintenanceMessage': msgCtrl.text.trim(),
+                          'reason': reasonCtrl.text.trim(),
+                        });
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                nextState ? 'تم تفعيل منصة الحجوزات بنجاح' : 'تم إيقاف منصة الحجوزات بالقاطع الشامل',
+                                style: const TextStyle(fontFamily: 'Cairo'),
+                              ),
+                              backgroundColor: nextState ? Colors.green : Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => busy = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('فشل الإجراء: $e', style: const TextStyle(fontFamily: 'Cairo')),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: busy
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(nextState ? 'تأكيد التشغيل' : 'تأكيد الإيقاف', style: const TextStyle(fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -592,6 +592,40 @@ class _BookingScreenState extends State<BookingScreen> {
                         : ListView(
                 key: const PageStorageKey('booking-workspace-scroll'),
                 children: [
+                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance.doc('booking_settings/platform_controls').snapshots(),
+                    builder: (context, snap) {
+                      final data = snap.data?.data();
+                      if (data == null || data['isBookingsEnabled'] != false) return const SizedBox.shrink();
+                      final msg = (data['maintenanceMessage'] ?? 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث').toString();
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1FEF4444),
+                          border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 26),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                msg,
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Color(0xFFDC2626),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   if (widget.admin && tab == 0)
                     BookingAdminTasks(
                         records: widget.adminTaskRecords ??
@@ -1429,16 +1463,23 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
         end != null &&
         start!.isBefore(end!) &&
         start!.isAfter(DateTime.now());
-    return PopScope<Object?>(
-        canPop: step == 0 || busy || submittedIntent != null,
-        onPopInvokedWithResult: (didPop, result) {
-          if (!didPop &&
-              !busy &&
-              submittedIntent == null &&
-              step > 0 &&
-              mounted) setState(() => step--);
-        },
-        child: BookingScaffold(
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.doc('booking_settings/platform_controls').snapshots(),
+      builder: (context, platformSnap) {
+        final platformData = platformSnap.data?.data();
+        final bool platformDisabled = platformData != null && platformData['isBookingsEnabled'] == false;
+        final String maintenanceMsg = (platformData?['maintenanceMessage'] ?? 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث').toString();
+
+        return PopScope<Object?>(
+            canPop: step == 0 || busy || submittedIntent != null,
+            onPopInvokedWithResult: (didPop, result) {
+              if (!didPop &&
+                  !busy &&
+                  submittedIntent == null &&
+                  step > 0 &&
+                  mounted) setState(() => step--);
+            },
+            child: BookingScaffold(
           appBar: AppBar(
               title: Text(step == 0
                   ? '${v['name']}'
@@ -1470,7 +1511,9 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (busy)
+                            if (platformDisabled)
+                              BookingActionReason(reason: maintenanceMsg)
+                            else if (busy)
                               const BookingActionReason(
                                   reason:
                                       'الإجراء معطل أثناء إرسال الطلب السابق.')
@@ -1553,7 +1596,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
                                       textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Cairo')),
-                                  onPressed: busy || (step == 1 && !validRange)
+                                  onPressed: platformDisabled || busy || (step == 1 && !validRange)
                                       ? null
                                       : () {
                                           HapticFeedback.selectionClick();
@@ -1593,7 +1636,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                             if (step == 3)
                               FilledButton(
                                   key: const ValueKey('booking-submit-request'),
-                                  onPressed: busy ||
+                                  onPressed: platformDisabled ||
+                                          busy ||
                                           confirmingRequest ||
                                           !accepted ||
                                           start == null ||
@@ -1745,11 +1789,13 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                                           if (mounted)
                                             setState(() => busy = false);
                                         },
-                                  child: Text(busy
-                                      ? 'جار إرسال الطلب…'
-                                      : submittedIntent != null
-                                          ? 'إعادة المحاولة بنفس الطلب'
-                                          : 'إرسال طلب الحجز')),
+                                  child: Text(platformDisabled
+                                      ? 'خدمة الحجوزات متوقفة مؤقتاً'
+                                      : busy
+                                          ? 'جار إرسال الطلب…'
+                                          : submittedIntent != null
+                                              ? 'إعادة المحاولة بنفس الطلب'
+                                              : 'إرسال طلب الحجز')),
                             if (step == 3 && submittedIntent != null)
                               TextButton(
                                   onPressed: busy
@@ -1763,6 +1809,33 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                   constraints: const BoxConstraints(maxWidth: 900),
                   child: Column(
                     children: [
+                      if (platformDisabled)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0x1FEF4444),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFEF4444), width: 1.2),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 24),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  maintenanceMsg,
+                                  style: const TextStyle(
+                                    color: Color(0xFFDC2626),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (step == 0)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
@@ -2252,6 +2325,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                   ],
                 ))),
         ));
+      },
+    );
   }
 }
 
