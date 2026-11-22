@@ -24,6 +24,10 @@ service cloud.firestore {
     match /booking_payment_references/{entry} { allow read, write: if false; }
     match /booking_checkin_codes/{entry} { allow read, write: if false; }
     match /booking_message_limits/{entry} { allow read, write: if false; }
+    match /booking_settings/{document} {
+      allow read: if document == 'platform_controls' || (activeUser() && isAdmin());
+      allow write: if false;
+    }
     match /booking_messages/{bookingId}/messages/{messageId} {
       allow read: if activeUser() && (
         get(/databases/$(database)/documents/bookings/$(bookingId)).data.customerId == request.auth.uid ||
@@ -74,6 +78,10 @@ service cloud.firestore {
       allow write: if false;
     }
     match /booking_venue_audit/{entry} {
+      allow read: if activeUser() && isAdmin();
+      allow write: if false;
+    }
+    match /booking_platform_audit/{entry} {
       allow read: if activeUser() && isAdmin();
       allow write: if false;
     }
