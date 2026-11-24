@@ -67,19 +67,132 @@ Future<void> endBookingStagingSession({
 final _stagingNavigator = GlobalKey<NavigatorState>();
 RemoteMessage? _pendingNotification;
 bool _stagingSessionReady = false;
-void _openNotification(RemoteMessage message) {
-  final bookingId = message.data['bookingId'];
-  if (bookingId is! String || bookingId.isEmpty || bookingId.contains('/')) {
+String? _lastNotificationKey;
+DateTime? _lastNotificationHandledAt;
+StreamSubscription<RemoteMessage>? _openedAppSub;
+StreamSubscription<RemoteMessage>? _foregroundSub;
+
+String? _extractBookingId(Map<String, dynamic>? data) {
+  if (data == null) return null;
+  final raw = data['bookingId'] ?? data['id'];
+  if (raw == null) return null;
+  final idStr = raw.toString().trim();
+  if (idStr.isEmpty || idStr.contains('/') || idStr.length > 200) return null;
+  if (!RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(idStr)) return null;
+  return idStr;
+}
+
+Future<void> _openNotification(RemoteMessage message) async {
+  final bookingId = _extractBookingId(message.data);
+  if (bookingId == null) {
+    final context = _stagingNavigator.currentContext;
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('بيانات إشعار الحجز غير صالحة')),
+      );
+    }
     return;
   }
-  if (!_stagingSessionReady ||
-      FirebaseAuth.instance.currentUser == null ||
+
+  final key = '${message.messageId ?? ''}:$bookingId';
+  final now = DateTime.now();
+  if (_lastNotificationKey == key &&
+      _lastNotificationHandledAt != null &&
+      now.difference(_lastNotificationHandledAt!) <
+          const Duration(milliseconds: 2000)) {
+    return;
+  }
+  _lastNotificationKey = key;
+  _lastNotificationHandledAt = now;
+
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null ||
+      !_stagingSessionReady ||
       _stagingNavigator.currentState == null) {
     _pendingNotification = message;
+    final context = _stagingNavigator.currentContext;
+    if (context != null && context.mounted && user == null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+            content:
+                Text('يرجى تسجيل الدخول أولاً للوصول إلى تفاصيل الحجز.')),
+      );
+    }
     return;
   }
-  _stagingNavigator.currentState!.push(MaterialPageRoute(
-      builder: (_) => BookingDetailsScreen(bookingId: bookingId)));
+
+  try {
+    final snap =
+        await FirebaseFirestore.instance.doc('bookings/$bookingId').get();
+    if (!snap.exists) {
+      final context = _stagingNavigator.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('الحجز المطلوب لم يعد متاحاً أو تم حذفه.')),
+        );
+      }
+      return;
+    }
+    final b = snap.data();
+    final uid = user.uid;
+    final isOwner = b?['ownerId'] == uid;
+    final isCustomer = b?['customerId'] == uid;
+    final userDoc =
+        await FirebaseFirestore.instance.doc('users/$uid').get();
+    final isAdmin = userDoc.data()?['isAdmin'] == true;
+    final canReview = userDoc.data()?['canReviewBookingPayments'] == true;
+    if (!isOwner && !isCustomer && !isAdmin && !canReview) {
+      final context = _stagingNavigator.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('لا تملك صلاحية عرض هذا الحجز.')),
+        );
+      }
+      return;
+    }
+  } catch (_) {}
+
+  if (_stagingNavigator.currentState != null) {
+    _stagingNavigator.currentState!.push(MaterialPageRoute(
+        builder: (_) => BookingDetailsScreen(bookingId: bookingId)));
+  }
+}
+
+void _handleForegroundMessage(RemoteMessage message) {
+  final title = message.notification?.title ??
+      message.data['title']?.toString() ??
+      'إشعار جديد';
+  final body =
+      message.notification?.body ?? message.data['body']?.toString() ?? '';
+  final bookingId = _extractBookingId(message.data);
+  final context = _stagingNavigator.currentContext;
+  if (context == null || !context.mounted) return;
+
+  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+    SnackBar(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+          if (body.isNotEmpty)
+            Text(body,
+                style: const TextStyle(fontSize: 12, fontFamily: 'Cairo')),
+        ],
+      ),
+      action: bookingId != null
+          ? SnackBarAction(
+              label: 'عرض الحجز',
+              textColor: const Color(0xFFC5A16B),
+              onPressed: () => _openNotification(message),
+            )
+          : null,
+      duration: const Duration(seconds: 5),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 
 Future<void> main() => runBookingStaging();
@@ -97,9 +210,20 @@ Future<void> runBookingStaging({FirebaseOptions? options}) async {
     await app.delete();
     throw StateError('Staging cannot connect to any other Firebase project');
   }
-  FirebaseMessaging.onMessageOpenedApp.listen(_openNotification);
+  _openedAppSub?.cancel();
+  _openedAppSub =
+      FirebaseMessaging.onMessageOpenedApp.listen(_openNotification);
+  _foregroundSub?.cancel();
+  _foregroundSub =
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
   FirebaseMessaging.instance.getInitialMessage().then((message) {
-    if (message != null) _pendingNotification = message;
+    if (message != null) {
+      if (_stagingSessionReady && FirebaseAuth.instance.currentUser != null) {
+        _openNotification(message);
+      } else {
+        _pendingNotification = message;
+      }
+    }
   }).catchError((_) {});
   runApp(MultiProvider(
       providers: [
@@ -183,6 +307,10 @@ class _LoginState extends State<_StagingLogin> {
     await FirebaseAuth.instance.authStateChanges().first;
     if (!mounted) return;
     setState(() => busy = false);
+    if (_pendingNotification != null &&
+        FirebaseAuth.instance.currentUser != null) {
+      _enterBookings(restore: true);
+    }
   }
 
   Future<void> _enterBookings({bool restore = false}) async {

@@ -70,6 +70,16 @@ class EditPropertyData {
   /// الصور الجديدة التي اختارها المستخدم من الجهاز.
   List<File> newImages;
 
+  /// رابط الفيديو المخزن
+  String? videoUrl;
+  String? videoThumbnailUrl;
+
+  /// فيديو جديد تم اختياره
+  File? newVideo;
+
+  /// إشارة لحذف الفيديو الحالي
+  bool removeVideo;
+
   // =========================
   // المميزات
   // =========================
@@ -110,6 +120,10 @@ class EditPropertyData {
     this.negotiable = false,
     List<String>? existingImages,
     List<File>? newImages,
+    this.videoUrl,
+    this.videoThumbnailUrl,
+    this.newVideo,
+    this.removeVideo = false,
     List<String>? features,
     this.description = '',
     this.phone = '',
@@ -162,6 +176,8 @@ class EditPropertyData {
       negotiable: map['negotiable'] == true,
 
       existingImages: _readImages(map),
+      videoUrl: map['videoUrl']?.toString(),
+      videoThumbnailUrl: map['videoThumbnailUrl']?.toString(),
 
       features: _readStringList(map['features']),
 
@@ -219,6 +235,14 @@ class EditPropertyData {
 
       'ownerPhone': phone,
       'ownerWhatsapp': whatsapp,
+
+      if (removeVideo) ...{
+        'videoUrl': null,
+        'videoThumbnailUrl': null,
+      } else if (videoUrl != null) ...{
+        'videoUrl': videoUrl,
+        'videoThumbnailUrl': videoThumbnailUrl,
+      },
 
       // أي تعديل يعيد العقار للمراجعة.
       'status': 'pending',

@@ -123,4 +123,70 @@ class ReelModel {
           Map<String, dynamic>.from(data['officeSnapshot'] ?? const {}),
     );
   }
+
+  factory ReelModel.fromBanner(Map<String, dynamic> data, String id) {
+    final type = data['type']?.toString() ?? 'general';
+    final targetId = data['targetId']?.toString();
+    final imageUrl = data['imageUrl']?.toString() ?? '';
+    final title = data['title']?.toString() ?? 'إعلان ممول';
+    final subtitle = data['subtitle']?.toString() ?? '';
+
+    // Support both 'external' (admin dashboard) and legacy 'url'
+    final isProperty = type == 'property';
+    final isOffice = type == 'office';
+    final isExternal = type == 'external' || type == 'url';
+
+    // Strict URL validation: must be http/https with valid host
+    String validExternalUrl = '';
+    if (isExternal && targetId != null && targetId.trim().isNotEmpty) {
+      final trimmed = targetId.trim();
+      final uri = Uri.tryParse(trimmed);
+      if (uri != null &&
+          (uri.scheme == 'http' || uri.scheme == 'https') &&
+          uri.host.isNotEmpty) {
+        validExternalUrl = trimmed;
+      }
+    }
+
+    final ctaLabel = isProperty
+        ? 'عرض العقار'
+        : (isOffice
+            ? 'زيارة المكتب'
+            : (validExternalUrl.isNotEmpty ? 'معرفة المزيد' : ''));
+
+    return ReelModel(
+      id: 'banner_$id',
+      title: title,
+      description: subtitle,
+      videoUrl: imageUrl,
+      thumbnailUrl: imageUrl,
+      qualityUrls: {'auto': imageUrl},
+      status: ReelStatus.published,
+      targetType: isProperty
+          ? ReelTargetType.property
+          : (isOffice ? ReelTargetType.office : ReelTargetType.general),
+      propertyId: isProperty ? targetId : null,
+      officeId: isOffice ? targetId : null,
+      category: 'إعلان',
+      tags: const ['إعلان', 'ممول'],
+      externalUrl: validExternalUrl,
+      ctaLabel: ctaLabel,
+      isPinned: false,
+      isFeatured: false,
+      isSponsored: true,
+      publishAt: null,
+      expiresAt: null,
+      sortOrder: (data['order'] as num?)?.toInt() ?? 0,
+      views: 0,
+      completions: 0,
+      likes: 0,
+      saves: 0,
+      shares: 0,
+      propertyClicks: 0,
+      externalClicks: 0,
+      reports: 0,
+      propertySnapshot: const {},
+      officeSnapshot: const {},
+    );
+  }
 }

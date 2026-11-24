@@ -1,6 +1,7 @@
 import 'package:aqar/moderation/user_blocks.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import '../../core/data/paged_query.dart';
@@ -43,10 +44,12 @@ class ReelService {
         if (!doc.exists) return false;
         UserBlocks.instance.rememberTarget(doc.reference.path, doc.data()!);
         if (UserBlocks.instance.hides(doc.data()!)) return false;
-        if (entry.key == 'properties' && doc.data()?['status'] != 'approved')
+        if (entry.key == 'properties' && doc.data()?['status'] != 'approved') {
           return false;
-        if (entry.key == 'offices' && doc.data()?['status'] != 'active')
+        }
+        if (entry.key == 'offices' && doc.data()?['status'] != 'active') {
           return false;
+        }
       }
       return !UserBlocks.instance.hides({
         'propertySnapshot': reel.propertySnapshot,
@@ -207,6 +210,133 @@ class ReelFeedController extends ChangeNotifier {
   bool loaded = false;
   Object? error;
   ReelModel? _initial;
+
+  final int _sessionSeed = DateTime.now().millisecondsSinceEpoch;
+  List<ReelModel> _activeAds = [];
+  bool _adsLoaded = false;
+
+  Future<void> _loadAds() async {
+    if (_adsLoaded || _disposed) return;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('banners')
+          .where('isActive', isEqualTo: true)
+          .get();
+      if (!_disposed) {
+        _activeAds = snap.docs
+            .map((d) => ReelModel.fromBanner(d.data(), d.id))
+            .toList();
+        _adsLoaded = true;
+      }
+    } catch (_) {
+      // Graceful fallback if banners are unreadable
+    }
+  }
+
+  List<ReelModel> _applySmartFeed(List<ReelModel> source) {
+    if (source.isEmpty) return source;
+
+    // 1. استخراج الريلز المثبتة للحفاظ على أولوية الإدارة بالأعلى
+    final pinned = source.where((r) => r.isPinned).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    final nonPinned = source.where((r) => !r.isPinned).toList();
+
+    // 2. التجميع الذكي حسب تصنيف العقار لتفادي التكرار الرتيب
+    final Map<String, List<ReelModel>> groups = {};
+    for (final reel in nonPinned) {
+      final key = reel.category.isNotEmpty ? reel.category : 'عام';
+      groups.putIfAbsent(key, () => []).add(reel);
+    }
+
+    // خلط محتوى كل فئة ببذرة الجلسة لضمان تنوع غير ثابت ومستقر أثناء التمرير
+    final rng = Random(_sessionSeed);
+    for (final group in groups.values) {
+      group.shuffle(rng);
+    }
+
+    // 3. التوزيع التناوبي بين الفئات (Interleaving)
+    final List<ReelModel> diverse = [];
+    final keys = groups.keys.toList()..shuffle(rng);
+    bool hasMore = true;
+    int cycle = 0;
+    while (hasMore) {
+      hasMore = false;
+      for (final key in keys) {
+        final list = groups[key]!;
+        if (cycle < list.length) {
+          diverse.add(list[cycle]);
+          hasMore = true;
+        }
+      }
+      cycle++;
+    }
+
+    // 4. دمج الإعلانات الإدارية كل 4 ريلز مع منع التكرار
+    final List<ReelModel> finalFeed = [];
+    final seen = <String>{};
+
+    void addReel(ReelModel r) {
+      if (seen.add(r.id)) {
+        finalFeed.add(r);
+      }
+    }
+
+    for (final p in pinned) {
+      addReel(p);
+    }
+
+    int adIndex = 0;
+    int itemsSinceAd = 0;
+    const int adInterval = 4;
+
+    for (final item in diverse) {
+      addReel(item);
+      itemsSinceAd++;
+
+      if (_activeAds.isNotEmpty && itemsSinceAd >= adInterval) {
+        final ad = _activeAds[adIndex % _activeAds.length];
+        final adInstance = ReelModel(
+          id: '${ad.id}_${finalFeed.length}',
+          title: ad.title,
+          description: ad.description,
+          videoUrl: ad.videoUrl,
+          thumbnailUrl: ad.thumbnailUrl,
+          qualityUrls: ad.qualityUrls,
+          status: ad.status,
+          targetType: ad.targetType,
+          propertyId: ad.propertyId,
+          officeId: ad.officeId,
+          category: ad.category,
+          tags: ad.tags,
+          externalUrl: ad.externalUrl,
+          ctaLabel: ad.ctaLabel,
+          isPinned: false,
+          isFeatured: false,
+          isSponsored: true,
+          publishAt: ad.publishAt,
+          expiresAt: ad.expiresAt,
+          sortOrder: ad.sortOrder,
+          views: ad.views,
+          completions: ad.completions,
+          likes: ad.likes,
+          saves: ad.saves,
+          shares: ad.shares,
+          propertyClicks: ad.propertyClicks,
+          externalClicks: ad.externalClicks,
+          reports: ad.reports,
+          propertySnapshot: ad.propertySnapshot,
+          officeSnapshot: ad.officeSnapshot,
+        );
+        addReel(adInstance);
+        adIndex++;
+        itemsSinceAd = 0;
+      }
+    }
+
+    return finalFeed;
+  }
+
   Future<void> includeInitial(String id) async {
     try {
       final doc = await DocumentReadCache.instance.get('reels/$id');
@@ -229,12 +359,14 @@ class ReelFeedController extends ChangeNotifier {
       return;
     }
     if (pages.snapshot.hasData) {
+      await _loadAds();
       final result = await Future.wait(pages.documents.map((doc) async {
         final reel = ReelModel.fromDocument(doc);
         return await service._visibleToViewer(reel) ? reel : null;
       }));
       if (_disposed || revision != _revision) return;
-      reels = result.whereType<ReelModel>().toList();
+      final visibleList = result.whereType<ReelModel>().toList();
+      reels = _applySmartFeed(visibleList);
       if (_initial != null &&
           !reels.any((r) => r.id == _initial!.id) &&
           await service._visibleToViewer(_initial!) &&

@@ -341,3 +341,6 @@ if (process.env.BOOKING_LEGACY_EXTERNAL_READS === "true") {
 const gateway = require('./booking_media_gateway');
 exports.bookingMediaContent = gateway.bookingMediaContent;
 exports.uploadBookingVideoChunk = gateway.uploadBookingVideoChunk;
+
+const propertyReelsSync = require('./property_reels_sync');
+exports.syncPropertyReels = propertyReelsSync.syncPropertyReels;

@@ -45,6 +45,44 @@ class _Step6ImagesState extends State<Step6Images> {
     widget.onChanged();
   }
 
+  Future<void> pickVideo() async {
+    try {
+      final picked = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 2),
+      );
+      if (picked == null) return;
+      final file = File(picked.path);
+      final size = await file.length();
+      if (size > 100 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("حجم الفيديو كبير جداً. الحد الأقصى هو 100 ميغابايت"),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        widget.property.selectedVideo = file;
+      });
+      widget.onChanged();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("تعذر اختيار الفيديو: $e")),
+      );
+    }
+  }
+
+  void removeVideo() {
+    setState(() {
+      widget.property.selectedVideo = null;
+      widget.property.videoUrl = null;
+    });
+    widget.onChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -94,6 +132,66 @@ class _Step6ImagesState extends State<Step6Images> {
               ),
             ),
           ),
+          const SizedBox(height: 14),
+          // زر وواجهة اختيار فيديو العقار (اختياري)
+          if (widget.property.selectedVideo == null)
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: pickVideo,
+                icon: const Icon(
+                  Icons.videocam_outlined,
+                  color: Color(0xffC5A16B),
+                ),
+                label: const Text(
+                  "إضافة فيديو للعقار (اختياري)",
+                  style: TextStyle(
+                    color: Color(0xffC5A16B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(
+                    color: Color(0xffC5A16B),
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xffC5A16B).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xffC5A16B)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.videocam_rounded, color: Color(0xffC5A16B)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "تم اختيار فيديو للعقار (${(widget.property.selectedVideo!.lengthSync() / (1024 * 1024)).toStringAsFixed(1)} ميغابايت)",
+                      style: TextStyle(
+                        color: onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.red),
+                    onPressed: removeVideo,
+                    tooltip: "إلغاء الفيديو",
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 25),
           Expanded(
             child: widget.property.selectedImages.isEmpty

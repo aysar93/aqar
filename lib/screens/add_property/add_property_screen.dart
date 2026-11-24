@@ -8,6 +8,7 @@ import '../../analytics/services/app_activity_service.dart';
 import '../../models/add_property_data.dart';
 import '../../services/media_store.dart';
 import '../../utils/property_default_images.dart';
+import '../../reels/services/reel_service.dart';
 
 import 'step1_ad_type.dart';
 import 'step2_property_type.dart';
@@ -566,6 +567,26 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
       property.imageUrls = imageUrls;
 
+      if (property.selectedVideo != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("جاري رفع فيديو العقار..."),
+          ),
+        );
+        try {
+          final videoBytes = await property.selectedVideo!.readAsBytes();
+          final fileName = 'prop_${DateTime.now().millisecondsSinceEpoch}.mp4';
+          final url = await ReelService.instance.uploadVideo(
+            bytes: videoBytes,
+            fileName: fileName,
+            contentType: 'video/mp4',
+          );
+          property.videoUrl = url;
+        } catch (e) {
+          debugPrint('Video upload warning during add: $e');
+        }
+      }
+
       final counterRef =
           FirebaseFirestore.instance.collection('settings').doc('properties');
 
@@ -653,6 +674,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                 "publisherAccountType": accountType,
                 "publisherVerified": isVerified,
                 "status": propertyStatus,
+                "videoUrl": property.videoUrl ?? "",
+                "videoThumbnailUrl": property.videoThumbnailUrl ?? "",
                 "createdAt": FieldValue.serverTimestamp(),
               }),
           actorUid: user.uid);
@@ -663,7 +686,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
         await _notifyOfficeFollowers(
           officeId: officeId,
           propertyId: propertyReference.id,
-          officeName: activeOffice?.name ?? 'المكتب',
+          officeName: activeOffice.name,
           propertyTitle: property.title.trim(),
           publisherUid: user.uid,
         );

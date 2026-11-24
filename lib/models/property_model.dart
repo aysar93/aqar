@@ -70,6 +70,9 @@ class PropertyModel {
 
   final String status;
 
+  final String? videoUrl;
+  final String? videoThumbnailUrl;
+
   const PropertyModel({
     required this.id,
     required this.title,
@@ -121,6 +124,8 @@ class PropertyModel {
     required this.longitude,
     required this.createdAt,
     required this.status,
+    this.videoUrl,
+    this.videoThumbnailUrl,
   });
 
   factory PropertyModel.fromMap(
@@ -183,6 +188,8 @@ class PropertyModel {
       longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
       createdAt: map['createdAt'],
       status: map['status'] ?? '',
+      videoUrl: map['videoUrl']?.toString(),
+      videoThumbnailUrl: map['videoThumbnailUrl']?.toString(),
     );
   }
 
@@ -237,6 +244,8 @@ class PropertyModel {
       'longitude': longitude,
       'createdAt': createdAt,
       'status': status,
+      'videoUrl': videoUrl,
+      'videoThumbnailUrl': videoThumbnailUrl,
     };
   }
 }

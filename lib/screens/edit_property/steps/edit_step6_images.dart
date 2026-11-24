@@ -75,6 +75,38 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
     widget.onChanged();
   }
 
+  Future<void> pickVideo() async {
+    try {
+      final picked = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 2),
+      );
+      if (picked == null) return;
+      final file = File(picked.path);
+      final size = await file.length();
+      if (size > 100 * 1024 * 1024) {
+        _showMessage('حجم الفيديو كبير جداً. الحد الأقصى 100 ميغابايت');
+        return;
+      }
+      setState(() {
+        widget.property.newVideo = file;
+        widget.property.removeVideo = false;
+      });
+      widget.onChanged();
+    } catch (e) {
+      _showMessage('تعذر اختيار الفيديو: $e');
+    }
+  }
+
+  void removeVideo() {
+    setState(() {
+      widget.property.newVideo = null;
+      widget.property.videoUrl = null;
+      widget.property.removeVideo = true;
+    });
+    widget.onChanged();
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
 
@@ -169,6 +201,96 @@ class _EditStep6ImagesState extends State<EditStep6Images> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // فيديو العقار (اختياري)
+          if (widget.property.newVideo != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xffC5A16B).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xffC5A16B)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.videocam_rounded, color: Color(0xffC5A16B)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'فيديو جديد جاهز للرفع (${(widget.property.newVideo!.lengthSync() / (1024 * 1024)).toStringAsFixed(1)} ميغابايت)',
+                      style: TextStyle(
+                        color: onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.red),
+                    onPressed: removeVideo,
+                    tooltip: 'إلغاء الفيديو',
+                  ),
+                ],
+              ),
+            )
+          else if (widget.property.videoUrl != null && !widget.property.removeVideo)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xffC5A16B).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xffC5A16B)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.videocam_rounded, color: Color(0xffC5A16B)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'العقار يحتوي على فيديو حالي',
+                      style: TextStyle(
+                        color: onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                    onPressed: removeVideo,
+                    tooltip: 'حذف الفيديو',
+                  ),
+                ],
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: pickVideo,
+                icon: const Icon(
+                  Icons.videocam_outlined,
+                  color: Color(0xffC5A16B),
+                ),
+                label: const Text(
+                  'إضافة / تعديل فيديو العقار (اختياري)',
+                  style: TextStyle(
+                    color: Color(0xffC5A16B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(
+                    color: Color(0xffC5A16B),
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 22),
           if (totalImages == 0)
             Expanded(

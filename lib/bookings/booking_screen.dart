@@ -2960,17 +2960,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 if (owner && b['status'] == 'confirmed')
                   button('تسجيل الوصول', 'arrive'),
                 if (owner && b['status'] == 'confirmed')
-                  TextButton(
+                  OutlinedButton.icon(
+                      icon: const Icon(Icons.pin_outlined),
+                      label: const Text('إدخال رمز التحقق يدوياً'),
                       onPressed: busy
                           ? null
-                          : () => bookingRun(context, () async {
-                                await widget.call('verifyBookingCheckInCode', {
-                                  'code': reason.text.trim(),
-                                  'bookingId': widget.bookingId
-                                });
-                              }),
-                      child: const Text(
-                          'تحقق من رمز الوصول الملصق في حقل الملاحظات')),
+                          : () => showDialog<bool>(
+                                context: context,
+                                builder: (_) => BookingManualCheckInDialog(
+                                  bookingId: widget.bookingId,
+                                  call: widget.call,
+                                ),
+                              )),
                 if (owner && ['confirmed', 'arrived'].contains(b['status']))
                   button('إنهاء الحجز بعد موعد الخروج', 'complete'),
                 BookingAgreedPolicy(booking: b),

@@ -205,7 +205,24 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
     _prepare();
   }
 
+  bool get _isImageMedia {
+    final url = widget.reel.videoUrl.toLowerCase();
+    return url.endsWith('.jpg') ||
+        url.endsWith('.jpeg') ||
+        url.endsWith('.png') ||
+        url.endsWith('.webp') ||
+        (!url.contains('.mp4') && !url.contains('.mov') && widget.reel.isSponsored);
+  }
+
   Future<void> _prepare() async {
+    if (_isImageMedia) {
+      if (!_trackedView && widget.active) {
+        _trackedView = true;
+        ReelService.instance.track(widget.reel.id, 'view');
+      }
+      if (mounted) setState(() {});
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     _muted = prefs.getBool('reels_muted') ?? false;
     _quality = prefs.getString('reels_quality') ?? 'auto';
@@ -245,6 +262,13 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
   @override
   void didUpdateWidget(covariant ReelPlayerCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_isImageMedia) {
+      if (widget.active && !_trackedView) {
+        _trackedView = true;
+        ReelService.instance.track(widget.reel.id, 'view');
+      }
+      return;
+    }
     if (widget.active && !oldWidget.active) {
       _controller?.play();
     } else if (!widget.active && oldWidget.active) {
@@ -314,27 +338,53 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
     final id = widget.reel.propertyId;
     if (id == null || id.isEmpty) return;
     ReelService.instance.track(widget.reel.id, 'propertyClick');
-    final doc =
-        await FirebaseFirestore.instance.collection('properties').doc(id).get();
-    if (doc.exists && mounted) {
-      PropertyNavigator.open(
-          context, PropertyModel.fromMap(doc.data()!, doc.id));
+    final wasPlaying = _controller?.value.isPlaying == true;
+    _controller?.pause();
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('properties').doc(id).get();
+      if (doc.exists && mounted) {
+        PropertyNavigator.open(
+            context, PropertyModel.fromMap(doc.data()!, doc.id));
+      }
+    } finally {
+      if (mounted && widget.active && wasPlaying) {
+        _controller?.play();
+      }
     }
   }
 
   Future<void> _openExternal() async {
-    final uri = Uri.tryParse(widget.reel.externalUrl);
-    if (uri == null) return;
+    final urlStr = widget.reel.externalUrl.trim();
+    if (urlStr.isEmpty) return;
+    final uri = Uri.tryParse(urlStr);
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      return;
+    }
     ReelService.instance.track(widget.reel.id, 'externalClick');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
   }
 
-  void _openOffice() {
+  Future<void> _openOffice() async {
     final id = widget.reel.officeId;
     if (id == null || id.isEmpty) return;
     ReelService.instance.track(widget.reel.id, 'officeClick');
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => OfficeProfileScreen(officeId: id)));
+    final wasPlaying = _controller?.value.isPlaying == true;
+    _controller?.pause();
+    try {
+      await Navigator.push(context,
+          MaterialPageRoute(builder: (_) => OfficeProfileScreen(officeId: id)));
+    } finally {
+      if (mounted && widget.active && wasPlaying) {
+        _controller?.play();
+      }
+    }
   }
 
   void _share() {
@@ -429,7 +479,19 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
         });
       },
       child: Stack(fit: StackFit.expand, children: [
-        if (controller?.value.isInitialized == true)
+        if (_isImageMedia)
+          Image.network(
+            widget.reel.videoUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const ColoredBox(
+              color: Colors.black,
+              child: Center(
+                child: Icon(Icons.broken_image_outlined,
+                    color: Colors.white38, size: 48),
+              ),
+            ),
+          )
+        else if (controller?.value.isInitialized == true)
           FittedBox(
               fit: BoxFit.cover,
               child: SizedBox(
@@ -546,9 +608,43 @@ class _ReelPlayerCardState extends State<ReelPlayerCard> {
                             style: const TextStyle(
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.w600)),
+                      _ctaButton(),
                     ]))),
         if (_ended) _endOverlay(),
       ]),
+    );
+  }
+
+  Widget _ctaButton() {
+    final hasProperty = widget.reel.propertyId?.isNotEmpty == true;
+    final hasOffice = widget.reel.officeId?.isNotEmpty == true;
+    final hasExternal = widget.reel.externalUrl.isNotEmpty;
+    if (!hasProperty && !hasOffice && !hasExternal) {
+      return const SizedBox.shrink();
+    }
+    final label = widget.reel.ctaLabel.isNotEmpty
+        ? widget.reel.ctaLabel
+        : (hasProperty ? 'عرض العقار' : (hasOffice ? 'زيارة المكتب' : 'معرفة المزيد'));
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: ElevatedButton.icon(
+        onPressed: hasProperty
+            ? _openProperty
+            : (hasOffice ? _openOffice : _openExternal),
+        icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+        label: Text(label,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 2,
+        ),
+      ),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'dart:io' as io;
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -53,6 +54,219 @@ class _PublishedReviewsState extends State<BookingPublishedReviews> {
       });
 }
 
+class BookingManualCheckInDialog extends StatefulWidget {
+  const BookingManualCheckInDialog({
+    super.key,
+    required this.bookingId,
+    this.call,
+  });
+
+  final String bookingId;
+  final Future<dynamic> Function(String, Map<String, dynamic>)? call;
+
+  @override
+  State<BookingManualCheckInDialog> createState() =>
+      _BookingManualCheckInDialogState();
+}
+
+class _BookingManualCheckInDialogState
+    extends State<BookingManualCheckInDialog> {
+  final TextEditingController _codeController = TextEditingController();
+  bool _busy = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    final raw = _codeController.text.trim();
+    if (raw.isEmpty) {
+      setState(() => _errorMessage = 'يرجى إدخال أو لصق رمز التحقق للمتابعة');
+      return;
+    }
+
+    final parts = raw.split(':');
+    if (parts.length != 3 || parts[0] != 'aqar-booking') {
+      setState(() =>
+          _errorMessage = 'صيغة الرمز غير صالحة. يجب أن يبدأ بـ aqar-booking:');
+      return;
+    }
+
+    if (parts[1] != widget.bookingId) {
+      setState(() =>
+          _errorMessage = 'هذا الرمز يخص حجزاً آخر؛ يرجى فتح الحجز الصحيح');
+      return;
+    }
+
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(parts[2])) {
+      setState(() => _errorMessage = 'رمز التحقق غير مكتمل أو تالف');
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final caller = widget.call ?? bookingCall;
+      await caller('verifyBookingCheckInCode', {
+        'code': raw,
+        'bookingId': widget.bookingId,
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم تسجيل وصول الحجز بنجاح'),
+          backgroundColor: Color(0xFF0F172A),
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        if (e is FirebaseFunctionsException) {
+          if (e.code == 'failed-precondition' &&
+              e.details is Map &&
+              e.details['reason'] == 'already-checked-in') {
+            _errorMessage =
+                'تم تسجيل الوصول مسبقاً، ولا يمكن استخدام هذا الرمز مرة أخرى';
+          } else if (e.message != null &&
+              e.message!.isNotEmpty &&
+              !e.message!.contains('Exception')) {
+            _errorMessage = e.message;
+          } else {
+            _errorMessage =
+                'تعذر اعتماد الرمز. تحقق من الموعد وصلاحية الرمز واتصال الإنترنت.';
+          }
+        } else {
+          _errorMessage =
+              'تعذر اعتماد الرمز. تحقق من الموعد وصلاحية الرمز واتصال الإنترنت.';
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.pin_outlined, color: Color(0xFFC5A16B)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'إدخال رمز التحقق يدوياً',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'الصق أو اكتب رمز الوصول (QR Code) الذي يقدمه المستأجر عند تسجيل الوصول.',
+              style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _codeController,
+              enabled: !_busy,
+              maxLines: 2,
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'aqar-booking:${widget.bookingId}:...',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                labelText: 'رمز التحقق',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.qr_code),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.paste_outlined),
+                  tooltip: 'لصق من الحافظة',
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          final data = await Clipboard.getData('text/plain');
+                          if (data?.text != null && mounted) {
+                            setState(() {
+                              _codeController.text = data!.text!.trim();
+                              _errorMessage = null;
+                            });
+                          }
+                        },
+                ),
+              ),
+              onChanged: (_) {
+                if (_errorMessage != null) {
+                  setState(() => _errorMessage = null);
+                }
+              },
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline,
+                        color: Colors.red.shade700, size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                            color: Colors.red.shade900, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: const Text('إلغاء'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFC5A16B),
+            foregroundColor: Colors.black,
+          ),
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.black),
+                )
+              : const Text('تحقق من الرمز',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+}
+
 class BookingScannerScreen extends StatefulWidget {
   const BookingScannerScreen({super.key, required this.bookingId});
   final String bookingId;
@@ -68,6 +282,25 @@ class _ScannerState extends State<BookingScannerScreen> {
   void dispose() {
     controller.dispose();
     super.dispose();
+  }
+
+  Future<void> openManualEntry() async {
+    await controller.stop();
+    if (!mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => BookingManualCheckInDialog(
+        bookingId: widget.bookingId,
+        call: bookingCall,
+      ),
+    );
+    if (ok == true && mounted) {
+      Navigator.pop(context);
+    } else if (mounted) {
+      try {
+        await controller.start();
+      } catch (_) {}
+    }
   }
 
   Future<void> verify(String code) async {
@@ -100,7 +333,16 @@ class _ScannerState extends State<BookingScannerScreen> {
 
   @override
   Widget build(BuildContext context) => BookingScaffold(
-      appBar: AppBar(title: const Text('مسح رمز وصول الحجز')),
+      appBar: AppBar(
+        title: const Text('مسح رمز وصول الحجز'),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.pin_outlined),
+            label: const Text('إدخال يدوي'),
+            onPressed: busy ? null : openManualEntry,
+          ),
+        ],
+      ),
       body: BookingScannerPanel(
           busy: busy,
           error: error,
@@ -114,9 +356,25 @@ class _ScannerState extends State<BookingScannerScreen> {
                   }
                 }
               },
-              errorBuilder: (context, error) => const Center(
-                  child: Text(
-                      'تعذر فتح الكاميرا؛ اسمح باستخدامها من إعدادات الهاتف أو استخدم لصق الرمز في الحجز.'))),
+              errorBuilder: (context, error) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          'تعذر فتح الكاميرا؛ اسمح باستخدامها من إعدادات الهاتف أو استخدم الإدخال اليدوي للرمز.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.pin_outlined),
+                        label: const Text('إدخال رمز التحقق يدوياً'),
+                        onPressed: busy ? null : openManualEntry,
+                      ),
+                    ],
+                  ))),
           onRetry: error == null
               ? null
               : () async {

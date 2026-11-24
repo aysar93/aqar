@@ -95,12 +95,16 @@ class AddPropertyData {
   bool negotiable = false;
 
 // =========================
-// الخطوة 6 - الصور
+// الخطوة 6 - الصور والفيديو
 // =========================
 
   List<String> imageUrls = [];
 
   List<File> selectedImages = [];
+
+  File? selectedVideo;
+  String? videoUrl;
+  String? videoThumbnailUrl;
 
 // =========================
 // الخطوة 7 - التواصل
