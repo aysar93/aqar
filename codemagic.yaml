@@ -82,7 +82,7 @@ workflows:
         script: swift tools/configure_ios_entitlements.swift
 
       - name: Run automated tests
-        script: flutter test
+        script: bash tools/run_release_test_gate.sh
 
       - name: Initialize signing keychain
         script: keychain initialize
@@ -101,8 +101,7 @@ workflows:
 
       - name: Build signed IPA
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
-          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          BUILD_NUMBER=22
           flutter build ipa --release \
             --build-number="$BUILD_NUMBER" \
             --export-options-plist="$HOME/export_options.plist"
@@ -112,13 +111,6 @@ workflows:
       - build/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
-
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
 
   ios-bookings-testflight:
     name: iPhone - Bookings Staging (TestFlight Prep)
@@ -671,3 +663,59 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/ipa/production-signing-evidence.json
+
+  android-release:
+    name: Android - Release Signed (AAB & APK)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: stable
+      java: 17
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/.gradle/caches
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Run Release Test Suite
+        script: bash tools/run_release_test_gate.sh
+
+      - name: Set up keystore and key.properties
+        script: |
+          set -e
+          mkdir -p android/keys
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/keys/release-key.jks
+          fi
+          if [ -n "$ANDROID_KEY_PROPERTIES_BASE64" ]; then
+            echo "$ANDROID_KEY_PROPERTIES_BASE64" | base64 --decode > android/key.properties
+          fi
+          if [ ! -f "android/keys/release-key.jks" ] || [ ! -f "android/key.properties" ]; then
+            echo "ERROR: Missing release keystore or key.properties"
+            exit 1
+          fi
+
+      - name: Build Android Release App Bundle (AAB)
+        script: |
+          flutter build appbundle --release --flavor production --target lib/main.dart
+
+      - name: Build Android Release APK
+        script: |
+          flutter build apk --release --flavor production --target lib/main.dart
+
+      - name: Verify Android signed binaries
+        script: |
+          set -e
+          echo "=== Built Artifacts ==="
+          ls -la build/app/outputs/bundle/productionRelease/
+          ls -la build/app/outputs/flutter-apk/
+
+    artifacts:
+      - build/app/outputs/bundle/productionRelease/*.aab
+      - build/app/outputs/flutter-apk/*.apk
+
