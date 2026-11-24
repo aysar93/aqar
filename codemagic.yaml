@@ -67,7 +67,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.andalus.aqar
-      flutter: stable
+      flutter: 3.44.8
       xcode: latest
 
     cache:
@@ -670,7 +670,7 @@ workflows:
     max_build_duration: 60
 
     environment:
-      flutter: stable
+      flutter: 3.44.8
       java: 17
 
     cache:
