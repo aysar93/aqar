@@ -65,8 +65,10 @@ workflows:
         - appstore_credentials
         - ios_config
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.andalus.aqar
+        provisioning_profiles:
+          - aqar_existing_app_store
+        certificates:
+          - rafcut_distribution
       flutter: 3.44.8
       xcode: latest
 
@@ -84,20 +86,11 @@ workflows:
       - name: Run automated tests
         script: bash tools/run_release_test_gate.sh
 
-      - name: Initialize signing keychain
-        script: keychain initialize
-
-      - name: Fetch App Store signing files
+      - name: Set up signing identities
         script: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-
-      - name: Install signing certificate
-        script: keychain add-certificates
-
-      - name: Apply provisioning profiles
-        script: xcode-project use-profiles
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Build signed IPA
         script: |
