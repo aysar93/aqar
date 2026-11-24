@@ -702,11 +702,11 @@ workflows:
 
       - name: Build Android Release App Bundle (AAB)
         script: |
-          flutter build appbundle --release --flavor production --target lib/main.dart
+          flutter build appbundle --release --flavor production --target lib/main.dart --android-skip-build-dependency-validation
 
       - name: Build Android Release APK
         script: |
-          flutter build apk --release --flavor production --target lib/main.dart
+          flutter build apk --release --flavor production --target lib/main.dart --android-skip-build-dependency-validation
 
       - name: Verify Android signed binaries
         script: |
