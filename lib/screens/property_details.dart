@@ -31,6 +31,7 @@ import '../office/screens/office_profile_screen.dart';
 import '../features/property_card/property_card_data.dart';
 import '../features/property_card/property_card_preview_screen.dart';
 import 'dart:async';
+import 'package:video_player/video_player.dart';
 import '../reports/report_dialog.dart';
 import '../chat/chat_screen.dart';
 
@@ -88,6 +89,8 @@ class PropertyDetails extends StatefulWidget {
   final int propertyNumber;
   final String? docId;
   final bool isFavorite;
+  final String? videoUrl;
+  final String? videoThumbnailUrl;
 
   const PropertyDetails({
     super.key,
@@ -135,10 +138,284 @@ class PropertyDetails extends StatefulWidget {
     required this.propertyNumber,
     this.docId,
     this.isFavorite = false,
+    this.videoUrl,
+    this.videoThumbnailUrl,
   });
 
   @override
   State<PropertyDetails> createState() => _PropertyDetailsState();
+}
+
+class _PropertyMediaSlide {
+  final bool isVideo;
+  final String url;
+  final String? thumbnailUrl;
+  final int photoIndex;
+
+  const _PropertyMediaSlide.photo({required this.url, required this.photoIndex})
+      : isVideo = false,
+        thumbnailUrl = null;
+
+  const _PropertyMediaSlide.video({required this.url, this.thumbnailUrl})
+      : isVideo = true,
+        photoIndex = -1;
+}
+
+class PropertyGalleryVideoItem extends StatefulWidget {
+  final String videoUrl;
+  final String? thumbnailUrl;
+  final bool isCurrentSlide;
+
+  const PropertyGalleryVideoItem({
+    super.key,
+    required this.videoUrl,
+    this.thumbnailUrl,
+    required this.isCurrentSlide,
+  });
+
+  @override
+  State<PropertyGalleryVideoItem> createState() =>
+      _PropertyGalleryVideoItemState();
+}
+
+class _PropertyGalleryVideoItemState extends State<PropertyGalleryVideoItem> {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+  bool _hasError = false;
+  bool _showControls = true;
+  Timer? _hideControlsTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initController();
+  }
+
+  Future<void> _initController() async {
+    try {
+      final uri = Uri.parse(widget.videoUrl);
+      final controller = VideoPlayerController.networkUrl(uri);
+      _controller = controller;
+      await controller.initialize();
+      await controller.setLooping(true);
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _hasError = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error initializing property gallery video: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _isInitialized = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(PropertyGalleryVideoItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.isCurrentSlide && (_controller?.value.isPlaying ?? false)) {
+      _controller?.pause();
+      if (mounted) setState(() {});
+    }
+    if (oldWidget.videoUrl != widget.videoUrl) {
+      _hideControlsTimer?.cancel();
+      _controller?.dispose();
+      _controller = null;
+      _isInitialized = false;
+      _hasError = false;
+      _initController();
+    }
+  }
+
+  void _togglePlayPause() {
+    if (_controller == null || !_isInitialized) return;
+    setState(() {
+      if (_controller!.value.isPlaying) {
+        _controller!.pause();
+        _showControls = true;
+        _hideControlsTimer?.cancel();
+      } else {
+        _controller!.play();
+        _showControls = true;
+        _startHideControlsTimer();
+      }
+    });
+  }
+
+  void _startHideControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && (_controller?.value.isPlaying ?? false)) {
+        setState(() {
+          _showControls = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _hideControlsTimer?.cancel();
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (_controller != null && _isInitialized) {
+          if (_controller!.value.isPlaying) {
+            if (_showControls) {
+              _togglePlayPause();
+            } else {
+              setState(() {
+                _showControls = true;
+              });
+              _startHideControlsTimer();
+            }
+          } else {
+            _togglePlayPause();
+          }
+        } else if (_hasError) {
+          _initController();
+        }
+      },
+      child: Container(
+        color: Colors.black,
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (_isInitialized && _controller != null)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: _controller!.value.aspectRatio,
+                  child: VideoPlayer(_controller!),
+                ),
+              )
+            else if (widget.thumbnailUrl != null &&
+                widget.thumbnailUrl!.isNotEmpty)
+              widget.thumbnailUrl!.startsWith('assets/')
+                  ? Image.asset(
+                      widget.thumbnailUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : MediaImage(
+                      widget.thumbnailUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+            else
+              Container(color: Colors.black),
+            if (!_isInitialized && !_hasError)
+              const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xffC5A16B),
+                  strokeWidth: 2.5,
+                ),
+              ),
+            if (_hasError)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: Colors.white70,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'تعذر تحميل الفيديو',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xffC5A16B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                      ),
+                      onPressed: _initController,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text(
+                        'إعادة المحاولة',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_isInitialized &&
+                _controller != null &&
+                (_showControls || !_controller!.value.isPlaying))
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white30, width: 1.5),
+                ),
+                child: Icon(
+                  _controller!.value.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+            Positioned(
+              top: 20,
+              left: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24, width: 0.5),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.videocam_rounded,
+                      color: Color(0xffC5A16B),
+                      size: 14,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'فيديو',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PropertyDetailsState extends State<PropertyDetails> {
@@ -523,9 +800,12 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                     border: Border.all(color: gold, width: 1.5),
                   ),
                   child: CircleAvatar(
-                    backgroundColor: isDark ? const Color(0xff0F172A) : const Color(0xFFF1F5F9),
-                    backgroundImage:
-                        photoUrl.isNotEmpty ? CachedNetworkImageProvider(photoUrl) : null,
+                    backgroundColor: isDark
+                        ? const Color(0xff0F172A)
+                        : const Color(0xFFF1F5F9),
+                    backgroundImage: photoUrl.isNotEmpty
+                        ? CachedNetworkImageProvider(photoUrl)
+                        : null,
                     child: photoUrl.isEmpty
                         ? Icon(
                             isOffice
@@ -554,7 +834,9 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF0F172A),
                                 fontSize:
                                     MediaQuery.of(context).size.width < 380
                                         ? 14
@@ -581,7 +863,9 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                                 ? Icons.business_center_rounded
                                 : Icons.campaign_rounded,
                             size: 15,
-                            color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                            color: isDark
+                                ? Colors.white54
+                                : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 5),
                           Flexible(
@@ -592,7 +876,9 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                color: isDark
+                                    ? Colors.white60
+                                    : const Color(0xFF64748B),
                                 fontSize:
                                     MediaQuery.of(context).size.width < 380
                                         ? 9
@@ -680,7 +966,9 @@ class _PropertyDetailsState extends State<PropertyDetails> {
 
             Container(
               height: 1,
-              color: isDark ? Colors.white.withValues(alpha: .07) : const Color(0xFFE2E8F0),
+              color: isDark
+                  ? Colors.white.withValues(alpha: .07)
+                  : const Color(0xFFE2E8F0),
             ),
 
             const SizedBox(height: 14),
@@ -710,11 +998,14 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: gold,
-                        disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                        disabledForegroundColor:
+                            isDark ? Colors.white24 : const Color(0xFF94A3B8),
                         side: BorderSide(
                           color: contactPhone.trim().isNotEmpty
                               ? gold.withValues(alpha: .45)
-                              : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                              : (isDark
+                                  ? Colors.white12
+                                  : const Color(0xFFE2E8F0)),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
@@ -747,8 +1038,10 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: gold,
                         foregroundColor: Colors.black,
-                        disabledBackgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-                        disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                        disabledBackgroundColor:
+                            isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                        disabledForegroundColor:
+                            isDark ? Colors.white24 : const Color(0xFF94A3B8),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
@@ -788,7 +1081,8 @@ class _PropertyDetailsState extends State<PropertyDetails> {
                                 })));
                   },
                   style: TextButton.styleFrom(
-                      foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                      foregroundColor:
+                          isDark ? Colors.white : const Color(0xFF0F172A),
                       padding: const EdgeInsets.symmetric(vertical: 12)),
                   child: const Text('استفسر عن هذا العقار مع الإدارة'),
                 )),
@@ -1126,7 +1420,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
           thickness: 1,
           indent: 14,
           endIndent: 14,
-          color: isDark ? Colors.white.withValues(alpha: .08) : const Color(0xFFE2E8F0),
+          color: isDark
+              ? Colors.white.withValues(alpha: .08)
+              : const Color(0xFFE2E8F0),
         ),
       ],
     );
@@ -1146,7 +1442,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
+              color: isDark
+                  ? Colors.black26
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -1191,7 +1489,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
+            color:
+                isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1419,7 +1718,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
         border: Border.all(
           color: data["isPinned"] == true
               ? const Color(0xffC5A16B)
-              : (isDark ? Colors.white.withValues(alpha: .05) : const Color(0xFFE2E8F0)),
+              : (isDark
+                  ? Colors.white.withValues(alpha: .05)
+                  : const Color(0xFFE2E8F0)),
           width: data["isPinned"] == true ? 1.5 : 1,
         ),
         boxShadow: [
@@ -1620,7 +1921,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
+                      color: isDark
+                          ? const Color(0xff0F172A)
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: const Color(0xffC5A16B).withValues(alpha: .20),
@@ -1632,12 +1935,16 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           child: TextField(
                             controller: replyController,
                             style: TextStyle(
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
                             ),
                             decoration: InputDecoration(
                               hintText: "اكتب ردك...",
                               hintStyle: TextStyle(
-                                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                                color: isDark
+                                    ? Colors.white54
+                                    : const Color(0xFF94A3B8),
                               ),
                               border: InputBorder.none,
                             ),
@@ -1738,7 +2045,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         ),
                                         padding: const EdgeInsets.all(14),
                                         decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xff0F172A) : const Color(0xFFF8FAFC),
+                                          color: isDark
+                                              ? const Color(0xff0F172A)
+                                              : const Color(0xFFF8FAFC),
                                           borderRadius:
                                               BorderRadius.circular(16),
                                           border: Border.all(
@@ -1758,15 +2067,15 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                                   backgroundColor: const Color(
                                                     0xffC5A16B,
                                                   ),
-                                                  backgroundImage:
-                                                      (reply["userPhoto"] ?? "")
-                                                              .toString()
-                                                              .isNotEmpty
-                                                          ? CachedNetworkImageProvider(
-                                                              reply[
-                                                                  "userPhoto"],
-                                                            )
-                                                          : null,
+                                                  backgroundImage: (reply[
+                                                                  "userPhoto"] ??
+                                                              "")
+                                                          .toString()
+                                                          .isNotEmpty
+                                                      ? CachedNetworkImageProvider(
+                                                          reply["userPhoto"],
+                                                        )
+                                                      : null,
                                                   child: (reply["userPhoto"] ??
                                                               "")
                                                           .toString()
@@ -1797,7 +2106,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                             Text(
                                               reply["text"] ?? "",
                                               style: TextStyle(
-                                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                                color: isDark
+                                                    ? Colors.white70
+                                                    : const Color(0xFF334155),
                                                 fontSize: 14,
                                               ),
                                             ),
@@ -1846,31 +2157,36 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
   @override
   Widget build(BuildContext context) {
-    if (widget.docId == null || widget.docId!.isEmpty)
+    if (widget.docId == null || widget.docId!.isEmpty) {
       return _buildContent(context);
+    }
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _liveProperty,
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return Scaffold(
-              appBar: AppBar(),
-              body: Center(
-                  child: Text(snapshot.hasError
-                      ? 'تعذر تحميل المحتوى'
-                      : 'جارٍ التحميل…')));
+            appBar: AppBar(),
+            body: Center(
+              child: Text(
+                snapshot.hasError ? 'تعذر تحميل المحتوى' : 'جارٍ التحميل…',
+              ),
+            ),
+          );
+        }
         final data = snapshot.data!.data();
         final uid = FirebaseAuth.instance.currentUser?.uid;
         final admin = context.watch<UserProvider>().isAdmin;
         if (data == null ||
             hiddenForViewer(context, data) ||
-            (data['status'] != 'approved' && data['userId'] != uid && !admin))
+            (data['status'] != 'approved' && data['userId'] != uid && !admin)) {
           return blockedContentPage();
-        return _buildContent(context);
+        }
+        return _buildContent(context, data);
       },
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, [Map<String, dynamic>? liveData]) {
     if (hiddenForViewer(context, {
       "publisherUid": widget.publisherUid,
       "officeId": (widget.property?.officeId ?? '')
@@ -1919,6 +2235,79 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
         widget.unitsCount != null &&
         widget.unitsCount! > 0;
 
+    final String? effectiveVideoUrl =
+        (liveData?['videoUrl'] as String?)?.isNotEmpty == true
+            ? (liveData!['videoUrl'] as String)
+            : ((widget.property?.videoUrl?.isNotEmpty == true)
+                ? widget.property!.videoUrl
+                : (widget.videoUrl?.isNotEmpty == true
+                    ? widget.videoUrl
+                    : null));
+
+    final String? effectiveVideoThumb =
+        (liveData?['videoThumbnailUrl'] as String?)?.isNotEmpty == true
+            ? (liveData!['videoThumbnailUrl'] as String)
+            : ((widget.property?.videoThumbnailUrl?.isNotEmpty == true)
+                ? widget.property!.videoThumbnailUrl
+                : (widget.videoThumbnailUrl?.isNotEmpty == true
+                    ? widget.videoThumbnailUrl
+                    : null));
+
+    final bool hasVideo =
+        effectiveVideoUrl != null && effectiveVideoUrl.isNotEmpty;
+
+    final List<_PropertyMediaSlide> mediaSlides = [];
+    final List<dynamic> rawImages = widget.images.isNotEmpty
+        ? widget.images
+        : (widget.imageUrl.isNotEmpty ? [widget.imageUrl] : []);
+
+    final int? customVideoIndex = (liveData?['videoIndex'] as num?)?.toInt() ??
+        (liveData?['mediaOrder'] is List &&
+                (liveData!['mediaOrder'] as List).contains('video')
+            ? (liveData!['mediaOrder'] as List).indexOf('video')
+            : null);
+
+    if (rawImages.isNotEmpty) {
+      final int targetIndex = customVideoIndex != null
+          ? customVideoIndex.clamp(0, rawImages.length)
+          : (rawImages.length > 1 ? 1 : 1);
+
+      if (hasVideo && targetIndex == 0) {
+        mediaSlides.add(_PropertyMediaSlide.video(
+          url: effectiveVideoUrl,
+          thumbnailUrl: effectiveVideoThumb,
+        ));
+      }
+
+      for (int i = 0; i < rawImages.length; i++) {
+        mediaSlides.add(_PropertyMediaSlide.photo(
+          url: rawImages[i].toString(),
+          photoIndex: i,
+        ));
+        if (hasVideo && i + 1 == targetIndex) {
+          mediaSlides.add(_PropertyMediaSlide.video(
+            url: effectiveVideoUrl,
+            thumbnailUrl: effectiveVideoThumb,
+          ));
+        }
+      }
+
+      if (hasVideo && targetIndex > rawImages.length) {
+        mediaSlides.add(_PropertyMediaSlide.video(
+          url: effectiveVideoUrl,
+          thumbnailUrl: effectiveVideoThumb,
+        ));
+      }
+    } else if (hasVideo) {
+      mediaSlides.add(_PropertyMediaSlide.video(
+        url: effectiveVideoUrl,
+        thumbnailUrl: effectiveVideoThumb,
+      ));
+    } else {
+      mediaSlides
+          .add(_PropertyMediaSlide.photo(url: widget.imageUrl, photoIndex: 0));
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
@@ -1933,20 +2322,20 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   ),
                   child: CarouselSlider.builder(
                     carouselController: carouselController,
-                    itemCount: widget.images.isEmpty ? 1 : widget.images.length,
+                    itemCount: mediaSlides.length,
                     options: CarouselOptions(
                       height: AqarSizes.detailsImageHeight(context),
                       viewportFraction: 1.0,
-                      enableInfiniteScroll: true,
+                      enableInfiniteScroll: mediaSlides.length > 1,
                       enlargeCenterPage: false,
-                      autoPlay: true,
-                      autoPlayInterval: const Duration(seconds: 3),
+                      autoPlay: !hasVideo && mediaSlides.length > 1,
+                      autoPlayInterval: const Duration(seconds: 4),
                       autoPlayAnimationDuration: const Duration(
                         milliseconds: 800,
                       ),
                       autoPlayCurve: Curves.fastOutSlowIn,
-                      pauseAutoPlayOnTouch: false,
-                      pauseAutoPlayOnManualNavigate: false,
+                      pauseAutoPlayOnTouch: true,
+                      pauseAutoPlayOnManualNavigate: true,
                       onPageChanged: (index, reason) {
                         setState(() {
                           activeImage = index;
@@ -1954,27 +2343,27 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       },
                     ),
                     itemBuilder: (_, index, __) {
+                      final slide = mediaSlides[index];
+                      if (slide.isVideo) {
+                        return PropertyGalleryVideoItem(
+                          videoUrl: slide.url,
+                          thumbnailUrl: slide.thumbnailUrl,
+                          isCurrentSlide: activeImage == index,
+                        );
+                      }
                       return GestureDetector(
-                        onTap: () => openGallery(index),
+                        onTap: () => openGallery(slide.photoIndex),
                         child: index == 0
                             ? Hero(
                                 tag: 'property_${widget.docId}',
-                                child: (widget.images.isEmpty
-                                            ? widget.imageUrl
-                                            : widget.images[index])
-                                        .toString()
-                                        .startsWith('assets/')
+                                child: slide.url.startsWith('assets/')
                                     ? Image.asset(
-                                        widget.images.isEmpty
-                                            ? widget.imageUrl
-                                            : widget.images[index],
+                                        slide.url,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
                                       )
                                     : MediaImage(
-                                        widget.images.isEmpty
-                                            ? widget.imageUrl
-                                            : widget.images[index],
+                                        slide.url,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => Container(
@@ -1986,29 +2375,21 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         ),
                                       ),
                               )
-                            : (widget.images.isEmpty
-                                        ? widget.imageUrl
-                                        : widget.images[index])
-                                    .toString()
-                                    .startsWith('assets/')
+                            : (slide.url.startsWith('assets/')
                                 ? Image.asset(
-                                    widget.images.isEmpty
-                                        ? widget.imageUrl
-                                        : widget.images[index],
+                                    slide.url,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
                                   )
                                 : MediaImage(
-                                    widget.images.isEmpty
-                                        ? widget.imageUrl
-                                        : widget.images[index],
+                                    slide.url,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Container(
                                       color: Colors.grey,
                                       child: const Icon(Icons.home, size: 80),
                                     ),
-                                  ),
+                                  )),
                       );
                     },
                   ),
@@ -2026,7 +2407,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      "${activeImage + 1}/${widget.images.isEmpty ? 1 : widget.images.length}",
+                      "${activeImage + 1}/${mediaSlides.length}",
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -2054,17 +2435,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 ),
                 Positioned(
                   bottom: 12,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: AnimatedSmoothIndicator(
-                      activeIndex: activeImage,
-                      count: widget.images.isEmpty ? 1 : widget.images.length,
-                      effect: ExpandingDotsEffect(
-                        dotHeight: AqarSizes.detailsDot(context),
-                        dotWidth: AqarSizes.detailsDot(context),
-                        expansionFactor: 3,
-                      ),
+                  left: 16,
+                  child: AnimatedSmoothIndicator(
+                    activeIndex: activeImage.clamp(0, mediaSlides.length - 1),
+                    count: mediaSlides.length,
+                    effect: ExpandingDotsEffect(
+                      dotHeight: AqarSizes.detailsDot(context),
+                      dotWidth: AqarSizes.detailsDot(context),
+                      expansionFactor: 3,
                     ),
                   ),
                 ),
@@ -2087,7 +2465,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           ),
                           child: IconButton(
                             icon: Icon(
-                              Icons.arrow_back_rounded,
+                              Icons.arrow_forward_ios_rounded,
                               color: Colors.white,
                               size: AqarSizes.detailsTopIcon(context),
                             ),
@@ -2196,15 +2574,15 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   ),
                 ),
                 Positioned(
-                  bottom: 16,
-                  right: 2,
+                  bottom: 12,
+                  right: 12,
                   child: Container(
-                    width: AqarSizes.detailsPriceCardWidth(context),
+                    width: 128,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: Colors.white.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Column(
@@ -2224,12 +2602,12 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                               const Icon(
                                 Icons.payments_rounded,
                                 color: Color(0xffC5A16B),
-                                size: 14,
+                                size: 13,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 5),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
@@ -2240,17 +2618,17 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                        fontSize: 13.5,
                                       ),
                                     ),
                                     if (widget.negotiable) ...[
-                                      const SizedBox(height: 2),
+                                      const SizedBox(height: 1),
                                       const Text(
                                         "قابل للتفاوض",
                                         textAlign: TextAlign.right,
                                         style: TextStyle(
                                           color: Color(0xffC5A16B),
-                                          fontSize: 10,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -2323,8 +2701,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                horizontal: 6,
+                                vertical: 3,
                               ),
                               child: Row(
                                 textDirection: TextDirection.rtl,
@@ -2332,9 +2710,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   Icon(
                                     statusIcon,
                                     color: statusColor,
-                                    size: 14,
+                                    size: 13,
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 5),
                                   Expanded(
                                     child: Text(
                                       statusText,
@@ -2343,7 +2721,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: statusColor,
-                                        fontSize: 11,
+                                        fontSize: 10.5,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -2374,7 +2752,6 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
               ),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                reverse: true,
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -2405,7 +2782,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.title,
@@ -2435,9 +2812,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           textAlign: TextAlign.right,
                           style: TextStyle(
                             fontSize: 15,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white70
-                                : const Color(0xFF475569),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : const Color(0xFF475569),
                           ),
                         ),
                       ),
@@ -2472,14 +2850,15 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 "السعر",
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? Colors.white60
                                       : const Color(0xFF64748B),
                                   fontSize: 11,
@@ -2501,7 +2880,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   "قابل للتفاوض",
                                   textAlign: TextAlign.right,
                                   style: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
                                         ? Colors.white70
                                         : const Color(0xFF475569),
                                     fontSize: AqarText.detailsStatus(context),
@@ -2577,7 +2957,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   vertical: 16,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? const Color(0xff162033)
                                       : const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(18),
@@ -2598,7 +2979,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     Text(
                                       "نوع العقار",
                                       style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
                                             ? Colors.white60
                                             : const Color(0xFF64748B),
                                         fontSize: 13,
@@ -2607,7 +2989,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     Text(
                                       widget.propertyType,
                                       style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
                                             ? Colors.white
                                             : const Color(0xFF0F172A),
                                         fontSize: 18,
@@ -2872,7 +3255,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         const SizedBox(width: 18),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 textDirection: TextDirection.rtl,
@@ -2902,7 +3285,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                     : widget.description,
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? Colors.white
                                       : const Color(0xFF0F172A),
                                   fontSize: AqarText.detailsBody(context),
@@ -3034,7 +3418,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       text,
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
                                             ? Colors.white
                                             : const Color(0xFF0F172A),
                                         fontSize: AqarText.featureText(context),
@@ -3044,7 +3429,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                   ),
                                   Icon(
                                     Icons.check_rounded,
-                                    color: Theme.of(context).brightness == Brightness.dark
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
                                         ? Colors.white38
                                         : const Color(0xFF94A3B8),
                                     size: 16,
@@ -3058,7 +3444,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 thickness: 1,
                                 indent: 14,
                                 endIndent: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.white.withValues(alpha: .08)
                                     : const Color(0xFFE2E8F0),
                               ),
@@ -3132,7 +3519,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                             Divider(
                               height: 1,
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white.withValues(alpha: .06)
                                   : const Color(0xFFE2E8F0),
                             ),
@@ -3152,7 +3540,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
 
                             Divider(
                               height: 1,
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white.withValues(alpha: .06)
                                   : const Color(0xFFE2E8F0),
                             ),
@@ -3241,9 +3630,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         Text(
                           "معلومات الناشر",
                           style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFF0F172A),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : const Color(0xFF0F172A),
                             fontSize: AqarText.detailsSectionTitle(context),
                             fontWeight: FontWeight.bold,
                           ),
@@ -3318,7 +3708,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                   StreamBuilder<QuerySnapshot>(
                     stream: _comments,
                     builder: (context, snapshot) {
-                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
                       int count = 0;
 
                       if (snapshot.hasData) {
@@ -3336,7 +3727,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           });
                         },
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               textDirection: TextDirection.rtl,
@@ -3356,7 +3747,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                         context,
                                       ),
                                       fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF0F172A),
                                     ),
                                   ),
                                 ),
@@ -3379,9 +3772,14 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xff1E293B) : Colors.white,
+                                color: isDark
+                                    ? const Color(0xff1E293B)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: isDark ? null : Border.all(color: const Color(0xFFE2E8F0)),
+                                border: isDark
+                                    ? null
+                                    : Border.all(
+                                        color: const Color(0xFFE2E8F0)),
                               ),
                               child: Row(
                                 textDirection: TextDirection.rtl,
@@ -3391,7 +3789,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                       "$count ${count == 1 ? "تعليق" : "تعليقات"}",
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
-                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                        color: isDark
+                                            ? Colors.white70
+                                            : const Color(0xFF475569),
                                         fontSize: AqarText.body(context),
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -3415,7 +3815,9 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                             Container(
                               width: double.infinity,
                               height: 1,
-                              color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                              color: isDark
+                                  ? Colors.white12
+                                  : const Color(0xFFE2E8F0),
                             ),
                           ],
                         ),
@@ -3439,9 +3841,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.black26
-                                : Colors.black.withValues(alpha: .05),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.black26
+                                    : Colors.black.withValues(alpha: .05),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -3518,7 +3921,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? const Color(0xff0F172A)
                                     : const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(20),
@@ -3531,7 +3935,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 textAlign: TextAlign.right,
                                 textInputAction: TextInputAction.newline,
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? Colors.white
                                       : const Color(0xFF0F172A),
                                   fontSize: 15,
@@ -3539,7 +3944,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                 decoration: InputDecoration(
                                   hintText: "شارك رأيك حول هذا العقار",
                                   hintStyle: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
                                         ? Colors.white.withValues(alpha: .45)
                                         : const Color(0xFF94A3B8),
                                   ),
@@ -3613,9 +4019,10 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                         children: [
                           Icon(
                             Icons.comments_disabled_rounded,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white54
-                                : const Color(0xFF94A3B8),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white54
+                                    : const Color(0xFF94A3B8),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -3623,7 +4030,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                               "التعليقات متوقفة حاليًا من إدارة التطبيق",
                               textAlign: TextAlign.right,
                               style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.white60
                                     : const Color(0xFF64748B),
                                 fontWeight: FontWeight.w600,
@@ -3740,7 +4148,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Divider(color: isDark ? Colors.white24 : Colors.black12, height: 1),
+      child:
+          Divider(color: isDark ? Colors.white24 : Colors.black12, height: 1),
     );
   }
 }
@@ -3778,7 +4187,7 @@ class _PropertyLocationRow extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,

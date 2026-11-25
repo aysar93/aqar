@@ -61,7 +61,7 @@ class OfficeLocationCard extends StatelessWidget {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTitle(context),
           const SizedBox(height: 14),
@@ -81,7 +81,7 @@ class OfficeLocationCard extends StatelessWidget {
 
   Widget _buildTitle(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         const Text(
           'موقع المكتب',

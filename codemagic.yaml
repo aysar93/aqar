@@ -97,6 +97,7 @@ workflows:
           BUILD_NUMBER=22
           flutter build ipa --release \
             --build-number="$BUILD_NUMBER" \
+            --dart-define-from-file=config/media.production.json \
             --export-options-plist="$HOME/export_options.plist"
 
     artifacts:
@@ -695,11 +696,11 @@ workflows:
 
       - name: Build Android Release App Bundle (AAB)
         script: |
-          flutter build appbundle --release --flavor production --target lib/main.dart --android-skip-build-dependency-validation
+          flutter build appbundle --release --flavor production --target lib/main.dart --dart-define-from-file=config/media.production.json --android-skip-build-dependency-validation
 
       - name: Build Android Release APK
         script: |
-          flutter build apk --release --flavor production --target lib/main.dart --android-skip-build-dependency-validation
+          flutter build apk --release --flavor production --target lib/main.dart --dart-define-from-file=config/media.production.json --android-skip-build-dependency-validation
 
       - name: Verify Android signed binaries
         script: |

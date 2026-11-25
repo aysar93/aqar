@@ -1,9 +1,13 @@
 import '../screens/notifications_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 import 'booking_filters.dart';
 import 'booking_widgets.dart';
 import 'booking_extras.dart';
@@ -97,12 +101,13 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final user = _currentUser;
     final uid = user?.uid;
+    final userProvider = context.watch<UserProvider>();
 
     final bodyContent = SingleChildScrollView(
       child: Column(
         children: [
           // 1. Curved Header behind User Info
-          _buildCurvedHeader(context, isDark, user),
+          _buildCurvedHeader(context, isDark, user, userProvider),
 
           // 2. 3-Section Stats Card (Floating/overlapping)
           Padding(
@@ -169,14 +174,20 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
   }
 
   /// 1. Curved Header
-  Widget _buildCurvedHeader(BuildContext context, bool isDark, User? user) {
+  Widget _buildCurvedHeader(
+      BuildContext context, bool isDark, User? user, UserProvider userProvider) {
     final topPadding = MediaQuery.of(context).padding.top;
-    final displayName = user?.displayName?.trim().isNotEmpty == true
-        ? user!.displayName!
-        : 'مستخدم عقارات الأنبار';
-    final phone = user?.phoneNumber?.trim().isNotEmpty == true
-        ? user!.phoneNumber!
-        : (user?.email?.trim().isNotEmpty == true ? user!.email! : 'حساب نشط');
+    final displayName = userProvider.name.trim().isNotEmpty
+        ? userProvider.name.trim()
+        : (user?.displayName?.trim().isNotEmpty == true
+            ? user!.displayName!
+            : 'مستخدم عقارات الأنبار');
+    final phone = userProvider.phone.trim().isNotEmpty
+        ? userProvider.phone.trim()
+        : (user?.phoneNumber?.trim().isNotEmpty == true
+            ? user!.phoneNumber!
+            : (user?.email?.trim().isNotEmpty == true ? user!.email! : 'حساب نشط'));
+    final photoUrl = userProvider.photoUrl.trim();
 
     return Container(
       width: double.infinity,
@@ -220,45 +231,100 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
           const SizedBox(height: 18),
 
           // Centered Avatar with Edit Badge
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 82,
-                height: 82,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    width: 2.8,
-                  ),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFD8BD95), Color(0xFFC5A16B)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+          GestureDetector(
+            onTap: () async {
+              if (user == null) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              } else {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              }
+              if (context.mounted) {
+                context.read<UserProvider>().refresh();
+              }
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      width: 2.8,
                     ),
-                  ],
+                    gradient: photoUrl.isNotEmpty
+                        ? null
+                        : const LinearGradient(
+                            colors: [Color(0xFFD8BD95), Color(0xFFC5A16B)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    image: photoUrl.isNotEmpty
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(photoUrl),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: photoUrl.isEmpty
+                      ? Center(
+                          child: Text(
+                            (displayName.isNotEmpty ? displayName[0] : 'ع')
+                                .toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
-                child: Center(
-                  child: Text(
-                    (displayName.isNotEmpty ? displayName[0] : 'ع').toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
+                Positioned(
+                  bottom: -2,
+                  left: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: bookingGold,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 14,
+                      color: Colors.black,
                     ),
                   ),
                 ),
-              ),
-              // Read-only avatar without edit badge
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -531,7 +597,34 @@ class _BookingAccountScreenState extends State<BookingAccountScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // 0. المفضلة (متسقة RTL)
+          // 0. الملف الشخصي
+          _buildOptionTile(
+            context: context,
+            icon: Icons.person_outline_rounded,
+            iconBg: bookingGold.withValues(alpha: 0.12),
+            iconColor: bookingGold,
+            title: 'الملف الشخصي',
+            subtitle: 'تعديل الاسم والصورة ورقم الهاتف',
+            onTap: () async {
+              if (uid == null) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              } else {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              }
+              if (context.mounted) {
+                context.read<UserProvider>().refresh();
+              }
+            },
+          ),
+          _buildDivider(borderColor),
+
+          // 1. المفضلة (متسقة RTL)
           _buildOptionTile(
             context: context,
             icon: Icons.favorite_outline_rounded,

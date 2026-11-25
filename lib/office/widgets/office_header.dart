@@ -104,10 +104,10 @@ class OfficeHeader extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Wrap(
-                alignment: WrapAlignment.end,
+                alignment: WrapAlignment.start,
                 spacing: 6,
                 runSpacing: 6,
                 children: [
@@ -120,7 +120,7 @@ class OfficeHeader extends StatelessWidget {
               const SizedBox(height: 10),
               if (_location.isNotEmpty)
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.location_on_outlined,

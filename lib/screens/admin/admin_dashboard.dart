@@ -16,6 +16,7 @@ import '../../analytics/screens/analytics_dashboard_screen.dart';
 import '../../reels/admin/reels_admin_screen.dart';
 import 'content_reports_screen.dart';
 import '../../bookings/admin/booking_admin_dashboard_screen.dart';
+import '../../bookings/admin/booking_reels_admin_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -99,6 +100,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 subtitle: 'النشر والجدولة والإحصائيات والبلاغات',
                 color: const Color(0xffC5A16B),
                 page: const ReelsAdminScreen(),
+                badgeCount: snapshot.data?.docs.length ?? 0,
+              ),
+            ),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('booking_reel_reports')
+                  .where('status', isEqualTo: 'open')
+                  .snapshots(),
+              builder: (context, snapshot) => adminButton(
+                context,
+                icon: Icons.video_library_rounded,
+                title: 'إدارة ريلزات الحجوزات',
+                subtitle: 'استعراض الفيديوهات، البلاغات، والتحكم بالظهور',
+                color: const Color(0xffC5A16B),
+                page: const BookingReelsAdminScreen(),
                 badgeCount: snapshot.data?.docs.length ?? 0,
               ),
             ),

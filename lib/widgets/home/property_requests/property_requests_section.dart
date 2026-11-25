@@ -194,7 +194,6 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                     height: 250,
                     child: PageView.builder(
                       controller: _pageController,
-                      reverse: true,
                       padEnds: false,
                       physics: const BouncingScrollPhysics(),
                       itemCount: requests.length,

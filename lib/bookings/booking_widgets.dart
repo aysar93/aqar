@@ -1641,10 +1641,14 @@ class BookingScaffold extends StatelessWidget {
                   // is primary. Remove only that automatic inset; the hero
                   // still reads viewPadding and reserves its own safe content
                   // space while its gold background reaches y=0.
-                  ? MediaQuery.removePadding(
-                      context: context,
-                      removeTop: true,
-                      child: body ?? const SizedBox.shrink())
+                  ? MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        padding: MediaQuery.of(context)
+                            .padding
+                            .copyWith(top: 0.0),
+                      ),
+                      child: body ?? const SizedBox.shrink(),
+                    )
                   : SafeArea(child: body ?? const SizedBox.shrink()))),
     );
   }

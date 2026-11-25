@@ -57,7 +57,7 @@ class OfficeWorkingHours extends StatelessWidget {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTitle(context),
           const SizedBox(height: 14),
@@ -79,7 +79,7 @@ class OfficeWorkingHours extends StatelessWidget {
 
   Widget _buildTitle(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         const Text(
           'أوقات العمل',

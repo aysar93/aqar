@@ -66,7 +66,7 @@ class OfficeRating extends StatelessWidget {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTitle(context),
           const SizedBox(height: 16),
@@ -93,7 +93,7 @@ class OfficeRating extends StatelessWidget {
     BuildContext context,
   ) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         const Text(
           'تقييم المكتب',

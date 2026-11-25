@@ -540,7 +540,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Stack(
                     alignment: Alignment.bottomRight,
                     children: [
-                      Container(
+                      GestureDetector(
+                        onTap: showImageSourceDialog,
+                        child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -579,6 +581,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 )
                               : null,
                         ),
+                      ),
                       ),
                       if (uploadingImage)
                         Positioned.fill(

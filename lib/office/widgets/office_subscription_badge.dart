@@ -126,7 +126,7 @@ class OfficeSubscriptionBadge extends StatelessWidget {
   // ═════════════════════════════════════════════
 
   String _readSubscriptionStatus() {
-    return office.subscriptionStatus?.toString() ?? '';
+    return office.subscriptionStatus.toString();
   }
 
   // ═════════════════════════════════════════════

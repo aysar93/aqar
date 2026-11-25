@@ -16,7 +16,7 @@ enum MediaPurpose {
   appLogo,
   license,
   receipt,
-  chatImage
+  chatImage,
 }
 
 class MediaStore {
@@ -24,20 +24,22 @@ class MediaStore {
   final FirebaseAuth auth;
   final String bucket;
   final Duration responseTimeout;
-  MediaStore(
-      {required this.storage,
-      required this.auth,
-      required this.bucket,
-      this.responseTimeout = const Duration(seconds: 30)});
+  MediaStore({
+    required this.storage,
+    required this.auth,
+    required this.bucket,
+    this.responseTimeout = const Duration(seconds: 30),
+  });
   static MediaStore get instance {
     const bucket = MediaLocation.defaultBucket;
     if (bucket.isEmpty) {
       throw StateError('MEDIA_STORAGE_BUCKET must be configured explicitly');
     }
     return MediaStore(
-        storage: FirebaseStorage.instanceFor(bucket: 'gs://$bucket'),
-        auth: FirebaseAuth.instance,
-        bucket: bucket);
+      storage: FirebaseStorage.instanceFor(bucket: 'gs://$bucket'),
+      auth: FirebaseAuth.instance,
+      bucket: bucket,
+    );
   }
 
   static bool isApprovedBrokerUri({
@@ -49,25 +51,28 @@ class MediaStore {
     required String bookingsStagingPath,
   }) {
     if (uri == null || uri.hasQuery || uri.userInfo.isNotEmpty) return false;
-    final sandbox = bucket.startsWith('demo-') &&
+    final sandbox =
+        bucket.startsWith('demo-') &&
         projectId.startsWith('demo-') &&
         uri.scheme == 'http' &&
         ['127.0.0.1', 'localhost', '10.0.2.2'].contains(uri.host) &&
         uri.port == 9396 &&
         uri.path == productionPath;
-    final isolatedCloud = bucket == 'aqar-media-test-20261018-media' &&
+    final isolatedCloud =
+        bucket == 'aqar-media-test-20261018-media' &&
         projectId == 'aqar-media-test-20261018' &&
         uri.scheme == 'https' &&
         uri.host == 'us-central1-aqar-media-test-20261018.cloudfunctions.net' &&
         uri.path == mediaTestPath;
     final isolatedBookingsStaging =
         bucket == 'aqar-bookings-test-20261009.firebasestorage.app' &&
-            projectId == 'aqar-bookings-test-20261009' &&
-            uri.scheme == 'https' &&
-            uri.host ==
-                'us-central1-aqar-bookings-test-20261009.cloudfunctions.net' &&
-            (uri.path == bookingsStagingPath || uri.path == productionPath);
-    final productionCloud = (bucket == 'aqar-9f3f9-media-canary' ||
+        projectId == 'aqar-bookings-test-20261009' &&
+        uri.scheme == 'https' &&
+        uri.host ==
+            'us-central1-aqar-bookings-test-20261009.cloudfunctions.net' &&
+        (uri.path == bookingsStagingPath || uri.path == productionPath);
+    final productionCloud =
+        (bucket == 'aqar-9f3f9-media-canary' ||
             bucket == 'aqar-9f3f9.appspot.com' ||
             bucket == 'aqar-9f3f9.firebasestorage.app') &&
         projectId == 'aqar-9f3f9' &&
@@ -110,11 +115,15 @@ class MediaStore {
       return 'jpg';
     }
     throw StateError(
-        'Only JPEG and PNG are supported; convert HEIC before upload');
+      'Only JPEG and PNG are supported; convert HEIC before upload',
+    );
   }
 
-  Future<Map<String, String>> uploadImage(File file,
-      {required MediaPurpose purpose, String? chatId}) async {
+  Future<Map<String, String>> uploadImage(
+    File file, {
+    required MediaPurpose purpose,
+    String? chatId,
+  }) async {
     _uid();
     if (await file.length() > 10 * 1024 * 1024) {
       throw StateError('Image exceeds 10 MiB');
@@ -123,8 +132,11 @@ class MediaStore {
     try {
       imageType(bytes);
     } on StateError {
-      bytes = await FlutterImageCompress.compressWithList(bytes,
-          quality: 85, format: CompressFormat.jpeg);
+      bytes = await FlutterImageCompress.compressWithList(
+        bytes,
+        quality: 85,
+        format: CompressFormat.jpeg,
+      );
       imageType(bytes);
     }
     if (bytes.length > 10 * 1024 * 1024) {
@@ -138,7 +150,10 @@ class MediaStore {
   }
 
   Future<Map<String, dynamic>> uploadAudio(
-      File file, String chatId, int seconds) async {
+    File file,
+    String chatId,
+    int seconds,
+  ) async {
     _uid();
     if (chatId.isEmpty || chatId.contains('/')) {
       throw StateError('Invalid chat');
@@ -149,12 +164,16 @@ class MediaStore {
     if (await file.length() > 5 * 1024 * 1024) {
       throw StateError('Audio exceeds 5 MiB');
     }
-    final result = await _privateUpload(await file.readAsBytes(),
-        purpose: 'chatAudio', chatId: chatId, seconds: seconds);
+    final result = await _privateUpload(
+      await file.readAsBytes(),
+      purpose: 'chatAudio',
+      chatId: chatId,
+      seconds: seconds,
+    );
     return {
       'audioUrl': result['url'],
       'audioPath': result['path'],
-      'audioSeconds': seconds
+      'audioSeconds': seconds,
     };
   }
 
@@ -171,45 +190,60 @@ class MediaStore {
     var bytes = await file.readAsBytes();
     try {
       if (imageType(bytes) != 'jpg') {
-        bytes = await FlutterImageCompress.compressWithList(bytes,
-            quality: 85, format: CompressFormat.jpeg);
+        bytes = await FlutterImageCompress.compressWithList(
+          bytes,
+          quality: 85,
+          format: CompressFormat.jpeg,
+        );
       }
     } on StateError {
-      bytes = await FlutterImageCompress.compressWithList(bytes,
-          quality: 85, format: CompressFormat.jpeg);
+      bytes = await FlutterImageCompress.compressWithList(
+        bytes,
+        quality: 85,
+        format: CompressFormat.jpeg,
+      );
     }
     if (imageType(bytes) != 'jpg' || bytes.length > 10 * 1024 * 1024) {
       throw StateError('Invalid receipt');
     }
-    return (await _privateUpload(bytes,
-        purpose: 'bookingReceipt', bookingId: bookingId))['path']!;
+    return (await _privateUpload(
+      bytes,
+      purpose: 'bookingReceipt',
+      bookingId: bookingId,
+    ))['path']!;
   }
 
-  Future<Map<String, String>> _privateUpload(Uint8List bytes,
-      {required String purpose,
-      String? chatId,
-      String? bookingId,
-      int? seconds,
-      String? uploadId,
-      int attempt = 0}) async {
+  Future<Map<String, String>> _privateUpload(
+    Uint8List bytes, {
+    required String purpose,
+    String? chatId,
+    String? bookingId,
+    int? seconds,
+    String? uploadId,
+    int attempt = 0,
+  }) async {
     final uid = _uid();
-    final operationId = uploadId ??
+    final operationId =
+        uploadId ??
         List.generate(
-            16,
-            (_) => Random.secure()
-                .nextInt(256)
-                .toRadixString(16)
-                .padLeft(2, '0')).join();
-    const endpoint = String.fromEnvironment('MEDIA_UPLOAD_URL');
+          16,
+          (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
+        ).join();
+    const endpoint = String.fromEnvironment(
+      'MEDIA_UPLOAD_URL',
+      defaultValue:
+          'https://us-central1-aqar-9f3f9.cloudfunctions.net/uploadMedia',
+    );
     final uri = Uri.tryParse(endpoint);
-    if (uri == null || !isApprovedBrokerUri(
-      projectId: auth.app.options.projectId,
-      bucket: bucket,
-      uri: uri,
-      productionPath: '/uploadMedia',
-      mediaTestPath: '/mediaBrokerTest/uploadMedia',
-      bookingsStagingPath: '/mediaBroker/uploadMedia',
-    )) {
+    if (uri == null ||
+        !isApprovedBrokerUri(
+          projectId: auth.app.options.projectId,
+          bucket: bucket,
+          uri: uri,
+          productionPath: '/uploadMedia',
+          mediaTestPath: '/mediaBrokerTest/uploadMedia',
+          bookingsStagingPath: '/mediaBroker/uploadMedia',
+        )) {
       throw StateError('Approved private upload broker must be configured');
     }
     final idToken = await auth.currentUser!.getIdToken();
@@ -223,16 +257,19 @@ class MediaStore {
       request.followRedirects = false;
       request.headers.contentType = ContentType.json;
       request.headers.set('Authorization', 'Bearer $idToken');
-      request.write(jsonEncode({
-        'uploadId': operationId,
-        'purpose': purpose,
-        'chatId': chatId,
-        'bookingId': bookingId,
-        'seconds': seconds,
-        'content': base64Encode(bytes)
-      }));
-      final response =
-          await request.close().timeout(const Duration(seconds: 60));
+      request.write(
+        jsonEncode({
+          'uploadId': operationId,
+          'purpose': purpose,
+          'chatId': chatId,
+          'bookingId': bookingId,
+          'seconds': seconds,
+          'content': base64Encode(bytes),
+        }),
+      );
+      final response = await request.close().timeout(
+        const Duration(seconds: 60),
+      );
       if (response.statusCode != 200) {
         await response.drain();
         if (response.statusCode >= 500) {
@@ -240,8 +277,10 @@ class MediaStore {
         }
         throw StateError('Media upload rejected');
       }
-      final text =
-          await utf8.decoder.bind(response).join().timeout(responseTimeout);
+      final text = await utf8.decoder
+          .bind(response)
+          .join()
+          .timeout(responseTimeout);
       if (text.length > 4096) {
         throw StateError('Unexpected broker response');
       }
@@ -259,24 +298,28 @@ class MediaStore {
       return {'path': path, 'url': url};
     } on IOException {
       if (attempt < 2 && auth.currentUser?.uid == uid) {
-        return _privateUpload(bytes,
-            purpose: purpose,
-            chatId: chatId,
-            bookingId: bookingId,
-            seconds: seconds,
-            uploadId: operationId,
-            attempt: attempt + 1);
+        return _privateUpload(
+          bytes,
+          purpose: purpose,
+          chatId: chatId,
+          bookingId: bookingId,
+          seconds: seconds,
+          uploadId: operationId,
+          attempt: attempt + 1,
+        );
       }
       rethrow;
     } on TimeoutException {
       if (attempt < 2 && auth.currentUser?.uid == uid) {
-        return _privateUpload(bytes,
-            purpose: purpose,
-            chatId: chatId,
-            bookingId: bookingId,
-            seconds: seconds,
-            uploadId: operationId,
-            attempt: attempt + 1);
+        return _privateUpload(
+          bytes,
+          purpose: purpose,
+          chatId: chatId,
+          bookingId: bookingId,
+          seconds: seconds,
+          uploadId: operationId,
+          attempt: attempt + 1,
+        );
       }
       rethrow;
     } finally {
@@ -288,18 +331,26 @@ class MediaStore {
       readPrivate(MediaLocation.urlFor(bucket, path));
 
   Future<HttpClientResponse> _privateReadRequest(
-      String path, String method, HttpClient client) async {
+    String path,
+    String method,
+    HttpClient client,
+  ) async {
     final uid = _uid();
-    const endpoint = String.fromEnvironment('MEDIA_PRIVATE_READ_URL');
+    const endpoint = String.fromEnvironment(
+      'MEDIA_PRIVATE_READ_URL',
+      defaultValue:
+          'https://us-central1-aqar-9f3f9.cloudfunctions.net/readPrivateMedia',
+    );
     final uri = Uri.tryParse(endpoint);
-    if (uri == null || !isApprovedBrokerUri(
-      projectId: auth.app.options.projectId,
-      bucket: bucket,
-      uri: uri,
-      productionPath: '/readPrivateMedia',
-      mediaTestPath: '/mediaBrokerTest/readPrivateMedia',
-      bookingsStagingPath: '/mediaBroker/readPrivateMedia',
-    )) {
+    if (uri == null ||
+        !isApprovedBrokerUri(
+          projectId: auth.app.options.projectId,
+          bucket: bucket,
+          uri: uri,
+          productionPath: '/readPrivateMedia',
+          mediaTestPath: '/mediaBrokerTest/readPrivateMedia',
+          bookingsStagingPath: '/mediaBroker/readPrivateMedia',
+        )) {
       throw StateError('Approved private read broker must be configured');
     }
     final token = await auth.currentUser!.getIdToken();
@@ -307,7 +358,9 @@ class MediaStore {
       throw StateError('Authentication changed');
     }
     final request = await client.openUrl(
-        method, uri.replace(queryParameters: {'path': path}));
+      method,
+      uri.replace(queryParameters: {'path': path}),
+    );
     request.followRedirects = false;
     request.headers.set('Authorization', 'Bearer $token');
     final response = await request.close().timeout(const Duration(seconds: 60));
@@ -372,7 +425,11 @@ class MediaStore {
     }
     // References disappear first; only the server may decide to reclaim bytes.
     // Missing deployment configuration retains the object, never client-deletes.
-    const endpoint = String.fromEnvironment('MEDIA_CLEANUP_URL');
+    const endpoint = String.fromEnvironment(
+      'MEDIA_CLEANUP_URL',
+      defaultValue:
+          'https://us-central1-aqar-9f3f9.cloudfunctions.net/requestMediaCleanup',
+    );
     if (endpoint.isEmpty) return;
     final uri = Uri.tryParse(endpoint);
     if (uri == null ||
@@ -396,8 +453,9 @@ class MediaStore {
       request.headers.contentType = ContentType.json;
       request.headers.set('Authorization', 'Bearer $token');
       request.write(jsonEncode({'path': path}));
-      final response =
-          await request.close().timeout(const Duration(seconds: 30));
+      final response = await request.close().timeout(
+        const Duration(seconds: 30),
+      );
       await response.drain();
       if (response.statusCode != 202) {
         throw StateError('Cleanup request rejected');
@@ -408,6 +466,8 @@ class MediaStore {
   }
 }
 
-Future<String?> uploadMediaImage(File file,
-        {required MediaPurpose purpose}) async =>
+Future<String?> uploadMediaImage(
+  File file, {
+  required MediaPurpose purpose,
+}) async =>
     (await MediaStore.instance.uploadImage(file, purpose: purpose))['url'];

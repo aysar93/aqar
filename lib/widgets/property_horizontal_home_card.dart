@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/property_model.dart';
 import '../utils/currency.dart';
 import '../core/design/aqar_sizes.dart';
+import '../core/design/aqar_breakpoints.dart';
 import '../core/design/aqar_spacing.dart';
 import '../core/design/aqar_radius.dart';
 import '../core/design/aqar_text.dart';
@@ -52,6 +53,9 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final image =
         property.images.isNotEmpty ? property.images.first : property.imageUrl;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final double imageHeight =
+        AqarBreakpoints.isTablet(context) ? 145.0 : 126.0;
 
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 350),
@@ -72,23 +76,22 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
           borderRadius: AqarRadius.dialog(context),
           onTap: onTap,
           child: Card(
-            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xff1E293B) : Colors.white,
-            elevation: 10,
-            shadowColor: Theme.of(context).brightness == Brightness.dark
+            color: isDark ? const Color(0xff1E293B) : Colors.white,
+            elevation: 8,
+            shadowColor: isDark
                 ? Colors.black.withValues(alpha: .35)
                 : Colors.black.withValues(alpha: .06),
             shape: RoundedRectangleBorder(
               borderRadius: AqarRadius.dialog(context),
               side: BorderSide(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0x22C5A16B)
-                    : const Color(0xFFE2E8F0),
+                color:
+                    isDark ? const Color(0x22C5A16B) : const Color(0xFFE2E8F0),
                 width: 1,
               ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Stack(
                   children: [
@@ -112,15 +115,13 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                             ? Image.asset(
                                 image.toString(),
                                 width: double.infinity,
-                                height:
-                                    AqarSizes.propertyImageHeight(context) + 15,
+                                height: imageHeight,
                                 fit: BoxFit.cover,
                               )
                             : CachedNetworkImage(
                                 imageUrl: image.toString(),
                                 width: double.infinity,
-                                height:
-                                    AqarSizes.propertyImageHeight(context) + 15,
+                                height: imageHeight,
                                 fit: BoxFit.cover,
                                 fadeInDuration: Duration.zero,
                                 placeholder: (context, url) => Container(
@@ -149,50 +150,11 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                               ),
                       ),
                     ),
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(
-                            AqarRadius.dialog(context).topLeft.x,
-                          ),
-                        ),
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black12,
-                                  Colors.black26,
-                                  Colors.black45,
-                                  const Color(0xff1E293B)
-                                      .withValues(alpha: .55),
-                                  const Color(0xff1E293B)
-                                      .withValues(alpha: .82),
-                                  const Color(0xff1E293B),
-                                ],
-                                stops: const [
-                                  0.00,
-                                  0.20,
-                                  0.38,
-                                  0.55,
-                                  0.72,
-                                  0.88,
-                                  1.00,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                     Positioned(
                       top: AqarSpacing.md(context),
                       right: AqarSpacing.md(context),
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 3,
                         ),
@@ -264,111 +226,144 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 14,
-                      right: 14,
-                      bottom: 12,
-                      child: Transform.translate(
-                        offset: const Offset(0, 40), // جرّب 10 أو 12 أو 15
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            // رقم الإعلان
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 3,
+                    if (property.videoUrl != null &&
+                        property.videoUrl!.isNotEmpty)
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: .65),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Colors.white24,
+                              width: 0.5,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.videocam_rounded,
+                                color: Color(0xffC5A16B),
+                                size: 12,
                               ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xffC5A16B),
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: .30),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                "\u200E#${property.propertyNumber}",
-                                textDirection: TextDirection.ltr,
+                              SizedBox(width: 3),
+                              Text(
+                                'فيديو',
                                 style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: AqarText.tiny(context),
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-
-                            const SizedBox(width: 2),
-
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    property.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: AqarText.propertyTitle(context),
-                                      fontWeight: FontWeight.w900,
-                                      shadows: const [
-                                        Shadow(
-                                          color: Colors.black54,
-                                          blurRadius: 8,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Row(
-                                    textDirection: TextDirection.rtl,
-                                    children: [
-                                      const Icon(
-                                        Icons.location_on_rounded,
-                                        color: Color(0xffC5A16B),
-                                        size: 15,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          property.location,
-                                          maxLines: 1,
-                                          softWrap: false,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: TextAlign.right,
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize:
-                                                AqarText.bodySmall(context),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    iqd(property.price),
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      color: const Color(0xffC5A16B),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: AqarText.price(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        property.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          color:
+                              isDark ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: AqarText.propertyTitle(context),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        textDirection: TextDirection.rtl,
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: Color(0xffC5A16B),
+                            size: 13,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              property.location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF64748B),
+                                fontSize: AqarText.bodySmall(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        textDirection: TextDirection.rtl,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              iqd(property.price),
+                              textAlign: TextAlign.right,
+                              textDirection: TextDirection.rtl,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: const Color(0xffC5A16B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: AqarText.price(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xffC5A16B)
+                                  .withValues(alpha: .15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xffC5A16B)
+                                    .withValues(alpha: .45),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              "رقم: #${property.propertyNumber}",
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(
+                                color: isDark
+                                    ? const Color(0xffD8BD95)
+                                    : const Color(0xff8C6D3B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

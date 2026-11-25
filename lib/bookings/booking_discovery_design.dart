@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../screens/notifications_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -31,9 +32,11 @@ class BookingGoldenHeaderContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.viewPaddingOf(context).top;
-    final isLandscape =
-        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    final mq = MediaQuery.of(context);
+    final rawTopInset = math.max(mq.viewPadding.top, mq.padding.top);
+    final isLandscape = mq.size.width > mq.size.height;
+    final topInset =
+        rawTopInset > 0 ? rawTopInset : (isLandscape ? 0.0 : 28.0);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,

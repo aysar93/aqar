@@ -53,6 +53,8 @@ class PropertyNavigator {
           views: property.views,
           createdAt: property.createdAt,
           buildYear: property.buildYear,
+          videoUrl: property.videoUrl,
+          videoThumbnailUrl: property.videoThumbnailUrl,
           images: property.images,
           features: property.features,
           documentType: property.documentType,

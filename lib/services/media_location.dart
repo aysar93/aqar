@@ -2,7 +2,10 @@ import 'media_public_imports.dart';
 
 // Token-free Firebase URLs remain normal HTTPS strings in Firestore.
 class MediaLocation {
-  static const defaultBucket = String.fromEnvironment('MEDIA_STORAGE_BUCKET');
+  static const defaultBucket = String.fromEnvironment(
+    'MEDIA_STORAGE_BUCKET',
+    defaultValue: 'aqar-9f3f9-media-canary',
+  );
   static String? pathFor(String value, String bucket) {
     final uri = Uri.tryParse(value);
     if (uri == null || bucket.isEmpty) return null;

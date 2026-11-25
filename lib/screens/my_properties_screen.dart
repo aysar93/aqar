@@ -7,6 +7,7 @@ import '../utils/currency.dart';
 import '../utils/property_default_images.dart';
 import 'package:intl/intl.dart' as intl;
 import 'property_details.dart';
+import 'admin/widgets/change_availability_sheet.dart';
 
 class MyPropertiesScreen extends StatefulWidget {
   final String? targetUserId;
@@ -426,8 +427,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(
-                                        alpha: _isDark ? .12 : .06),
+                                    color: Colors.black
+                                        .withValues(alpha: _isDark ? .12 : .06),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -563,6 +564,33 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                           ),
                                                         );
                                                       } else if (value ==
+                                                          'availability') {
+                                                        showModalBottomSheet(
+                                                          context: context,
+                                                          shape:
+                                                              const RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.vertical(
+                                                                    top: Radius
+                                                                        .circular(
+                                                                            20)),
+                                                          ),
+                                                          builder: (_) =>
+                                                              ChangeAvailabilitySheet(
+                                                            documentId:
+                                                                filteredDocs[
+                                                                        index]
+                                                                    .id,
+                                                            currentStatus: (data[
+                                                                        'availabilityStatus'] ??
+                                                                    'available')
+                                                                .toString(),
+                                                            ownerId: data[
+                                                                    'userId']
+                                                                ?.toString(),
+                                                          ),
+                                                        );
+                                                      } else if (value ==
                                                           'delete') {
                                                         _deleteProperty(
                                                           context,
@@ -585,6 +613,22 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
                                                             ),
                                                             SizedBox(width: 8),
                                                             Text('تعديل'),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      PopupMenuItem<String>(
+                                                        value: 'availability',
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons
+                                                                  .event_available_rounded,
+                                                              size: 18,
+                                                              color: Color(
+                                                                  0xffC5A16B),
+                                                            ),
+                                                            SizedBox(width: 8),
+                                                            Text('حالة التوفر'),
                                                           ],
                                                         ),
                                                       ),
@@ -1277,7 +1321,8 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             ),
             decoration: BoxDecoration(
               color: _background,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SafeArea(
               top: false,
@@ -1557,43 +1602,6 @@ class _MyPropertiesScreenState extends State<MyPropertiesScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _statChip(
-    IconData icon,
-    String value,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: _isDark ? const Color(0xff334155) : const Color(0xFFE2E8F0),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: _borderSubtle,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 17,
-            color: const Color(0xffC5A16B),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            value,
-            style: TextStyle(
-              color: _textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

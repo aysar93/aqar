@@ -246,8 +246,6 @@ class _HorizontalPropertiesSectionState
                     height: AqarSizes.horizontalCardsHeight(context),
                     child: PageView.builder(
                       controller: _pageController,
-                      // التقليب من اليمين إلى اليسار مثل قسم المكاتب المميزة.
-                      reverse: true,
                       allowImplicitScrolling: true,
                       physics: const BouncingScrollPhysics(),
                       pageSnapping: true,
@@ -326,9 +324,9 @@ class _HorizontalPropertiesSectionState
                                         maxOffset;
 
                                 return Transform.translate(
-                                  offset: Offset(offset, 0),
+                                  offset: Offset(-offset, 0),
                                   child: Align(
-                                    alignment: Alignment.centerLeft,
+                                    alignment: Alignment.centerRight,
                                     child: Container(
                                       width: 16,
                                       height: 6,

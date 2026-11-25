@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../booking_admin_theme.dart';
 
 class BookingAdminReelsTab extends StatefulWidget {
@@ -15,6 +16,14 @@ class BookingAdminReelsTab extends StatefulWidget {
 class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
     with AutomaticKeepAliveClientMixin {
   String _filter = 'all'; // all, reports, hidden
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -24,13 +33,11 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
     super.build(context);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream:
-          widget.reelsStream ??
+      stream: widget.reelsStream ??
           FirebaseFirestore.instance.collection('booking_reels').snapshots(),
       builder: (context, reelsSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream:
-              widget.reportsStream ??
+          stream: widget.reportsStream ??
               FirebaseFirestore.instance
                   .collection('booking_reel_reports')
                   .snapshots(),
@@ -50,8 +57,18 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                     (r.data()['status'] ?? 'open') == 'open',
               );
 
-              if (_filter == 'reports') return hasReport;
-              if (_filter == 'hidden') return !active;
+              if (_filter == 'reports' && !hasReport) return false;
+              if (_filter == 'hidden' && active) return false;
+
+              if (_searchQuery.isNotEmpty) {
+                final t = (data['title'] ?? '').toString().toLowerCase();
+                final v = (data['venueName'] ?? data['venueId'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                if (!t.contains(_searchQuery) && !v.contains(_searchQuery)) {
+                  return false;
+                }
+              }
               return true;
             }).toList();
 
@@ -89,6 +106,53 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                         ],
                       ),
                       const SizedBox(height: 12),
+                      Container(
+                        height: 40,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: BookingAdminTheme.surfaceSecondary(context),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: BookingAdminTheme.border(context)),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (q) => setState(
+                              () => _searchQuery = q.trim().toLowerCase()),
+                          textDirection: TextDirection.rtl,
+                          style: TextStyle(
+                            color: BookingAdminTheme.text(context),
+                            fontSize: 12,
+                            fontFamily: 'Cairo',
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'بحث في عنوان الفيديو أو اسم المكان…',
+                            hintTextDirection: TextDirection.rtl,
+                            hintStyle: TextStyle(
+                              color: BookingAdminTheme.textMute(context),
+                              fontSize: 12,
+                              fontFamily: 'Cairo',
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              size: 18,
+                              color: BookingAdminTheme.icon(context),
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 10),
+                          ),
+                        ),
+                      ),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -117,9 +181,8 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                           title: 'لا توجد مقاطع ريلز مطابقة',
                           description:
                               'لم يتم العثور على أي مقطع فيديو يطابق تصفية البحث المختارة حالياً.',
-                          actionLabel: _filter != 'all'
-                              ? 'عرض كل المقاطع'
-                              : null,
+                          actionLabel:
+                              _filter != 'all' ? 'عرض كل المقاطع' : null,
                           onAction: () => setState(() => _filter = 'all'),
                         )
                       : ListView.builder(
@@ -181,12 +244,16 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
     List<QueryDocumentSnapshot<Map<String, dynamic>>> reports,
   ) {
     final rawTitle = (r['title'] ?? '').toString().trim();
-    final title = (rawTitle.isEmpty || rawTitle == 'فيديو حجز بدون عنوان' || BookingAdminDataSanitizer.isSyntheticString(rawTitle))
+    final title = (rawTitle.isEmpty ||
+            rawTitle == 'فيديو حجز بدون عنوان' ||
+            BookingAdminDataSanitizer.isSyntheticString(rawTitle))
         ? 'جولة مصورة — شاليه الرافدين الملكي بالأنبار'
         : rawTitle;
     final active = r['active'] == true;
     final rawVenue = (r['venueName'] ?? r['venueId'] ?? '').toString().trim();
-    final venueDisplay = (rawVenue.isEmpty || rawVenue.length > 14 || BookingAdminDataSanitizer.isSyntheticString(rawVenue))
+    final venueDisplay = (rawVenue.isEmpty ||
+            rawVenue.length > 14 ||
+            BookingAdminDataSanitizer.isSyntheticString(rawVenue))
         ? 'شاليه الرافدين الملكي — الحبانية'
         : rawVenue;
     final likesCount = r['likesCount'] ?? 0;
@@ -307,6 +374,29 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
               spacing: 8,
               runSpacing: 6,
               children: [
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: BookingAdminTheme.gold,
+                  ),
+                  icon: const Icon(
+                    Icons.play_circle_fill_rounded,
+                    size: 16,
+                    color: BookingAdminTheme.gold,
+                  ),
+                  label: const Text(
+                    'مشاهدة الفيديو',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () => _showVideoPreviewModal(
+                    context,
+                    title,
+                    (r['videoUrl'] ?? '').toString(),
+                  ),
+                ),
                 if (reports.isNotEmpty)
                   TextButton.icon(
                     style: TextButton.styleFrom(
@@ -390,6 +480,38 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                     ),
                     onPressed: () => _toggleReelActive(id, true),
                   ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF4444),
+                    side: const BorderSide(color: Color(0x66EF4444)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 14,
+                    color: Color(0xFFEF4444),
+                  ),
+                  label: const Text(
+                    'حذف الريلز',
+                    style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                  ),
+                  onPressed: () async {
+                    final ok = await BookingAdminConfirmDialog.show(
+                      context: context,
+                      title: 'حذف فيديو الريلز نهائياً',
+                      message:
+                          'هل أنت متأكد من حذف هذا الفيديو بشكل نهائي من ريلزات الحجوزات؟ لا يمكن التراجع عن هذا الإجراء.',
+                      confirmLabel: 'حذف نهائي',
+                      isDestructive: true,
+                    );
+                    if (ok) {
+                      _deleteReel(id);
+                    }
+                  },
+                ),
               ],
             ),
           ],
@@ -638,13 +760,12 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                                 onPressed: () async {
                                   final ok =
                                       await BookingAdminConfirmDialog.show(
-                                        context: ctx,
-                                        title: 'حذف التعليق',
-                                        message:
-                                            'هل تريد حذف هذا التعليق نهائياً؟',
-                                        confirmLabel: 'حذف',
-                                        isDestructive: true,
-                                      );
+                                    context: ctx,
+                                    title: 'حذف التعليق',
+                                    message: 'هل تريد حذف هذا التعليق نهائياً؟',
+                                    confirmLabel: 'حذف',
+                                    isDestructive: true,
+                                  );
                                   if (ok) {
                                     await FirebaseFirestore.instance
                                         .collection('booking_reels')
@@ -656,11 +777,10 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                                         .collection('booking_reels')
                                         .doc(reelId)
                                         .update({
-                                          'commentsCount': FieldValue.increment(
-                                            -1,
-                                          ),
-                                        })
-                                        .catchError((_) {});
+                                      'commentsCount': FieldValue.increment(
+                                        -1,
+                                      ),
+                                    }).catchError((_) {});
                                   }
                                 },
                               ),
@@ -706,5 +826,208 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
         );
       }
     }
+  }
+
+  Future<void> _deleteReel(String reelId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('booking_reels')
+          .doc(reelId)
+          .delete();
+
+      final reports = await FirebaseFirestore.instance
+          .collection('booking_reel_reports')
+          .where('reelId', isEqualTo: reelId)
+          .get();
+      for (final doc in reports.docs) {
+        await doc.reference.delete();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم حذف مقطع الريلز بنجاح',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: Color(0xFF1E293B),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تعذر حذف الريلز: $e',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showVideoPreviewModal(
+    BuildContext context,
+    String title,
+    String videoUrl,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => BookingReelVideoPreviewDialog(
+        title: title,
+        videoUrl: videoUrl,
+      ),
+    );
+  }
+}
+
+class BookingReelVideoPreviewDialog extends StatefulWidget {
+  final String title;
+  final String videoUrl;
+
+  const BookingReelVideoPreviewDialog({
+    super.key,
+    required this.title,
+    required this.videoUrl,
+  });
+
+  @override
+  State<BookingReelVideoPreviewDialog> createState() =>
+      _BookingReelVideoPreviewDialogState();
+}
+
+class _BookingReelVideoPreviewDialogState
+    extends State<BookingReelVideoPreviewDialog> {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.videoUrl.isNotEmpty) {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() => _isInitialized = true);
+            _controller?.play();
+            _controller?.setLooping(true);
+          }
+        }).catchError((err) {
+          debugPrint('Preview video error: $err');
+          if (mounted) setState(() => _hasError = true);
+        });
+    } else {
+      _hasError = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.black,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: const Color(0xFF1E293B),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.65,
+              ),
+              child: AspectRatio(
+                aspectRatio: _isInitialized && _controller != null
+                    ? _controller!.value.aspectRatio
+                    : 9 / 16,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_isInitialized && _controller != null)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _controller!.value.isPlaying
+                                ? _controller!.pause()
+                                : _controller!.play();
+                          });
+                        },
+                        child: VideoPlayer(_controller!),
+                      )
+                    else if (!_hasError)
+                      const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xffC5A16B),
+                        ),
+                      )
+                    else
+                      const Center(
+                        child: Text(
+                          'تعذر تشغيل الفيديو أو الرابط غير صالح',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                    if (_isInitialized &&
+                        _controller != null &&
+                        !_controller!.value.isPlaying)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
