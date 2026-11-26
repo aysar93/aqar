@@ -2264,7 +2264,7 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
     final int? customVideoIndex = (liveData?['videoIndex'] as num?)?.toInt() ??
         (liveData?['mediaOrder'] is List &&
                 (liveData!['mediaOrder'] as List).contains('video')
-            ? (liveData!['mediaOrder'] as List).indexOf('video')
+            ? (liveData['mediaOrder'] as List).indexOf('video')
             : null);
 
     if (rawImages.isNotEmpty) {
