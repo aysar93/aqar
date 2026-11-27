@@ -80,8 +80,10 @@ String bookingTime(dynamic minute) {
   if (minute is String) {
     if (minute.contains(':')) return minute;
     final parsed = int.tryParse(minute);
-    if (parsed != null) minute = parsed;
-    else return '00:00';
+    if (parsed != null)
+      minute = parsed;
+    else
+      return '00:00';
   }
   final m = (minute is num) ? minute.toInt() : 0;
   return '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
@@ -265,6 +267,47 @@ class _BookingScreenState extends State<BookingScreen> {
   int? _cachedPublicLimit;
   String? _cachedStreamUid;
   Stream<QuerySnapshot<Map<String, dynamic>>>? _cachedStream;
+  bool _isRefreshing = false;
+
+  Future<void> _refreshBookings(
+    Query<Map<String, dynamic>>? query, {
+    bool showFeedback = false,
+  }) async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      if (widget.records == null && query != null) {
+        await query
+            .get(const GetOptions(source: Source.server))
+            .timeout(const Duration(seconds: 15));
+      }
+      if (mounted) {
+        setState(() {
+          _cachedStream = null;
+        });
+        if (showFeedback) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم تحديث البيانات'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر تحديث البيانات؛ تحقق من اتصال الإنترنت'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>>? _getBookingStream(
     Query<Map<String, dynamic>>? query,
@@ -286,6 +329,7 @@ class _BookingScreenState extends State<BookingScreen> {
     _cachedStream = query.snapshots(includeMetadataChanges: true);
     return _cachedStream;
   }
+
   @override
   void initState() {
     super.initState();
@@ -466,8 +510,8 @@ class _BookingScreenState extends State<BookingScreen> {
         if (tab == 4) {
           query = bookingFinanceQueue(query);
         } else if (!widget.admin) {
-          query =
-              query.where(tab == 1 ? 'customerId' : 'ownerId', isEqualTo: uid ?? '');
+          query = query.where(tab == 1 ? 'customerId' : 'ownerId',
+              isEqualTo: uid ?? '');
         }
       }
     }
@@ -540,7 +584,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                 if (finance)
                                   PopupMenuButton<int>(
                                       tooltip: 'المراجعة المالية',
-                                      icon: const Icon(Icons.grid_view_outlined),
+                                      icon:
+                                          const Icon(Icons.grid_view_outlined),
                                       onSelected: (value) =>
                                           setState(() => tab = value),
                                       itemBuilder: (_) => const [
@@ -552,12 +597,35 @@ class _BookingScreenState extends State<BookingScreen> {
                             : [
                                 IconButton(
                                   tooltip: 'الإشعارات',
-                                  icon: const Icon(Icons.notifications_none_rounded),
+                                  icon: const Icon(
+                                      Icons.notifications_none_rounded),
                                   onPressed: () => Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const NotificationsScreen()),
                                   ),
                                 ),
+                                if (!isSearch && !isReels && !isAccount)
+                                  IconButton(
+                                    tooltip: 'تحديث البيانات',
+                                    icon: _isRefreshing
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: bookingGold,
+                                            ),
+                                          )
+                                        : const Icon(Icons.refresh_rounded),
+                                    onPressed: _isRefreshing
+                                        ? null
+                                        : () => _refreshBookings(
+                                              query,
+                                              showFeedback: true,
+                                            ),
+                                  ),
                               ])),
             bottomNavigationBar: widget.embedded
                 ? null
@@ -589,489 +657,716 @@ class _BookingScreenState extends State<BookingScreen> {
                                     })
                                 : null,
                           )
-                        : ListView(
-                key: const PageStorageKey('booking-workspace-scroll'),
-                children: [
-                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance.doc('booking_settings/platform_controls').snapshots(),
-                    builder: (context, snap) {
-                      final data = snap.data?.data();
-                      if (data == null || data['isBookingsEnabled'] != false) return const SizedBox.shrink();
-                      final msg = (data['maintenanceMessage'] ?? 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث').toString();
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0x1FEF4444),
-                          border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 26),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                msg,
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  color: Color(0xFFDC2626),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  if (widget.admin && tab == 0)
-                    BookingAdminTasks(
-                        records: widget.adminTaskRecords ??
-                            (widget.records == null ? null : const {}),
-                        onOpen: (task) {
-                          if (widget.onAdminTask != null) {
-                            widget.onAdminTask!(task);
-                            return;
-                          }
-                          if (task == 'requests' || task == 'reports') {
-                            setState(() => tab = task == 'requests' ? 1 : 3);
-                            return;
-                          }
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => task == 'media'
-                                      ? const BookingMediaInbox()
-                                      : task == 'proofs'
-                                          ? const BookingProofInbox()
-                                          : const BookingReviewInbox()));
-                        }),
-                  if (tab != 2 && tab != 0 && tab != 1)
-                    Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: !widget.admin && tab == 0
-                            ? const BookingBrowseHeader()
-                            : BookingWorkspaceHeader(
-                                title: widget.admin
-                                    ? 'مركز إدارة الحجوزات'
-                                    : 'لوحة المالك',
-                                subtitle: widget.admin
-                                    ? 'راجع الأماكن والطلبات والتوثيق من مساحة واحدة.'
-                                    : 'إدارة الشاليهات والأسعار ومتابعة طلبات الحجز.')),
-                  if (uid != null &&
-                      (((tab != 0 && tab != 1 && tab != 2) ||
-                          (widget.admin && tab == 0))))
-                    ...workspaceTools(uid),
-                  if (tab == 0)
-                    BookingFilterBar(
-                        welcome: true,
-                        onBack: widget.onBackToMain,
-                        heroAction: isHosted && finance
-                            ? PopupMenuButton<int>(
-                                tooltip: 'المراجعة المالية',
-                                icon: const Icon(Icons.apps_rounded,
-                                    color: Color(0xFF0F172A)),
-                                onSelected: (value) => setState(() {
-                                  tab = value;
-                                  _bottomBarIndex = 0;
-                                }),
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                      value: 4,
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.account_balance, size: 20),
-                                          SizedBox(width: 8),
-                                          Text('المراجعة المالية'),
-                                        ],
-                                      )),
-                                ],
-                              )
-                            : null,
-                        filters: filters,
-                        onChanged: () => setState(() {})),
-                  if (tab == 1)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF1E222D)
-                              : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white12
-                                : const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            for (final name in statusGroups.keys)
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => setState(() => statusGroup = name),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 9),
-                                        child: Text(
-                                          name,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontFamily: 'Cairo',
-                                            fontSize: 12,
-                                            fontWeight: statusGroup == name
-                                                ? FontWeight.bold
-                                                : FontWeight.w500,
-                                            color: statusGroup == name
-                                                ? (Theme.of(context).brightness == Brightness.dark
-                                                    ? const Color(0xFFC5A16B)
-                                                    : const Color(0xFF8B6B23))
-                                                : (Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.white60
-                                                    : const Color(0xFF64748B)),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        height: 2.5,
-                                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        : RefreshIndicator(
+                            color: bookingGold,
+                            onRefresh: () => _refreshBookings(query),
+                            child: ListView(
+                                key: const PageStorageKey(
+                                    'booking-workspace-scroll'),
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  StreamBuilder<
+                                      DocumentSnapshot<Map<String, dynamic>>>(
+                                    stream: FirebaseFirestore.instance
+                                        .doc(
+                                            'booking_settings/platform_controls')
+                                        .snapshots(),
+                                    builder: (context, snap) {
+                                      final data = snap.data?.data();
+                                      if (data == null ||
+                                          data['isBookingsEnabled'] != false)
+                                        return const SizedBox.shrink();
+                                      final msg = (data['maintenanceMessage'] ??
+                                              'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث')
+                                          .toString();
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
+                                        padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: statusGroup == name
-                                              ? bookingGold
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(2),
+                                          color: const Color(0x1FEF4444),
+                                          border: Border.all(
+                                              color: const Color(0xFFEF4444),
+                                              width: 1.5),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
-                                      ),
-                                    ],
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Color(0xFFEF4444),
+                                                size: 26),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                msg,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Cairo',
+                                                  color: Color(0xFFDC2626),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ...[
-                    if (tab == 0 &&
-                        (widget.records == null || widget.banners != null))
-                      BannerSlider(
-                          stream: widget.banners ?? bookingBanners,
-                          imageBuilder: widget.bannerImageBuilder,
-                          accentColor: bookingGold,
-                          onBookingVenue: (id, category) async {
-                            await bookingRun(context, () async {
-                              final venue = widget.loadVenue != null
-                                  ? await widget.loadVenue!(id)
-                                  : (await FirebaseFirestore.instance
-                                          .doc('booking_venues/$id')
-                                          .get())
-                                      .data();
-                              if (venue == null ||
-                                  venue['active'] != true ||
-                                  const ['pending', 'rejected']
-                                      .contains(venue['verificationStatus']) ||
-                                  (widget.loadVenue == null &&
-                                      !isBookingVenueApprovedStatus(
-                                          venue['verificationStatus'])) ||
-                                  venue['category'] != category)
-                                throw StateError('المكان غير متاح');
-                              if (context.mounted)
-                                await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => (widget.venuePage
-                                                ?.call(id, venue) ??
-                                            BookingRequestScreen(
-                                                venueId: id, venue: venue))));
-                            });
-                          }),
-                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: _getBookingStream(query, tab, publicLimit, uid),
-                        builder: (context, s) {
-                          final requireVerifiedServer =
-                              tab != 0 || widget.admin || !s.hasData || (s.data?.docs.isEmpty ?? true);
-                          return BookingVerifiedGate(
-                            hasData: s.hasData,
-                            hasError: s.hasError,
-                            error: s.error,
-                            isFromCache: requireVerifiedServer &&
-                                (s.data?.metadata.isFromCache ?? false),
-                            hasPendingWrites:
-                                s.data?.metadata.hasPendingWrites ?? false,
-                            permissionDetail: tab == 0
-                                ? 'تعذر تحميل قائمة الأماكن بسبب صلاحية الحساب أو الاتصال.'
-                                : 'بيانات الحجوزات أو الإدارة تتطلب التحقق من الحساب عبر الخادم.',
-                            onRetry: () => setState(() {}),
-                            child: Builder(builder: (context) {
-                              if (s.data!.docs.isEmpty &&
-                                  !(tab == 0 && !widget.admin)) {
-                                return const BookingStateView(
-                                    title: 'لا توجد بيانات بعد',
-                                    detail: 'ستظهر الطلبات هنا عند توفرها.',
-                                    icon: Icons.inbox_outlined);
-                              }
-                          final sourceDocs = tab == 0 && !widget.admin
-                              ? s.data!.docs.take(publicLimit)
-                              : s.data!.docs;
-                          final allowedStatuses = statusGroups[statusGroup] ?? [];
-                          final docs = sourceDocs.where((d) {
-                            if (tab == 0) {
-                              final data = d.data();
-                              if (!widget.admin &&
-                                  (data['active'] == false ||
-                                      const ['pending', 'rejected'].contains(
-                                          data['verificationStatus']) ||
-                                      (widget.records == null &&
-                                          !isBookingVenueApprovedStatus(
-                                              data['verificationStatus'])))) {
-                                return false;
-                              }
-                              return filters.matches(data);
-                            }
-                            if (tab == 1) {
-                              if (statusGroup == 'الكل' || allowedStatuses.isEmpty) return true;
-                              final s = d.data()['status']?.toString();
-                              return allowedStatuses.contains(s);
-                            }
-                            return true;
-                          }).toList();
-                          if (tab == 0)
-                            docs.sort(
-                                (a, b) => filters.compare(a.data(), b.data()));
-                          if (docs.isEmpty && !(tab == 0 && !widget.admin)) {
-                            if (tab == 1) {
-                              final isDark = Theme.of(context).brightness == Brightness.dark;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-                                child: Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(24),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                                        width: 1,
+                                  if (widget.admin && tab == 0)
+                                    BookingAdminTasks(
+                                        records: widget.adminTaskRecords ??
+                                            (widget.records == null
+                                                ? null
+                                                : const {}),
+                                        onOpen: (task) {
+                                          if (widget.onAdminTask != null) {
+                                            widget.onAdminTask!(task);
+                                            return;
+                                          }
+                                          if (task == 'requests' ||
+                                              task == 'reports') {
+                                            setState(() => tab =
+                                                task == 'requests' ? 1 : 3);
+                                            return;
+                                          }
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (_) => task ==
+                                                          'media'
+                                                      ? const BookingMediaInbox()
+                                                      : task == 'proofs'
+                                                          ? const BookingProofInbox()
+                                                          : const BookingReviewInbox()));
+                                        }),
+                                  if (tab != 2 && tab != 0 && tab != 1)
+                                    Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: !widget.admin && tab == 0
+                                            ? const BookingBrowseHeader()
+                                            : BookingWorkspaceHeader(
+                                                title: widget.admin
+                                                    ? 'مركز إدارة الحجوزات'
+                                                    : 'لوحة المالك',
+                                                subtitle: widget.admin
+                                                    ? 'راجع الأماكن والطلبات والتوثيق من مساحة واحدة.'
+                                                    : 'إدارة الشاليهات والأسعار ومتابعة طلبات الحجز.')),
+                                  if (uid != null &&
+                                      (((tab != 0 && tab != 1 && tab != 2) ||
+                                          (widget.admin && tab == 0))))
+                                    ...workspaceTools(uid),
+                                  if (tab == 0)
+                                    BookingFilterBar(
+                                        welcome: true,
+                                        onBack: widget.onBackToMain,
+                                        heroAction: isHosted && finance
+                                            ? PopupMenuButton<int>(
+                                                tooltip: 'المراجعة المالية',
+                                                icon: const Icon(
+                                                    Icons.apps_rounded,
+                                                    color: Color(0xFF0F172A)),
+                                                onSelected: (value) =>
+                                                    setState(() {
+                                                  tab = value;
+                                                  _bottomBarIndex = 0;
+                                                }),
+                                                itemBuilder: (_) => const [
+                                                  PopupMenuItem(
+                                                      value: 4,
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(
+                                                              Icons
+                                                                  .account_balance,
+                                                              size: 20),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                              'المراجعة المالية'),
+                                                        ],
+                                                      )),
+                                                ],
+                                              )
+                                            : null,
+                                        filters: filters,
+                                        onChanged: () => setState(() {})),
+                                  if (tab == 1)
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 12, 16, 8),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? const Color(0xFF1E222D)
+                                              : const Color(0xFFF8FAFC),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.white12
+                                                    : const Color(0xFFE2E8F0),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            for (final name
+                                                in statusGroups.keys)
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: () => setState(
+                                                      () => statusGroup = name),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 9),
+                                                        child: Text(
+                                                          name,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          style: TextStyle(
+                                                            fontFamily: 'Cairo',
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                statusGroup ==
+                                                                        name
+                                                                    ? FontWeight
+                                                                        .bold
+                                                                    : FontWeight
+                                                                        .w500,
+                                                            color: statusGroup ==
+                                                                    name
+                                                                ? (Theme.of(context)
+                                                                            .brightness ==
+                                                                        Brightness
+                                                                            .dark
+                                                                    ? const Color(
+                                                                        0xFFC5A16B)
+                                                                    : const Color(
+                                                                        0xFF8B6B23))
+                                                                : (Theme.of(context)
+                                                                            .brightness ==
+                                                                        Brightness
+                                                                            .dark
+                                                                    ? Colors
+                                                                        .white60
+                                                                    : const Color(
+                                                                        0xFF64748B)),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        height: 2.5,
+                                                        margin: const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 6),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: statusGroup ==
+                                                                  name
+                                                              ? bookingGold
+                                                              : Colors
+                                                                  .transparent,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(2),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
                                     ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          width: 68,
-                                          height: 68,
-                                          decoration: BoxDecoration(
-                                            color: bookingGold.withValues(alpha: 0.12),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: bookingGold.withValues(alpha: 0.3)),
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.calendar_month_rounded, size: 34, color: bookingGold),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          statusGroup == 'الكل'
-                                              ? 'لم تسجل أي حجوزات بعد'
-                                              : 'لا توجد حجوزات في قسم "$statusGroup" حاليًا',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontFamily: 'Cairo',
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          statusGroup == 'الكل'
-                                              ? 'استكشف أفضل الشاليهات والمنتجعات الفاخرة بالأنبار واحجز موعدك القادم بسهولة.'
-                                              : 'يمكنك الاطلاع على الأقسام الأخرى أو تصفح الأماكن المتاحة للحجز فوراً.',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontFamily: 'Cairo',
-                                            fontSize: 12.5,
-                                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                                            height: 1.5,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        ElevatedButton.icon(
-                                          key: const ValueKey('empty-state-browse-btn'),
-                                          onPressed: () {
-                                            HapticFeedback.selectionClick();
-                                            setState(() {
-                                              tab = 0;
-                                              _bottomBarIndex = 0;
+                                  ...[
+                                    if (tab == 0 &&
+                                        (widget.records == null ||
+                                            widget.banners != null))
+                                      BannerSlider(
+                                          stream:
+                                              widget.banners ?? bookingBanners,
+                                          imageBuilder:
+                                              widget.bannerImageBuilder,
+                                          accentColor: bookingGold,
+                                          onBookingVenue: (id, category) async {
+                                            await bookingRun(context, () async {
+                                              final venue = widget.loadVenue !=
+                                                      null
+                                                  ? await widget.loadVenue!(id)
+                                                  : (await FirebaseFirestore
+                                                          .instance
+                                                          .doc(
+                                                              'booking_venues/$id')
+                                                          .get())
+                                                      .data();
+                                              if (venue == null ||
+                                                  venue['active'] != true ||
+                                                  const [
+                                                    'pending',
+                                                    'rejected'
+                                                  ].contains(venue[
+                                                      'verificationStatus']) ||
+                                                  (widget.loadVenue == null &&
+                                                      !isBookingVenueApprovedStatus(
+                                                          venue[
+                                                              'verificationStatus'])) ||
+                                                  venue['category'] != category)
+                                                throw StateError(
+                                                    'المكان غير متاح');
+                                              if (context.mounted)
+                                                await Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (_) => (widget
+                                                                .venuePage
+                                                                ?.call(id,
+                                                                    venue) ??
+                                                            BookingRequestScreen(
+                                                                venueId: id,
+                                                                venue:
+                                                                    venue))));
                                             });
-                                          },
-                                          icon: const Icon(Icons.explore_outlined, size: 18),
-                                          label: const Text(
-                                            'تصفح الأماكن المتاحة الآن',
-                                            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13.5),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: bookingGold,
-                                            foregroundColor: const Color(0xFF0F172A),
-                                            elevation: 1,
-                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            return const Padding(
-                                padding: EdgeInsets.all(24),
-                                child: Text(
-                                    'لا توجد أماكن تطابق الفلاتر؛ جرّب تخفيفها'));
-                          }
-                          if (tab == 0 && !widget.admin) {
-                            return BookingBrowseContent(
-                                featuredPreview: kDebugMode &&
-                                    appFlavor == 'bookingsOfflinePreview' &&
-                                    const bool.fromEnvironment(
-                                        'BOOKING_OFFLINE_PREVIEW'),
-                                featuredVenues: widget.diagnosticFeatured.isNotEmpty
-                                    ? (widget.diagnosticFeatured
-                                        .where(filters.matches)
-                                        .where(isBookingVenueFeatured)
-                                        .toList()
-                                      ..sort(compareFeaturedBookingVenues))
-                                    : (docs
-                                        .map((d) => <String, dynamic>{
-                                              ...d.data(),
-                                              'id': d.id
-                                            })
-                                        .where(isBookingVenueFeatured)
-                                        .toList()
-                                      ..sort(compareFeaturedBookingVenues)),
-                                hasMore: s.data!.docs.length > publicLimit,
-                                loading: s.connectionState ==
-                                    ConnectionState.waiting,
-                                onLoadMore: () =>
-                                    setState(() => publicLimit += 12),
-                                venues: docs
-                                    .map((d) => <String, dynamic>{
-                                          ...d.data(),
-                                          'id': d.id
-                                        })
-                                    .toList(),
-                                onOpen: (venue) => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => (widget.venuePage?.call(
-                                                venue['id'] as String, venue) ??
-                                            BookingRequestScreen(
-                                                venueId: venue['id'] as String,
-                                                venue: venue)))));
-                          }
-                          if (tab == 2)
-                            return BookingOwnerPanel(
-                                onManageVenues: () => setState(() => tab = 5),
-                                bookings: docs
-                                    .map((d) => <String, dynamic>{
-                                          ...d.data(),
-                                          'id': d.id
-                                        })
-                                    .toList(),
-                                onOpen: (id) => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            (widget.bookingPage?.call(id) ??
-                                                BookingDetailsScreen(
-                                                    bookingId: id)))));
-                          return Column(children: [
-                            ...docs.map((doc) {
-                              final d = doc.data();
-                              if (tab == 6)
-                                return ListTile(
-                                    title: Text('مكان ${d['venueId']}'),
-                                    subtitle: const Text('صلاحيات موظف مفوض'),
-                                    onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => BookingStaffScreen(
-                                                venueId: d['venueId'],
-                                                scopes: List<String>.from(
-                                                    d['scopes'] ?? [])))));
-                              if (tab == 0 || tab == 5) {
-                                return BookingVenueCard(
-                                    venue: d,
-                                    onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => widget.admin ||
-                                                    tab == 5
-                                                ? (widget.venuePage
-                                                        ?.call(doc.id, d) ??
-                                                    BookingVenueEditor(
-                                                        venueId: doc.id,
+                                          }),
+                                    StreamBuilder<
+                                            QuerySnapshot<
+                                                Map<String, dynamic>>>(
+                                        stream: _getBookingStream(
+                                            query, tab, publicLimit, uid),
+                                        builder: (context, s) {
+                                          final requireVerifiedServer = tab !=
+                                                  0 ||
+                                              widget.admin ||
+                                              !s.hasData ||
+                                              (s.data?.docs.isEmpty ?? true);
+                                          return BookingVerifiedGate(
+                                            hasData: s.hasData,
+                                            hasError: s.hasError,
+                                            error: s.error,
+                                            isFromCache:
+                                                requireVerifiedServer &&
+                                                    (s.data?.metadata
+                                                            .isFromCache ??
+                                                        false),
+                                            hasPendingWrites: s.data?.metadata
+                                                    .hasPendingWrites ??
+                                                false,
+                                            permissionDetail: tab == 0
+                                                ? 'تعذر تحميل قائمة الأماكن بسبب صلاحية الحساب أو الاتصال.'
+                                                : 'بيانات الحجوزات أو الإدارة تتطلب التحقق من الحساب عبر الخادم.',
+                                            onRetry: () => setState(() {}),
+                                            child: Builder(builder: (context) {
+                                              if (s.data!.docs.isEmpty &&
+                                                  !(tab == 0 &&
+                                                      !widget.admin)) {
+                                                return const BookingStateView(
+                                                    title: 'لا توجد بيانات بعد',
+                                                    detail:
+                                                        'ستظهر الطلبات هنا عند توفرها.',
+                                                    icon: Icons.inbox_outlined);
+                                              }
+                                              final sourceDocs =
+                                                  tab == 0 && !widget.admin
+                                                      ? s.data!.docs
+                                                          .take(publicLimit)
+                                                      : s.data!.docs;
+                                              final allowedStatuses =
+                                                  statusGroups[statusGroup] ??
+                                                      [];
+                                              final docs =
+                                                  sourceDocs.where((d) {
+                                                if (tab == 0) {
+                                                  final data = d.data();
+                                                  if (!widget.admin &&
+                                                      (data['active'] ==
+                                                              false ||
+                                                          const [
+                                                            'pending',
+                                                            'rejected'
+                                                          ].contains(data[
+                                                              'verificationStatus']) ||
+                                                          (widget.records ==
+                                                                  null &&
+                                                              !isBookingVenueApprovedStatus(
+                                                                  data[
+                                                                      'verificationStatus'])))) {
+                                                    return false;
+                                                  }
+                                                  return filters.matches(data);
+                                                }
+                                                if (tab == 1) {
+                                                  if (statusGroup == 'الكل' ||
+                                                      allowedStatuses.isEmpty)
+                                                    return true;
+                                                  final s = d
+                                                      .data()['status']
+                                                      ?.toString();
+                                                  return allowedStatuses
+                                                      .contains(s);
+                                                }
+                                                return true;
+                                              }).toList();
+                                              if (tab == 0)
+                                                docs.sort((a, b) =>
+                                                    filters.compare(
+                                                        a.data(), b.data()));
+                                              if (docs.isEmpty &&
+                                                  !(tab == 0 &&
+                                                      !widget.admin)) {
+                                                if (tab == 1) {
+                                                  final isDark =
+                                                      Theme.of(context)
+                                                              .brightness ==
+                                                          Brightness.dark;
+                                                  return Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 24,
+                                                        vertical: 48),
+                                                    child: Center(
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(24),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: isDark
+                                                              ? const Color(
+                                                                  0xFF1E293B)
+                                                              : Colors.white,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(20),
+                                                          border: Border.all(
+                                                            color: isDark
+                                                                ? const Color(
+                                                                    0xFF334155)
+                                                                : const Color(
+                                                                    0xFFE2E8F0),
+                                                            width: 1,
+                                                          ),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors
+                                                                  .black
+                                                                  .withValues(
+                                                                      alpha: isDark
+                                                                          ? 0.2
+                                                                          : 0.04),
+                                                              blurRadius: 10,
+                                                              offset:
+                                                                  const Offset(
+                                                                      0, 4),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Column(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Container(
+                                                              width: 68,
+                                                              height: 68,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: bookingGold
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.12),
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                                border: Border.all(
+                                                                    color: bookingGold
+                                                                        .withValues(
+                                                                            alpha:
+                                                                                0.3)),
+                                                              ),
+                                                              child:
+                                                                  const Center(
+                                                                child: Icon(
+                                                                    Icons
+                                                                        .calendar_month_rounded,
+                                                                    size: 34,
+                                                                    color:
+                                                                        bookingGold),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 16),
+                                                            Text(
+                                                              statusGroup ==
+                                                                      'الكل'
+                                                                  ? 'لم تسجل أي حجوزات بعد'
+                                                                  : 'لا توجد حجوزات في قسم "$statusGroup" حاليًا',
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontFamily:
+                                                                    'Cairo',
+                                                                fontSize: 16,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 6),
+                                                            Text(
+                                                              statusGroup ==
+                                                                      'الكل'
+                                                                  ? 'استكشف أفضل الشاليهات والمنتجعات الفاخرة بالأنبار واحجز موعدك القادم بسهولة.'
+                                                                  : 'يمكنك الاطلاع على الأقسام الأخرى أو تصفح الأماكن المتاحة للحجز فوراً.',
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style: TextStyle(
+                                                                fontFamily:
+                                                                    'Cairo',
+                                                                fontSize: 12.5,
+                                                                color: isDark
+                                                                    ? Colors
+                                                                        .white60
+                                                                    : const Color(
+                                                                        0xFF64748B),
+                                                                height: 1.5,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 20),
+                                                            ElevatedButton.icon(
+                                                              key: const ValueKey(
+                                                                  'empty-state-browse-btn'),
+                                                              onPressed: () {
+                                                                HapticFeedback
+                                                                    .selectionClick();
+                                                                setState(() {
+                                                                  tab = 0;
+                                                                  _bottomBarIndex =
+                                                                      0;
+                                                                });
+                                                              },
+                                                              icon: const Icon(
+                                                                  Icons
+                                                                      .explore_outlined,
+                                                                  size: 18),
+                                                              label: const Text(
+                                                                'تصفح الأماكن المتاحة الآن',
+                                                                style: TextStyle(
+                                                                    fontFamily:
+                                                                        'Cairo',
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    fontSize:
+                                                                        13.5),
+                                                              ),
+                                                              style:
+                                                                  ElevatedButton
+                                                                      .styleFrom(
+                                                                backgroundColor:
+                                                                    bookingGold,
+                                                                foregroundColor:
+                                                                    const Color(
+                                                                        0xFF0F172A),
+                                                                elevation: 1,
+                                                                padding: const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        20,
+                                                                    vertical:
+                                                                        12),
+                                                                shape: RoundedRectangleBorder(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                            10)),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                                return const Padding(
+                                                    padding: EdgeInsets.all(24),
+                                                    child: Text(
+                                                        'لا توجد أماكن تطابق الفلاتر؛ جرّب تخفيفها'));
+                                              }
+                                              if (tab == 0 && !widget.admin) {
+                                                return BookingBrowseContent(
+                                                    refreshing: _isRefreshing,
+                                                    onRefresh: () =>
+                                                        _refreshBookings(
+                                                          query,
+                                                          showFeedback: true,
+                                                        ),
+                                                    featuredPreview: kDebugMode &&
+                                                        appFlavor ==
+                                                            'bookingsOfflinePreview' &&
+                                                        const bool.fromEnvironment(
+                                                            'BOOKING_OFFLINE_PREVIEW'),
+                                                    featuredVenues: widget
+                                                            .diagnosticFeatured
+                                                            .isNotEmpty
+                                                        ? (widget
+                                                            .diagnosticFeatured
+                                                            .where(
+                                                                filters.matches)
+                                                            .where(
+                                                                isBookingVenueFeatured)
+                                                            .toList()
+                                                          ..sort(
+                                                              compareFeaturedBookingVenues))
+                                                        : (docs
+                                                            .map((d) =>
+                                                                <String, dynamic>{
+                                                                  ...d.data(),
+                                                                  'id': d.id
+                                                                })
+                                                            .where(
+                                                                isBookingVenueFeatured)
+                                                            .toList()
+                                                          ..sort(compareFeaturedBookingVenues)),
+                                                    hasMore: s.data!.docs.length > publicLimit,
+                                                    loading: s.connectionState == ConnectionState.waiting,
+                                                    onLoadMore: () => setState(() => publicLimit += 12),
+                                                    venues: docs.map((d) => <String, dynamic>{...d.data(), 'id': d.id}).toList(),
+                                                    onOpen: (venue) => Navigator.push(context, MaterialPageRoute(builder: (_) => (widget.venuePage?.call(venue['id'] as String, venue) ?? BookingRequestScreen(venueId: venue['id'] as String, venue: venue)))));
+                                              }
+                                              if (tab == 2)
+                                                return BookingOwnerPanel(
+                                                    onManageVenues: () =>
+                                                        setState(() => tab = 5),
+                                                    bookings: docs
+                                                        .map((d) =>
+                                                            <String, dynamic>{
+                                                              ...d.data(),
+                                                              'id': d.id
+                                                            })
+                                                        .toList(),
+                                                    onOpen: (id) => Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                            builder: (_) => (widget
+                                                                    .bookingPage
+                                                                    ?.call(
+                                                                        id) ??
+                                                                BookingDetailsScreen(
+                                                                    bookingId:
+                                                                        id)))));
+                                              return Column(children: [
+                                                ...docs.map((doc) {
+                                                  final d = doc.data();
+                                                  if (tab == 6)
+                                                    return ListTile(
+                                                        title: Text(
+                                                            'مكان ${d['venueId']}'),
+                                                        subtitle: const Text(
+                                                            'صلاحيات موظف مفوض'),
+                                                        onTap: () => Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                                builder: (_) => BookingStaffScreen(
+                                                                    venueId: d[
+                                                                        'venueId'],
+                                                                    scopes: List<
+                                                                        String>.from(d[
+                                                                            'scopes'] ??
+                                                                        [])))));
+                                                  if (tab == 0 || tab == 5) {
+                                                    return BookingVenueCard(
+                                                        venue: d,
+                                                        onTap: () => Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                                builder: (_) => widget.admin ||
+                                                                        tab == 5
+                                                                    ? (widget.venuePage?.call(doc.id, d) ??
+                                                                        BookingVenueEditor(
+                                                                            venueId: doc
+                                                                                .id,
+                                                                            data:
+                                                                                d,
+                                                                            ownerMode: tab ==
+                                                                                5))
+                                                                    : (widget.venuePage?.call(
+                                                                            doc
+                                                                                .id,
+                                                                            d) ??
+                                                                        BookingRequestScreen(
+                                                                            venueId: doc.id,
+                                                                            venue: d)))));
+                                                  }
+                                                  if (tab == 3) {
+                                                    final isVenue =
+                                                        d['bookingId'] ==
+                                                                null ||
+                                                            d['bookingId']
+                                                                .toString()
+                                                                .isEmpty;
+                                                    final bId = d['bookingId']
+                                                        ?.toString();
+                                                    final vId = d['venueId']
+                                                        ?.toString();
+                                                    return BookingReportCard(
                                                         data: d,
-                                                        ownerMode: tab == 5))
-                                                : (widget.venuePage
-                                                        ?.call(doc.id, d) ??
-                                                    BookingRequestScreen(
-                                                        venueId: doc.id,
-                                                        venue: d)))));
-                              }
-                              if (tab == 3) {
-                                final isVenue = d['bookingId'] == null ||
-                                    d['bookingId'].toString().isEmpty;
-                                final bId = d['bookingId']?.toString();
-                                final vId = d['venueId']?.toString();
-                                return BookingReportCard(
-                                    data: d,
-                                    onOpen: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => (!isVenue && bId != null && bId.isNotEmpty)
-                                                ? (widget.bookingPage?.call(bId) ??
-                                                    BookingDetailsScreen(bookingId: bId))
-                                                : (widget.venuePage?.call(vId ?? '', d) ??
-                                                    BookingVenueEditor(
-                                                        venueId: vId,
-                                                        data: d,
-                                                        ownerMode: false)))),
-                                    onResolve: d['status'] == 'open'
-                                        ? () => bookingRun(
-                                            context,
-                                            () => doc.reference
-                                                .update({'status': 'resolved'}))
-                                        : null);
-                              }
-                              return BookingRecordCard(
-                                  booking: d,
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => (widget.bookingPage
-                                                  ?.call(doc.id) ??
-                                              BookingDetailsScreen(
-                                                  bookingId: doc.id)))));
-                            }).toList()
-                          ]);
-                            }),
-                          );
-                        })
-                  ],
-                ])));
+                                                        onOpen: () => Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                                builder: (_) => (!isVenue && bId != null && bId.isNotEmpty)
+                                                                    ? (widget.bookingPage?.call(bId) ??
+                                                                        BookingDetailsScreen(
+                                                                            bookingId:
+                                                                                bId))
+                                                                    : (widget.venuePage?.call(vId ?? '', d) ??
+                                                                        BookingVenueEditor(
+                                                                            venueId:
+                                                                                vId,
+                                                                            data:
+                                                                                d,
+                                                                            ownerMode:
+                                                                                false)))),
+                                                        onResolve: d['status'] == 'open'
+                                                            ? () => bookingRun(
+                                                                context,
+                                                                () => doc
+                                                                    .reference
+                                                                    .update({'status': 'resolved'}))
+                                                            : null);
+                                                  }
+                                                  return BookingRecordCard(
+                                                      booking: d,
+                                                      onTap: () => Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                              builder: (_) => (widget
+                                                                      .bookingPage
+                                                                      ?.call(doc
+                                                                          .id) ??
+                                                                  BookingDetailsScreen(
+                                                                      bookingId:
+                                                                          doc.id)))));
+                                                }).toList()
+                                              ]);
+                                            }),
+                                          );
+                                        })
+                                  ],
+                                ]))));
   }
 }
 
@@ -1105,7 +1400,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   bool identityChanged = false;
   bool intentReady = false;
   bool intentReadFailed = false;
-  final GlobalKey<BookingVenueDetailsState> _venueDetailsKey = GlobalKey<BookingVenueDetailsState>();
+  final GlobalKey<BookingVenueDetailsState> _venueDetailsKey =
+      GlobalKey<BookingVenueDetailsState>();
   final ScrollController _venueScrollController = ScrollController();
   final ValueNotifier<int> _venueSelectedNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isVenueTabPinned = ValueNotifier<bool>(false);
@@ -1150,7 +1446,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
       } catch (_) {}
       try {
         final uid = FirebaseAuth.instance.currentUser?.uid;
-        requestSession = FirebaseAuth.instance.authStateChanges().listen((user) {
+        requestSession =
+            FirebaseAuth.instance.authStateChanges().listen((user) {
           if (mounted && user?.uid != uid) invalidateIdentity();
         });
       } catch (_) {}
@@ -1171,16 +1468,21 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
         submittedUid = uid;
         submittedIntent = Map<String, dynamic>.unmodifiable(pending);
         if (pending['start'] is num) {
-          start = DateTime.fromMillisecondsSinceEpoch((pending['start'] as num).toInt());
+          start = DateTime.fromMillisecondsSinceEpoch(
+              (pending['start'] as num).toInt());
         }
         if (pending['end'] is num) {
-          end = DateTime.fromMillisecondsSinceEpoch((pending['end'] as num).toInt());
+          end = DateTime.fromMillisecondsSinceEpoch(
+              (pending['end'] as num).toInt());
         }
         shiftId = pending['shiftId'];
         notes.text = pending['notes'] as String? ?? '';
-        if (pending['guestName'] is String) guestName.text = pending['guestName'] as String;
-        if (pending['guestPhone'] is String) guestPhone.text = pending['guestPhone'] as String;
-        if (pending['guestCount'] is num) guestCount = (pending['guestCount'] as num).toInt();
+        if (pending['guestName'] is String)
+          guestName.text = pending['guestName'] as String;
+        if (pending['guestPhone'] is String)
+          guestPhone.text = pending['guestPhone'] as String;
+        if (pending['guestCount'] is num)
+          guestCount = (pending['guestCount'] as num).toInt();
         step = 3;
         accepted = true;
       }
@@ -1208,6 +1510,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
     );
     return guestNameError == null && guestPhoneError == null;
   }
+
   DateTime calendarMonth = bookingBaghdadMonth();
   late Future<Map<String, dynamic>> availability = loadAvailability();
   Future<Map<String, dynamic>> loadAvailability() async {
@@ -1335,7 +1638,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
 
     final monthsList = <DateTime>[];
     for (var i = 0; i < 12; i++) {
-      monthsList.add(DateTime(currentMonthBaghdad.year, currentMonthBaghdad.month + i));
+      monthsList.add(
+          DateTime(currentMonthBaghdad.year, currentMonthBaghdad.month + i));
     }
 
     showModalBottomSheet(
@@ -1354,11 +1658,15 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.calendar_month_rounded, color: bookingGold, size: 22),
+                  Icon(Icons.calendar_month_rounded,
+                      color: bookingGold, size: 22),
                   SizedBox(width: 8),
                   Text(
                     'الانتقال السريع إلى شهر محدد',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -1380,7 +1688,8 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, idx) {
                     final m = monthsList[idx];
-                    final isCurrent = m.year == calendarMonth.year && m.month == calendarMonth.month;
+                    final isCurrent = m.year == calendarMonth.year &&
+                        m.month == calendarMonth.month;
                     const monthNames = [
                       'يناير / كانون الثاني',
                       'فبراير / شباط',
@@ -1397,21 +1706,30 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                     ];
                     return ListTile(
                       dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 2),
                       selected: isCurrent,
                       selectedTileColor: bookingGold.withValues(alpha: 0.12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                       leading: Icon(
-                        isCurrent ? Icons.check_circle : Icons.calendar_today_outlined,
-                        color: isCurrent ? bookingGold : (isDark ? Colors.white54 : Colors.grey),
+                        isCurrent
+                            ? Icons.check_circle
+                            : Icons.calendar_today_outlined,
+                        color: isCurrent
+                            ? bookingGold
+                            : (isDark ? Colors.white54 : Colors.grey),
                         size: 20,
                       ),
                       title: Text(
                         '${monthNames[m.month - 1]} ${m.year}',
                         style: TextStyle(
                           fontFamily: 'Cairo',
-                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-                          color: isCurrent ? (isDark ? bookingGold : const Color(0xFFB45309)) : null,
+                          fontWeight:
+                              isCurrent ? FontWeight.bold : FontWeight.w600,
+                          color: isCurrent
+                              ? (isDark ? bookingGold : const Color(0xFFB45309))
+                              : null,
                         ),
                       ),
                       onTap: () {
@@ -1464,11 +1782,16 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
         start!.isBefore(end!) &&
         start!.isAfter(DateTime.now());
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.doc('booking_settings/platform_controls').snapshots(),
+      stream: FirebaseFirestore.instance
+          .doc('booking_settings/platform_controls')
+          .snapshots(),
       builder: (context, platformSnap) {
         final platformData = platformSnap.data?.data();
-        final bool platformDisabled = platformData != null && platformData['isBookingsEnabled'] == false;
-        final String maintenanceMsg = (platformData?['maintenanceMessage'] ?? 'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث').toString();
+        final bool platformDisabled =
+            platformData != null && platformData['isBookingsEnabled'] == false;
+        final String maintenanceMsg = (platformData?['maintenanceMessage'] ??
+                'خدمة الحجوزات متوقفة مؤقتاً لأعمال الصيانة والتحديث')
+            .toString();
 
         return PopScope<Object?>(
             canPop: step == 0 || busy || submittedIntent != null,
@@ -1480,851 +1803,1310 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
                   mounted) setState(() => step--);
             },
             child: BookingScaffold(
-          appBar: AppBar(
-              title: Text(step == 0
-                  ? '${v['name']}'
-                  : step == 1
-                      ? 'اختيار الموعد'
-                      : step == 2
-                          ? 'بيانات الحجز'
-                          : 'مراجعة وتأكيد الحجز'),
-              leading: step == 0
-                  ? null
-                  : IconButton(
-                      tooltip: 'الخطوة السابقة',
-                      icon: const Icon(Icons.arrow_forward,
-                          textDirection: TextDirection.ltr),
-                      onPressed: busy || submittedIntent != null
-                          ? null
-                          : () => setState(() => step--))),
-          bottomNavigationBar: Center(
-              heightFactor: 1,
-              child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                      child: SingleChildScrollView(
-                        physics: const ClampingScrollPhysics(),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (platformDisabled)
-                              BookingActionReason(reason: maintenanceMsg)
-                            else if (busy)
-                              const BookingActionReason(
-                                  reason:
-                                      'الإجراء معطل أثناء إرسال الطلب السابق.')
-                            else if (step == 1 && !validRange)
-                              const BookingActionReason(
-                                  reason:
-                                      'اختر الفترة ثم يوم الزيارة، أو حدد الدخول والخروج، لتفعيل متابعة الحجز.')
-                            else if (step == 3 && !accepted)
-                              const BookingActionReason(
-                                  reason:
-                                      'راجع الشروط وحدد الموافقة عليها لتفعيل إرسال الطلب.'),
-                            if (step == 0)
-                              Text(
-                                  'يبدأ من ${bookingMoney(bookingStartingPrice(v))} · العربون ${bookingMoney(v['deposit'])}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700)),
-                            if (step == 1) ...[
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerRight,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('المجموع الإجمالي للفترة:',
-                                            style: TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'Cairo')),
-                                        Text(
-                                          '${bookingMoney(total)} د.ع',
-                                          style: const TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.bold,
-                                            color: bookingGold,
-                                            fontFamily: 'Cairo',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (validRange) ...[
-                                      const SizedBox(width: 16),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF16A34A).withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0xFF16A34A), width: 0.8),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.check_circle, size: 14, color: Color(0xFF16A34A)),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'العربون: ${bookingMoney(BookingPricingDraft.venueDeposit(v) ?? v['deposit'])}',
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF16A34A),
-                                                fontFamily: 'Cairo',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                            ],
-                            const SizedBox(height: 8),
-                            if (step < 3)
-                              FilledButton(
-                                  key: const ValueKey('booking-next'),
-                                  style: FilledButton.styleFrom(
-                                      backgroundColor: bookingGold,
-                                      foregroundColor: const Color(0xFF1E293B),
-                                      elevation: 1,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-                                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Cairo')),
-                                  onPressed: platformDisabled || busy || (step == 1 && !validRange)
-                                      ? null
-                                      : () {
-                                          HapticFeedback.selectionClick();
-                                          if (step == 2) {
-                                            setState(() {
-                                              if (_validateGuestStep()) {
-                                                step++;
-                                              }
-                                            });
-                                            return;
-                                          }
-                                          setState(() => step++);
-                                        },
-                                  child: Row(
+              appBar: AppBar(
+                  title: Text(step == 0
+                      ? '${v['name']}'
+                      : step == 1
+                          ? 'اختيار الموعد'
+                          : step == 2
+                              ? 'بيانات الحجز'
+                              : 'مراجعة وتأكيد الحجز'),
+                  leading: step == 0
+                      ? null
+                      : IconButton(
+                          tooltip: 'الخطوة السابقة',
+                          icon: const Icon(Icons.arrow_forward,
+                              textDirection: TextDirection.ltr),
+                          onPressed: busy || submittedIntent != null
+                              ? null
+                              : () => setState(() => step--))),
+              bottomNavigationBar: Center(
+                  heightFactor: 1,
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: SafeArea(
+                          top: false,
+                          child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                              child: SingleChildScrollView(
+                                  physics: const ClampingScrollPhysics(),
+                                  child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
                                       children: [
-                                        Icon(
-                                            step == 0
-                                                ? Icons.calendar_month_outlined
-                                                : step == 1
-                                                    ? Icons.person_outline
-                                                    : Icons.receipt_long_outlined,
-                                            size: 18),
-                                        const SizedBox(width: 8),
-                                        Flexible(
-                                            child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                    step == 0
-                                                        ? 'احجز الآن'
-                                                        : step == 1
-                                                            ? 'متابعة لبيانات الحجز'
-                                                            : 'متابعة لمراجعة الحجز',
-                                                    maxLines: 1))),
-                                      ])),
-                            if (step == 3)
-                              FilledButton(
-                                  key: const ValueKey('booking-submit-request'),
-                                  onPressed: platformDisabled ||
-                                          busy ||
-                                          confirmingRequest ||
-                                          !accepted ||
-                                          start == null ||
-                                          end == null
-                                      ? null
-                                      : () async {
-                                          if (busy || confirmingRequest) return;
-                                          final priorUid = currentUid();
-                                          if (submittedIntent == null) {
-                                            setState(
-                                                () => confirmingRequest = true);
-                                            bool? confirmed;
-                                            try {
-                                              confirmed = await showModalBottomSheet<
-                                                      bool>(
-                                                  context: context,
-                                                  isScrollControlled: true,
-                                                  useSafeArea: true,
-                                                  showDragHandle: false,
-                                                  builder: (_) =>
-                                                      BookingRequestConfirmation(
-                                                          venue: v,
-                                                          total: total,
-                                                          start: start,
-                                                          end: end,
-                                                          shiftName: isShiftsPricing &&
-                                                                  shiftId !=
-                                                                      null
-                                                              ? '${availableShifts.firstWhere((s) => s['id'] == shiftId)['name']}'
-                                                              : null));
-                                            } finally {
-                                              if (mounted)
-                                                setState(() =>
-                                                    confirmingRequest = false);
-                                            }
-                                            if (!mounted ||
-                                                confirmed != true ||
-                                                busy ||
-                                                !accepted ||
-                                                start == null ||
-                                                end == null) return;
-                                          }
-                                          if (currentUid() != priorUid) {
-                                            invalidateIdentity();
-                                            return;
-                                          }
-                                          setState(() => busy = true);
-                                          await bookingRun(context, () async {
-                                            final uid = currentUid();
-                                            if (uid == null)
-                                              throw FirebaseFunctionsException(
-                                                  code: 'unauthenticated',
-                                                  message:
-                                                      'سجل الدخول لإرسال الطلب.');
-                                            if (submittedUid != null &&
-                                                submittedUid != uid) {
-                                              invalidateIdentity();
-                                              return;
-                                            }
-                                            submittedUid = uid;
-                                            final retrying =
-                                                submittedIntent != null;
-                                            final v2Quote = pricingV2 != null &&
-                                                    shiftId != null
-                                                ? pricingV2!.quote(
-                                                    shiftId!, start!, end!)
-                                                : null;
-                                            final payload = submittedIntent ??=
-                                                Map<String,
-                                                    dynamic>.unmodifiable({
-                                              'venueId': widget.venueId,
-                                              'requestId': requestId,
-                                              'start':
-                                                  start!.millisecondsSinceEpoch,
-                                              'end':
-                                                  end!.millisecondsSinceEpoch,
-                                              'acceptedTerms': v['terms'],
-                                              'price': total,
-                                              'shiftId': shiftId,
-                                              'cancellationPolicy':
-                                                  v['cancellationPolicy'],
-                                              'deposit': BookingPricingDraft.venueDeposit(v) ??
-                                                  v2Quote?['deposit'] ??
-                                                  v['deposit'],
-                                              if (v2Quote != null)
-                                                'pricingSnapshot':
-                                                    v2Quote['pricing'],
-                                               'guestName': guestName.text.trim(),
-                                               'guestPhone':
-                                                   BookingFormValidator.normalizeValidPhone(
-                                                           guestPhone.text) ??
-                                                       guestPhone.text.trim(),
-                                               'guestCount': guestCount,
-                                               'notes': notes.text
-                                            });
-                                            Map<String, dynamic> r;
-                                            await intentStore.save(
-                                                uid, widget.venueId, payload);
-                                            if (currentUid() != uid) {
-                                              invalidateIdentity();
-                                              return;
-                                            }
-                                            try {
-                                              r = await widget.call(
-                                                  'requestBooking', payload);
-                                            } on FirebaseFunctionsException catch (e) {
-                                              if (!retrying &&
-                                                  [
-                                                    'invalid-argument',
-                                                    'failed-precondition',
-                                                    'permission-denied',
-                                                    'unauthenticated',
-                                                    'not-found'
-                                                  ].contains(e.code)) {
-                                                await intentStore.clear(
-                                                    uid,
-                                                    widget.venueId,
-                                                    payload['requestId']
-                                                        as String);
-                                                submittedIntent = null;
-                                              }
-                                              rethrow;
-                                            }
-                                            await intentStore.clear(
-                                                uid,
-                                                widget.venueId,
-                                                payload['requestId'] as String);
-                                            if (!mounted) return;
-                                            if (currentUid() != uid) {
-                                              invalidateIdentity();
-                                              return;
-                                            }
-                                            if (context.mounted &&
-                                                widget.onRequested != null) {
-                                              widget.onRequested!(
-                                                  r['id'] as String);
-                                              return;
-                                            }
-                                            if (context.mounted) {
-                                              Navigator.pushReplacement(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          BookingDetailsScreen(
-                                                              bookingId:
-                                                                  r['id'])));
-                                            }
-                                          });
-                                          if (mounted)
-                                            setState(() => busy = false);
-                                        },
-                                  child: Text(platformDisabled
-                                      ? 'خدمة الحجوزات متوقفة مؤقتاً'
-                                      : busy
-                                          ? 'جار إرسال الطلب…'
-                                          : submittedIntent != null
-                                              ? 'إعادة المحاولة بنفس الطلب'
-                                              : 'إرسال طلب الحجز')),
-                            if (step == 3 && submittedIntent != null)
-                              TextButton(
-                                  onPressed: busy
-                                      ? null
-                                      : () => Navigator.maybePop(context),
-                                  child:
-                                      const Text('العودة للتحقق من حجوزاتي')),
-                          ])))))),
-          body: Center(
-              child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Column(
-                    children: [
-                      if (platformDisabled)
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0x1FEF4444),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFEF4444), width: 1.2),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 24),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  maintenanceMsg,
-                                  style: const TextStyle(
-                                    color: Color(0xFFDC2626),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (step == 0)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
-                          child: BookingVenueDetails.buildTabBarWidget(
-                            context: context,
-                            selectedNotifier: _venueSelectedNotifier,
-                            onTabTap: (i) => _venueDetailsKey.currentState?.jump(i),
-                          ),
-                        ),
-                      Expanded(
-                        child: ListView(
-                            key: ValueKey('booking-step-$step'),
-                            controller: _venueScrollController,
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                            children: [
-                              if (step > 0)
-                                BookingCheckoutHeader(step: (step - 1).clamp(0, 2)),
-                              if (step == 0) ...[
-                                BookingVenueDetails(
-                                    key: _venueDetailsKey,
-                                    showTabBar: false,
-                                    selectedNotifier: _venueSelectedNotifier,
-                                    scrollController: _venueScrollController,
-                                    venue: v),
-                          BookingSection(
-                              title: 'تجارب الضيوف',
-                              child: BookingPublishedReviews(
-                                  venueId: widget.venueId,
-                                  load: () => widget.call(
-                                      'getPublishedBookingReviews',
-                                      {'venueId': widget.venueId}))),
-                        ],
-                        if (step == 1) ...[
-                          BookingSection(
-                              key: const ValueKey('booking-calendar-section'),
-                              title: 'اختيار الموعد والتوافر',
-                              subtitle:
-                                  'اختر اليوم المناسب من التقويم، ثم حدد الفترة للاطلاع على السعر والعربون.',
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                   const BookingStatusLegend(),
-                                  // Calendar Navigation & Body
-                                  Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        IconButton(
-                                            tooltip: 'الشهر السابق',
-                                            onPressed: calendarMonth.isAfter(bookingBaghdadMonth())
-                                                ? () => setState(() {
-                                                      calendarMonth = DateTime(calendarMonth.year, calendarMonth.month - 1);
-                                                      availability = loadAvailability();
-                                                    })
-                                                : null,
-                                            icon: const Icon(Icons.chevron_right)),
-                                        Expanded(
-                                            child: InkWell(
-                                              onTap: () => _openMonthYearPicker(context),
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: [
-                                                      Text(
-                                                          '${const [
-                                                            'يناير',
-                                                            'فبراير',
-                                                            'مارس',
-                                                            'أبريل',
-                                                            'مايو',
-                                                            'يونيو',
-                                                            'يوليو',
-                                                            'أغسطس',
-                                                            'سبتمبر',
-                                                            'أكتوبر',
-                                                            'نوفمبر',
-                                                            'ديسمبر'
-                                                          ][calendarMonth.month - 1]} ${calendarMonth.year}',
-                                                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16),
-                                                          textAlign: TextAlign.center),
-                                                      const SizedBox(width: 4),
-                                                      const Icon(Icons.arrow_drop_down_rounded, color: bookingGold, size: 24),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        IconButton(
-                                            tooltip: 'الشهر التالي',
-                                            onPressed: () => setState(() {
-                                                  calendarMonth = DateTime(calendarMonth.year, calendarMonth.month + 1);
-                                                  availability = loadAvailability();
-                                                }),
-                                            icon: const Icon(Icons.chevron_left)),
-                                      ]),
-                                  FutureBuilder<Map<String, dynamic>>(
-                                      future: availability,
-                                      builder: (context, snapshot) {
-                                        if (snapshot.hasError) {
-                                          return TextButton(
-                                              onPressed: () => setState(() => availability = loadAvailability()),
-                                              child: const Text('تعذر تحميل التوافر — إعادة المحاولة'));
-                                        }
-                                        if (!snapshot.hasData) return const LinearProgressIndicator();
-                                        final targetShift = shiftId != null
-                                            ? availableShifts.firstWhere((s) => s['id'] == shiftId, orElse: () => availableShifts.first)
-                                            : (availableShifts.isNotEmpty ? availableShifts.first : null);
-                                        return BookingCalendar(
-                                            selectedDay: start?.add(const Duration(hours: 3)),
-                                            month: calendarMonth,
-                                            slots: (snapshot.data!['slots'] as List).map((e) => Map<String, dynamic>.from(e)).toList(),
-                                            intervalForDay: (day) => targetShift != null
-                                                ? bookingShiftDates(day, targetShift)
-                                                : [day, day.add(const Duration(days: 1))],
-                                            onSelect: (day) => setState(() {
-                                                   HapticFeedback.selectionClick();
-                                                   final isSameDay = start != null &&
-                                                       start!.year == day.year &&
-                                                       start!.month == day.month &&
-                                                       start!.day == day.day;
-                                                   if (isSameDay) {
-                                                     start = null;
-                                                     end = null;
-                                                   } else {
-                                                     if (shiftId == null && availableShifts.isNotEmpty) {
-                                                       shiftId = availableShifts.first['id'] as String;
-                                                     }
-                                                     setShiftDate(day);
-                                                   }
-                                                   accepted = false;
-                                                 }));
-                                      }),
-                                  const SizedBox(height: 16),
-                                  // Shifts Selection
-                                  if (isShiftsPricing && availableShifts.isNotEmpty) ...[
-                                    const Text('اختر الفترة المطلوبة:',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                    const SizedBox(height: 8),
-                                    for (final shift in availableShifts)
-                                      Card(
-                                        elevation: shiftId == shift['id'] ? 2 : 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          side: BorderSide(
-                                            color: shiftId == shift['id'] ? bookingGold : Theme.of(context).dividerColor,
-                                            width: shiftId == shift['id'] ? 2 : 1,
-                                          ),
-                                        ),
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(12),
-                                          onTap: busy
-                                              ? null
-                                              : () => setState(() {
-                                                    HapticFeedback.selectionClick();
-                                                    shiftId = shift['id'] as String;
-                                                    if (start != null) {
-                                                      setShiftDate(start!);
-                                                    }
-                                                    accepted = false;
-                                                  }),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                            child: Builder(builder: (context) {
-                                                final sName = shift['name']?.toString() ?? '';
-                                                final visual = BookingShiftVisual.resolve(shift);
-                                                final brightness = Theme.of(context).brightness;
-                                                final shiftIcon = visual.icon;
-                                                final shiftIconFg = visual.foreground(brightness);
-                                                final shiftIconBg = visual.background(brightness);
-                                                final shiftIconBorder = visual.border(brightness);
-                                                final startMinute = shift['checkInMinute'] ?? shift['startMinute'];
-                                                final endMinute = shift['checkOutMinute'] ?? shift['endMinute'];
-                                                final timeText = (startMinute != null && endMinute != null)
-                                                    ? '${bookingClock12(startMinute)} إلى ${bookingClock12(endMinute)}'
-                                                    : '';
-                                                return Row(
+                                        if (platformDisabled)
+                                          BookingActionReason(
+                                              reason: maintenanceMsg)
+                                        else if (busy)
+                                          const BookingActionReason(
+                                              reason:
+                                                  'الإجراء معطل أثناء إرسال الطلب السابق.')
+                                        else if (step == 1 && !validRange)
+                                          const BookingActionReason(
+                                              reason:
+                                                  'اختر الفترة ثم يوم الزيارة، أو حدد الدخول والخروج، لتفعيل متابعة الحجز.')
+                                        else if (step == 3 && !accepted)
+                                          const BookingActionReason(
+                                              reason:
+                                                  'راجع الشروط وحدد الموافقة عليها لتفعيل إرسال الطلب.'),
+                                        if (step == 0)
+                                          Text(
+                                              'يبدأ من ${bookingMoney(bookingStartingPrice(v))} · العربون ${bookingMoney(v['deposit'])}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w700)),
+                                        if (step == 1) ...[
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerRight,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Icon(
-                                                      shiftId == shift['id']
-                                                          ? Icons.radio_button_checked
-                                                          : Icons.radio_button_off,
-                                                      color: shiftId == shift['id'] ? bookingGold : Colors.grey,
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Container(
-                                                      padding: const EdgeInsets.all(6),
-                                                      decoration: BoxDecoration(
-                                                        color: shiftIconBg,
-                                                        borderRadius: BorderRadius.circular(8),
-                                                        border: Border.all(color: shiftIconBorder, width: 0.8),
-                                                      ),
-                                                      child: Icon(shiftIcon, color: shiftIconFg, size: 18),
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            sName,
-                                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Cairo'),
-                                                          ),
-                                                          if (timeText.isNotEmpty)
-                                                            Text(
-                                                              timeText,
-                                                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant, fontFamily: 'Cairo'),
-                                                            ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    ConstrainedBox(
-                                                      constraints: const BoxConstraints(maxWidth: 110),
-                                                      child: FittedBox(
-                                                        fit: BoxFit.scaleDown,
-                                                        alignment: Alignment.centerLeft,
-                                                        child: Text(
-                                                          '${bookingMoney(shift['price'] ?? shift['weekdayPrice'])} د.ع',
-                                                          style: const TextStyle(fontWeight: FontWeight.bold, color: bookingGold, fontFamily: 'Cairo'),
-                                                        ),
+                                                    const Text(
+                                                        'المجموع الإجمالي للفترة:',
+                                                        style: TextStyle(
+                                                            fontSize: 11,
+                                                            color: Colors.grey,
+                                                            fontFamily:
+                                                                'Cairo')),
+                                                    Text(
+                                                      '${bookingMoney(total)} د.ع',
+                                                      style: const TextStyle(
+                                                        fontSize: 17,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: bookingGold,
+                                                        fontFamily: 'Cairo',
                                                       ),
                                                     ),
                                                   ],
-                                                );
-                                              }),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                  // Live Financial Summary
-                                  if (start != null && end != null) ...[
-                                    const SizedBox(height: 16),
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: bookingGold.withValues(alpha: 0.5)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.calculate_outlined, color: bookingGold, size: 20),
-                                              const SizedBox(width: 8),
-                                              const Flexible(child: Text('تفاصيل الحساب المالي المعتمد',
-                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
-                                            ],
-                                          ),
-                                          const Divider(height: 16),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: Wrap(
-                                              alignment: WrapAlignment.spaceBetween,
-                                              crossAxisAlignment: WrapCrossAlignment.center,
-                                              children: [
-                                                const Text('السعر الإجمالي:'),
-                                                Text(bookingMoney(total), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                ),
+                                                if (validRange) ...[
+                                                  const SizedBox(width: 16),
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                              0xFF16A34A)
+                                                          .withValues(
+                                                              alpha: 0.12),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                      border: Border.all(
+                                                          color: const Color(
+                                                              0xFF16A34A),
+                                                          width: 0.8),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(
+                                                            Icons.check_circle,
+                                                            size: 14,
+                                                            color: Color(
+                                                                0xFF16A34A)),
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        Text(
+                                                          'العربون: ${bookingMoney(BookingPricingDraft.venueDeposit(v) ?? v['deposit'])}',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: Color(
+                                                                0xFF16A34A),
+                                                            fontFamily: 'Cairo',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
                                               ],
                                             ),
                                           ),
                                           const SizedBox(height: 6),
-                                           Builder(builder: (context) {
-                                             final depositAmt = BookingPricingDraft.safeVenueDeposit(v);
-                                             final remainingAmt = total - depositAmt;
-                                             return Column(
-                                               crossAxisAlignment: CrossAxisAlignment.stretch,
-                                               children: [
-                                                 SizedBox(
-                                                   width: double.infinity,
-                                                   child: Wrap(
-                                                     alignment: WrapAlignment.spaceBetween,
-                                                     crossAxisAlignment: WrapCrossAlignment.center,
-                                                     children: [
-                                                       const Text('العربون المطلوب للدفع:'),
-                                                       Text(bookingMoney(depositAmt),
-                                                           style: const TextStyle(fontWeight: FontWeight.bold, color: bookingGold)),
-                                                     ],
-                                                   ),
-                                                 ),
-                                                 const SizedBox(height: 6),
-                                                 SizedBox(
-                                                   width: double.infinity,
-                                                   child: Wrap(
-                                                     alignment: WrapAlignment.spaceBetween,
-                                                     crossAxisAlignment: WrapCrossAlignment.center,
-                                                     children: [
-                                                       const Text('الرصيد المتبقي عند الوصول:'),
-                                                       Text(bookingMoney(remainingAmt),
-                                                           style: const TextStyle(fontWeight: FontWeight.bold)),
-                                                     ],
-                                                   ),
-                                                 ),
-                                               ],
-                                             );
-                                           }),
-                                          Builder(builder: (context) {
-                                            final sec = (v['securityDeposit'] as num?) ?? (v['insuranceDeposit'] as num?) ?? 0;
-                                            if (sec <= 0) return const SizedBox.shrink();
-                                            return Column(
-                                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                                              children: [
-                                                const SizedBox(height: 6),
-                                                SizedBox(
-                                                  width: double.infinity,
-                                                  child: Wrap(
-                                                    alignment: WrapAlignment.spaceBetween,
-                                                    crossAxisAlignment: WrapCrossAlignment.center,
-                                                    children: [
-                                                      const Text('مبلغ التأمين (ضمان الأضرار):'),
-                                                      Text('${bookingMoney(sec)} د.ع',
-                                                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
-                                                    ],
+                                        ],
+                                        const SizedBox(height: 8),
+                                        if (step < 3)
+                                          FilledButton(
+                                              key: const ValueKey(
+                                                  'booking-next'),
+                                              style: FilledButton.styleFrom(
+                                                  backgroundColor: bookingGold,
+                                                  foregroundColor:
+                                                      const Color(0xFF1E293B),
+                                                  elevation: 1,
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12)),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                          vertical: 14,
+                                                          horizontal: 18),
+                                                  textStyle: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 15,
+                                                      fontFamily: 'Cairo')),
+                                              onPressed: platformDisabled ||
+                                                      busy ||
+                                                      (step == 1 && !validRange)
+                                                  ? null
+                                                  : () {
+                                                      HapticFeedback
+                                                          .selectionClick();
+                                                      if (step == 2) {
+                                                        setState(() {
+                                                          if (_validateGuestStep()) {
+                                                            step++;
+                                                          }
+                                                        });
+                                                        return;
+                                                      }
+                                                      setState(() => step++);
+                                                    },
+                                              child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                        step == 0
+                                                            ? Icons
+                                                                .calendar_month_outlined
+                                                            : step == 1
+                                                                ? Icons
+                                                                    .person_outline
+                                                                : Icons
+                                                                    .receipt_long_outlined,
+                                                        size: 18),
+                                                    const SizedBox(width: 8),
+                                                    Flexible(
+                                                        child: FittedBox(
+                                                            fit: BoxFit
+                                                                .scaleDown,
+                                                            child: Text(
+                                                                step == 0
+                                                                    ? 'احجز الآن'
+                                                                    : step == 1
+                                                                        ? 'متابعة لبيانات الحجز'
+                                                                        : 'متابعة لمراجعة الحجز',
+                                                                maxLines: 1))),
+                                                  ])),
+                                        if (step == 3)
+                                          FilledButton(
+                                              key: const ValueKey(
+                                                  'booking-submit-request'),
+                                              onPressed: platformDisabled ||
+                                                      busy ||
+                                                      confirmingRequest ||
+                                                      !accepted ||
+                                                      start == null ||
+                                                      end == null
+                                                  ? null
+                                                  : () async {
+                                                      if (busy ||
+                                                          confirmingRequest)
+                                                        return;
+                                                      final priorUid =
+                                                          currentUid();
+                                                      if (submittedIntent ==
+                                                          null) {
+                                                        setState(() =>
+                                                            confirmingRequest =
+                                                                true);
+                                                        bool? confirmed;
+                                                        try {
+                                                          confirmed = await showModalBottomSheet<
+                                                                  bool>(
+                                                              context: context,
+                                                              isScrollControlled:
+                                                                  true,
+                                                              useSafeArea: true,
+                                                              showDragHandle:
+                                                                  false,
+                                                              builder: (_) => BookingRequestConfirmation(
+                                                                  venue: v,
+                                                                  total: total,
+                                                                  start: start,
+                                                                  end: end,
+                                                                  shiftName: isShiftsPricing &&
+                                                                          shiftId !=
+                                                                              null
+                                                                      ? '${availableShifts.firstWhere((s) => s['id'] == shiftId)['name']}'
+                                                                      : null));
+                                                        } finally {
+                                                          if (mounted)
+                                                            setState(() =>
+                                                                confirmingRequest =
+                                                                    false);
+                                                        }
+                                                        if (!mounted ||
+                                                            confirmed != true ||
+                                                            busy ||
+                                                            !accepted ||
+                                                            start == null ||
+                                                            end == null) return;
+                                                      }
+                                                      if (currentUid() !=
+                                                          priorUid) {
+                                                        invalidateIdentity();
+                                                        return;
+                                                      }
+                                                      setState(
+                                                          () => busy = true);
+                                                      await bookingRun(context,
+                                                          () async {
+                                                        final uid =
+                                                            currentUid();
+                                                        if (uid == null)
+                                                          throw FirebaseFunctionsException(
+                                                              code:
+                                                                  'unauthenticated',
+                                                              message:
+                                                                  'سجل الدخول لإرسال الطلب.');
+                                                        if (submittedUid !=
+                                                                null &&
+                                                            submittedUid !=
+                                                                uid) {
+                                                          invalidateIdentity();
+                                                          return;
+                                                        }
+                                                        submittedUid = uid;
+                                                        final retrying =
+                                                            submittedIntent !=
+                                                                null;
+                                                        final v2Quote =
+                                                            pricingV2 != null &&
+                                                                    shiftId !=
+                                                                        null
+                                                                ? pricingV2!
+                                                                    .quote(
+                                                                        shiftId!,
+                                                                        start!,
+                                                                        end!)
+                                                                : null;
+                                                        final payload =
+                                                            submittedIntent ??= Map<
+                                                                String,
+                                                                dynamic>.unmodifiable({
+                                                          'venueId':
+                                                              widget.venueId,
+                                                          'requestId':
+                                                              requestId,
+                                                          'start': start!
+                                                              .millisecondsSinceEpoch,
+                                                          'end': end!
+                                                              .millisecondsSinceEpoch,
+                                                          'acceptedTerms':
+                                                              v['terms'],
+                                                          'price': total,
+                                                          'shiftId': shiftId,
+                                                          'cancellationPolicy':
+                                                              v['cancellationPolicy'],
+                                                          'deposit': BookingPricingDraft
+                                                                  .venueDeposit(
+                                                                      v) ??
+                                                              v2Quote?[
+                                                                  'deposit'] ??
+                                                              v['deposit'],
+                                                          if (v2Quote != null)
+                                                            'pricingSnapshot':
+                                                                v2Quote[
+                                                                    'pricing'],
+                                                          'guestName': guestName
+                                                              .text
+                                                              .trim(),
+                                                          'guestPhone': BookingFormValidator
+                                                                  .normalizeValidPhone(
+                                                                      guestPhone
+                                                                          .text) ??
+                                                              guestPhone.text
+                                                                  .trim(),
+                                                          'guestCount':
+                                                              guestCount,
+                                                          'notes': notes.text
+                                                        });
+                                                        Map<String, dynamic> r;
+                                                        await intentStore.save(
+                                                            uid,
+                                                            widget.venueId,
+                                                            payload);
+                                                        if (currentUid() !=
+                                                            uid) {
+                                                          invalidateIdentity();
+                                                          return;
+                                                        }
+                                                        try {
+                                                          r = await widget.call(
+                                                              'requestBooking',
+                                                              payload);
+                                                        } on FirebaseFunctionsException catch (e) {
+                                                          if (!retrying &&
+                                                              [
+                                                                'invalid-argument',
+                                                                'failed-precondition',
+                                                                'permission-denied',
+                                                                'unauthenticated',
+                                                                'not-found'
+                                                              ].contains(
+                                                                  e.code)) {
+                                                            await intentStore.clear(
+                                                                uid,
+                                                                widget.venueId,
+                                                                payload['requestId']
+                                                                    as String);
+                                                            submittedIntent =
+                                                                null;
+                                                          }
+                                                          rethrow;
+                                                        }
+                                                        await intentStore.clear(
+                                                            uid,
+                                                            widget.venueId,
+                                                            payload['requestId']
+                                                                as String);
+                                                        if (!mounted) return;
+                                                        if (currentUid() !=
+                                                            uid) {
+                                                          invalidateIdentity();
+                                                          return;
+                                                        }
+                                                        if (context.mounted &&
+                                                            widget.onRequested !=
+                                                                null) {
+                                                          widget.onRequested!(
+                                                              r['id']
+                                                                  as String);
+                                                          return;
+                                                        }
+                                                        if (context.mounted) {
+                                                          Navigator.pushReplacement(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                  builder: (_) =>
+                                                                      BookingDetailsScreen(
+                                                                          bookingId:
+                                                                              r['id'])));
+                                                        }
+                                                      });
+                                                      if (mounted)
+                                                        setState(
+                                                            () => busy = false);
+                                                    },
+                                              child: Text(platformDisabled
+                                                  ? 'خدمة الحجوزات متوقفة مؤقتاً'
+                                                  : busy
+                                                      ? 'جار إرسال الطلب…'
+                                                      : submittedIntent != null
+                                                          ? 'إعادة المحاولة بنفس الطلب'
+                                                          : 'إرسال طلب الحجز')),
+                                        if (step == 3 &&
+                                            submittedIntent != null)
+                                          TextButton(
+                                              onPressed: busy
+                                                  ? null
+                                                  : () => Navigator.maybePop(
+                                                      context),
+                                              child: const Text(
+                                                  'العودة للتحقق من حجوزاتي')),
+                                      ])))))),
+              body: Center(
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
+                        children: [
+                          if (platformDisabled)
+                            Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1FEF4444),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: const Color(0xFFEF4444), width: 1.2),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded,
+                                      color: Color(0xFFEF4444), size: 24),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      maintenanceMsg,
+                                      style: const TextStyle(
+                                        color: Color(0xFFDC2626),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (step == 0)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+                              child: BookingVenueDetails.buildTabBarWidget(
+                                context: context,
+                                selectedNotifier: _venueSelectedNotifier,
+                                onTabTap: (i) =>
+                                    _venueDetailsKey.currentState?.jump(i),
+                              ),
+                            ),
+                          Expanded(
+                            child: ListView(
+                                key: ValueKey('booking-step-$step'),
+                                controller: _venueScrollController,
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                                children: [
+                                  if (step > 0)
+                                    BookingCheckoutHeader(
+                                        step: (step - 1).clamp(0, 2)),
+                                  if (step == 0) ...[
+                                    BookingVenueDetails(
+                                        key: _venueDetailsKey,
+                                        showTabBar: false,
+                                        selectedNotifier:
+                                            _venueSelectedNotifier,
+                                        scrollController:
+                                            _venueScrollController,
+                                        venue: v),
+                                    BookingSection(
+                                        title: 'تجارب الضيوف',
+                                        child: BookingPublishedReviews(
+                                            venueId: widget.venueId,
+                                            load: () => widget.call(
+                                                'getPublishedBookingReviews',
+                                                {'venueId': widget.venueId}))),
+                                  ],
+                                  if (step == 1) ...[
+                                    BookingSection(
+                                        key: const ValueKey(
+                                            'booking-calendar-section'),
+                                        title: 'اختيار الموعد والتوافر',
+                                        subtitle:
+                                            'اختر اليوم المناسب من التقويم، ثم حدد الفترة للاطلاع على السعر والعربون.',
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            const BookingStatusLegend(),
+                                            // Calendar Navigation & Body
+                                            Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  IconButton(
+                                                      tooltip: 'الشهر السابق',
+                                                      onPressed:
+                                                          calendarMonth.isAfter(
+                                                                  bookingBaghdadMonth())
+                                                              ? () =>
+                                                                  setState(() {
+                                                                    calendarMonth = DateTime(
+                                                                        calendarMonth
+                                                                            .year,
+                                                                        calendarMonth.month -
+                                                                            1);
+                                                                    availability =
+                                                                        loadAvailability();
+                                                                  })
+                                                              : null,
+                                                      icon: const Icon(
+                                                          Icons.chevron_right)),
+                                                  Expanded(
+                                                      child: InkWell(
+                                                    onTap: () =>
+                                                        _openMonthYearPicker(
+                                                            context),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 4,
+                                                          vertical: 4),
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        child: Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            Text(
+                                                                '${const [
+                                                                  'يناير',
+                                                                  'فبراير',
+                                                                  'مارس',
+                                                                  'أبريل',
+                                                                  'مايو',
+                                                                  'يونيو',
+                                                                  'يوليو',
+                                                                  'أغسطس',
+                                                                  'سبتمبر',
+                                                                  'أكتوبر',
+                                                                  'نوفمبر',
+                                                                  'ديسمبر'
+                                                                ][calendarMonth.month - 1]} ${calendarMonth.year}',
+                                                                style: const TextStyle(
+                                                                    fontFamily:
+                                                                        'Cairo',
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    fontSize:
+                                                                        16),
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            const Icon(
+                                                                Icons
+                                                                    .arrow_drop_down_rounded,
+                                                                color:
+                                                                    bookingGold,
+                                                                size: 24),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )),
+                                                  IconButton(
+                                                      tooltip: 'الشهر التالي',
+                                                      onPressed: () =>
+                                                          setState(() {
+                                                            calendarMonth = DateTime(
+                                                                calendarMonth
+                                                                    .year,
+                                                                calendarMonth
+                                                                        .month +
+                                                                    1);
+                                                            availability =
+                                                                loadAvailability();
+                                                          }),
+                                                      icon: const Icon(
+                                                          Icons.chevron_left)),
+                                                ]),
+                                            FutureBuilder<Map<String, dynamic>>(
+                                                future: availability,
+                                                builder: (context, snapshot) {
+                                                  if (snapshot.hasError) {
+                                                    return TextButton(
+                                                        onPressed: () => setState(
+                                                            () => availability =
+                                                                loadAvailability()),
+                                                        child: const Text(
+                                                            'تعذر تحميل التوافر — إعادة المحاولة'));
+                                                  }
+                                                  if (!snapshot.hasData)
+                                                    return const LinearProgressIndicator();
+                                                  final targetShift = shiftId !=
+                                                          null
+                                                      ? availableShifts
+                                                          .firstWhere(
+                                                              (s) =>
+                                                                  s['id'] ==
+                                                                  shiftId,
+                                                              orElse: () =>
+                                                                  availableShifts
+                                                                      .first)
+                                                      : (availableShifts
+                                                              .isNotEmpty
+                                                          ? availableShifts
+                                                              .first
+                                                          : null);
+                                                  return BookingCalendar(
+                                                      selectedDay: start?.add(
+                                                          const Duration(
+                                                              hours: 3)),
+                                                      month: calendarMonth,
+                                                      slots: (snapshot.data![
+                                                              'slots'] as List)
+                                                          .map((e) => Map<
+                                                              String,
+                                                              dynamic>.from(e))
+                                                          .toList(),
+                                                      intervalForDay: (day) =>
+                                                          targetShift != null
+                                                              ? bookingShiftDates(
+                                                                  day,
+                                                                  targetShift)
+                                                              : [
+                                                                  day,
+                                                                  day.add(
+                                                                      const Duration(
+                                                                          days:
+                                                                              1))
+                                                                ],
+                                                      onSelect: (day) =>
+                                                          setState(() {
+                                                            HapticFeedback
+                                                                .selectionClick();
+                                                            final isSameDay = start !=
+                                                                    null &&
+                                                                start!.year ==
+                                                                    day.year &&
+                                                                start!.month ==
+                                                                    day.month &&
+                                                                start!.day ==
+                                                                    day.day;
+                                                            if (isSameDay) {
+                                                              start = null;
+                                                              end = null;
+                                                            } else {
+                                                              if (shiftId ==
+                                                                      null &&
+                                                                  availableShifts
+                                                                      .isNotEmpty) {
+                                                                shiftId = availableShifts
+                                                                            .first[
+                                                                        'id']
+                                                                    as String;
+                                                              }
+                                                              setShiftDate(day);
+                                                            }
+                                                            accepted = false;
+                                                          }));
+                                                }),
+                                            const SizedBox(height: 16),
+                                            // Shifts Selection
+                                            if (isShiftsPricing &&
+                                                availableShifts.isNotEmpty) ...[
+                                              const Text(
+                                                  'اختر الفترة المطلوبة:',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 14)),
+                                              const SizedBox(height: 8),
+                                              for (final shift
+                                                  in availableShifts)
+                                                Card(
+                                                  elevation:
+                                                      shiftId == shift['id']
+                                                          ? 2
+                                                          : 0,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                    side: BorderSide(
+                                                      color: shiftId ==
+                                                              shift['id']
+                                                          ? bookingGold
+                                                          : Theme.of(context)
+                                                              .dividerColor,
+                                                      width:
+                                                          shiftId == shift['id']
+                                                              ? 2
+                                                              : 1,
+                                                    ),
+                                                  ),
+                                                  child: InkWell(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                    onTap: busy
+                                                        ? null
+                                                        : () => setState(() {
+                                                              HapticFeedback
+                                                                  .selectionClick();
+                                                              shiftId =
+                                                                  shift['id']
+                                                                      as String;
+                                                              if (start !=
+                                                                  null) {
+                                                                setShiftDate(
+                                                                    start!);
+                                                              }
+                                                              accepted = false;
+                                                            }),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 14,
+                                                          vertical: 10),
+                                                      child: Builder(
+                                                          builder: (context) {
+                                                        final sName = shift[
+                                                                    'name']
+                                                                ?.toString() ??
+                                                            '';
+                                                        final visual =
+                                                            BookingShiftVisual
+                                                                .resolve(shift);
+                                                        final brightness =
+                                                            Theme.of(context)
+                                                                .brightness;
+                                                        final shiftIcon =
+                                                            visual.icon;
+                                                        final shiftIconFg =
+                                                            visual.foreground(
+                                                                brightness);
+                                                        final shiftIconBg =
+                                                            visual.background(
+                                                                brightness);
+                                                        final shiftIconBorder =
+                                                            visual.border(
+                                                                brightness);
+                                                        final startMinute = shift[
+                                                                'checkInMinute'] ??
+                                                            shift[
+                                                                'startMinute'];
+                                                        final endMinute = shift[
+                                                                'checkOutMinute'] ??
+                                                            shift['endMinute'];
+                                                        final timeText =
+                                                            (startMinute !=
+                                                                        null &&
+                                                                    endMinute !=
+                                                                        null)
+                                                                ? '${bookingClock12(startMinute)} إلى ${bookingClock12(endMinute)}'
+                                                                : '';
+                                                        return Row(
+                                                          children: [
+                                                            Icon(
+                                                              shiftId ==
+                                                                      shift[
+                                                                          'id']
+                                                                  ? Icons
+                                                                      .radio_button_checked
+                                                                  : Icons
+                                                                      .radio_button_off,
+                                                              color: shiftId ==
+                                                                      shift[
+                                                                          'id']
+                                                                  ? bookingGold
+                                                                  : Colors.grey,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 8),
+                                                            Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(6),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color:
+                                                                    shiftIconBg,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            8),
+                                                                border: Border.all(
+                                                                    color:
+                                                                        shiftIconBorder,
+                                                                    width: 0.8),
+                                                              ),
+                                                              child: Icon(
+                                                                  shiftIcon,
+                                                                  color:
+                                                                      shiftIconFg,
+                                                                  size: 18),
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 10),
+                                                            Expanded(
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Text(
+                                                                    sName,
+                                                                    style: const TextStyle(
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .bold,
+                                                                        fontSize:
+                                                                            14,
+                                                                        fontFamily:
+                                                                            'Cairo'),
+                                                                  ),
+                                                                  if (timeText
+                                                                      .isNotEmpty)
+                                                                    Text(
+                                                                      timeText,
+                                                                      style: TextStyle(
+                                                                          fontSize:
+                                                                              12,
+                                                                          color: Theme.of(context)
+                                                                              .colorScheme
+                                                                              .onSurfaceVariant,
+                                                                          fontFamily:
+                                                                              'Cairo'),
+                                                                    ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 8),
+                                                            ConstrainedBox(
+                                                              constraints:
+                                                                  const BoxConstraints(
+                                                                      maxWidth:
+                                                                          110),
+                                                              child: FittedBox(
+                                                                fit: BoxFit
+                                                                    .scaleDown,
+                                                                alignment: Alignment
+                                                                    .centerLeft,
+                                                                child: Text(
+                                                                  '${bookingMoney(shift['price'] ?? shift['weekdayPrice'])} د.ع',
+                                                                  style: const TextStyle(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      color:
+                                                                          bookingGold,
+                                                                      fontFamily:
+                                                                          'Cairo'),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      }),
+                                                    ),
                                                   ),
                                                 ),
-                                                const SizedBox(height: 2),
-                                                const Text(
-                                                  'ملاحظة: يُسترد مبلغ التأمين بالكامل عند تسجيل الخروج وتسليم المكان بحالته الأصلية وفق شروط المالك.',
-                                                  style: TextStyle(fontSize: 10.5, color: Colors.grey, fontFamily: 'Cairo'),
+                                            ],
+                                            // Live Financial Summary
+                                            if (start != null &&
+                                                end != null) ...[
+                                              const SizedBox(height: 16),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF0F172A)
+                                                      .withValues(alpha: 0.05),
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                  border: Border.all(
+                                                      color: bookingGold
+                                                          .withValues(
+                                                              alpha: 0.5)),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .stretch,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        const Icon(
+                                                            Icons
+                                                                .calculate_outlined,
+                                                            color: bookingGold,
+                                                            size: 20),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        const Flexible(
+                                                            child: Text(
+                                                                'تفاصيل الحساب المالي المعتمد',
+                                                                style: TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    fontSize:
+                                                                        14))),
+                                                      ],
+                                                    ),
+                                                    const Divider(height: 16),
+                                                    SizedBox(
+                                                      width: double.infinity,
+                                                      child: Wrap(
+                                                        alignment: WrapAlignment
+                                                            .spaceBetween,
+                                                        crossAxisAlignment:
+                                                            WrapCrossAlignment
+                                                                .center,
+                                                        children: [
+                                                          const Text(
+                                                              'السعر الإجمالي:'),
+                                                          Text(
+                                                              bookingMoney(
+                                                                  total),
+                                                              style: const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold)),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    Builder(builder: (context) {
+                                                      final depositAmt =
+                                                          BookingPricingDraft
+                                                              .safeVenueDeposit(
+                                                                  v);
+                                                      final remainingAmt =
+                                                          total - depositAmt;
+                                                      return Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .stretch,
+                                                        children: [
+                                                          SizedBox(
+                                                            width:
+                                                                double.infinity,
+                                                            child: Wrap(
+                                                              alignment:
+                                                                  WrapAlignment
+                                                                      .spaceBetween,
+                                                              crossAxisAlignment:
+                                                                  WrapCrossAlignment
+                                                                      .center,
+                                                              children: [
+                                                                const Text(
+                                                                    'العربون المطلوب للدفع:'),
+                                                                Text(
+                                                                    bookingMoney(
+                                                                        depositAmt),
+                                                                    style: const TextStyle(
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .bold,
+                                                                        color:
+                                                                            bookingGold)),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 6),
+                                                          SizedBox(
+                                                            width:
+                                                                double.infinity,
+                                                            child: Wrap(
+                                                              alignment:
+                                                                  WrapAlignment
+                                                                      .spaceBetween,
+                                                              crossAxisAlignment:
+                                                                  WrapCrossAlignment
+                                                                      .center,
+                                                              children: [
+                                                                const Text(
+                                                                    'الرصيد المتبقي عند الوصول:'),
+                                                                Text(
+                                                                    bookingMoney(
+                                                                        remainingAmt),
+                                                                    style: const TextStyle(
+                                                                        fontWeight:
+                                                                            FontWeight.bold)),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    }),
+                                                    Builder(builder: (context) {
+                                                      final sec =
+                                                          (v['securityDeposit']
+                                                                  as num?) ??
+                                                              (v['insuranceDeposit']
+                                                                  as num?) ??
+                                                              0;
+                                                      if (sec <= 0)
+                                                        return const SizedBox
+                                                            .shrink();
+                                                      return Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .stretch,
+                                                        children: [
+                                                          const SizedBox(
+                                                              height: 6),
+                                                          SizedBox(
+                                                            width:
+                                                                double.infinity,
+                                                            child: Wrap(
+                                                              alignment:
+                                                                  WrapAlignment
+                                                                      .spaceBetween,
+                                                              crossAxisAlignment:
+                                                                  WrapCrossAlignment
+                                                                      .center,
+                                                              children: [
+                                                                const Text(
+                                                                    'مبلغ التأمين (ضمان الأضرار):'),
+                                                                Text(
+                                                                    '${bookingMoney(sec)} د.ع',
+                                                                    style: const TextStyle(
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .bold,
+                                                                        color: Color(
+                                                                            0xFF2563EB))),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 2),
+                                                          const Text(
+                                                            'ملاحظة: يُسترد مبلغ التأمين بالكامل عند تسجيل الخروج وتسليم المكان بحالته الأصلية وفق شروط المالك.',
+                                                            style: TextStyle(
+                                                                fontSize: 10.5,
+                                                                color:
+                                                                    Colors.grey,
+                                                                fontFamily:
+                                                                    'Cairo'),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    }),
+                                                    const Divider(height: 16),
+                                                    Text(
+                                                      'الدخول: ${start != null ? bookingVisitTime(start!.add(const Duration(hours: 3))) : "-"}\nالخروج: ${end != null ? bookingVisitTime(end!.add(const Duration(hours: 3))) : "-"} — توقيت بغداد',
+                                                      style: TextStyle(
+                                                          fontSize: 12,
+                                                          height: 1.5,
+                                                          color: Theme.of(
+                                                                  context)
+                                                              .colorScheme
+                                                              .onSurfaceVariant),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        )),
+                                  ],
+                                  if (step == 2) ...[
+                                    BookingSection(
+                                      key: const ValueKey(
+                                          'booking-guests-section'),
+                                      title: 'بيانات الحجز والضيف',
+                                      subtitle:
+                                          'أدخل معلومات الاتصال وعدد الضيوف وملاحظاتك لتأكيد الترتيبات مع المالك.',
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          TextFormField(
+                                            controller: guestName,
+                                            onChanged: (_) {
+                                              if (guestNameError != null) {
+                                                setState(() =>
+                                                    guestNameError = null);
+                                              }
+                                            },
+                                            decoration: InputDecoration(
+                                              labelText:
+                                                  'الاسم الكامل للضيف / الزبون',
+                                              errorText: guestNameError,
+                                              suffix: const Text('*',
+                                                  style: TextStyle(
+                                                      color: Color(0xFFDC2626),
+                                                      fontWeight:
+                                                          FontWeight.bold)),
+                                              prefixIcon: const Icon(
+                                                  Icons.person_outline,
+                                                  color: bookingGold),
+                                              border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12)),
+                                              filled: true,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          TextFormField(
+                                            controller: guestPhone,
+                                            keyboardType: TextInputType.phone,
+                                            textDirection: TextDirection.ltr,
+                                            onChanged: (_) {
+                                              if (guestPhoneError != null) {
+                                                setState(() =>
+                                                    guestPhoneError = null);
+                                              }
+                                            },
+                                            decoration: InputDecoration(
+                                              labelText: 'رقم الهاتف للتواصل',
+                                              hintText: '07XXXXXXXXX',
+                                              errorText: guestPhoneError,
+                                              suffix: const Text('*',
+                                                  style: TextStyle(
+                                                      color: Color(0xFFDC2626),
+                                                      fontWeight:
+                                                          FontWeight.bold)),
+                                              prefixIcon: const Icon(
+                                                  Icons.phone_outlined,
+                                                  color: bookingGold),
+                                              border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12)),
+                                              filled: true,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                  color: Theme.of(context)
+                                                      .dividerColor),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.group_outlined,
+                                                    color: bookingGold,
+                                                    size: 20),
+                                                const SizedBox(width: 8),
+                                                const Expanded(
+                                                  child: Text(
+                                                    'عدد الضيوف المتوقع:',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 13,
+                                                        fontFamily: 'Cairo'),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 34,
+                                                          minHeight: 34),
+                                                  icon: const Icon(
+                                                      Icons
+                                                          .remove_circle_outline,
+                                                      size: 22),
+                                                  onPressed: guestCount > 1
+                                                      ? () => setState(
+                                                          () => guestCount--)
+                                                      : null,
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(horizontal: 4),
+                                                  child: Text('$guestCount',
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16)),
+                                                ),
+                                                IconButton(
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 34,
+                                                          minHeight: 34),
+                                                  icon: const Icon(
+                                                      Icons.add_circle_outline,
+                                                      size: 22),
+                                                  onPressed: guestCount < 100
+                                                      ? () => setState(
+                                                          () => guestCount++)
+                                                      : null,
                                                 ),
                                               ],
-                                            );
-                                          }),
-                                          const Divider(height: 16),
-                                          Text(
-                                            'الدخول: ${start != null ? bookingVisitTime(start!.add(const Duration(hours: 3))) : "-"}\nالخروج: ${end != null ? bookingVisitTime(end!.add(const Duration(hours: 3))) : "-"} — توقيت بغداد',
-                                            style: TextStyle(fontSize: 12, height: 1.5, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 14),
+                                          TextField(
+                                            controller: notes,
+                                            maxLength: 1000,
+                                            maxLines: 3,
+                                            decoration: InputDecoration(
+                                              labelText:
+                                                  'ملاحظات خاصة للمالك (اختياري)',
+                                              border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12)),
+                                              filled: true,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
                                   ],
-                                ],
-                              )),
-                        ],
-                        if (step == 2) ...[
-                          BookingSection(
-                            key: const ValueKey('booking-guests-section'),
-                            title: 'بيانات الحجز والضيف',
-                            subtitle: 'أدخل معلومات الاتصال وعدد الضيوف وملاحظاتك لتأكيد الترتيبات مع المالك.',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                TextFormField(
-                                  controller: guestName,
-                                  onChanged: (_) {
-                                    if (guestNameError != null) {
-                                      setState(() => guestNameError = null);
-                                    }
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText: 'الاسم الكامل للضيف / الزبون',
-                                    errorText: guestNameError,
-                                    suffix: const Text('*',
-                                        style: TextStyle(
-                                            color: Color(0xFFDC2626),
-                                            fontWeight: FontWeight.bold)),
-                                    prefixIcon: const Icon(Icons.person_outline, color: bookingGold),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    filled: true,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                TextFormField(
-                                  controller: guestPhone,
-                                  keyboardType: TextInputType.phone,
-                                  textDirection: TextDirection.ltr,
-                                  onChanged: (_) {
-                                    if (guestPhoneError != null) {
-                                      setState(() => guestPhoneError = null);
-                                    }
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText: 'رقم الهاتف للتواصل',
-                                    hintText: '07XXXXXXXXX',
-                                    errorText: guestPhoneError,
-                                    suffix: const Text('*',
-                                        style: TextStyle(
-                                            color: Color(0xFFDC2626),
-                                            fontWeight: FontWeight.bold)),
-                                    prefixIcon: const Icon(Icons.phone_outlined, color: bookingGold),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    filled: true,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Theme.of(context).dividerColor),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.group_outlined, color: bookingGold, size: 20),
-                                      const SizedBox(width: 8),
-                                      const Expanded(
+                                  if (step == 3) ...[
+                                    if (submittedIntent != null)
+                                      const BookingStateView(
+                                          title: 'إعادة التحقق من الطلب',
+                                          detail:
+                                              'عند انقطاع الرد، تعاد المحاولة بنفس البيانات ومعرّف الطلب لمنع إنشاء طلب آخر.'),
+                                    BookingVenueOverview(
+                                        venue: v, total: total),
+                                    BookingArrivalSummary(
+                                        start: start, end: end),
+                                    BookingSection(
+                                        title: 'موعد الزيارة',
                                         child: Text(
-                                          'عدد الضيوف المتوقع:',
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo'),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        visualDensity: VisualDensity.compact,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                                        icon: const Icon(Icons.remove_circle_outline, size: 22),
-                                        onPressed: guestCount > 1 ? () => setState(() => guestCount--) : null,
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                                        child: Text('$guestCount', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                      ),
-                                      IconButton(
-                                        visualDensity: VisualDensity.compact,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                                        icon: const Icon(Icons.add_circle_outline, size: 22),
-                                        onPressed: guestCount < 100 ? () => setState(() => guestCount++) : null,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                TextField(
-                                  controller: notes,
-                                  maxLength: 1000,
-                                  maxLines: 3,
-                                  decoration: InputDecoration(
-                                    labelText: 'ملاحظات خاصة للمالك (اختياري)',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    filled: true,
-                                  ),
-                                ),
-                              ],
-                            ),
+                                            'الدخول: ${bookingVisitTime(start?.add(const Duration(hours: 3)))}\nالخروج: ${bookingVisitTime(end?.add(const Duration(hours: 3)))} — توقيت بغداد',
+                                            style:
+                                                const TextStyle(height: 1.8))),
+                                    BookingSection(
+                                        title: 'الشروط والتأكيد',
+                                        child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              Text(bookingCancellationText(
+                                                  v['cancellationPolicy'])),
+                                              const SizedBox(height: 10),
+                                              TextField(
+                                                  controller: notes,
+                                                  enabled: !busy &&
+                                                      submittedIntent == null,
+                                                  maxLength: 1000,
+                                                  maxLines: 3,
+                                                  decoration:
+                                                      const InputDecoration(
+                                                          labelText:
+                                                              'ملاحظات اختيارية')),
+                                              CheckboxListTile(
+                                                  value: accepted,
+                                                  onChanged: busy ||
+                                                          submittedIntent !=
+                                                              null
+                                                      ? null
+                                                      : (v) => setState(() =>
+                                                          accepted =
+                                                              v ?? false),
+                                                  title: const Text(
+                                                      'أوافق على السعر والشروط وسياسة الإلغاء')),
+                                            ])),
+                                  ],
+                                ]),
                           ),
                         ],
-                        if (step == 3) ...[
-                          if (submittedIntent != null)
-                            const BookingStateView(
-                                title: 'إعادة التحقق من الطلب',
-                                detail:
-                                    'عند انقطاع الرد، تعاد المحاولة بنفس البيانات ومعرّف الطلب لمنع إنشاء طلب آخر.'),
-                          BookingVenueOverview(venue: v, total: total),
-                          BookingArrivalSummary(start: start, end: end),
-                          BookingSection(
-                              title: 'موعد الزيارة',
-                              child: Text(
-                                  'الدخول: ${bookingVisitTime(start?.add(const Duration(hours: 3)))}\nالخروج: ${bookingVisitTime(end?.add(const Duration(hours: 3)))} — توقيت بغداد',
-                                  style: const TextStyle(height: 1.8))),
-                          BookingSection(
-                              title: 'الشروط والتأكيد',
-                              child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(bookingCancellationText(
-                                        v['cancellationPolicy'])),
-                                    const SizedBox(height: 10),
-                                    TextField(
-                                        controller: notes,
-                                        enabled:
-                                            !busy && submittedIntent == null,
-                                        maxLength: 1000,
-                                        maxLines: 3,
-                                        decoration: const InputDecoration(
-                                            labelText: 'ملاحظات اختيارية')),
-                                    CheckboxListTile(
-                                        value: accepted,
-                                        onChanged: busy ||
-                                                submittedIntent != null
-                                            ? null
-                                            : (v) => setState(
-                                                () => accepted = v ?? false),
-                                        title: const Text(
-                                            'أوافق على السعر والشروط وسياسة الإلغاء')),
-                                  ])),
-                        ],
-                      ]),
-                    ),
-                  ],
-                ))),
-        ));
+                      ))),
+            ));
       },
     );
   }
@@ -2530,7 +3312,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  Future<String?> promptReason(String title, String hint, {bool isDestructive = false}) async {
+  Future<String?> promptReason(String title, String hint,
+      {bool isDestructive = false}) async {
     final controller = TextEditingController(text: reason.text);
     bool confirming = false;
     return showModalBottomSheet<String>(
@@ -2558,8 +3341,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   Row(
                     children: [
                       Icon(
-                        isDestructive ? Icons.warning_amber_rounded : Icons.info_outline,
-                        color: isDestructive ? const Color(0xFFEF4444) : bookingGold,
+                        isDestructive
+                            ? Icons.warning_amber_rounded
+                            : Icons.info_outline,
+                        color: isDestructive
+                            ? const Color(0xFFEF4444)
+                            : bookingGold,
                         size: 24,
                       ),
                       const SizedBox(width: 8),
@@ -2582,7 +3369,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color:
+                                const Color(0xFFEF4444).withValues(alpha: 0.3)),
                       ),
                       child: const Text(
                         'تنبيه: هذا الإجراء نهائي ولا يمكن التراجع عنه. يتم تطبيق سياسة الحجز والاسترداد المعتمدة لهذا المكان فور التأكيد.',
@@ -2601,7 +3390,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: hint,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -2609,15 +3399,20 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: confirming ? null : () => Navigator.pop(ctx, null),
-                          child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+                          onPressed: confirming
+                              ? null
+                              : () => Navigator.pop(ctx, null),
+                          child: const Text('إلغاء',
+                              style: TextStyle(fontFamily: 'Cairo')),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF0F172A),
+                            backgroundColor: isDestructive
+                                ? const Color(0xFFEF4444)
+                                : const Color(0xFF0F172A),
                             foregroundColor: Colors.white,
                           ),
                           onPressed: confirming
@@ -2626,7 +3421,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                   final text = controller.text.trim();
                                   if (text.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('يرجى إدخال السبب للمتابعة')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'يرجى إدخال السبب للمتابعة')),
                                     );
                                     return;
                                   }
@@ -2636,7 +3433,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                 },
                           child: Text(
                             confirming ? 'جار التأكيد…' : 'تأكيد الإجراء',
-                            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -2668,7 +3467,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       hint = 'وضح سبب رفض الإيصال (مثال: غير واضح، المبلغ ناقص)...';
       isDestructive = true;
     }
-    final entered = await promptReason(title, hint, isDestructive: isDestructive);
+    final entered =
+        await promptReason(title, hint, isDestructive: isDestructive);
     if (entered == null) return;
     reason.text = entered;
     await act(action, {'reason': entered});
@@ -2676,7 +3476,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Future<void> act(String action,
       [Map<String, dynamic> extra = const {}]) async {
-    if (['reject', 'cancel', 'rejectPayment'].contains(action) && !extra.containsKey('reason')) {
+    if (['reject', 'cancel', 'rejectPayment'].contains(action) &&
+        !extra.containsKey('reason')) {
       await handleActionWithReason(action);
       return;
     }
@@ -2703,14 +3504,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle_outline, color: bookingGold, size: 20),
+                const Icon(Icons.check_circle_outline,
+                    color: bookingGold, size: 20),
                 const SizedBox(width: 8),
-                Expanded(child: Text(label, style: const TextStyle(fontFamily: 'Cairo'))),
+                Expanded(
+                    child: Text(label,
+                        style: const TextStyle(fontFamily: 'Cairo'))),
               ],
             ),
             backgroundColor: const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
@@ -2748,7 +3553,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               if (owner || customer) {
                 // Owner or customer can view their booking
               } else {
-                return const Center(child: Text('لا تملك صلاحية عرض هذا الحجز'));
+                return const Center(
+                    child: Text('لا تملك صلاحية عرض هذا الحجز'));
               }
             }
             final holdDeadline = bookingHoldDeadline(b['holdUntil']);
@@ -2769,7 +3575,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       padding: EdgeInsets.only(bottom: 12),
                       child: BookingStateView(
                           title: 'تعذر التحقق من مهلة العربون',
-                          detail: 'حدّث الحجز أو تواصل مع الدعم قبل إرسال أي دفعة.',
+                          detail:
+                              'حدّث الحجز أو تواصل مع الدعم قبل إرسال أي دفعة.',
                           icon: Icons.info_outline),
                     ),
                   if (b['status'] == 'held' && holdDeadline != null)
@@ -2782,536 +3589,580 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             if (mounted) setState(() {});
                           }),
                     ),
-                Semantics(
-                    liveRegion: true,
-                    child: Text(bookingStatusLabel(b['status']),
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700))),
-                BookingReservationHeader(
-                    booking: b,
-                    id: widget.bookingId,
-                    venue: widget.displayVenue),
-                ExpansionTile(
-                    maintainState: true,
-                    title: const Text('بيانات الحجز الكاملة'),
-                    children: [
-                      BookingSummary(
-                          booking: b,
-                          status: bookingStatusLabel(b['status']))
-                    ]),
-                ExpansionTile(
-                    maintainState: true,
-                    key: const PageStorageKey('booking-tools-3'),
-                    title: const Text('مراحل الحجز'),
-                    children: [BookingProgress(status: canonicalBookingStatus(b['status']))]),
-                if (customer && b['status'] == 'completed') ...[
-                  DropdownButtonFormField<int>(
-                      initialValue: rating,
-                      isExpanded: true,
-                      decoration:
-                          const InputDecoration(labelText: 'تقييم تجربة الحجز'),
-                      items: [
-                        for (var i = 1; i <= 5; i++)
-                          DropdownMenuItem(value: i, child: Text('$i / 5', overflow: TextOverflow.ellipsis))
-                      ],
-                      onChanged:
-                          busy ? null : (v) => setState(() => rating = v ?? 5)),
-                  TextButton(
+                  Semantics(
+                      liveRegion: true,
+                      child: Text(bookingStatusLabel(b['status']),
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700))),
+                  BookingReservationHeader(
+                      booking: b,
+                      id: widget.bookingId,
+                      venue: widget.displayVenue),
+                  ExpansionTile(
+                      maintainState: true,
+                      title: const Text('بيانات الحجز الكاملة'),
+                      children: [
+                        BookingSummary(
+                            booking: b, status: bookingStatusLabel(b['status']))
+                      ]),
+                  ExpansionTile(
+                      maintainState: true,
+                      key: const PageStorageKey('booking-tools-3'),
+                      title: const Text('مراحل الحجز'),
+                      children: [
+                        BookingProgress(
+                            status: canonicalBookingStatus(b['status']))
+                      ]),
+                  if (customer && b['status'] == 'completed') ...[
+                    DropdownButtonFormField<int>(
+                        initialValue: rating,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                            labelText: 'تقييم تجربة الحجز'),
+                        items: [
+                          for (var i = 1; i <= 5; i++)
+                            DropdownMenuItem(
+                                value: i,
+                                child: Text('$i / 5',
+                                    overflow: TextOverflow.ellipsis))
+                        ],
+                        onChanged: busy
+                            ? null
+                            : (v) => setState(() => rating = v ?? 5)),
+                    TextButton(
+                        onPressed: busy
+                            ? null
+                            : () => bookingRun(context, () async {
+                                  await widget.call('reviewCompletedBooking', {
+                                    'bookingId': widget.bookingId,
+                                    'rating': rating,
+                                    'comment': reason.text
+                                  });
+                                }),
+                        child: const Text(
+                            'إرسال التقييم — اكتب تعليقك في حقل الملاحظات')),
+                  ],
+
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: _eventsStream,
+                      builder: (context, events) {
+                        if (events.hasError) {
+                          return const Center(
+                              child: Text(
+                                  'يلزم اتصال للتحقق من صلاحية عرض البيانات'));
+                        }
+                        if (!events.hasData) return const SizedBox.shrink();
+                        final docs = events.data!.docs.toList()
+                          ..sort((a, b) => ((a.data()['version'] as num?) ?? 0)
+                              .compareTo((b.data()['version'] as num?) ?? 0));
+                        return Column(children: [
+                          for (final event in docs)
+                            ListTile(
+                                dense: true,
+                                title: Text(
+                                    bookingActionLabel(event.data()['action'])),
+                                subtitle: Text(
+                                    '${event.data()['createdAt'] is Timestamp ? (event.data()['createdAt'] as Timestamp).toDate().toUtc().add(const Duration(hours: 3)).toString().replaceAll('Z', '') : ""} — بغداد'))
+                        ]);
+                      }),
+                  if (finance &&
+                      !owner &&
+                      !customer &&
+                      b['status'] == 'completed' &&
+                      b['ownerSettlementStatus'] != 'settled')
+                    BookingManualSettlement(
+                        key: ValueKey(
+                            'owner-${widget.bookingId}-${b['version']}'),
+                        bookingId: widget.bookingId,
+                        action: 'settleOwner',
+                        version: b['version'] is int ? b['version'] : null,
+                        loadPreview: () => widget.call(
+                                'getBookingFinancePreview', {
+                              'bookingId': widget.bookingId,
+                              'action': 'settleOwner'
+                            }),
+                        title: 'تسوية مستحقات المالك',
+                        reference: refundReference,
+                        busy: busy,
+                        label: 'تسجيل تسوية مستحقات المالك يدويًا',
+                        onSubmit: () => act('settleOwner',
+                            {'settlementReference': refundReference.text})),
+                  if (customer && b['status'] == 'confirmed')
+                    FilledButton.icon(
+                        icon: const Icon(Icons.qr_code),
+                        label: const Text('رمز الوصول — صالح 10 دقائق'),
+                        onPressed: busy
+                            ? null
+                            : () => guarded(() async {
+                                  final issuedUid = currentUid();
+                                  if (issuedUid == null) return;
+                                  final result = await widget.call(
+                                      'issueBookingCheckInCode',
+                                      {'bookingId': widget.bookingId});
+                                  if (context.mounted &&
+                                      currentUid() == issuedUid)
+                                    await showDialog(
+                                        context: context,
+                                        builder: (_) => Dialog(
+                                            child: SingleChildScrollView(
+                                                child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            24),
+                                                    child: BookingQrPass(
+                                                        code: result['code'],
+                                                        issuedUid: issuedUid,
+                                                        currentUserId:
+                                                            currentUid,
+                                                        sessions: widget
+                                                                .sessions ??
+                                                            FirebaseAuth
+                                                                .instance
+                                                                .authStateChanges()
+                                                                .map((u) =>
+                                                                    u?.uid),
+                                                        expiresAt:
+                                                            bookingHoldDeadline(
+                                                                result['expiresAt']))))));
+                                })),
+
+                  if (['confirmed', 'arrived', 'completed', 'held']
+                      .contains(b['status'])) ...[
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      key: const ValueKey('booking-receipt-pdf-btn'),
+                      icon: const Icon(Icons.picture_as_pdf_outlined,
+                          color: bookingGold),
+                      label: const Text('تحميل ومشاركة إيصال الحجز (PDF)',
+                          style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: bookingNavy,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
                       onPressed: busy
                           ? null
-                          : () => bookingRun(context, () async {
-                                await widget.call('reviewCompletedBooking', {
-                                  'bookingId': widget.bookingId,
-                                  'rating': rating,
-                                  'comment': reason.text
-                                });
-                              }),
-                      child: const Text(
-                          'إرسال التقييم — اكتب تعليقك في حقل الملاحظات')),
-                ],
-
-                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: _eventsStream,
-                    builder: (context, events) {
-                      if (events.hasError) {
-                        return const Center(
-                            child: Text(
-                                'يلزم اتصال للتحقق من صلاحية عرض البيانات'));
-                      }
-                      if (!events.hasData) return const SizedBox.shrink();
-                      final docs = events.data!.docs.toList()
-                        ..sort((a, b) => ((a.data()['version'] as num?) ?? 0)
-                            .compareTo((b.data()['version'] as num?) ?? 0));
-                      return Column(children: [
-                        for (final event in docs)
-                          ListTile(
-                              dense: true,
-                              title: Text(
-                                  bookingActionLabel(event.data()['action'])),
-                              subtitle: Text(
-                                  '${event.data()['createdAt'] is Timestamp ? (event.data()['createdAt'] as Timestamp).toDate().toUtc().add(const Duration(hours: 3)).toString().replaceAll('Z', '') : ""} — بغداد'))
-                      ]);
-                    }),
-                if (finance &&
-                    !owner &&
-                    !customer &&
-                    b['status'] == 'completed' &&
-                    b['ownerSettlementStatus'] != 'settled')
-                  BookingManualSettlement(
-                      key:
-                          ValueKey('owner-${widget.bookingId}-${b['version']}'),
-                      bookingId: widget.bookingId,
-                      action: 'settleOwner',
-                      version: b['version'] is int ? b['version'] : null,
-                      loadPreview: () => widget.call(
-                              'getBookingFinancePreview', {
-                            'bookingId': widget.bookingId,
-                            'action': 'settleOwner'
-                          }),
-                      title: 'تسوية مستحقات المالك',
-                      reference: refundReference,
-                      busy: busy,
-                      label: 'تسجيل تسوية مستحقات المالك يدويًا',
-                      onSubmit: () => act('settleOwner',
-                          {'settlementReference': refundReference.text})),
-                if (customer && b['status'] == 'confirmed')
-                  FilledButton.icon(
-                      icon: const Icon(Icons.qr_code),
-                      label: const Text('رمز الوصول — صالح 10 دقائق'),
-                      onPressed: busy
-                          ? null
-                          : () => guarded(() async {
-                                final issuedUid = currentUid();
-                                if (issuedUid == null) return;
-                                final result = await widget.call(
-                                    'issueBookingCheckInCode',
-                                    {'bookingId': widget.bookingId});
-                                if (context.mounted &&
-                                    currentUid() == issuedUid)
-                                  await showDialog(
-                                      context: context,
-                                      builder: (_) => Dialog(
-                                          child: SingleChildScrollView(
-                                              child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(24),
-                                                  child: BookingQrPass(
-                                                      code: result['code'],
-                                                      issuedUid: issuedUid,
-                                                      currentUserId: currentUid,
-                                                      sessions: widget
-                                                              .sessions ??
-                                                          FirebaseAuth.instance
-                                                              .authStateChanges()
-                                                              .map((u) =>
-                                                                  u?.uid),
-                                                      expiresAt:
-                                                          bookingHoldDeadline(
-                                                              result[
-                                                                  'expiresAt']))))));
-                              })),
-
-                if (['confirmed', 'arrived', 'completed', 'held'].contains(b['status'])) ...[
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    key: const ValueKey('booking-receipt-pdf-btn'),
-                    icon: const Icon(Icons.picture_as_pdf_outlined, color: bookingGold),
-                    label: const Text('تحميل ومشاركة إيصال الحجز (PDF)',
-                        style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13.5)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: bookingNavy,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: busy
-                        ? null
-                        : () async {
-                            HapticFeedback.selectionClick();
-                            try {
-                              final vSnap = widget.displayVenue ?? (b['venueSnapshot'] is Map ? Map<String, dynamic>.from(b['venueSnapshot']) : null);
-                              await BookingReceiptService.shareReceipt(
-                                booking: b,
-                                bookingId: widget.bookingId,
-                                venue: vSnap,
-                                context: context,
-                              );
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('تعذر إنشاء الإيصال: $e')),
-                                );
-                              }
-                            }
-                          },
-                  ),
-                ],
-
-                if (owner && ['confirmed', 'arrived'].contains(b['status']))
-                  TextButton.icon(
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('مسح رمز الوصول بالكاميرا'),
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: widget.scannerPage ??
-                                  (_) => BookingScannerScreen(
-                                      bookingId: widget.bookingId)))),
-                if (owner && b['status'] == 'confirmed')
-                  button('تسجيل الوصول', 'arrive'),
-                if (owner && b['status'] == 'confirmed')
-                  OutlinedButton.icon(
-                      icon: const Icon(Icons.pin_outlined),
-                      label: const Text('إدخال رمز التحقق يدوياً'),
-                      onPressed: busy
-                          ? null
-                          : () => showDialog<bool>(
-                                context: context,
-                                builder: (_) => BookingManualCheckInDialog(
+                          : () async {
+                              HapticFeedback.selectionClick();
+                              try {
+                                final vSnap = widget.displayVenue ??
+                                    (b['venueSnapshot'] is Map
+                                        ? Map<String, dynamic>.from(
+                                            b['venueSnapshot'])
+                                        : null);
+                                await BookingReceiptService.shareReceipt(
+                                  booking: b,
                                   bookingId: widget.bookingId,
-                                  call: widget.call,
-                                ),
-                              )),
-                if (owner && ['confirmed', 'arrived'].contains(b['status']))
-                  button('إنهاء الحجز بعد موعد الخروج', 'complete'),
-                BookingAgreedPolicy(booking: b),
-                if (b['pricing'] is Map &&
-                    ((b['pricing'] as Map)['name'] != null ||
-                        (b['pricing'] as Map)['kind'] != null ||
-                        (b['pricing'] as Map)['id'] != null))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        const Text('التسعير والفترة:'),
-                        BookingPeriodBadge(shift: b['pricing']),
-                      ],
+                                  venue: vSnap,
+                                  context: context,
+                                );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text('تعذر إنشاء الإيصال: $e')),
+                                  );
+                                }
+                              }
+                            },
                     ),
-                  )
-                else if (b['pricing'] != null)
-                  Text(
-                      'التسعير: ${b['pricing'] is Map ? (b['pricing']['name'] ?? b['pricing']['mode'] ?? '') : b['pricing']}'),
-                BookingRecordedMoney(booking: b),
-                if (b['reviewedBy'] != null)
-                  Text('مراجع العربون: ${b['reviewedBy']}'),
-                if (b['status'] == 'rejected') ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFCA5A5)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'سبب رفض الحجز من قبل المالك:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
-                                  color: Color(0xFF991B1B),
+                  ],
+
+                  if (owner && ['confirmed', 'arrived'].contains(b['status']))
+                    TextButton.icon(
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('مسح رمز الوصول بالكاميرا'),
+                        onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: widget.scannerPage ??
+                                    (_) => BookingScannerScreen(
+                                        bookingId: widget.bookingId)))),
+                  if (owner && b['status'] == 'confirmed')
+                    button('تسجيل الوصول', 'arrive'),
+                  if (owner && b['status'] == 'confirmed')
+                    OutlinedButton.icon(
+                        icon: const Icon(Icons.pin_outlined),
+                        label: const Text('إدخال رمز التحقق يدوياً'),
+                        onPressed: busy
+                            ? null
+                            : () => showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => BookingManualCheckInDialog(
+                                    bookingId: widget.bookingId,
+                                    call: widget.call,
+                                  ),
+                                )),
+                  if (owner && ['confirmed', 'arrived'].contains(b['status']))
+                    button('إنهاء الحجز بعد موعد الخروج', 'complete'),
+                  BookingAgreedPolicy(booking: b),
+                  if (b['pricing'] is Map &&
+                      ((b['pricing'] as Map)['name'] != null ||
+                          (b['pricing'] as Map)['kind'] != null ||
+                          (b['pricing'] as Map)['id'] != null))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          const Text('التسعير والفترة:'),
+                          BookingPeriodBadge(shift: b['pricing']),
+                        ],
+                      ),
+                    )
+                  else if (b['pricing'] != null)
+                    Text(
+                        'التسعير: ${b['pricing'] is Map ? (b['pricing']['name'] ?? b['pricing']['mode'] ?? '') : b['pricing']}'),
+                  BookingRecordedMoney(booking: b),
+                  if (b['reviewedBy'] != null)
+                    Text('مراجع العربون: ${b['reviewedBy']}'),
+                  if (b['status'] == 'rejected') ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.cancel_outlined,
+                              color: Color(0xFFDC2626), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'سبب رفض الحجز من قبل المالك:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12.5,
+                                    color: Color(0xFF991B1B),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                (b['reason'] ?? b['rejectionReason'] ?? 'لم يحدد المالك سبباً إضافياً').toString(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF7F1D1D),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (b['status'] == 'cancelled' || b['cancelledBy'] != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline, color: Color(0xFF475569), size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'حالة الإلغاء: ${b['cancelledBy'] == b['customerId'] ? 'أُلغي بواسطة الزبون' : (b['cancelledBy'] == b['ownerId'] ? 'أُلغي بواسطة المالك' : (b['cancelledBy'] ?? 'ملغى'))}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
-                                  color: Color(0xFF334155),
-                                ),
-                              ),
-                              if (b['cancellationReason'] != null || b['reason'] != null) ...[
                                 const SizedBox(height: 3),
                                 Text(
-                                  'السبب: ${b['cancellationReason'] ?? b['reason']}',
+                                  (b['reason'] ??
+                                          b['rejectionReason'] ??
+                                          'لم يحدد المالك سبباً إضافياً')
+                                      .toString(),
                                   style: const TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF475569),
+                                    color: Color(0xFF7F1D1D),
                                   ),
                                 ),
                               ],
-                            ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (b['status'] == 'cancelled' ||
+                      b['cancelledBy'] != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline,
+                              color: Color(0xFF475569), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'حالة الإلغاء: ${b['cancelledBy'] == b['customerId'] ? 'أُلغي بواسطة الزبون' : (b['cancelledBy'] == b['ownerId'] ? 'أُلغي بواسطة المالك' : (b['cancelledBy'] ?? 'ملغى'))}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12.5,
+                                    color: Color(0xFF334155),
+                                  ),
+                                ),
+                                if (b['cancellationReason'] != null ||
+                                    b['reason'] != null) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'السبب: ${b['cancellationReason'] ?? b['reason']}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (b['refundReference'] != null)
+                    Text(
+                        'مرجع الاسترداد: ${b['refundReference']}\nالمراجع: ${b['refundSettledBy'] ?? 'الإدارة'}\nوقت التسوية: ${b['refundSettledAt'] is num ? DateTime.fromMillisecondsSinceEpoch((b['refundSettledAt'] as num).toInt()).toString() : (b['refundSettledAt'] ?? 'غير محدد')}'),
+                  if (finance &&
+                      !owner &&
+                      !customer &&
+                      b['refundStatus'] == 'pending')
+                    BookingManualSettlement(
+                        key: ValueKey(
+                            'refund-${widget.bookingId}-${b['version']}'),
+                        bookingId: widget.bookingId,
+                        action: 'settleRefund',
+                        version: b['version'] is int ? b['version'] : null,
+                        loadPreview: () => widget.call(
+                                'getBookingFinancePreview', {
+                              'bookingId': widget.bookingId,
+                              'action': 'settleRefund'
+                            }),
+                        title: 'إعادة العربون المستحق',
+                        reference: refundReference,
+                        busy: busy,
+                        label: 'تسجيل إعادة المبلغ يدوياً',
+                        onSubmit: () => act('settleRefund',
+                            {'refundReference': refundReference.text})),
+                  if (b['receiptPath'] != null &&
+                      b['receiptPath'].toString().trim().isNotEmpty)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('عرض الإيصال'),
+                      onPressed: busy
+                          ? null
+                          : () => bookingRun(context, () async {
+                                final bytes = widget.readReceiptBytes != null
+                                    ? await widget.readReceiptBytes!()
+                                    : await FirebaseStorage.instance
+                                        .ref(b['receiptPath'].toString())
+                                        .getData(10 * 1024 * 1024);
+                                if (!context.mounted ||
+                                    bytes == null ||
+                                    bytes.isEmpty) {
+                                  return;
+                                }
+                                await showDialog<void>(
+                                  context: context,
+                                  builder: (ctx) => Dialog(
+                                    child: InteractiveViewer(
+                                      child: Image.memory(
+                                        bytes,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Padding(
+                                          padding: EdgeInsets.all(24),
+                                          child: Text(
+                                              'تعذر عرض صورة الإيصال المالي'),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                    ),
+                  if (owner && b['status'] == 'requested') ...[
+                    button('موافقة وحجز مؤقت', 'approve'),
+                    button('رفض الطلب', 'reject')
+                  ],
+                  if (customer && held)
+                    BookingPaymentPanel(
+                        deposit: b['deposit'],
+                        receiptBytes: receiptBytes,
+                        onPickReceipt: pickReceipt,
+                        accounts: accounts,
+                        method: method,
+                        transaction: transaction,
+                        busy: busy,
+                        onMethod: (value) => setState(() {
+                              method = value;
+                              displayedNumber =
+                                  (accounts[method] as Map?)?['number']
+                                      ?.toString();
+                            }),
+                        onSubmit: busy ||
+                                displayedNumber == null ||
+                                receiptBytes == null
+                            ? null
+                            : () async {
+                                if (busy) return;
+                                final expectedNumber = displayedNumber;
+                                final selectedMethod = method;
+                                setState(() => busy = true);
+                                await bookingRun(context, () async {
+                                  final bytes = receiptBytes!;
+                                  if (widget.submitReceipt != null) {
+                                    await widget.submitReceipt!(bytes,
+                                        selectedMethod, transaction.text);
+                                    return;
+                                  }
+                                  final path =
+                                      'booking_receipts/${widget.bookingId}/$uid/${BookingMediaService.receiptFileName(bytes)}';
+                                  final receipt =
+                                      FirebaseStorage.instance.ref(path);
+                                  await BookingMediaService
+                                      .uploadVerifiedReceipt(bytes,
+                                          reuseExisting: true,
+                                          upload: (data) async {
+                                    await receipt.putData(
+                                        data,
+                                        SettableMetadata(
+                                            contentType: 'image/jpeg'));
+                                  }, read: () async {
+                                    try {
+                                      return await receipt
+                                          .getData(10 * 1024 * 1024);
+                                    } on FirebaseException catch (e) {
+                                      if (e.code == 'object-not-found')
+                                        return null;
+                                      rethrow;
+                                    }
+                                  }, discardInvalid: () async {
+                                    await widget
+                                        .call('discardInvalidBookingReceipt', {
+                                      'bookingId': widget.bookingId,
+                                      'path': path,
+                                    });
+                                  });
+
+                                  await widget.call('actOnBooking', {
+                                    'bookingId': widget.bookingId,
+                                    'action': 'submitPayment',
+                                    'method': selectedMethod,
+                                    'expectedNumber': expectedNumber,
+                                    'transactionNumber': transaction.text,
+                                    'receiptPath': path
+                                  });
+                                });
+                                if (mounted) setState(() => busy = false);
+                              }),
+                  if (finance &&
+                      !owner &&
+                      !customer &&
+                      ['payment_review', 'cancel_requested']
+                          .contains(b['status'])) ...[
+                    button(
+                        b['status'] == 'cancel_requested'
+                            ? 'اعتماد المبلغ وفتح تسوية الاسترداد'
+                            : 'اعتماد العربون وتأكيد الحجز',
+                        'confirmPayment'),
+                    button('رفض الإيصال', 'rejectPayment')
+                  ],
+                  // الإجراءات السفلية الأربعة الموحدة
+                  if (owner || customer || admin) ...[
+                    const SizedBox(height: 20),
+                    const Text('إجراءات الحجز',
+                        style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13.5)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        // 1. محادثة الحجز (تُفعل بعد تأكيد العربون)
+                        Expanded(
+                          child: _BookingUnifiedActionTile(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            iconColor: const Color(0xFF64748B),
+                            label: 'محادثة الحجز',
+                            enabled: !busy &&
+                                ['confirmed', 'arrived', 'completed']
+                                    .contains(b['status']),
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: widget.chatPage ??
+                                        (_) => BookingChatScreen(
+                                            bookingId: widget.bookingId))),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 2. طلب دعم (يظهر مرة واحدة فقط)
+                        Expanded(
+                          child: _BookingUnifiedActionTile(
+                            icon: Icons.support_agent_rounded,
+                            iconColor: const Color(0xFF64748B),
+                            label: 'طلب دعم',
+                            enabled: !busy,
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: widget.supportPage ??
+                                        (_) => BookingSupportScreen(
+                                            bookingId: widget.bookingId))),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 3. إلغاء الحجز
+                        Expanded(
+                          child: _BookingUnifiedActionTile(
+                            icon: Icons.cancel_outlined,
+                            iconColor: const Color(0xFF64748B),
+                            label: 'إلغاء الحجز',
+                            enabled: !busy &&
+                                [
+                                  'requested',
+                                  'held',
+                                  'confirmed',
+                                  'payment_review'
+                                ].contains(b['status']),
+                            onTap: () => act('cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 4. إرسال بلاغ
+                        Expanded(
+                          child: _BookingUnifiedActionTile(
+                            icon: Icons.flag_outlined,
+                            iconColor: const Color(0xFF64748B),
+                            label: 'إرسال بلاغ',
+                            enabled: !busy,
+                            onTap: () async {
+                              final entered = await promptReason(
+                                  'تقديم بلاغ للإدارة',
+                                  'وضح سبب البلاغ للإدارة...');
+                              if (entered == null || entered.trim().isEmpty)
+                                return;
+                              if (!context.mounted) return;
+                              await bookingRun(context, () async {
+                                await widget.call('reportBooking', {
+                                  'bookingId': widget.bookingId,
+                                  'reason': entered.trim()
+                                });
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('تم إرسال البلاغ بنجاح')));
+                                }
+                              });
+                            },
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ],
-                if (b['refundReference'] != null)
-                  Text(
-                      'مرجع الاسترداد: ${b['refundReference']}\nالمراجع: ${b['refundSettledBy'] ?? 'الإدارة'}\nوقت التسوية: ${b['refundSettledAt'] is num ? DateTime.fromMillisecondsSinceEpoch((b['refundSettledAt'] as num).toInt()).toString() : (b['refundSettledAt'] ?? 'غير محدد')}'),
-                if (finance &&
-                    !owner &&
-                    !customer &&
-                    b['refundStatus'] == 'pending')
-                  BookingManualSettlement(
-                      key: ValueKey(
-                          'refund-${widget.bookingId}-${b['version']}'),
-                      bookingId: widget.bookingId,
-                      action: 'settleRefund',
-                      version: b['version'] is int ? b['version'] : null,
-                      loadPreview: () => widget.call(
-                              'getBookingFinancePreview', {
-                            'bookingId': widget.bookingId,
-                            'action': 'settleRefund'
-                          }),
-                      title: 'إعادة العربون المستحق',
-                      reference: refundReference,
-                      busy: busy,
-                       label: 'تسجيل إعادة المبلغ يدوياً',
-                      onSubmit: () => act('settleRefund',
-                          {'refundReference': refundReference.text})),
-                if (b['receiptPath'] != null &&
-                    b['receiptPath'].toString().trim().isNotEmpty)
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.receipt_long_outlined),
-                    label: const Text('عرض الإيصال'),
-                    onPressed: busy
-                        ? null
-                        : () => bookingRun(context, () async {
-                              final bytes = widget.readReceiptBytes != null
-                                  ? await widget.readReceiptBytes!()
-                                  : await FirebaseStorage.instance
-                                      .ref(b['receiptPath'].toString())
-                                      .getData(10 * 1024 * 1024);
-                              if (!context.mounted ||
-                                  bytes == null ||
-                                  bytes.isEmpty) {
-                                return;
-                              }
-                              await showDialog<void>(
-                                context: context,
-                                builder: (ctx) => Dialog(
-                                  child: InteractiveViewer(
-                                    child: Image.memory(
-                                      bytes,
-                                      errorBuilder: (_, __, ___) =>
-                                          const Padding(
-                                        padding: EdgeInsets.all(24),
-                                        child: Text(
-                                            'تعذر عرض صورة الإيصال المالي'),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                  ),
-                if (owner && b['status'] == 'requested') ...[
-                  button('موافقة وحجز مؤقت', 'approve'),
-                  button('رفض الطلب', 'reject')
-                ],
-                if (customer && held)
-                  BookingPaymentPanel(
-                      deposit: b['deposit'],
-                      receiptBytes: receiptBytes,
-                      onPickReceipt: pickReceipt,
-                      accounts: accounts,
-                      method: method,
-                      transaction: transaction,
-                      busy: busy,
-                      onMethod: (value) => setState(() {
-                            method = value;
-                            displayedNumber = (accounts[method] as Map?)?['number']?.toString();
-                          }),
-                      onSubmit: busy ||
-                              displayedNumber == null ||
-                              receiptBytes == null
-                          ? null
-                          : () async {
-                              if (busy) return;
-                              final expectedNumber = displayedNumber;
-                              final selectedMethod = method;
-                              setState(() => busy = true);
-                              await bookingRun(context, () async {
-                                final bytes = receiptBytes!;
-                                if (widget.submitReceipt != null) {
-                                  await widget.submitReceipt!(
-                                      bytes, selectedMethod, transaction.text);
-                                  return;
-                                }
-                                final path =
-                                    'booking_receipts/${widget.bookingId}/$uid/${BookingMediaService.receiptFileName(bytes)}';
-                                final receipt =
-                                    FirebaseStorage.instance.ref(path);
-                                await BookingMediaService.uploadVerifiedReceipt(
-                                    bytes,
-                                    reuseExisting: true, upload: (data) async {
-                                  await receipt.putData(
-                                      data,
-                                      SettableMetadata(
-                                          contentType: 'image/jpeg'));
-                                }, read: () async {
-                                  try {
-                                    return await receipt
-                                        .getData(10 * 1024 * 1024);
-                                  } on FirebaseException catch (e) {
-                                    if (e.code == 'object-not-found')
-                                      return null;
-                                    rethrow;
-                                  }
-                                }, discardInvalid: () async {
-                                  await widget
-                                      .call('discardInvalidBookingReceipt', {
-                                    'bookingId': widget.bookingId,
-                                    'path': path,
-                                  });
-                                });
-
-                                await widget.call('actOnBooking', {
-                                  'bookingId': widget.bookingId,
-                                  'action': 'submitPayment',
-                                  'method': selectedMethod,
-                                  'expectedNumber': expectedNumber,
-                                  'transactionNumber': transaction.text,
-                                  'receiptPath': path
-                                });
-                              });
-                              if (mounted) setState(() => busy = false);
-                            }),
-                if (finance &&
-                    !owner &&
-                    !customer &&
-                    ['payment_review', 'cancel_requested']
-                        .contains(b['status'])) ...[
-                  button(
-                      b['status'] == 'cancel_requested'
-                          ? 'اعتماد المبلغ وفتح تسوية الاسترداد'
-                          : 'اعتماد العربون وتأكيد الحجز',
-                      'confirmPayment'),
-                  button('رفض الإيصال', 'rejectPayment')
-                ],
-                // الإجراءات السفلية الأربعة الموحدة
-                if (owner || customer || admin) ...[
-                  const SizedBox(height: 20),
-                  const Text('إجراءات الحجز',
-                      style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13.5)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      // 1. محادثة الحجز (تُفعل بعد تأكيد العربون)
-                      Expanded(
-                        child: _BookingUnifiedActionTile(
-                          icon: Icons.chat_bubble_outline_rounded,
-                          iconColor: const Color(0xFF64748B),
-                          label: 'محادثة الحجز',
-                          enabled: !busy && ['confirmed', 'arrived', 'completed'].contains(b['status']),
-                          onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: widget.chatPage ??
-                                      (_) => BookingChatScreen(
-                                          bookingId: widget.bookingId))),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 2. طلب دعم (يظهر مرة واحدة فقط)
-                      Expanded(
-                        child: _BookingUnifiedActionTile(
-                          icon: Icons.support_agent_rounded,
-                          iconColor: const Color(0xFF64748B),
-                          label: 'طلب دعم',
-                          enabled: !busy,
-                          onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: widget.supportPage ??
-                                      (_) => BookingSupportScreen(
-                                          bookingId: widget.bookingId))),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 3. إلغاء الحجز
-                      Expanded(
-                        child: _BookingUnifiedActionTile(
-                          icon: Icons.cancel_outlined,
-                          iconColor: const Color(0xFF64748B),
-                          label: 'إلغاء الحجز',
-                          enabled: !busy && ['requested', 'held', 'confirmed', 'payment_review'].contains(b['status']),
-                          onTap: () => act('cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 4. إرسال بلاغ
-                      Expanded(
-                        child: _BookingUnifiedActionTile(
-                          icon: Icons.flag_outlined,
-                          iconColor: const Color(0xFF64748B),
-                          label: 'إرسال بلاغ',
-                          enabled: !busy,
-                          onTap: () async {
-                            final entered = await promptReason(
-                                'تقديم بلاغ للإدارة',
-                                'وضح سبب البلاغ للإدارة...');
-                            if (entered == null || entered.trim().isEmpty) return;
-                            if (!context.mounted) return;
-                            await bookingRun(context, () async {
-                              await widget.call('reportBooking', {
-                                'bookingId': widget.bookingId,
-                                'reason': entered.trim()
-                              });
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('تم إرسال البلاغ بنجاح')));
-                              }
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          );
-        }));
+              ),
+            );
+          }));
 }
-
 
 class _BookingUnifiedActionTile extends StatelessWidget {
   final IconData icon;
@@ -3354,7 +4205,9 @@ class _BookingUnifiedActionTile extends StatelessWidget {
                 icon,
                 size: 20,
                 color: enabled
-                    ? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A6E7C))
+                    ? (isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF5A6E7C))
                     : Colors.grey.withValues(alpha: 0.35),
               ),
               const SizedBox(height: 5),
@@ -3436,33 +4289,53 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
     }
 
     final mShift = findShift('صباح') ?? findShift('morning');
-    final eShift = findShift('مساء') ?? findShift('مسائ') ?? findShift('night') ?? findShift('evening');
-    final fShift = findShift('كامل') ?? findShift('يوم') ?? findShift('fullday');
+    final eShift = findShift('مساء') ??
+        findShift('مسائ') ??
+        findShift('night') ??
+        findShift('evening');
+    final fShift =
+        findShift('كامل') ?? findShift('يوم') ?? findShift('fullday');
 
     final bool hasExisting = rawShifts.isNotEmpty;
 
-    morningActive = mShift != null || (!hasExisting && widget.data['pricingMode'] == 'shifts');
-    morningId = mShift?['id']?.toString() ?? 'shift_morning_${DateTime.now().microsecondsSinceEpoch}';
-    morningInCtrl = TextEditingController(text: bookingTime12(mShift?['checkInMinute'] ?? 480));
-    morningOutCtrl = TextEditingController(text: bookingTime12(mShift?['checkOutMinute'] ?? 840));
-    morningPriceCtrl = TextEditingController(text: (mShift?['price'] ?? 100000).toString());
+    morningActive = mShift != null ||
+        (!hasExisting && widget.data['pricingMode'] == 'shifts');
+    morningId = mShift?['id']?.toString() ??
+        'shift_morning_${DateTime.now().microsecondsSinceEpoch}';
+    morningInCtrl = TextEditingController(
+        text: bookingTime12(mShift?['checkInMinute'] ?? 480));
+    morningOutCtrl = TextEditingController(
+        text: bookingTime12(mShift?['checkOutMinute'] ?? 840));
+    morningPriceCtrl =
+        TextEditingController(text: (mShift?['price'] ?? 100000).toString());
 
-    eveningActive = eShift != null || (!hasExisting && widget.data['pricingMode'] == 'shifts');
-    eveningId = eShift?['id']?.toString() ?? 'shift_evening_${DateTime.now().microsecondsSinceEpoch}';
-    eveningInCtrl = TextEditingController(text: bookingTime12(eShift?['checkInMinute'] ?? 900));
-    eveningOutCtrl = TextEditingController(text: bookingTime12(eShift?['checkOutMinute'] ?? 1380));
-    eveningPriceCtrl = TextEditingController(text: (eShift?['price'] ?? 150000).toString());
+    eveningActive = eShift != null ||
+        (!hasExisting && widget.data['pricingMode'] == 'shifts');
+    eveningId = eShift?['id']?.toString() ??
+        'shift_evening_${DateTime.now().microsecondsSinceEpoch}';
+    eveningInCtrl = TextEditingController(
+        text: bookingTime12(eShift?['checkInMinute'] ?? 900));
+    eveningOutCtrl = TextEditingController(
+        text: bookingTime12(eShift?['checkOutMinute'] ?? 1380));
+    eveningPriceCtrl =
+        TextEditingController(text: (eShift?['price'] ?? 150000).toString());
 
     fullDayActive = fShift != null;
-    fullDayId = fShift?['id']?.toString() ?? 'shift_fullday_${DateTime.now().microsecondsSinceEpoch}';
-    fullDayInCtrl = TextEditingController(text: bookingTime12(fShift?['checkInMinute'] ?? 480));
-    fullDayOutCtrl = TextEditingController(text: bookingTime12(fShift?['checkOutMinute'] ?? 1380));
-    fullDayPriceCtrl = TextEditingController(text: (fShift?['price'] ?? 250000).toString());
+    fullDayId = fShift?['id']?.toString() ??
+        'shift_fullday_${DateTime.now().microsecondsSinceEpoch}';
+    fullDayInCtrl = TextEditingController(
+        text: bookingTime12(fShift?['checkInMinute'] ?? 480));
+    fullDayOutCtrl = TextEditingController(
+        text: bookingTime12(fShift?['checkOutMinute'] ?? 1380));
+    fullDayPriceCtrl =
+        TextEditingController(text: (fShift?['price'] ?? 250000).toString());
   }
 
-  Future<void> _pickShiftTime(BuildContext context, TextEditingController controller) async {
+  Future<void> _pickShiftTime(
+      BuildContext context, TextEditingController controller) async {
     final current = bookingMinute(controller.text) ?? 480;
-    final initialTime = TimeOfDay(hour: (current ~/ 60) % 24, minute: current % 60);
+    final initialTime =
+        TimeOfDay(hour: (current ~/ 60) % 24, minute: current % 60);
     final picked = await showTimePicker(
       context: context,
       initialTime: initialTime,
@@ -3478,6 +4351,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       setState(() {});
     }
   }
+
   late final fields = {
     for (final k in [
       'name',
@@ -3523,32 +4397,33 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
     return 'both';
   }();
   List<Map<String, dynamic>> get compiledShifts => [
-    if (morningActive)
-      {
-        'id': morningId,
-        'name': 'الفترة الصباحية',
-        'checkInMinute': bookingMinute(morningInCtrl.text) ?? 480,
-        'checkOutMinute': bookingMinute(morningOutCtrl.text) ?? 840,
-        'price': int.tryParse(morningPriceCtrl.text) ?? 0,
-      },
-    if (eveningActive)
-      {
-        'id': eveningId,
-        'name': 'الفترة المسائية',
-        'checkInMinute': bookingMinute(eveningInCtrl.text) ?? 900,
-        'checkOutMinute': bookingMinute(eveningOutCtrl.text) ?? 1380,
-        'price': int.tryParse(eveningPriceCtrl.text) ?? 0,
-      },
-    if (fullDayActive)
-      {
-        'id': fullDayId,
-        'name': 'يوم كامل',
-        'checkInMinute': bookingMinute(fullDayInCtrl.text) ?? 480,
-        'checkOutMinute': bookingMinute(fullDayOutCtrl.text) ?? 1380,
-        'price': int.tryParse(fullDayPriceCtrl.text) ?? 0,
-      },
-  ];
-  late final amenities = Set<String>.from(widget.data['amenities'] is Iterable ? widget.data['amenities'] : []);
+        if (morningActive)
+          {
+            'id': morningId,
+            'name': 'الفترة الصباحية',
+            'checkInMinute': bookingMinute(morningInCtrl.text) ?? 480,
+            'checkOutMinute': bookingMinute(morningOutCtrl.text) ?? 840,
+            'price': int.tryParse(morningPriceCtrl.text) ?? 0,
+          },
+        if (eveningActive)
+          {
+            'id': eveningId,
+            'name': 'الفترة المسائية',
+            'checkInMinute': bookingMinute(eveningInCtrl.text) ?? 900,
+            'checkOutMinute': bookingMinute(eveningOutCtrl.text) ?? 1380,
+            'price': int.tryParse(eveningPriceCtrl.text) ?? 0,
+          },
+        if (fullDayActive)
+          {
+            'id': fullDayId,
+            'name': 'يوم كامل',
+            'checkInMinute': bookingMinute(fullDayInCtrl.text) ?? 480,
+            'checkOutMinute': bookingMinute(fullDayOutCtrl.text) ?? 1380,
+            'price': int.tryParse(fullDayPriceCtrl.text) ?? 0,
+          },
+      ];
+  late final amenities = Set<String>.from(
+      widget.data['amenities'] is Iterable ? widget.data['amenities'] : []);
   late String category = () {
     final c = widget.data['category']?.toString();
     if (['chalet', 'farm', 'hall', 'other'].contains(c)) return c!;
@@ -3577,7 +4452,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       setState(() {
         _uploadingMedia = true;
         _uploadProgress = 0.05;
-        _uploadStatus = video ? 'جارٍ اختيار مقطع الفيديو...' : 'جارٍ اختيار الصورة...';
+        _uploadStatus =
+            video ? 'جارٍ اختيار مقطع الفيديو...' : 'جارٍ اختيار الصورة...';
         _uploadError = null;
       });
       Uint8List? bytes;
@@ -3588,15 +4464,14 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
         final file = video
             ? await ImagePicker().pickVideo(source: ImageSource.gallery)
             : await ImagePicker().pickImage(
-                source: ImageSource.gallery,
-                maxWidth: 2000,
-                imageQuality: 90);
+                source: ImageSource.gallery, maxWidth: 2000, imageQuality: 90);
         if (file == null) {
           if (mounted) setState(() => _uploadingMedia = false);
           return;
         }
         if (await file.length() > (video ? 50 : 10) * 1024 * 1024) {
-          throw StateError('حجم الملف يتجاوز الحد المسموح به (${video ? 50 : 10} ميغابايت)');
+          throw StateError(
+              'حجم الملف يتجاوز الحد المسموح به (${video ? 50 : 10} ميغابايت)');
         }
         setState(() {
           _uploadProgress = 0.15;
@@ -3659,7 +4534,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       if (mounted) {
         setState(() {
           _uploadingMedia = false;
-          _uploadError = e.toString().replaceAll('Exception: ', '').replaceAll('StateError: ', '');
+          _uploadError = e
+              .toString()
+              .replaceAll('Exception: ', '')
+              .replaceAll('StateError: ', '');
         });
       }
     }
@@ -3670,7 +4548,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       return const SizedBox.shrink();
     }
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSuccess = !_uploadingMedia && _uploadError == null && _uploadProgress >= 1.0;
+    final isSuccess =
+        !_uploadingMedia && _uploadError == null && _uploadProgress >= 1.0;
     final isError = _uploadError != null;
 
     return Container(
@@ -3742,7 +4621,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
                 value: _uploadProgress > 0 ? _uploadProgress : null,
-                backgroundColor: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                backgroundColor:
+                    isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                 valueColor: const AlwaysStoppedAnimation<Color>(bookingGold),
                 minHeight: 6,
               ),
@@ -3769,7 +4649,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 ),
                 icon: const Icon(Icons.refresh_rounded, size: 16),
                 label: const Text('إعادة المحاولة',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
                 onPressed: busy ? null : () => _retryUploadTask!(),
               ),
             ),
@@ -3778,6 +4661,7 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
       ),
     );
   }
+
   @override
   void dispose() {
     morningInCtrl.dispose();
@@ -3864,7 +4748,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
               'parkingSpots': 'عدد مواقف السيارات',
               'area': 'المساحة الإجمالية (م²)',
               'complexName': 'اسم المنتجع أو المجمع (اختياري)',
-              'unitName': 'اسم الوحدة أو الشاليه الفرعي (مثل: شاليه 1 أو فيلا A)',
+              'unitName':
+                  'اسم الوحدة أو الشاليه الفرعي (مثل: شاليه 1 أو فيلا A)',
               'name': 'اسم المكان',
               'ownerId': 'معرف حساب المالك للتحقق من الحساب',
               'location': 'الموقع',
@@ -3880,10 +4765,14 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
             }[e.key],
             labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5),
             floatingLabelStyle: const TextStyle(
-                fontFamily: 'Cairo', fontSize: 11.0, fontWeight: FontWeight.bold),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                fontFamily: 'Cairo',
+                fontSize: 11.0,
+                fontWeight: FontWeight.bold),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             isDense: true,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
         keyboardType: [
           'latitude',
           'longitude',
@@ -3979,7 +4868,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                           fontWeight: FontWeight.bold,
                           fontSize: 14.5,
                           color: isActive
-                              ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                              ? (isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A))
                               : Theme.of(context).disabledColor,
                         ),
                       ),
@@ -4005,7 +4896,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
             ),
             if (isActive) ...[
               const SizedBox(height: 10),
-              Divider(height: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+              Divider(
+                  height: 1,
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -4014,12 +4907,17 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                       onTap: busy ? null : onPickIn,
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          color: isDark
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? Colors.white12
+                                : const Color(0xFFE2E8F0),
                           ),
                         ),
                         child: Column(
@@ -4030,13 +4928,16 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontFamily: 'Cairo',
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                Icon(Icons.access_time_rounded, size: 14, color: accentColor),
+                                Icon(Icons.access_time_rounded,
+                                    size: 14, color: accentColor),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
@@ -4061,12 +4962,17 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                       onTap: busy ? null : onPickOut,
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          color: isDark
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? Colors.white12
+                                : const Color(0xFFE2E8F0),
                           ),
                         ),
                         child: Column(
@@ -4077,17 +4983,22 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontFamily: 'Cairo',
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                Icon(Icons.logout_rounded, size: 14, color: accentColor),
+                                Icon(Icons.logout_rounded,
+                                    size: 14, color: accentColor),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    outCtrl.text.isEmpty ? 'اختر' : outCtrl.text,
+                                    outCtrl.text.isEmpty
+                                        ? 'اختر'
+                                        : outCtrl.text,
                                     style: const TextStyle(
                                       fontFamily: 'Cairo',
                                       fontWeight: FontWeight.bold,
@@ -4112,13 +5023,21 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
                 decoration: InputDecoration(
                   labelText: 'سعر الفترة (د.ع)',
-                  labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                  floatingLabelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: accentColor),
-                  prefixIcon: Icon(Icons.payments_outlined, size: 18, color: accentColor),
+                  labelStyle:
+                      const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                  floatingLabelStyle: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: accentColor),
+                  prefixIcon: Icon(Icons.payments_outlined,
+                      size: 18, color: accentColor),
                   suffixText: 'د.ع',
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ],
@@ -4251,37 +5170,51 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
               await bookingRun(tabContext, () async {
                 if (pricingMode == 'shifts') {
                   if (!morningActive && !eveningActive && !fullDayActive) {
-                    throw StateError('يجب تفعيل فترة واحدة على الأقل في نظام الفترات اليومية');
+                    throw StateError(
+                        'يجب تفعيل فترة واحدة على الأقل في نظام الفترات اليومية');
                   }
                   if (morningActive) {
                     final inM = bookingMinute(morningInCtrl.text);
                     final outM = bookingMinute(morningOutCtrl.text);
                     final p = int.tryParse(morningPriceCtrl.text) ?? 0;
-                    if (inM == null || outM == null) throw StateError('يرجى تحديد أوقات الفترة الصباحية');
-                    if (inM == outM) throw StateError('وقت الدخول والخروج للفترة الصباحية متطابق');
-                    if (p <= 0) throw StateError('يرجى إدخال سعر صحيح للفترة الصباحية');
+                    if (inM == null || outM == null)
+                      throw StateError('يرجى تحديد أوقات الفترة الصباحية');
+                    if (inM == outM)
+                      throw StateError(
+                          'وقت الدخول والخروج للفترة الصباحية متطابق');
+                    if (p <= 0)
+                      throw StateError('يرجى إدخال سعر صحيح للفترة الصباحية');
                   }
                   if (eveningActive) {
                     final inM = bookingMinute(eveningInCtrl.text);
                     final outM = bookingMinute(eveningOutCtrl.text);
                     final p = int.tryParse(eveningPriceCtrl.text) ?? 0;
-                    if (inM == null || outM == null) throw StateError('يرجى تحديد أوقات الفترة المسائية');
-                    if (inM == outM) throw StateError('وقت الدخول والخروج للفترة المسائية متطابق');
-                    if (p <= 0) throw StateError('يرجى إدخال سعر صحيح للفترة المسائية');
+                    if (inM == null || outM == null)
+                      throw StateError('يرجى تحديد أوقات الفترة المسائية');
+                    if (inM == outM)
+                      throw StateError(
+                          'وقت الدخول والخروج للفترة المسائية متطابق');
+                    if (p <= 0)
+                      throw StateError('يرجى إدخال سعر صحيح للفترة المسائية');
                   }
                   if (fullDayActive) {
                     final inM = bookingMinute(fullDayInCtrl.text);
                     final outM = bookingMinute(fullDayOutCtrl.text);
                     final p = int.tryParse(fullDayPriceCtrl.text) ?? 0;
-                    if (inM == null || outM == null) throw StateError('يرجى تحديد أوقات اليوم الكامل');
-                    if (inM == outM) throw StateError('وقت الدخول والخروج لليوم الكامل متطابق');
-                    if (p <= 0) throw StateError('يرجى إدخال سعر صحيح لليوم الكامل');
+                    if (inM == null || outM == null)
+                      throw StateError('يرجى تحديد أوقات اليوم الكامل');
+                    if (inM == outM)
+                      throw StateError(
+                          'وقت الدخول والخروج لليوم الكامل متطابق');
+                    if (p <= 0)
+                      throw StateError('يرجى إدخال سعر صحيح لليوم الكامل');
                   }
                   if (morningActive && eveningActive) {
                     final mOut = bookingMinute(morningOutCtrl.text) ?? 840;
                     final eIn = bookingMinute(eveningInCtrl.text) ?? 900;
                     if (mOut > eIn) {
-                      throw StateError('وقت نهاية الفترة الصباحية يتداخل مع وقت بداية الفترة المسائية');
+                      throw StateError(
+                          'وقت نهاية الفترة الصباحية يتداخل مع وقت بداية الفترة المسائية');
                     }
                   }
                 }
@@ -4301,7 +5234,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   'bedrooms': int.tryParse(fields['bedrooms']!.text) ?? 0,
                   'bathrooms': int.tryParse(fields['bathrooms']!.text) ?? 0,
                   'pools': int.tryParse(fields['pools']!.text) ?? 0,
-                  'parkingSpots': int.tryParse(fields['parkingSpots']!.text) ?? 0,
+                  'parkingSpots':
+                      int.tryParse(fields['parkingSpots']!.text) ?? 0,
                   'area': int.tryParse(fields['area']!.text) ?? 0,
                   'amenities': amenities.toList(),
                   'pricingMode': pricingMode,
@@ -4337,8 +5271,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-      length: 5,
-      child: BookingScaffold(
+        length: 5,
+        child: BookingScaffold(
           appBar: AppBar(
               title: const Text('إدارة المكان'),
               bottom: const TabBar(
@@ -4415,7 +5349,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   DropdownButtonFormField<String>(
                       initialValue: category,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'تصنيف المكان'),
+                      decoration:
+                          const InputDecoration(labelText: 'تصنيف المكان'),
                       items: [
                         for (final e in {
                           'chalet': 'شاليه',
@@ -4428,7 +5363,8 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               child: Text(e.value,
                                   maxLines: 1, overflow: TextOverflow.ellipsis))
                       ],
-                      onChanged: busy ? null : (v) => setState(() => category = v!)),
+                      onChanged:
+                          busy ? null : (v) => setState(() => category = v!)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                       initialValue: guestType,
@@ -4449,7 +5385,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                             child: Text('عوائل وشباب',
                                 maxLines: 1, overflow: TextOverflow.ellipsis)),
                       ],
-                      onChanged: busy ? null : (v) => setState(() => guestType = v ?? 'both')),
+                      onChanged: busy
+                          ? null
+                          : (v) => setState(() => guestType = v ?? 'both')),
                   editorField('name'),
                   editorField('complexName'),
                   editorField('unitName'),
@@ -4485,21 +5423,29 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                       decoration: BoxDecoration(
                         color: bookingGold.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: bookingGold.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color: bookingGold.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.shield_outlined, color: bookingGold, size: 22),
+                          const Icon(Icons.shield_outlined,
+                              color: bookingGold, size: 22),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text('العربون المركزي المعتمد',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo', fontSize: 13)),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Cairo',
+                                        fontSize: 13)),
                                 Text(
                                   'العربون يُحدد مركزيًا بواسطة إدارة عقارات الأنبار لضمان حقوق المالك والمستأجر (${fields['deposit']!.text.isNotEmpty ? fields['deposit']!.text : "50,000"} د.ع).',
-                                  style: const TextStyle(fontSize: 11.5, color: Colors.grey, fontFamily: 'Cairo'),
+                                  style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.grey,
+                                      fontFamily: 'Cairo'),
                                 ),
                               ],
                             ),
@@ -4537,14 +5483,19 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   if (pricingMode == 'shifts') ...[
                     const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline, size: 16, color: bookingGold),
+                          const Icon(Icons.info_outline,
+                              size: 16, color: bookingGold),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -4552,7 +5503,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontFamily: 'Cairo',
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -4614,45 +5567,65 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .dividerColor
+                              .withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.map_outlined, color: bookingGold, size: 20),
+                            const Icon(Icons.map_outlined,
+                                color: bookingGold, size: 20),
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
                                 'تحديد الموقع بدقة عبر الخريطة',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo'),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    fontFamily: 'Cairo'),
                               ),
                             ),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
                                 backgroundColor: bookingGold,
                                 foregroundColor: const Color(0xFF0F172A),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
                               icon: const Icon(Icons.place, size: 14),
-                              label: const Text('فتح الخريطة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                              label: const Text('فتح الخريطة',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo')),
                               onPressed: () async {
-                                final currentLat = double.tryParse(fields['latitude']!.text);
-                                final currentLng = double.tryParse(fields['longitude']!.text);
+                                final currentLat =
+                                    double.tryParse(fields['latitude']!.text);
+                                final currentLng =
+                                    double.tryParse(fields['longitude']!.text);
                                 final picked = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => LocationPickerScreen(
-                                      initialLocation: currentLat != null && currentLng != null
+                                      initialLocation: currentLat != null &&
+                                              currentLng != null
                                           ? PropertyLocation(
                                               latitude: currentLat,
                                               longitude: currentLng,
                                               city: 'الأنبار',
-                                              district: fields['location']!.text,
+                                              district:
+                                                  fields['location']!.text,
                                             )
                                           : null,
                                     ),
@@ -4660,10 +5633,17 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                 );
                                 if (picked is PropertyLocation) {
                                   setState(() {
-                                    fields['latitude']!.text = picked.latitude.toString();
-                                    fields['longitude']!.text = picked.longitude.toString();
-                                    if (fields['location']!.text.trim().isEmpty && picked.district.isNotEmpty) {
-                                      fields['location']!.text = '${picked.city} — ${picked.district}';
+                                    fields['latitude']!.text =
+                                        picked.latitude.toString();
+                                    fields['longitude']!.text =
+                                        picked.longitude.toString();
+                                    if (fields['location']!
+                                            .text
+                                            .trim()
+                                            .isEmpty &&
+                                        picked.district.isNotEmpty) {
+                                      fields['location']!.text =
+                                          '${picked.city} — ${picked.district}';
                                     }
                                   });
                                 }
@@ -4671,16 +5651,19 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                             ),
                           ],
                         ),
-                        if (fields['latitude']!.text.isNotEmpty && fields['longitude']!.text.isNotEmpty) ...[
+                        if (fields['latitude']!.text.isNotEmpty &&
+                            fields['longitude']!.text.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 16),
+                              const Icon(Icons.check_circle,
+                                  color: Color(0xFF10B981), size: 16),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   'الإحداثيات: ${fields['latitude']!.text}, ${fields['longitude']!.text}',
-                                  style: const TextStyle(fontSize: 12, fontFamily: 'Cairo'),
+                                  style: const TextStyle(
+                                      fontSize: 12, fontFamily: 'Cairo'),
                                 ),
                               ),
                               TextButton(
@@ -4688,7 +5671,10 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                   fields['latitude']!.clear();
                                   fields['longitude']!.clear();
                                 }),
-                                child: const Text('مسح', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+                                child: const Text('مسح',
+                                    style: TextStyle(
+                                        color: Color(0xFFEF4444),
+                                        fontSize: 12)),
                               ),
                             ],
                           ),
@@ -4704,7 +5690,11 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                 detail: 'اختر المرافق المتوفرة في المكان.',
                 icon: Icons.checklist_rtl_outlined,
                 children: [
-                  const Text('المرافق المتاحة للضيوف:', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13)),
+                  const Text('المرافق المتاحة للضيوف:',
+                      style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -4712,7 +5702,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                     children: [
                       for (final e in bookingAmenities.entries)
                         FilterChip(
-                            label: Text(e.value, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
+                            label: Text(e.value,
+                                style: const TextStyle(
+                                    fontFamily: 'Cairo', fontSize: 12)),
                             selected: amenities.contains(e.key),
                             onSelected: (yes) => setState(() {
                                   if (yes) {
@@ -4770,9 +5762,9 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                 isFromCache:
                                     snapshot.data?.metadata.isFromCache ??
                                         false,
-                                hasPendingWrites: snapshot
-                                        .data?.metadata.hasPendingWrites ??
-                                    false,
+                                hasPendingWrites:
+                                    snapshot.data?.metadata.hasPendingWrites ??
+                                        false,
                                 cachedDetail:
                                     'تحديث حالة الوسائط الخاصة يحتاج اتصالًا وحسابًا مصرحًا.',
                                 permissionDetail:
@@ -4780,54 +5772,64 @@ class _BookingVenueEditorState extends State<BookingVenueEditor> {
                                 onRetry: widget.localMediaHooks == null
                                     ? () => setState(() {})
                                     : null,
-                                child: Builder(builder: (context) => Column(children: [
-                              for (final doc in snapshot.data?.docs ??
-                                  <QueryDocumentSnapshot<
-                                      Map<String, dynamic>>>[])
-                                if ([
-                                      2,
-                                      3
-                                    ].contains(doc.data()['schemaVersion']) &&
-                                    ['uploading', 'pending', 'delete_pending']
-                                        .contains(doc.data()['status']))
-                                  Card(
-                                      child: Column(children: [
-                                    ListTile(
-                                        title: Text(const {
-                                              'uploading': 'لم يكتمل الرفع',
-                                              'pending':
-                                                  'بانتظار مراجعة الإدارة',
-                                              'delete_pending': 'قيد الحذف'
-                                            }[doc.data()['status']] ??
-                                            ''),
-                                        trailing: doc.data()['status'] ==
-                                                'delete_pending'
-                                            ? null
-                                            : IconButton(
-                                                tooltip: 'إزالة الملف',
-                                                icon: const Icon(
-                                                    Icons.delete_outline),
-                                                onPressed: busy
-                                                    ? null
-                                                    : () =>
-                                                        editorTask(() async {
-                                                          await bookingCall(
-                                                              'removeBookingExternalMedia',
-                                                              {
-                                                                'venueId': widget
-                                                                    .venueId,
-                                                                'path':
-                                                                    doc.data()[
-                                                                        'path']
-                                                              });
-                                                        }))),
-                                    if (doc.data()['status'] == 'pending')
-                                      BookingMediaGallery(paths: [
-                                        doc.data()['path'] as String
-                                      ]),
-                                  ])),
-                            ])),
-                          )),
+                                child: Builder(
+                                    builder: (context) => Column(children: [
+                                          for (final doc
+                                              in snapshot.data?.docs ??
+                                                  <QueryDocumentSnapshot<
+                                                      Map<String, dynamic>>>[])
+                                            if ([2, 3].contains(doc
+                                                    .data()['schemaVersion']) &&
+                                                [
+                                                  'uploading',
+                                                  'pending',
+                                                  'delete_pending'
+                                                ].contains(
+                                                    doc.data()['status']))
+                                              Card(
+                                                  child: Column(children: [
+                                                ListTile(
+                                                    title: Text(const {
+                                                          'uploading':
+                                                              'لم يكتمل الرفع',
+                                                          'pending':
+                                                              'بانتظار مراجعة الإدارة',
+                                                          'delete_pending':
+                                                              'قيد الحذف'
+                                                        }[doc.data()[
+                                                            'status']] ??
+                                                        ''),
+                                                    trailing: doc.data()[
+                                                                'status'] ==
+                                                            'delete_pending'
+                                                        ? null
+                                                        : IconButton(
+                                                            tooltip:
+                                                                'إزالة الملف',
+                                                            icon: const Icon(Icons
+                                                                .delete_outline),
+                                                            onPressed: busy
+                                                                ? null
+                                                                : () =>
+                                                                    editorTask(
+                                                                        () async {
+                                                                      await bookingCall(
+                                                                          'removeBookingExternalMedia',
+                                                                          {
+                                                                            'venueId':
+                                                                                widget.venueId,
+                                                                            'path':
+                                                                                doc.data()['path']
+                                                                          });
+                                                                    }))),
+                                                if (doc.data()['status'] ==
+                                                    'pending')
+                                                  BookingMediaGallery(paths: [
+                                                    doc.data()['path'] as String
+                                                  ]),
+                                              ])),
+                                        ])),
+                              )),
                     if (widget.ownerMode && widget.venueId != null) ...[
                       Wrap(children: [
                         for (final video in [false, true])
@@ -5069,7 +6071,6 @@ class _BookingSettingsScreenState extends State<BookingSettingsScreen> {
                       })));
 }
 
-
 class BookingBottomUtilitiesCard extends StatelessWidget {
   final bool admin;
   final String uid;
@@ -5109,7 +6110,8 @@ class BookingBottomUtilitiesCard extends StatelessWidget {
             children: [
               const Icon(Icons.explore_outlined, color: bookingGold, size: 22),
               const SizedBox(width: 8),
-              const Flexible(child: Text(
+              const Flexible(
+                  child: Text(
                 'أدوات وخدمات عقارات الأنبار',
                 style: TextStyle(
                   fontSize: 16,
@@ -5148,7 +6150,8 @@ class BookingBottomUtilitiesCard extends StatelessWidget {
                 label: 'البحث المتقدم',
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const BookingSearchScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const BookingSearchScreen()),
                 ),
               ),
               _buildUtilityPill(
@@ -5161,7 +6164,8 @@ class BookingBottomUtilitiesCard extends StatelessWidget {
                       context: context,
                       builder: (dCtx) => AlertDialog(
                         title: const Text('يلزم تسجيل الدخول'),
-                        content: const Text('يرجى تسجيل الدخول لإضافة مكان جديد.'),
+                        content:
+                            const Text('يرجى تسجيل الدخول لإضافة مكان جديد.'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dCtx),

@@ -275,18 +275,20 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                     children: [
                       Text(
                         property.title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
                         textDirection: TextDirection.rtl,
                         style: TextStyle(
                           color:
                               isDark ? Colors.white : const Color(0xFF0F172A),
-                          fontSize: AqarText.propertyTitle(context),
+                          fontSize:
+                              AqarBreakpoints.isTablet(context) ? 16.0 : 14.0,
+                          height: 1.25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Row(
                         textDirection: TextDirection.rtl,
                         children: [
@@ -319,16 +321,24 @@ class PropertyHorizontalHomeCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              iqd(property.price),
-                              textAlign: TextAlign.right,
-                              textDirection: TextDirection.rtl,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: const Color(0xffC5A16B),
-                                fontWeight: FontWeight.bold,
-                                fontSize: AqarText.price(context),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  iqd(property.price),
+                                  textAlign: TextAlign.right,
+                                  textDirection: TextDirection.rtl,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    color: const Color(0xffC5A16B),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AqarBreakpoints.isTablet(context)
+                                        ? 15.5
+                                        : 13.5,
+                                  ),
+                                ),
                               ),
                             ),
                           ),

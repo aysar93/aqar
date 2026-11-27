@@ -162,8 +162,8 @@ class AqarSizes {
   // ==========================
 
   static double horizontalSectionHeight(BuildContext context) =>
-      AqarBreakpoints.isTablet(context) ? 325 : 300;
+      AqarBreakpoints.isTablet(context) ? 350 : 323;
 
   static double horizontalCardsHeight(BuildContext context) =>
-      AqarBreakpoints.isTablet(context) ? 255 : 225;
+      AqarBreakpoints.isTablet(context) ? 280 : 248;
 }

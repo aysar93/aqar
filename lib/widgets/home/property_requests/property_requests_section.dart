@@ -167,7 +167,9 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
             bottom: 4,
           ),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF0F172A)
+                : Colors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
@@ -177,7 +179,9 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.black.withValues(alpha: .04),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black26
+                    : Colors.black.withValues(alpha: .04),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
@@ -271,12 +275,14 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                       requests.length,
                     ),
                     count: requests.length,
-                    effect: const ExpandingDotsEffect(
+                    effect: ExpandingDotsEffect(
                       dotHeight: 8,
                       dotWidth: 8,
                       expansionFactor: 3,
                       spacing: 6,
-                      dotColor: Colors.white24,
+                      dotColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : const Color(0xFFCBD5E1),
                       activeDotColor: _gold,
                     ),
                     onDotClicked: (index) {
@@ -334,7 +340,9 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                       "طلبات العقارات",
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF0F172A),
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: .3,
@@ -345,7 +353,9 @@ class _PropertyRequestsSectionState extends State<PropertyRequestsSection> {
                       "العقارات التي يبحث عنها المستخدمون",
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF64748B),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white54
+                            : const Color(0xFF64748B),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

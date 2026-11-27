@@ -2576,162 +2576,174 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                 Positioned(
                   bottom: 12,
                   right: 12,
-                  child: Container(
-                    width: 128,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
-                      ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 124,
+                      maxWidth: 192,
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // =========================
-                        // السعر
-                        // =========================
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          child: Row(
-                            textDirection: TextDirection.rtl,
-                            children: [
-                              const Icon(
-                                Icons.payments_rounded,
-                                color: Color(0xffC5A16B),
-                                size: 13,
-                              ),
-                              const SizedBox(width: 5),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      widget.price,
-                                      textAlign: TextAlign.right,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13.5,
-                                      ),
-                                    ),
-                                    if (widget.negotiable) ...[
-                                      const SizedBox(height: 1),
-                                      const Text(
-                                        "قابل للتفاوض",
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                          color: Color(0xffC5A16B),
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // =========================
+                          // السعر
+                          // =========================
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 5,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              textDirection: TextDirection.rtl,
+                              children: [
+                                const Icon(
+                                  Icons.payments_rounded,
+                                  color: Color(0xffC5A16B),
+                                  size: 13,
+                                ),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          widget.price,
+                                          textAlign: TextAlign.right,
+                                          textDirection: TextDirection.rtl,
+                                          maxLines: 1,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12.0,
+                                          ),
                                         ),
                                       ),
+                                      if (widget.negotiable) ...[
+                                        const SizedBox(height: 2),
+                                        const Text(
+                                          "قابل للتفاوض",
+                                          textAlign: TextAlign.right,
+                                          style: TextStyle(
+                                            color: Color(0xffC5A16B),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const Divider(height: 1, color: Colors.white24),
-
-                        // =========================
-                        // حالة التوفر
-                        // =========================
-                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: _liveProperty,
-                          builder: (context, snapshot) {
-                            final data = snapshot.data?.data();
-
-                            final status =
-                                (data?['status'] ?? 'approved').toString();
-
-                            final availabilityStatus =
-                                (data?['availabilityStatus'] ??
-                                        widget.availabilityStatus)
-                                    .toString();
-
-                            late final IconData statusIcon;
-                            late final Color statusColor;
-                            late final String statusText;
-
-                            if (status == 'rejected') {
-                              statusIcon = Icons.cancel_rounded;
-                              statusColor = const Color(0xFFE35D5D);
-                              statusText = 'مرفوض';
-                            } else if (status == 'pending') {
-                              statusIcon = Icons.hourglass_top_rounded;
-                              statusColor = const Color(0xFFF4B042);
-                              statusText = 'قيد المراجعة';
-                            } else {
-                              switch (availabilityStatus) {
-                                case 'reserved':
-                                  statusIcon = Icons.schedule_rounded;
-                                  statusColor = const Color(0xFFF4B042);
-                                  statusText = 'محجوز';
-                                  break;
-
-                                case 'sold':
-                                  statusIcon = Icons.gpp_bad_rounded;
-                                  statusColor = const Color(0xFFE35D5D);
-                                  statusText = 'تم البيع';
-                                  break;
-
-                                case 'rented':
-                                  statusIcon = Icons.key_rounded;
-                                  statusColor = const Color(0xFF64B5F6);
-                                  statusText = 'تم التأجير';
-                                  break;
-
-                                case 'available':
-                                default:
-                                  statusIcon = Icons.verified_rounded;
-                                  statusColor = const Color(0xFF35C76F);
-                                  statusText = 'متوفر';
-                                  break;
-                              }
-                            }
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              child: Row(
-                                textDirection: TextDirection.rtl,
-                                children: [
-                                  Icon(
-                                    statusIcon,
-                                    color: statusColor,
-                                    size: 13,
                                   ),
-                                  const SizedBox(width: 5),
-                                  Expanded(
-                                    child: Text(
-                                      statusText,
-                                      textAlign: TextAlign.right,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: statusColor,
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.bold,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const Divider(height: 1, color: Colors.white24),
+
+                          // =========================
+                          // حالة التوفر
+                          // =========================
+                          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                            stream: _liveProperty,
+                            builder: (context, snapshot) {
+                              final data = snapshot.data?.data();
+
+                              final status =
+                                  (data?['status'] ?? 'approved').toString();
+
+                              final availabilityStatus =
+                                  (data?['availabilityStatus'] ??
+                                          widget.availabilityStatus)
+                                      .toString();
+
+                              late final IconData statusIcon;
+                              late final Color statusColor;
+                              late final String statusText;
+
+                              if (status == 'rejected') {
+                                statusIcon = Icons.cancel_rounded;
+                                statusColor = const Color(0xFFE35D5D);
+                                statusText = 'مرفوض';
+                              } else if (status == 'pending') {
+                                statusIcon = Icons.hourglass_top_rounded;
+                                statusColor = const Color(0xFFF4B042);
+                                statusText = 'قيد المراجعة';
+                              } else {
+                                switch (availabilityStatus) {
+                                  case 'reserved':
+                                    statusIcon = Icons.schedule_rounded;
+                                    statusColor = const Color(0xFFF4B042);
+                                    statusText = 'محجوز';
+                                    break;
+
+                                  case 'sold':
+                                    statusIcon = Icons.gpp_bad_rounded;
+                                    statusColor = const Color(0xFFE35D5D);
+                                    statusText = 'تم البيع';
+                                    break;
+
+                                  case 'rented':
+                                    statusIcon = Icons.key_rounded;
+                                    statusColor = const Color(0xFF64B5F6);
+                                    statusText = 'تم التأجير';
+                                    break;
+
+                                  case 'available':
+                                  default:
+                                    statusIcon = Icons.verified_rounded;
+                                    statusColor = const Color(0xFF35C76F);
+                                    statusText = 'متوفر';
+                                    break;
+                                }
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  textDirection: TextDirection.rtl,
+                                  children: [
+                                    Icon(
+                                      statusIcon,
+                                      color: statusColor,
+                                      size: 13,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        statusText,
+                                        textAlign: TextAlign.right,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -2913,44 +2925,8 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                     child: Column(
                       children: [
                         Row(
+                          textDirection: TextDirection.rtl,
                           children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffC5A16B),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.sell_rounded,
-                                      color: Colors.black,
-                                      size: 28,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      "نوع الإعلان",
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      widget.adType,
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -2993,6 +2969,43 @@ ${isOfficeProperty ? '🏢 المكتب: ' : '👤 الناشر: '}$name
                                                 Brightness.dark
                                             ? Colors.white
                                             : const Color(0xFF0F172A),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffC5A16B),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Column(
+                                  children: [
+                                    const Icon(
+                                      Icons.sell_rounded,
+                                      color: Colors.black,
+                                      size: 28,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      "نوع الإعلان",
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.adType,
+                                      style: const TextStyle(
+                                        color: Colors.black,
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),

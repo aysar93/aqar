@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../booking_admin_theme.dart';
+import '../booking_reel_editor_screen.dart';
+import '../booking_reel_media_service.dart';
 
 class BookingAdminReelsTab extends StatefulWidget {
   final Stream<QuerySnapshot<Map<String, dynamic>>>? reelsStream;
@@ -72,138 +74,162 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
               return true;
             }).toList();
 
-            return Column(
-              children: [
-                // شريط التصفية والتحكم (SaaS Reels Filter Strip)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BookingAdminTheme.cardDecoration(
-                    context: context,
+            return Scaffold(
+              backgroundColor: Colors.transparent,
+              floatingActionButton: FloatingActionButton.extended(
+                backgroundColor: BookingAdminTheme.gold,
+                foregroundColor: Colors.black87,
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text(
+                  'إضافة ريل',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.video_library_outlined,
-                            size: 20,
-                            color: BookingAdminTheme.gold,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'إدارة ريلز الحجوزات (منفصلة تماماً عن ريلز العقارات)',
-                              style: TextStyle(
-                                color: BookingAdminTheme.text(context),
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Cairo',
+                ),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BookingReelEditorScreen(),
+                  ),
+                ),
+              ),
+              body: Column(
+                children: [
+                  // شريط التصفية والتحكم (SaaS Reels Filter Strip)
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BookingAdminTheme.cardDecoration(
+                      context: context,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.video_library_outlined,
+                              size: 20,
+                              color: BookingAdminTheme.gold,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'إدارة ريلز الحجوزات (منفصلة تماماً عن ريلز العقارات)',
+                                style: TextStyle(
+                                  color: BookingAdminTheme.text(context),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        height: 40,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: BookingAdminTheme.surfaceSecondary(context),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: BookingAdminTheme.border(context)),
+                          ],
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (q) => setState(
-                              () => _searchQuery = q.trim().toLowerCase()),
-                          textDirection: TextDirection.rtl,
-                          style: TextStyle(
-                            color: BookingAdminTheme.text(context),
-                            fontSize: 12,
-                            fontFamily: 'Cairo',
+                        const SizedBox(height: 12),
+                        Container(
+                          height: 40,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: BookingAdminTheme.surfaceSecondary(context),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: BookingAdminTheme.border(context)),
                           ),
-                          decoration: InputDecoration(
-                            hintText: 'بحث في عنوان الفيديو أو اسم المكان…',
-                            hintTextDirection: TextDirection.rtl,
-                            hintStyle: TextStyle(
-                              color: BookingAdminTheme.textMute(context),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (q) => setState(
+                                () => _searchQuery = q.trim().toLowerCase()),
+                            textDirection: TextDirection.rtl,
+                            style: TextStyle(
+                              color: BookingAdminTheme.text(context),
                               fontSize: 12,
                               fontFamily: 'Cairo',
                             ),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              size: 18,
-                              color: BookingAdminTheme.icon(context),
+                            decoration: InputDecoration(
+                              hintText: 'بحث في عنوان الفيديو أو اسم المكان…',
+                              hintTextDirection: TextDirection.rtl,
+                              hintStyle: TextStyle(
+                                color: BookingAdminTheme.textMute(context),
+                                fontSize: 12,
+                                fontFamily: 'Cairo',
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                size: 18,
+                                color: BookingAdminTheme.icon(context),
+                              ),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 16),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 10),
                             ),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 16),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 10),
                           ),
                         ),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _chip('كل الفيديوهات (${reelsDocs.length})', 'all'),
-                            _chip(
-                              openReports.isNotEmpty
-                                  ? 'بلاغات مفتوحة (${openReports.length})'
-                                  : 'بلاغات مفتوحة',
-                              'reports',
-                              highlight: openReports.isNotEmpty,
-                            ),
-                            _chip('فيديوهات مخفية', 'hidden'),
-                          ],
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _chip(
+                                  'كل الفيديوهات (${reelsDocs.length})', 'all'),
+                              _chip(
+                                openReports.isNotEmpty
+                                    ? 'بلاغات مفتوحة (${openReports.length})'
+                                    : 'بلاغات مفتوحة',
+                                'reports',
+                                highlight: openReports.isNotEmpty,
+                              ),
+                              _chip('فيديوهات مخفية', 'hidden'),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // قائمة الريلز
-                Expanded(
-                  child: filteredReels.isEmpty
-                      ? BookingAdminEmptyState(
-                          icon: Icons.videocam_off_outlined,
-                          title: 'لا توجد مقاطع ريلز مطابقة',
-                          description:
-                              'لم يتم العثور على أي مقطع فيديو يطابق تصفية البحث المختارة حالياً.',
-                          actionLabel:
-                              _filter != 'all' ? 'عرض كل المقاطع' : null,
-                          onAction: () => setState(() => _filter = 'all'),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                          itemCount: filteredReels.length,
-                          itemBuilder: (context, index) {
-                            final reelDoc = filteredReels[index];
-                            final rData = reelDoc.data();
-                            final reelReports = reportsDocs
-                                .where((r) => r.data()['reelId'] == reelDoc.id)
-                                .toList();
-                            return _buildReelAdminCard(
-                              reelDoc.id,
-                              rData,
-                              reelReports,
-                            );
-                          },
-                        ),
-                ),
-              ],
-            );
+                  // قائمة الريلز
+                  Expanded(
+                    child: filteredReels.isEmpty
+                        ? BookingAdminEmptyState(
+                            icon: Icons.videocam_off_outlined,
+                            title: 'لا توجد مقاطع ريلز مطابقة',
+                            description:
+                                'لم يتم العثور على أي مقطع فيديو يطابق تصفية البحث المختارة حالياً.',
+                            actionLabel:
+                                _filter != 'all' ? 'عرض كل المقاطع' : null,
+                            onAction: () => setState(() => _filter = 'all'),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                            itemCount: filteredReels.length,
+                            itemBuilder: (context, index) {
+                              final reelDoc = filteredReels[index];
+                              final rData = reelDoc.data();
+                              final reelReports = reportsDocs
+                                  .where(
+                                      (r) => r.data()['reelId'] == reelDoc.id)
+                                  .toList();
+                              return _buildReelAdminCard(
+                                reelDoc.id,
+                                rData,
+                                reelReports,
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ), // Column
+            ); // Scaffold
           },
         );
       },
@@ -379,6 +405,33 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                     foregroundColor: BookingAdminTheme.gold,
                   ),
                   icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: BookingAdminTheme.gold,
+                  ),
+                  label: const Text(
+                    'تعديل',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BookingReelEditorScreen(
+                        reelId: id,
+                        existing: r,
+                      ),
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: BookingAdminTheme.gold,
+                  ),
+                  icon: const Icon(
                     Icons.play_circle_fill_rounded,
                     size: 16,
                     color: BookingAdminTheme.gold,
@@ -508,7 +561,10 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
                       isDestructive: true,
                     );
                     if (ok) {
-                      _deleteReel(id);
+                      _deleteReel(
+                        id,
+                        storagePath: r['videoStoragePath']?.toString(),
+                      );
                     }
                   },
                 ),
@@ -828,7 +884,7 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
     }
   }
 
-  Future<void> _deleteReel(String reelId) async {
+  Future<void> _deleteReel(String reelId, {String? storagePath}) async {
     try {
       await FirebaseFirestore.instance
           .collection('booking_reels')
@@ -842,6 +898,8 @@ class _BookingAdminReelsTabState extends State<BookingAdminReelsTab>
       for (final doc in reports.docs) {
         await doc.reference.delete();
       }
+
+      await BookingReelMediaService.deleteStorageObjectIfOwned(storagePath);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -32,7 +32,8 @@ class BookingSectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final isFeatured = title.contains('المميزة');
-    final sectionIcon = isFeatured ? Icons.auto_awesome_rounded : Icons.explore_outlined;
+    final sectionIcon =
+        isFeatured ? Icons.auto_awesome_rounded : Icons.explore_outlined;
 
     return Padding(
       key: ValueKey('booking-section-header-$title'),
@@ -52,7 +53,9 @@ class BookingSectionHeader extends StatelessWidget {
             child: Icon(
               sectionIcon,
               size: 18,
-              color: isFeatured ? bookingGold : (dark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7)),
+              color: isFeatured
+                  ? bookingGold
+                  : (dark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7)),
             ),
           ),
           const SizedBox(width: 10),
@@ -105,7 +108,8 @@ class BookingSectionHeader extends StatelessWidget {
                 children: [
                   Text(
                     'عرض الكل',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                    style:
+                        TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -128,21 +132,24 @@ class BookingBrowseContent extends StatelessWidget {
       this.featuredPreview = false,
       this.hasMore = false,
       this.loading = false,
-      this.onLoadMore});
+      this.refreshing = false,
+      this.onLoadMore,
+      this.onRefresh});
   final List<Map<String, dynamic>> venues, featuredVenues;
   final ValueChanged<Map<String, dynamic>> onOpen;
   final bool hasMore, loading;
   final bool featuredPreview;
+  final bool refreshing;
   final VoidCallback? onLoadMore;
+  final VoidCallback? onRefresh;
   Widget section(BuildContext context, String title,
-          List<Map<String, dynamic>> items, String empty,
-          {String? subtitle}) {
+      List<Map<String, dynamic>> items, String empty,
+      {String? subtitle}) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final cardBg = dark ? const Color(0xFF1E2638) : Colors.white;
-    final borderColor = dark
-        ? bookingGold.withValues(alpha: .28)
-        : const Color(0xFFE2E8F0);
+    final borderColor =
+        dark ? bookingGold.withValues(alpha: .28) : const Color(0xFFE2E8F0);
 
     return Container(
       key: ValueKey('booking-unified-section-$title'),
@@ -209,36 +216,72 @@ class BookingBrowseContent extends StatelessWidget {
       ),
     );
   }
+
   @override
-  Widget build(BuildContext context) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (featuredPreview)
-          const Padding(
-              padding: EdgeInsets.fromLTRB(16, 6, 16, 0),
-              child: Text('المميزة — بيانات معاينة محلية فقط',
-                  style: TextStyle(fontSize: 12))),
-        section(context, 'المميزة', featuredVenues,
-            'لا توجد أماكن ذات تمييز معتمد حاليًا.',
-            subtitle: 'أماكن مختارة بعناية'),
-        section(context, 'استكشف الأماكن', venues,
-            'لا توجد أماكن مطابقة ضمن الدفعة المحمّلة؛ جرّب الفلاتر أو حمّل المزيد.',
-            subtitle: 'شاليهات وقاعات ومزارع مختارة'),
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (featuredPreview)
         const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Text(
-                'البحث والترتيب ضمن الأماكن المحمّلة؛ تحميل المزيد يحتفظ بالفلاتر.',
+            padding: EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Text('المميزة — بيانات معاينة محلية فقط',
                 style: TextStyle(fontSize: 12))),
-        if (loading)
-          const Padding(
-              padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
-        if (hasMore)
-          Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
-              child: OutlinedButton.icon(
-                  onPressed: loading ? null : onLoadMore,
-                  icon: const Icon(Icons.expand_more),
-                  label: const Text('عرض المزيد'))),
-      ]);
+      if (onRefresh != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            children: [
+              const Spacer(),
+              TextButton.icon(
+                onPressed: refreshing ? null : onRefresh,
+                icon: refreshing
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: bookingGold,
+                        ),
+                      )
+                    : Icon(Icons.refresh_rounded,
+                        size: 18, color: dark ? bookingGold : bookingNavy),
+                label: Text(
+                  refreshing ? 'جارٍ التحديث…' : 'تحديث',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: dark ? bookingGold : bookingNavy,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+        ),
+      section(context, 'المميزة', featuredVenues,
+          'لا توجد أماكن ذات تمييز معتمد حاليًا.',
+          subtitle: 'أماكن مختارة بعناية'),
+      section(context, 'استكشف الأماكن', venues,
+          'لا توجد أماكن مطابقة ضمن الدفعة المحمّلة؛ جرّب الفلاتر أو حمّل المزيد.',
+          subtitle: 'شاليهات وقاعات ومزارع مختارة'),
+      if (loading)
+        const Padding(
+            padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
+      if (hasMore)
+        Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+            child: OutlinedButton.icon(
+                onPressed: loading ? null : onLoadMore,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('عرض المزيد'))),
+    ]);
+  }
 }
 
 class BookingVenueRail extends StatefulWidget {

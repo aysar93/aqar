@@ -129,7 +129,9 @@ class _HorizontalPropertiesSectionState
             bottom: AqarSpacing.xs(context),
           ),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF0F172A)
+                : Colors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
@@ -139,7 +141,9 @@ class _HorizontalPropertiesSectionState
             ),
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.black.withValues(alpha: .04),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black26
+                    : Colors.black.withValues(alpha: .04),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
@@ -181,7 +185,10 @@ class _HorizontalPropertiesSectionState
                                 _sectionTitle,
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : const Color(0xFF0F172A),
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: .3,
@@ -192,7 +199,10 @@ class _HorizontalPropertiesSectionState
                                 _sectionDescription,
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF64748B),
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white54
+                                      : const Color(0xFF64748B),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -304,7 +314,10 @@ class _HorizontalPropertiesSectionState
                           children: [
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white24,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.18)
+                                    : const Color(0xFFCBD5E1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
